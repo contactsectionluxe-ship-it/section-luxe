@@ -66,10 +66,7 @@ export async function updateSellerStatus(
   
   const { error } = await client
     .from('sellers')
-    .update({
-      status,
-      updated_at: new Date().toISOString(),
-    })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', sellerId);
 
   if (error) throw error;

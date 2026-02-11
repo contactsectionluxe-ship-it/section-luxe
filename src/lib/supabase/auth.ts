@@ -1,7 +1,8 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './client';
 import { User, Seller } from '@/types';
 
-function checkSupabase() {
+function checkSupabase(): SupabaseClient {
   if (!isSupabaseConfigured || !supabase) {
     throw new Error('Supabase n\'est pas configuré. Veuillez configurer .env.local');
   }

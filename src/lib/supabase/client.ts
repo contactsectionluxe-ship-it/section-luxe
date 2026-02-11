@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/database';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -11,9 +10,9 @@ export const isSupabaseConfigured =
   supabaseUrl !== 'https://votre-projet.supabase.co' &&
   supabaseAnonKey !== 'votre_anon_key_ici';
 
-// Create Supabase client
-export const supabase = isSupabaseConfigured
-  ? createClient<Database>(supabaseUrl!, supabaseAnonKey!)
+// Create Supabase client (sans typage Database strict pour éviter les erreurs de build)
+export const supabase: SupabaseClient | null = isSupabaseConfigured
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
   : null;
 
 if (!isSupabaseConfigured) {

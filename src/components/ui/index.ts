@@ -26,5 +26,5 @@ export type { FileUploadProps } from './FileUpload';
 export { Avatar } from './Avatar';
 export type { AvatarProps } from './Avatar';
 
-export { Spinner, PageLoader, FullPageLoader } from './Spinner';
+export { Spinner, PageLoader } from './Spinner';
 export type { SpinnerProps } from './Spinner';

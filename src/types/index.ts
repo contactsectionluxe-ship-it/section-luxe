@@ -31,7 +31,7 @@ export interface Seller {
   description: string;
   status: SellerStatus;
   idCardFrontUrl: string;
-  idCardBackUrl: string;
+  idCardBackUrl: string | null;
   kbisUrl: string;
   createdAt: Date;
   updatedAt: Date;

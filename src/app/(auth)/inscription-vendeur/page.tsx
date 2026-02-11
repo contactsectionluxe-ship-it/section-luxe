@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CheckCircle, Upload, X } from 'lucide-react';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { signUpSeller } from '@/lib/supabase/auth';
 import { uploadSellerDocument } from '@/lib/supabase/storage';
 import { fetchCompanyBySiret, type CompanyInfo } from '@/lib/siret';
@@ -29,8 +29,8 @@ function FileUploadField({
     }
   }, [onFileChange]);
 
-  const onDropRejected = useCallback((rejected: { file: File; errors: { code: string }[] }[]) => {
-    const first = rejected[0];
+  const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
+    const first = fileRejections[0];
     if (!first) return;
     const isTooLarge = first.errors.some((e) => e.code === 'file-too-large');
     if (isTooLarge) {

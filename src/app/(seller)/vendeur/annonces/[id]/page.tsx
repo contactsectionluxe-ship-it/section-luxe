@@ -256,12 +256,11 @@ export default function EditListingPage() {
 
           <FileUpload
             label="Ajouter de nouvelles photos"
-            accept="image/*"
-            multiple
-            maxSize={10}
-            value={newPhotos}
-            onChange={setNewPhotos}
-            hint="Ajoutez des photos supplémentaires"
+            accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+            maxFiles={10}
+            maxSize={10 * 1024 * 1024}
+            onFilesChange={setNewPhotos}
+            helperText="Ajoutez des photos supplémentaires"
           />
 
           {/* Active toggle */}

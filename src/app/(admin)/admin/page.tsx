@@ -232,9 +232,11 @@ export default function AdminDashboardPage() {
                 <a href={selectedSeller.idCardFrontUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
                   <ExternalLink size={14} /> CNI (recto)
                 </a>
-                <a href={selectedSeller.idCardBackUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
-                  <ExternalLink size={14} /> CNI (verso)
-                </a>
+                {selectedSeller.idCardBackUrl && (
+                  <a href={selectedSeller.idCardBackUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
+                    <ExternalLink size={14} /> CNI (verso)
+                  </a>
+                )}
                 <a href={selectedSeller.kbisUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
                   <ExternalLink size={14} /> KBIS
                 </a>

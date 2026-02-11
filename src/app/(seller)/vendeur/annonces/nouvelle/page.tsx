@@ -152,12 +152,11 @@ export default function NewListingPage() {
 
           <FileUpload
             label="Photos de l'article"
-            accept="image/*"
-            multiple
-            maxSize={10}
-            value={photos}
-            onChange={setPhotos}
-            hint="Ajoutez jusqu'à 10 photos de votre article. La première photo sera utilisée comme image principale."
+            accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+            maxFiles={10}
+            maxSize={10 * 1024 * 1024}
+            onFilesChange={setPhotos}
+            helperText="Ajoutez jusqu'à 10 photos de votre article. La première photo sera utilisée comme image principale."
           />
 
           <div className="flex gap-4 pt-4">

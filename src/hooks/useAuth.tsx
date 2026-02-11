@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isSeller: user?.role === 'seller',
     isApprovedSeller: seller?.status === 'approved',
     isAdmin: user?.role === 'admin',
-    isSupabaseConfigured,
+    isSupabaseConfigured: Boolean(isSupabaseConfigured),
     refreshUser,
   };
 
