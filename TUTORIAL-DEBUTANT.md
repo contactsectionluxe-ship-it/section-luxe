@@ -37,25 +37,51 @@ Si Git vous demande de vous connecter, suivez les instructions (token ou mot de 
 4. Notez **Project URL** et la clé **anon public** (qui commence par `eyJ...`).
 5. Dans le menu de gauche : **SQL Editor** → New query. Ouvrez le fichier `supabase/schema.sql` du projet, copiez tout le contenu, collez dans l’éditeur Supabase → **Run**. Les tables sont créées.
 
+6. **Créer les espaces de stockage (Storage)** : menu **Storage** → **New bucket**. Créez deux buckets :
+   - **documents** (CNI, KBIS) : **ne pas cocher** Public → bucket **privé** (RGPD). Puis dans **SQL Editor**, exécutez le fichier **`supabase/storage-policies.sql`** pour que seuls les admins puissent lire ces pièces.
+   - **listings** (photos d’annonces) : cochez **Public bucket**.  
+   Détail : voir **`supabase/storage-buckets.md`**.
+
 ## C. Publier sur Vercel
 
 1. Allez sur **https://vercel.com** → créez un compte (vous pouvez « Continue with GitHub »).
 2. **Add New** → **Project**.
 3. Importez le dépôt GitHub `section-luxe` (ou le nom que vous avez choisi). Cliquez **Import**.
-4. Avant de déployer, cliquez sur **Environment Variables**. Ajoutez ces variables (une par une) :
+4. Avant de déployer, il faut ajouter les **variables d’environnement** (les « clés » que le site utilise en ligne).
 
-| Name | Value |
-|------|--------|
-| `NEXT_PUBLIC_SUPABASE_URL` | l’URL de votre projet Supabase (ex. `https://xxxx.supabase.co`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | la clé anon public de Supabase |
+#### Étape 4a – Ouvrir les variables
+- Sur la page du projet Vercel, avant de cliquer sur **Deploy**, repérez la section **Environment Variables** (souvent sous le nom du dépôt).
+- Cliquez sur **Environment Variables** (ou **Add** à côté) pour ajouter des variables.
+
+#### Étape 4b – Ajouter chaque variable une par une
+Pour **chaque ligne** du tableau ci‑dessous :
+1. Dans le champ **Key** (ou **Name**), tapez **exactement** le nom indiqué (copier-coller pour éviter les fautes).
+2. Dans le champ **Value**, tapez la valeur (sans guillemets, sans espace avant/après).
+3. Cliquez sur **Add** (ou **Save**), puis recommencez pour la ligne suivante.
+
+| Key (nom) | Value (valeur) |
+|-----------|----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | L’URL de ton projet Supabase. Ex. : `https://jlfbzhlxqdtlhkvonzqg.supabase.co` (à récupérer dans Supabase → Project Settings → API → Project URL). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | La clé « anon public » de Supabase (longue chaîne qui commence par `eyJ...`). Même endroit : Project Settings → API → anon public. |
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
-| `SMTP_USER` | `contact.sectionluxe@gmail.com` (ou votre adresse Gmail) |
-| `SMTP_PASS` | le **mot de passe d’application** Gmail (Google Account → Sécurité → Mots de passe des applications) |
-| `SMTP_FROM` | `contact.sectionluxe@gmail.com` |
+| `SMTP_USER` | Ton adresse Gmail qui enverra les emails, ex. : `contact.sectionluxe@gmail.com` |
+| `SMTP_PASS` | Le **mot de passe d’application** Gmail (pas le mot de passe du compte). Voir ci‑dessous comment l’obtenir. |
+| `SMTP_FROM` | La même adresse Gmail, ex. : `contact.sectionluxe@gmail.com` |
 
-5. Cliquez **Deploy**. Attendez 1 à 2 minutes.
-6. Quand c’est vert, cliquez **Visit** : votre site est en ligne (ex. `section-luxe.vercel.app`).
+#### Obtenir le mot de passe d’application Gmail (SMTP_PASS)
+1. Va sur ton compte Google : https://myaccount.google.com  
+2. **Sécurité** → section « Connexion à Google » → **Mots de passe des applications** (ou « Validation en 2 étapes » d’abord si demandé).  
+3. Choisis « Autre » ou « Mail », nomme (ex. « Section Luxe »), puis **Générer**.  
+4. Google affiche un mot de passe à **16 caractères**. Copie-le et colle-le dans **Value** pour `SMTP_PASS` (sans espace).
+
+#### Étape 5 – Déployer
+- Cliquez sur **Deploy** (en bas de la page ou à côté du dépôt).
+- Attendez 1 à 2 minutes. Un cercle ou une barre de progression s’affiche.
+
+#### Étape 6 – Ouvrir le site
+- Quand le statut est **vert** (Ready / Déployé), cliquez sur **Visit** (ou sur l’URL affichée, ex. `section-luxe.vercel.app`).
+- Votre site est en ligne. Les demandes « Devenir vendeur » enverront un email à l’adresse indiquée dans `SMTP_USER` / `SMTP_FROM`.
 
 Dès qu’un visiteur remplit « Devenir vendeur » sur ce site, l’email part vers `contact.sectionluxe@gmail.com` avec les infos et les pièces jointes. **Aucune installation de Node.js sur votre Mac n’est nécessaire.**
 
