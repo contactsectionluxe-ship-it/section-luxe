@@ -195,7 +195,8 @@ export default function SellerRegisterPage() {
       });
       if (!resUpload.ok) {
         const data = await resUpload.json().catch(() => ({}));
-        throw new Error(data?.error || `Upload échoué (${resUpload.status})`);
+        const detail = data?.detail ? ` — ${data.detail}` : '';
+        throw new Error((data?.error || `Upload échoué (${resUpload.status})`) + detail);
       }
       const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
 

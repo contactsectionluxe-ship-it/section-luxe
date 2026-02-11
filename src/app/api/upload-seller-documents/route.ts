@@ -34,27 +34,37 @@ export async function POST(request: NextRequest) {
       `sellers/${tempId}/kbis.${ext(fileKbis)}`,
     ];
 
+    const rectoBuf = Buffer.from(await fileRecto.arrayBuffer());
     const { error: errRecto } = await server.storage
       .from(bucket)
-      .upload(rectoPath, await fileRecto.arrayBuffer(), { upsert: true });
+      .upload(rectoPath, rectoBuf, { upsert: true, contentType: fileRecto.type || 'image/png' });
     if (errRecto) {
       console.error('Upload recto:', errRecto);
-      return NextResponse.json({ error: 'Upload recto échoué' }, { status: 500 });
+      const msg =
+        (errRecto as { message?: string })?.message ??
+        (errRecto as { error?: string })?.error ??
+        (typeof errRecto === 'object' ? JSON.stringify(errRecto) : String(errRecto));
+      return NextResponse.json(
+        { error: `Upload recto échoué : ${msg}` },
+        { status: 500 }
+      );
     }
 
     if (fileVerso?.size) {
+      const versoBuf = Buffer.from(await fileVerso.arrayBuffer());
       const { error: errVerso } = await server.storage
         .from(bucket)
-        .upload(versoPath!, await fileVerso.arrayBuffer(), { upsert: true });
+        .upload(versoPath!, versoBuf, { upsert: true, contentType: fileVerso.type || 'image/png' });
       if (errVerso) {
         console.error('Upload verso:', errVerso);
         return NextResponse.json({ error: 'Upload verso échoué' }, { status: 500 });
       }
     }
 
+    const kbisBuf = Buffer.from(await fileKbis.arrayBuffer());
     const { error: errKbis } = await server.storage
       .from(bucket)
-      .upload(kbisPath, await fileKbis.arrayBuffer(), { upsert: true });
+      .upload(kbisPath, kbisBuf, { upsert: true, contentType: fileKbis.type || 'application/pdf' });
     if (errKbis) {
       console.error('Upload kbis:', errKbis);
       return NextResponse.json({ error: 'Upload KBIS échoué' }, { status: 500 });
@@ -72,8 +82,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error('Upload seller documents:', err);
+    const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: 'Erreur lors de l’upload des documents' },
+      { error: `Erreur upload : ${msg}` },
       { status: 500 }
     );
   }
