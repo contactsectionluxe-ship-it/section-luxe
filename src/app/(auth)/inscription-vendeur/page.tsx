@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { CheckCircle, Upload, X } from 'lucide-react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { signUpSeller } from '@/lib/supabase/auth';
-import { uploadSellerDocument } from '@/lib/supabase/storage';
 import { fetchCompanyBySiret, type CompanyInfo } from '@/lib/siret';
 
 function FileUploadField({
@@ -185,15 +184,20 @@ export default function SellerRegisterPage() {
     setLoading(true);
 
     try {
-      const tempId = `temp_${Date.now()}`;
+      const formUpload = new FormData();
+      formUpload.set('fileRecto', idCardFront);
+      formUpload.set('fileKbis', kbis);
+      if (idCardBack) formUpload.set('fileVerso', idCardBack);
 
-      const [idCardFrontUrl, kbisUrl] = await Promise.all([
-        uploadSellerDocument(tempId, idCardFront, 'idCardFront'),
-        uploadSellerDocument(tempId, kbis, 'kbis'),
-      ]);
-      const idCardBackUrl = idCardBack
-        ? await uploadSellerDocument(tempId, idCardBack, 'idCardBack')
-        : null;
+      const resUpload = await fetch('/api/upload-seller-documents', {
+        method: 'POST',
+        body: formUpload,
+      });
+      if (!resUpload.ok) {
+        const data = await resUpload.json().catch(() => ({}));
+        throw new Error(data?.error || `Upload échoué (${resUpload.status})`);
+      }
+      const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
 
       await signUpSeller(email, password, {
         companyName,
@@ -231,7 +235,16 @@ export default function SellerRegisterPage() {
       setSuccess(true);
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError('Une erreur est survenue. Veuillez réessayer.');
+      const msg = err?.message || err?.error_description || '';
+      if (msg.includes('row-level security') || msg.includes('policy')) {
+        setError('Configuration Supabase : vérifiez les politiques RLS et que la confirmation email est désactivée (Auth → Providers → Email).');
+      } else if (msg.includes('Bucket') || msg.includes('storage') || msg.includes('documents')) {
+        setError('Stockage : créez le bucket "documents" dans Supabase (Storage) et exécutez supabase/storage-policies.sql.');
+      } else if (msg) {
+        setError(`Erreur : ${msg}`);
+      } else {
+        setError('Une erreur est survenue. Veuillez réessayer.');
+      }
     } finally {
       setLoading(false);
     }
