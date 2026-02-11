@@ -177,7 +177,7 @@ export default function SellerRegisterPage() {
     setError('');
 
     if (!idCardFront || !kbis) {
-      setError('Veuillez télécharger le KBIS et le justificatif d\'identité recto.');
+      setError('Veuillez télécharger le KBIS et le Justificatif d\'identité.');
       return;
     }
 
