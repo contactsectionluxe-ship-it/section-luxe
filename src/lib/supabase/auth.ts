@@ -158,7 +158,7 @@ export async function getUserData(uid: string): Promise<User | null> {
     .from('users')
     .select('*')
     .eq('id', uid)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
@@ -179,7 +179,7 @@ export async function getSellerData(uid: string): Promise<Seller | null> {
     .from('sellers')
     .select('*')
     .eq('id', uid)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 

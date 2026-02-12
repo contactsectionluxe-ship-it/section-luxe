@@ -46,6 +46,27 @@ export function Header() {
     transition: 'color 0.2s',
   };
 
+  const iconSize = 22;
+  const iconLabelStyle = {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    gap: 2,
+    padding: '10px 10px',
+    minWidth: 64,
+    fontSize: 12,
+    fontWeight: linkStyle.fontWeight,
+    color: linkStyle.color,
+  };
+  const iconWrapStyle = {
+    width: iconSize,
+    height: iconSize,
+    display: 'flex' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    color: '#1d1d1f',
+  };
+
   return (
     <>
       <header
@@ -87,32 +108,30 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Link
-              href="/favoris"
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 2,
-                padding: '10px 16px',
-                fontSize: 14,
-                fontWeight: 500,
-                color: '#1d1d1f',
-              }}
-            >
-              <Heart size={20} />
+          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+            <Link href="/favoris" style={iconLabelStyle}>
+              <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.75} /></div>
               <span>Favoris</span>
+            </Link>
+            <Link href="/messages" style={iconLabelStyle}>
+              <div style={iconWrapStyle}><MessageCircle size={20} strokeWidth={1.75} /></div>
+              <span>Messages</span>
             </Link>
             {isAuthenticated ? (
               <>
-                <Link href="/messages" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, color: '#6e6e73', borderRadius: 980 }}><MessageCircle size={20} /></Link>
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, color: '#6e6e73', background: 'none', border: 'none', borderRadius: 980 }}
+                    style={{
+                      ...iconLabelStyle,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
                   >
-                    <User size={20} />
+                    <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.75} /></div>
+                    <span>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
                   </button>
                   {userMenuOpen && (
                     <div
@@ -145,24 +164,10 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <>
-                <Link
-                  href="/connexion"
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 2,
-                    padding: '10px 16px',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    color: '#1d1d1f',
-                  }}
-                >
-                  <User size={20} />
-                  <span>Connexion</span>
-                </Link>
-              </>
+              <Link href="/connexion" style={iconLabelStyle}>
+                <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.75} /></div>
+                <span>Se connecter</span>
+              </Link>
             )}
           </div>
 
@@ -205,7 +210,8 @@ export function Header() {
             </nav>
             {isAuthenticated ? (
               <div>
-                <p style={{ fontSize: 13, color: '#86868b', marginBottom: 16 }}>Connecté : {user?.email}</p>
+                <p style={{ fontSize: 13, color: '#86868b', marginBottom: 4 }}>Connecté</p>
+                <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>{(user?.displayName || '').trim().split(/\s+/)[0] || user?.email || 'Compte'}</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
                   <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>

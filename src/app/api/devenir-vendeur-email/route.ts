@@ -45,18 +45,26 @@ export async function POST(request: NextRequest) {
       description,
     ].join('\n');
 
+    const safeCompany = (companyName || 'societe')
+      .replace(/[/\\:*?"<>|]/g, '_')
+      .replace(/\s+/g, '_')
+      .slice(0, 40)
+      .trim() || 'societe';
     const attachments: { filename: string; content: Buffer }[] = [];
     const recto = formData.get('fileRecto') as File | null;
     const verso = formData.get('fileVerso') as File | null;
     const kbis = formData.get('fileKbis') as File | null;
     if (recto && recto.size > 0) {
-      attachments.push({ filename: `justificatif_recto_${recto.name}`, content: Buffer.from(await recto.arrayBuffer()) });
+      const ext = recto.name.includes('.') ? recto.name.slice(recto.name.lastIndexOf('.')) : '';
+      attachments.push({ filename: `justificatif_recto_${safeCompany}${ext}`, content: Buffer.from(await recto.arrayBuffer()) });
     }
     if (verso && verso.size > 0) {
-      attachments.push({ filename: `justificatif_verso_${verso.name}`, content: Buffer.from(await verso.arrayBuffer()) });
+      const ext = verso.name.includes('.') ? verso.name.slice(verso.name.lastIndexOf('.')) : '';
+      attachments.push({ filename: `justificatif_verso_${safeCompany}${ext}`, content: Buffer.from(await verso.arrayBuffer()) });
     }
     if (kbis && kbis.size > 0) {
-      attachments.push({ filename: `kbis_${kbis.name}`, content: Buffer.from(await kbis.arrayBuffer()) });
+      const ext = kbis.name.includes('.') ? kbis.name.slice(kbis.name.lastIndexOf('.')) : '';
+      attachments.push({ filename: `kbis_${safeCompany}${ext}`, content: Buffer.from(await kbis.arrayBuffer()) });
     }
 
     const transporter = getTransporter();
