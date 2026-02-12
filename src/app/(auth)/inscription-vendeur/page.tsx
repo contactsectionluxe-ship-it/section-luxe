@@ -106,6 +106,8 @@ export default function SellerRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [emailNotificationSent, setEmailNotificationSent] = useState(false);
+  const [emailErrorDetail, setEmailErrorDetail] = useState('');
 
   const [companyName, setCompanyName] = useState('');
   const [siret, setSiret] = useState('');
@@ -221,19 +223,26 @@ export default function SellerRegisterPage() {
       if (idCardFront) formDataEmail.set('fileRecto', idCardFront);
       if (idCardBack) formDataEmail.set('fileVerso', idCardBack);
       formDataEmail.set('fileKbis', kbis);
+      let emailSent = false;
+      let emailErrorDetail = '';
       try {
         const resEmail = await fetch('/api/devenir-vendeur-email', {
           method: 'POST',
           body: formDataEmail,
         });
+        emailSent = resEmail.ok;
         if (!resEmail.ok) {
-          console.error('Envoi email échoué:', await resEmail.text());
+          const data = await resEmail.json().catch(() => ({}));
+          emailErrorDetail = data?.detail || data?.error || '';
+          console.error('Envoi email échoué:', data);
         }
       } catch (emailErr) {
         console.error('Envoi email:', emailErr);
       }
+      setEmailErrorDetail(emailErrorDetail);
 
       setSuccess(true);
+      setEmailNotificationSent(emailSent);
     } catch (err: any) {
       console.error('Registration error:', err);
       const msg = err?.message || err?.error_description || '';
@@ -294,12 +303,77 @@ export default function SellerRegisterPage() {
             Votre demande d&apos;inscription vendeur a été soumise. Notre équipe va examiner vos
             documents et vous recevrez une réponse dans les plus brefs délais.
           </p>
-          <div style={{ padding: 16, backgroundColor: '#fef3c7', marginBottom: 24, borderRadius: 12 }}>
-            <p style={{ fontSize: 13, fontWeight: 500 }}>Statut de votre demande :</p>
-            <p style={{ fontSize: 14, color: '#b45309', fontWeight: 600, marginTop: 4 }}>
-              En cours d&apos;étude
-            </p>
+          <div
+            style={{
+              marginBottom: 28,
+              borderRadius: 16,
+              overflow: 'hidden',
+              border: '1px solid #e8e6e3',
+              backgroundColor: '#fafaf9',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div style={{ padding: '20px 24px' }}>
+              <p
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: '#86868b',
+                  marginBottom: 6,
+                }}
+              >
+                Statut de votre demande
+              </p>
+              <p
+                style={{
+                  fontSize: 18,
+                  fontWeight: 500,
+                  color: '#1d1d1f',
+                  letterSpacing: '-0.02em',
+                }}
+              >
+                En cours d&apos;étude
+              </p>
+              <div
+                style={{
+                  marginTop: 12,
+                  height: 4,
+                  borderRadius: 2,
+                  backgroundColor: '#e8e6e3',
+                  overflow: 'hidden',
+                }}
+              >
+                <div
+                  style={{
+                    width: '40%',
+                    height: '100%',
+                    backgroundColor: '#1d1d1f',
+                    borderRadius: 2,
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: 12, color: '#86868b', marginTop: 10 }}>
+                Notre équipe examine vos documents sous 48 à 72 h.
+              </p>
+            </div>
           </div>
+          {!emailNotificationSent && (
+            <div style={{ marginBottom: 24, textAlign: 'center' }}>
+              <p style={{ fontSize: 13, color: '#b45309', marginBottom: 4 }}>
+                La notification par email n&apos;a pas pu être envoyée.
+              </p>
+              {emailErrorDetail && (
+                <p style={{ fontSize: 12, color: '#86868b', maxWidth: 380, margin: '0 auto' }}>
+                  {emailErrorDetail}
+                </p>
+              )}
+              <p style={{ fontSize: 12, color: '#86868b', marginTop: 8 }}>
+                Vérifiez SMTP_HOST, SMTP_USER, SMTP_PASS sur Vercel (Environment Variables) et refaites un déploiement.
+              </p>
+            </div>
+          )}
           <Link
             href="/"
             style={{
