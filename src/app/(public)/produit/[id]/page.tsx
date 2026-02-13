@@ -471,7 +471,7 @@ export default function ProductPage() {
 
             {/* Informations (gauche) et Description (droite) sur la même ligne, toute la largeur */}
             <div className="hide-mobile" style={{ gridColumn: '1 / -1', marginTop: 40, borderTop: '1px solid #e5e5e7', paddingTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
-              <div style={{ paddingRight: 24 }}>
+              <div style={{ paddingRight: 56 }}>
                 <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Informations</h2>
                 <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
@@ -545,7 +545,7 @@ export default function ProductPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 24 }}>
+              <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 56 }}>
                 <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Description</h2>
                 {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{seller.companyName}</p>}
                 <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
@@ -580,7 +580,7 @@ export default function ProductPage() {
 
               {/* Informations (gauche) et Description (droite) sur la même ligne - mobile */}
               <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
-                <div style={{ paddingRight: 16 }}>
+                <div style={{ paddingRight: 32 }}>
                   <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Informations</h2>
                   <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
@@ -654,7 +654,7 @@ export default function ProductPage() {
                   </div>
                 </div>
                 </div>
-                <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 16 }}>
+                <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 32 }}>
                   <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Description</h2>
                   {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{seller.companyName}</p>}
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
