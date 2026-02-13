@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, X, File, Image } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
 
 export interface FileUploadProps {
   label?: string;

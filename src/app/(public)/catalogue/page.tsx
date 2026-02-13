@@ -112,7 +112,7 @@ function CatalogueContent() {
       else if (filters.sortBy === 'price_desc') sortBy = 'price_desc';
       else if (filters.sortBy === 'likes') sortBy = 'likes';
 
-      const data = await getListings({ category: filters.category, sortBy });
+      const data = await getListings({ category: filters.category, sellerId: filters.sellerId, sortBy });
 
       let filtered = data;
       if (filters.priceMin) filtered = filtered.filter((l) => l.price >= filters.priceMin!);

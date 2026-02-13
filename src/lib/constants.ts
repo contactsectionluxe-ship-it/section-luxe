@@ -115,6 +115,10 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
   ],
 };
 
+/** Années pour filtre catalogue (année min/max), de l'année en cours à 1920 */
+const currentYear = new Date().getFullYear();
+export const YEARS = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
+
 /** Régions pour le filtre catalogue (France métropolitaine + DOM-TOM) */
 export const REGIONS = [
   { value: 'idf', label: 'Île-de-France' },

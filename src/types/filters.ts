@@ -37,6 +37,9 @@ export interface SearchFilters {
   
   // Recherche texte
   query?: string;
+
+  // Filtre vendeur (depuis page produit)
+  sellerId?: string;
 }
 
 export const defaultFilters: SearchFilters = {

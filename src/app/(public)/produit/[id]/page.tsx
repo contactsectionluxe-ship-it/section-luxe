@@ -3,14 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Users2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getListing } from '@/lib/supabase/listings';
+import { getListing, getSellerListings } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
 import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
+import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
+
+/** Affiche le téléphone au format 00 00 00 00 00 */
+function formatPhoneDisplay(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  return digits.replace(/(.{2})/g, '$1 ').trim();
+}
 
 export default function ProductPage() {
   const params = useParams();
@@ -39,6 +46,10 @@ export default function ProductPage() {
   });
   const [contactFormSubmitting, setContactFormSubmitting] = useState(false);
   const [contactFormError, setContactFormError] = useState('');
+  const [showMapPopup, setShowMapPopup] = useState(false);
+  const [mapZoom, setMapZoom] = useState(15);
+  const [sellerListingsCount, setSellerListingsCount] = useState(0);
+  const [showMoreAbout, setShowMoreAbout] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -54,6 +65,9 @@ export default function ProductPage() {
 
         const sellerData = await getSellerData(listingData.sellerId);
         setSeller(sellerData);
+
+        const sellerListings = await getSellerListings(listingData.sellerId);
+        setSellerListingsCount(sellerListings.filter((l) => l.isActive).length);
 
         if (isAuthenticated && user) {
           const favorite = await getFavorite(user.uid, listingId);
@@ -211,6 +225,7 @@ export default function ProductPage() {
   const categoryLabel = CATEGORIES.find((c) => c.value === listing.category)?.label;
 
   return (
+    <>
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px 20px 60px' }}>
         {/* Back button */}
@@ -223,63 +238,44 @@ export default function ProductPage() {
         </Link>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
-          {/* Desktop: 2 columns */}
-          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
-            {/* Gallery */}
-            <div>
-              <div style={{ aspectRatio: '1', backgroundColor: '#f5f5f7', marginBottom: 12, position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
-                {listing.photos[currentPhotoIndex] ? (
-                  <img
-                    src={listing.photos[currentPhotoIndex]}
-                    alt={listing.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
-                    Photo
-                  </div>
-                )}
-                {listing.photos.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1)}
-                      style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <button
-                      onClick={() => setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0)}
-                      style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </>
-                )}
-              </div>
-              {listing.photos.length > 1 && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {listing.photos.map((photo, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentPhotoIndex(index)}
-                      style={{
-                        width: 60,
-                        height: 60,
-                        border: currentPhotoIndex === index ? '2px solid #000' : '1px solid #ddd',
-                        padding: 0,
-                        cursor: 'pointer',
-                        overflow: 'hidden',
-                      }}
-                    >
-                      <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    </button>
-                  ))}
+          {/* Desktop: photo et détails même hauteur (hauteur = photo), puis miniatures en dessous */}
+          <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
+              {/* Photo principale — définit la hauteur de la ligne */}
+              <div style={{ flex: '1.15 0 0', minWidth: 0 }}>
+                <div style={{ aspectRatio: '4/3', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
+                  {listing.photos[currentPhotoIndex] ? (
+                    <img
+                      src={listing.photos[currentPhotoIndex]}
+                      alt={listing.title}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
+                      Photo
+                    </div>
+                  )}
+                  {listing.photos.length > 1 && (
+                    <>
+                      <button
+                        onClick={() => setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1)}
+                        style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button
+                        onClick={() => setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0)}
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
-            </div>
+              </div>
 
-            {/* Details */}
-            <div>
+              {/* Détails — même hauteur que la photo, bloc vendeur en bas */}
+            <div style={{ flex: '0.85 0 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 {categoryLabel && (
                   <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>
@@ -298,59 +294,53 @@ export default function ProductPage() {
               {listing.listingNumber && (
                 <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
               )}
-              <p style={{ fontSize: 28, fontWeight: 600, marginBottom: 16 }}>{formatPrice(listing.price)}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+                <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button
+                    onClick={handleFavoriteClick}
+                    disabled={favoriteLoading}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#fff',
+                      color: '#1d1d1f',
+                      border: '1.5px solid #d2d2d7',
+                      cursor: 'pointer',
+                    }}
+                    title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                  >
+                    <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#fff',
+                      color: '#1d1d1f',
+                      border: '1.5px solid #d2d2d7',
+                      cursor: 'pointer',
+                    }}
+                    title="Partager"
+                  >
+                    <Share2 size={20} />
+                  </button>
+                </div>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: '#888', marginBottom: 24 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <Heart size={14} /> {likesCount} likes
                 </span>
                 <span>Publié le {formatDate(listing.createdAt)}</span>
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                <button
-                  onClick={handleFavoriteClick}
-                  disabled={favoriteLoading}
-                  style={{
-                    flex: 1,
-                    height: 50,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    backgroundColor: isFavorited ? '#1d1d1f' : '#fff',
-                    color: isFavorited ? '#fff' : '#1d1d1f',
-                    border: '1.5px solid #d2d2d7',
-                    borderRadius: 980,
-                    fontSize: 15,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Heart size={18} fill={isFavorited ? '#fff' : 'none'} />
-                  {isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                </button>
-                <button
-                  onClick={handleShare}
-                  style={{
-                    height: 50,
-                    padding: '0 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    backgroundColor: '#fff',
-                    color: '#1d1d1f',
-                    border: '1.5px solid #d2d2d7',
-                    borderRadius: 980,
-                    fontSize: 15,
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Share2 size={18} />
-                  Partager
-                </button>
               </div>
 
               {user?.uid !== listing.sellerId && showContactForm && (
@@ -398,25 +388,19 @@ export default function ProductPage() {
                 </div>
               )}
 
-              <div style={{ marginBottom: 32 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Description</h2>
-                <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{listing.description}</p>
-              </div>
-
               {seller && (
-                <div style={{ padding: 20, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
                         <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
-                        <Store size={24} color="#888" />
+                        <Store size={40} color="#888" />
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 600 }}>{seller.companyName}</h3>
-                      <p style={{ fontSize: 12, color: '#888' }}>Vendeur professionnel</p>
-                      {seller.address && <p style={{ fontSize: 12, color: '#666', marginTop: 6 }}>{seller.address}</p>}
+                      <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>{seller.companyName}</h3>
+                      <p style={{ fontSize: 14, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
@@ -425,8 +409,14 @@ export default function ProductPage() {
                       onClick={() => setShowPhone((v) => !v)}
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
-                      <Phone size={18} />
-                      {showPhone ? seller.phone : 'N° téléphone'}
+                      {showPhone ? (
+                        <span style={{ fontSize: 18 }}>{formatPhoneDisplay(seller.phone)}</span>
+                      ) : (
+                        <>
+                          <Phone size={18} />
+                          N° téléphone
+                        </>
+                      )}
                     </button>
                     <button
                       type="button"
@@ -437,8 +427,129 @@ export default function ProductPage() {
                       Message
                     </button>
                   </div>
+                  {seller.address && (
+                    <button
+                      type="button"
+                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                      style={{ width: '100%', marginTop: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14, cursor: 'pointer' }}
+                    >
+                      <MapPin size={22} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
+                    </button>
+                  )}
                 </div>
               )}
+            </div>
+            </div>
+
+            {/* Miniatures sous la photo */}
+            {listing.photos.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'row', gap: 40 }}>
+                <div style={{ flex: '1.15 0 0', display: 'flex', gap: 8 }}>
+                  {listing.photos.map((photo, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPhotoIndex(index)}
+                      style={{
+                        width: 60,
+                        height: 60,
+                        border: currentPhotoIndex === index ? '2px solid #000' : '1px solid #ddd',
+                        padding: 0,
+                        cursor: 'pointer',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </button>
+                  ))}
+                </div>
+                <div style={{ flex: '0.85 0 0' }} />
+              </div>
+            )}
+          </div>
+
+            {/* Informations (gauche) et Description (droite) sur la même ligne, toute la largeur */}
+            <div className="hide-mobile" style={{ gridColumn: '1 / -1', marginTop: 40, borderTop: '1px solid #e5e5e7', paddingTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
+              <div style={{ paddingRight: 24 }}>
+                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Informations</h2>
+                <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Tag size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{categoryLabel || '…'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Award size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.brand || '…'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Modèle</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.model ?? ''}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.year != null ? listing.year : '…'}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <CheckCircle size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Layers size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Palette size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                        L. {listing.widthCm != null ? listing.widthCm : '   '} × H. {listing.heightCm != null ? listing.heightCm : '   '} cm
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 24 }}>
+                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Description</h2>
+                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{seller.companyName}</p>}
+                <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+              </div>
             </div>
           </div>
 
@@ -446,7 +557,7 @@ export default function ProductPage() {
           <div className="hide-desktop">
             {/* Gallery */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ aspectRatio: '1', backgroundColor: '#f5f5f7', marginBottom: 12, position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
+              <div style={{ aspectRatio: '4/3', backgroundColor: '#f5f5f7', marginBottom: 12, position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
                 {listing.photos[currentPhotoIndex] ? (
                   <img src={listing.photos[currentPhotoIndex]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -466,6 +577,89 @@ export default function ProductPage() {
                   ))}
                 </div>
               )}
+
+              {/* Informations (gauche) et Description (droite) sur la même ligne - mobile */}
+              <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
+                <div style={{ paddingRight: 16 }}>
+                  <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Informations</h2>
+                  <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Tag size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{categoryLabel || '…'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Award size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.brand || '…'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Modèle</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.model || '…'}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Calendar size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Année</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.year != null ? listing.year : '…'}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <CheckCircle size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Layers size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Matière</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Palette size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Couleur</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : '…'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimensions</span>
+                      </div>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                        L. {listing.widthCm != null ? listing.widthCm : '   '} × H. {listing.heightCm != null ? listing.heightCm : '   '} cm
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                </div>
+                <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 16 }}>
+                  <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Description</h2>
+                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{seller.companyName}</p>}
+                  <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+                </div>
+              </div>
             </div>
 
             {/* Details */}
@@ -478,66 +672,237 @@ export default function ProductPage() {
               )}
             </div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12 }}>{listing.title}</h1>
-            <p style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>{formatPrice(listing.price)}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12 }}>
+              <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+              <button
+                onClick={handleFavoriteClick}
+                disabled={favoriteLoading}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  border: '1.5px solid #d2d2d7',
+                  cursor: 'pointer',
+                }}
+                title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+              >
+                <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+              </button>
+              <button
+                onClick={handleShare}
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  border: '1.5px solid #d2d2d7',
+                  cursor: 'pointer',
+                }}
+                title="Partager"
+              >
+                <Share2 size={18} />
+              </button>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: '#888', marginBottom: 20 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12} /> {likesCount}</span>
               <span>{formatDate(listing.createdAt)}</span>
             </div>
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
-              <button
-                onClick={handleFavoriteClick}
-                disabled={favoriteLoading}
-                style={{ flex: 1, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isFavorited ? '#000' : '#fff', color: isFavorited ? '#fff' : '#000', border: '1px solid #000', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
-              >
-                <Heart size={18} fill={isFavorited ? '#fff' : 'none'} />
-                {isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              </button>
-              <button
-                onClick={handleShare}
-                style={{ height: 48, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', color: '#000', border: '1px solid #000', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
-              >
-                <Share2 size={18} />
-                Partager
-              </button>
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Description</h2>
-              <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line' }}>{listing.description}</p>
-            </div>
-
             {seller && (
-              <div style={{ padding: 16, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {seller.avatarUrl ? (
                       <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <Store size={20} color="#888" />
+                      <Store size={34} color="#888" />
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 14, fontWeight: 600 }}>{seller.companyName}</h3>
-                    <p style={{ fontSize: 11, color: '#888' }}>Vendeur professionnel</p>
-                    {seller.address && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{seller.address}</p>}
+                    <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
+                    <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                   <button type="button" onClick={() => setShowPhone((v) => !v)} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
-                    <Phone size={16} />
-                    {showPhone ? seller.phone : 'N° téléphone'}
+                    {showPhone ? (
+                      <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
+                    ) : (
+                      <>
+                        <Phone size={16} />
+                        N° téléphone
+                      </>
+                    )}
                   </button>
                   <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm((v) => !v); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     <MessageCircle size={16} />
                     Message
                   </button>
                 </div>
+                {seller.address && (
+                  <button
+                    type="button"
+                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                    style={{ width: '100%', marginTop: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14, cursor: 'pointer' }}
+                  >
+                    <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
+                  </button>
+                )}
               </div>
             )}
           </div>
+
+          {/* Section Vendeur Professionnel — en bas de page */}
+          {seller && (
+            <div style={{ marginTop: 40, borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
+              <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 24 }}>
+                <Users2 size={28} color="#1d1d1f" />
+                Vendeur professionnel
+              </h2>
+              <div style={{ maxWidth: 480, margin: '0 auto' }}>
+                {/* Logo, nom, description (2 lignes + Voir plus) */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {seller.avatarUrl ? (
+                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Store size={40} color="#888" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
+                    {seller.description && (
+                      <>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            color: '#666',
+                            margin: 0,
+                            lineHeight: 1.5,
+                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
+                          }}
+                        >
+                          {seller.description}
+                        </p>
+                        {seller.description.length > 100 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowMoreAbout((v) => !v)}
+                            style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            {showMoreAbout ? 'Voir moins' : 'Voir plus'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+                {/* Bouton Voir les annonces du pro — même largeur que la carte */}
+                <Link
+                  href={`/catalogue?sellerId=${seller.uid}`}
+                  style={{ display: 'block', width: '100%', padding: '14px 20px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 500, textAlign: 'center', marginBottom: 12 }}
+                >
+                  Voir les annonces du pro ({sellerListingsCount})
+                </Link>
+                {/* Carte */}
+                {seller.address && (
+                    <div
+                      style={{
+                        minHeight: 140,
+                        padding: '20px 16px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 14,
+                        backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
+                        backgroundSize: '115%',
+                        backgroundPosition: 'center',
+                        backgroundColor: '#f6f6f8',
+                        border: '1px solid #c8c8cc',
+                        borderRadius: 14,
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                        <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                        <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                        style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                      >
+                        Voir la carte
+                      </button>
+                    </div>
+                  )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
+
+      {/* Popup Plan vendeur */}
+      {showMapPopup && seller && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+            <div style={{ padding: 24 }}>
+              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, marginBottom: 16, textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Plan vendeur</h2>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>{seller.companyName}</p>
+              <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
+              <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+                <iframe
+                  title="Carte du vendeur"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent([seller.address, seller.postcode, seller.city].filter(Boolean).join(', '))}&z=${mapZoom}&output=embed`}
+                  style={{ width: '100%', height: '100%', border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.min(20, z + 1)); }}
+                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
+                    title="Zoom avant"
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.max(10, z - 1)); }}
+                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
+                    title="Zoom arrière"
+                  >
+                    <Minus size={18} />
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowMapPopup(false); if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }}
+                style={{ width: '100%', height: 48, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer' }}
+              >
+                Contacter le vendeur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Auth Modal */}
       {showAuthModal && (
@@ -555,6 +920,6 @@ export default function ProductPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
