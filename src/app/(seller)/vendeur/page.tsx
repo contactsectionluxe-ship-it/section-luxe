@@ -25,7 +25,8 @@ export default function SellerDashboardPage() {
   // Synchronisation en temps réel du statut (validé/refusé) quand l'admin met à jour
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase || !user?.uid) return;
-    const channel = supabase
+    const client = supabase;
+    const channel = client
       .channel('seller-status')
       .on(
         'postgres_changes',
@@ -36,7 +37,7 @@ export default function SellerDashboardPage() {
       )
       .subscribe();
     return () => {
-      supabase.removeChannel(channel);
+      client.removeChannel(channel);
     };
   }, [user?.uid, refreshUser]);
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
+import { validateDocumentFile } from '@/lib/file-validation';
 
 export async function POST(request: NextRequest) {
   try {

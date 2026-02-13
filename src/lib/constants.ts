@@ -115,6 +115,25 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
   ],
 };
 
+/** Régions pour le filtre catalogue (France métropolitaine + DOM-TOM) */
+export const REGIONS = [
+  { value: 'idf', label: 'Île-de-France' },
+  { value: 'paca', label: 'Provence-Alpes-Côte d\'Azur' },
+  { value: 'auvergne-rhone-alpes', label: 'Auvergne-Rhône-Alpes' },
+  { value: 'occitanie', label: 'Occitanie' },
+  { value: 'nouvelle-aquitaine', label: 'Nouvelle-Aquitaine' },
+  { value: 'hauts-de-france', label: 'Hauts-de-France' },
+  { value: 'grand-est', label: 'Grand Est' },
+  { value: 'bretagne', label: 'Bretagne' },
+  { value: 'normandie', label: 'Normandie' },
+  { value: 'pays-de-la-loire', label: 'Pays de la Loire' },
+  { value: 'centre-val-de-loire', label: 'Centre-Val de Loire' },
+  { value: 'bourgogne-franche-comte', label: 'Bourgogne-Franche-Comté' },
+  { value: 'corse', label: 'Corse' },
+  { value: 'dom-tom', label: 'DOM-TOM' },
+  { value: 'autre', label: 'Autre' },
+];
+
 export const MATERIALS = [
   { value: 'leather', label: 'Cuir' },
   { value: 'canvas', label: 'Toile' },
