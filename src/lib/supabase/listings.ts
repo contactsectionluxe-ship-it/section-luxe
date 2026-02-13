@@ -149,6 +149,7 @@ export async function getListing(listingId: string): Promise<Listing | null> {
 export async function getListings(options?: {
   category?: string;
   sellerId?: string;
+  year?: number | null;
   limitCount?: number;
   sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
 }): Promise<Listing[]> {
@@ -157,6 +158,7 @@ export async function getListings(options?: {
   const {
     category,
     sellerId,
+    year,
     limitCount = 50,
     sortBy = 'newest',
   } = options || {};
@@ -172,6 +174,10 @@ export async function getListings(options?: {
 
   if (sellerId) {
     query = query.eq('seller_id', sellerId);
+  }
+
+  if (year != null) {
+    query = query.eq('year', year);
   }
 
   // Apply sorting

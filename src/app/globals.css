@@ -91,6 +91,31 @@ input, select, textarea, button {
   }
 }
 
+/* Page produit : Informations, Description, Vendeur professionnel sur 50 % à gauche sur desktop */
+@media (min-width: 768px) {
+  .produit-section-left {
+    width: 50% !important;
+    max-width: 50% !important;
+  }
+}
+
+/* Page produit : les 4 titres de section (Informations, Description, Prix, Vendeur professionnel) même taille sur mobile */
+@media (max-width: 767px) {
+  .produit-section-title {
+    font-size: 20px !important;
+    margin-bottom: 6px !important;
+  }
+  .produit-section-title svg {
+    width: 14px !important;
+    height: 14px !important;
+  }
+  /* Icône Vendeur professionnel : même taille visuelle que les autres (18px → 16px sur mobile) */
+  .produit-section-title-vendeur svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+}
+
 /* Catalogue: barre de recherche décalée à droite du logo sur desktop */
 @media (min-width: 900px) {
   .catalogue-search-inner {

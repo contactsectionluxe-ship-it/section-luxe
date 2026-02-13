@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Users2 } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getListing, getSellerListings } from '@/lib/supabase/listings';
+import { getListing, getSellerListings, getListings } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
 import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
@@ -17,6 +17,20 @@ import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
 function formatPhoneDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.replace(/(.{2})/g, '$1 ').trim();
+}
+
+function getDealLevel(price: number, average: number): { label: string; color: string; description: string } {
+  if (price <= average * 0.85) return { label: 'Très bonne affaire', color: '#248a3d', description: 'Le prix est très en-dessous de la moyenne des articles similaires.' };
+  if (price <= average * 0.95) return { label: 'Bonne affaire', color: '#248a3d', description: 'Le prix est en-dessous de la moyenne des articles similaires.' };
+  if (price <= average * 1.05) return { label: 'Offre équitable', color: '#6e6e73', description: 'Le prix est dans la moyenne des articles similaires.' };
+  return { label: 'Au-dessus du marché', color: '#ff9500', description: 'Le prix est supérieur à la moyenne des prix des articles similaires.' };
+}
+function getDealDefault(): { label: string; color: string; description: string } {
+  return { label: 'Offre équitable', color: '#6e6e73', description: 'Le prix de l\'annonce est dans la moyenne des prix des annonces similaires.' };
+}
+function getBarPosition(price: number, min: number, max: number): number {
+  if (max <= min) return 0.5;
+  return Math.max(0, Math.min(1, (price - min) / (max - min)));
 }
 
 export default function ProductPage() {
@@ -50,6 +64,9 @@ export default function ProductPage() {
   const [mapZoom, setMapZoom] = useState(15);
   const [sellerListingsCount, setSellerListingsCount] = useState(0);
   const [showMoreAbout, setShowMoreAbout] = useState(false);
+  const [showPrixEnSavoirPlus, setShowPrixEnSavoirPlus] = useState(false);
+  /** Comparaison de prix : moyenne / min / max des annonces même catégorie et même année (hors annonce actuelle) */
+  const [priceStats, setPriceStats] = useState<{ average: number; min: number; max: number; count: number } | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -68,6 +85,25 @@ export default function ProductPage() {
 
         const sellerListings = await getSellerListings(listingData.sellerId);
         setSellerListingsCount(sellerListings.filter((l) => l.isActive).length);
+
+        const similar = await getListings({
+          category: listingData.category,
+          year: listingData.year ?? undefined,
+          limitCount: 100,
+        });
+        const others = similar.filter((l) => l.id !== listingData.id && l.price > 0);
+        if (others.length > 0) {
+          const prices = others.map((l) => l.price);
+          const sum = prices.reduce((a, b) => a + b, 0);
+          setPriceStats({
+            average: sum / others.length,
+            min: Math.min(...prices),
+            max: Math.max(...prices),
+            count: others.length,
+          });
+        } else {
+          setPriceStats(null);
+        }
 
         if (isAuthenticated && user) {
           const favorite = await getFavorite(user.uid, listingId);
@@ -241,9 +277,9 @@ export default function ProductPage() {
           {/* Desktop: photo et détails même hauteur (hauteur = photo), puis miniatures en dessous */}
           <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
             <div style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
-              {/* Photo principale — définit la hauteur de la ligne */}
-              <div style={{ flex: '1.15 0 0', minWidth: 0 }}>
-                <div style={{ aspectRatio: '4/3', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
+              {/* Photo principale — définit la hauteur de la ligne (aspect 4/3) pour aligner le bas de la carte vendeur */}
+              <div style={{ flex: '1.15 0 0', minWidth: 0, aspectRatio: '4/3' }}>
+                <div style={{ width: '100%', height: '100%', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
                   {listing.photos[currentPhotoIndex] ? (
                     <img
                       src={listing.photos[currentPhotoIndex]}
@@ -288,7 +324,7 @@ export default function ProductPage() {
                   </span>
                 )}
               </div>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#0a0a0a' }}>
                 {listing.title}
               </h1>
               {listing.listingNumber && (
@@ -469,10 +505,18 @@ export default function ProductPage() {
             )}
           </div>
 
-            {/* Informations (gauche) et Description (droite) sur la même ligne, toute la largeur */}
-            <div className="hide-mobile" style={{ gridColumn: '1 / -1', marginTop: 40, borderTop: '1px solid #e5e5e7', paddingTop: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
-              <div style={{ paddingRight: 56 }}>
-                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Informations</h2>
+          {/* À partir de la ligne au-dessus d'Informations jusqu'en bas : gauche = contenu, droite = pub (même largeur que cadre vendeur 0.85fr) */}
+          <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 40, gridColumn: '1 / -1', width: '100%', marginTop: 40, alignItems: 'start' }}>
+            <div style={{ minWidth: 0, paddingRight: 32 }}>
+            {/* Ligne au-dessus d'Informations : même largeur que la ligne au-dessus de Description (contenu uniquement) */}
+            <div style={{ width: '100%', borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
+            {/* Informations puis Description en dessous — 50% gauche */}
+            <div className="hide-mobile" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div>
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <Info size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 3 }} />
+                  Informations
+                </h2>
                 <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -545,12 +589,182 @@ export default function ProductPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 56 }}>
-                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>Description</h2>
+              <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <FileText size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  Description
+                </h2>
                 {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{seller.companyName}</p>}
                 <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
               </div>
+              {/* Section Prix — design type barre de comparaison (offre et prix) */}
+              <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <Euro size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  Prix
+                </h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <span style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f' }}>{listing.price.toLocaleString('fr-FR')}</span>
+                  <span style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', marginRight: 4 }}>€</span>
+                  {(() => {
+                    const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
+                        <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Euro size={10} color="#fff" strokeWidth={2.5} />
+                        </span>
+                        {deal.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div style={{ position: 'relative', marginBottom: 12 }}>
+                  <div style={{ height: 8, display: 'flex', gap: 2, borderRadius: 4, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
+                    <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                    <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                    <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
+                    <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+                  </div>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${priceStats ? getBarPosition(listing.price, priceStats.min, priceStats.max) * 100 : 62.5}%`,
+top: -4,
+                        width: 0,
+                        height: 0,
+                        borderLeft: '5px solid transparent',
+                        borderRight: '5px solid transparent',
+                        borderTop: '6px solid #1d1d1f',
+                      transform: 'translateX(-50%)',
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: 14, color: '#555', lineHeight: 1.5, margin: 0 }}>
+                  {(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()).description}
+                </p>
+                {priceStats && (
+                  <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}).
+                  </p>
+                )}
+                <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
+                  L&apos;estimation indiquée est donnée à titre informatif et peut différer de la valeur réelle du marché. Nous vous recommandons de réaliser votre propre analyse.
+                </p>
+                {!showPrixEnSavoirPlus ? (
+                  <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                    Voir plus
+                  </button>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: 0 }}>
+                      Cette estimation ne constitue pas une valeur contractuelle et peut comporter des variations ou des erreurs. Nous vous recommandons d&apos;effectuer votre propre comparaison et vos vérifications avant toute décision d&apos;achat.
+                    </p>
+                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                      Voir moins
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
+
+          {/* Section Vendeur Professionnel — même largeur que les autres (100 % colonne gauche) */}
+          {seller && (
+            <div style={{ marginTop: 24, borderTop: '1px solid #e5e5e7', paddingTop: 24, width: '100%' }}>
+              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 24 }}>
+                <Store size={20} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, alignSelf: 'center', marginTop: 2 }} />
+                Vendeur professionnel
+              </h2>
+              <div style={{ maxWidth: 480 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
+                  <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {seller.avatarUrl ? (
+                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Store size={40} color="#888" />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
+                    {seller.description && (
+                      <>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            color: '#666',
+                            margin: 0,
+                            lineHeight: 1.5,
+                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
+                          }}
+                        >
+                          {seller.description}
+                        </p>
+                        {seller.description.length > 100 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowMoreAbout((v) => !v)}
+                            style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            {showMoreAbout ? 'Voir moins' : 'Voir plus'}
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {/* Voir les annonces + carte : même largeur que la ligne au-dessus (100 % section) */}
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
+                <Link
+                  href={`/catalogue?sellerId=${seller.uid}`}
+                  style={{ display: 'block', width: '100%', padding: '14px 20px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 500, textAlign: 'center' }}
+                >
+                  Voir les annonces du vendeur ({sellerListingsCount})
+                </Link>
+                {seller.address && (
+                  <div
+                    style={{
+                      width: '100%',
+                      minHeight: 140,
+                      padding: '20px 16px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 14,
+                      backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
+                      backgroundSize: '115%',
+                      backgroundPosition: 'center',
+                      backgroundColor: '#f6f6f8',
+                      border: '1px solid #c8c8cc',
+                      borderRadius: 14,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                      <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                      <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                      style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                    >
+                      Voir la carte
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+            </div>
+          </div>
+          {/* Section publicité — même largeur que cadre vendeur, uniquement sur PC (pas sur téléphone) */}
+          <div className="hide-mobile" style={{ minWidth: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', paddingLeft: 32 }}>
+            <div style={{ width: '100%', flex: 1, minHeight: 300, padding: 20, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e5e5e7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#888' }}>
+              Publicité
+            </div>
+          </div>
           </div>
 
           {/* Mobile: single column */}
@@ -578,10 +792,13 @@ export default function ProductPage() {
                 </div>
               )}
 
-              {/* Informations (gauche) et Description (droite) sur la même ligne - mobile */}
-              <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, alignItems: 'stretch' }}>
-                <div style={{ paddingRight: 32 }}>
-                  <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Informations</h2>
+              {/* Informations puis Description en dessous - mobile */}
+              <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <div>
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                  <Info size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  Informations
+                </h2>
                   <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -654,10 +871,81 @@ export default function ProductPage() {
                   </div>
                 </div>
                 </div>
-                <div style={{ borderLeft: '1px solid #e5e5e7', paddingLeft: 32 }}>
-                  <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>Description</h2>
+                <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                  <FileText size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                  Description
+                </h2>
                   {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{seller.companyName}</p>}
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+                </div>
+                {/* Section Prix - mobile */}
+                <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                    <Euro size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                    Prix
+                  </h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                    <span style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f' }}>{listing.price.toLocaleString('fr-FR')}</span>
+                    <span style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', marginRight: 2 }}>€</span>
+                    {(() => {
+                      const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                      return (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color }}>
+                          <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Euro size={9} color="#fff" strokeWidth={2.5} />
+                          </span>
+                          {deal.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ position: 'relative', marginBottom: 10 }}>
+                    <div style={{ height: 6, display: 'flex', gap: 1, borderRadius: 3, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
+                      <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                      <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                      <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
+                      <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+                    </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${priceStats ? getBarPosition(listing.price, priceStats.min, priceStats.max) * 100 : 62.5}%`,
+                        top: -3,
+                        width: 0,
+                        height: 0,
+                        borderLeft: '4px solid transparent',
+                        borderRight: '4px solid transparent',
+                        borderTop: '5px solid #1d1d1f',
+                        transform: 'translateX(-50%)',
+                      }}
+                    />
+                  </div>
+                  <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, margin: 0 }}>
+                    {(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()).description}
+                  </p>
+                  {priceStats && (
+                    <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}).
+                    </p>
+                  )}
+                  <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
+                    L&apos;estimation indiquée est donnée à titre informatif et peut différer de la valeur réelle du marché. Nous vous recommandons de réaliser votre propre analyse.
+                  </p>
+                  {!showPrixEnSavoirPlus ? (
+                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 4, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                      Voir plus
+                    </button>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: 0 }}>
+                        Cette estimation ne constitue pas une valeur contractuelle et peut comporter des variations ou des erreurs. Nous vous recommandons d&apos;effectuer votre propre comparaison et vos vérifications avant toute décision d&apos;achat.
+                      </p>
+                      <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                        Voir moins
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -671,7 +959,7 @@ export default function ProductPage() {
                 <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>{listing.brand}</span>
               )}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12 }}>{listing.title}</h1>
+            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{listing.title}</h1>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12 }}>
               <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
               <button
@@ -763,95 +1051,6 @@ export default function ProductPage() {
             )}
           </div>
 
-          {/* Section Vendeur Professionnel — en bas de page */}
-          {seller && (
-            <div style={{ marginTop: 40, borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
-              <h2 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 24 }}>
-                <Users2 size={28} color="#1d1d1f" />
-                Vendeur professionnel
-              </h2>
-              <div style={{ maxWidth: 480, margin: '0 auto' }}>
-                {/* Logo, nom, description (2 lignes + Voir plus) */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 20 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {seller.avatarUrl ? (
-                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Store size={40} color="#888" />
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
-                    {seller.description && (
-                      <>
-                        <p
-                          style={{
-                            fontSize: 14,
-                            color: '#666',
-                            margin: 0,
-                            lineHeight: 1.5,
-                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
-                          }}
-                        >
-                          {seller.description}
-                        </p>
-                        {seller.description.length > 100 && (
-                          <button
-                            type="button"
-                            onClick={() => setShowMoreAbout((v) => !v)}
-                            style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
-                          >
-                            {showMoreAbout ? 'Voir moins' : 'Voir plus'}
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Bouton Voir les annonces du pro — même largeur que la carte */}
-                <Link
-                  href={`/catalogue?sellerId=${seller.uid}`}
-                  style={{ display: 'block', width: '100%', padding: '14px 20px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 500, textAlign: 'center', marginBottom: 12 }}
-                >
-                  Voir les annonces du pro ({sellerListingsCount})
-                </Link>
-                {/* Carte */}
-                {seller.address && (
-                    <div
-                      style={{
-                        minHeight: 140,
-                        padding: '20px 16px 16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 14,
-                        backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
-                        backgroundSize: '115%',
-                        backgroundPosition: 'center',
-                        backgroundColor: '#f6f6f8',
-                        border: '1px solid #c8c8cc',
-                        borderRadius: 14,
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                        <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                        <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                        style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
-                      >
-                        Voir la carte
-                      </button>
-                    </div>
-                  )}
-              </div>
-            </div>
-          )}
-
         </div>
       </div>
 
@@ -920,6 +1119,7 @@ export default function ProductPage() {
           </div>
         </div>
       )}
+      </div>
     </>
   );
 }

@@ -113,9 +113,8 @@ CREATE POLICY "Users are viewable by everyone" ON public.users FOR SELECT USING 
 CREATE POLICY "Users can insert their own profile" ON public.users FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Users can update their own profile" ON public.users FOR UPDATE USING (auth.uid() = id);
 
--- Sellers: Owner and admins can read, only owner can insert
-CREATE POLICY "Sellers viewable by owner and admins" ON public.sellers FOR SELECT 
-  USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+-- Sellers: Anyone can read (for product page), only owner can insert/update
+CREATE POLICY "Sellers are viewable by everyone" ON public.sellers FOR SELECT USING (true);
 CREATE POLICY "Users can create their seller profile" ON public.sellers FOR INSERT WITH CHECK (auth.uid() = id);
 CREATE POLICY "Sellers can update their own profile" ON public.sellers FOR UPDATE 
   USING (auth.uid() = id OR EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
