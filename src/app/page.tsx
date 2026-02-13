@@ -47,7 +47,7 @@ export default function HomePage() {
       <section
         style={{
           position: 'relative',
-          paddingTop: 'var(--header-height)',
+          paddingTop: 'calc(var(--header-height) + 48px + 1cm)',
           paddingBottom: 100,
           paddingLeft: 24,
           paddingRight: 24,

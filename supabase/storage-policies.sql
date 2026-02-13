@@ -33,3 +33,21 @@ USING (
   bucket_id = 'documents'
   AND owner_id = auth.uid()::text
 );
+
+-- ========== Bucket "listings" (photos d'annonces) ==========
+-- Permettre aux vendeurs connectés d'uploader des photos dans leur dossier
+DROP POLICY IF EXISTS "Upload photos annonces listings" ON storage.objects;
+CREATE POLICY "Upload photos annonces listings"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'listings'
+  AND name LIKE (auth.uid()::text || '/%')
+);
+
+-- Lecture publique des photos d'annonces (bucket public)
+DROP POLICY IF EXISTS "Lecture publique photos listings" ON storage.objects;
+CREATE POLICY "Lecture publique photos listings"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'listings');

@@ -18,9 +18,9 @@ export interface FileUploadProps {
 
 export function FileUpload({
   label,
-  accept = { 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] },
+  accept = { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
   maxFiles = 1,
-  maxSize = 5 * 1024 * 1024,
+  maxSize = MAX_FILE_SIZE_BYTES,
   onFilesChange,
   error,
   helperText,
@@ -82,7 +82,7 @@ export function FileUpload({
         <div
           {...getRootProps()}
           className={cn(
-            'border border-dashed border-[#e8e8e8] p-8 text-center cursor-pointer transition-colors',
+            'border border-dashed border-[#e8e8e8] p-10 min-h-[140px] flex items-center justify-center text-center cursor-pointer transition-colors',
             isDragActive && 'border-[#1a1a1a] bg-[#fafafa]',
             error && 'border-red-500',
             files.length >= maxFiles && 'opacity-50 cursor-not-allowed'
@@ -90,7 +90,7 @@ export function FileUpload({
         >
           <input {...getInputProps()} />
           <div className="flex flex-col items-center gap-2">
-            <Upload className="h-6 w-6 text-[#999]" />
+            <Upload className="h-8 w-8 text-[#999]" />
             <p className="text-sm text-[#666]">
               {isDragActive
                 ? 'Déposez ici'

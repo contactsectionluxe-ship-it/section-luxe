@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
-import { getOrCreateConversation } from '@/lib/supabase/messaging';
+import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
@@ -27,6 +27,18 @@ export default function ProductPage() {
   const [contactLoading, setContactLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showPhone, setShowPhone] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [showLegalMore, setShowLegalMore] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    message: 'Bonjour,\nVotre produit est-il toujours disponible ?',
+  });
+  const [contactFormSubmitting, setContactFormSubmitting] = useState(false);
+  const [contactFormError, setContactFormError] = useState('');
 
   useEffect(() => {
     async function loadData() {
@@ -83,16 +95,47 @@ export default function ProductPage() {
     }
   };
 
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/produit/${listingId}` : '';
+    const title = listing ? `${listing.title} - Section Luxe` : 'Section Luxe';
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ title, url });
+      } else {
+        await navigator.clipboard?.writeText(url);
+        alert('Lien copié dans le presse-papiers.');
+      }
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        try {
+          await navigator.clipboard?.writeText(url);
+          alert('Lien copié dans le presse-papiers.');
+        } catch {
+          alert('Impossible de partager.');
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (user?.displayName) {
+      const parts = user.displayName.trim().split(/\s+/);
+      setContactForm((prev) => ({
+        ...prev,
+        firstName: parts[0] || prev.firstName,
+        lastName: parts.slice(1).join(' ') || prev.lastName,
+        email: user.email || prev.email,
+      }));
+    }
+  }, [user]);
+
   const handleContactSeller = async () => {
     if (!isAuthenticated) {
       setShowAuthModal(true);
       return;
     }
-
     if (!listing || !seller || contactLoading) return;
-
     if (user?.uid === listing.sellerId) return;
-
     setContactLoading(true);
     try {
       const conversation = await getOrCreateConversation({
@@ -104,12 +147,54 @@ export default function ProductPage() {
         sellerId: listing.sellerId,
         sellerName: seller.companyName,
       });
-
       router.push(`/messages/${conversation.id}`);
     } catch (error) {
       console.error('Error creating conversation:', error);
     } finally {
       setContactLoading(false);
+    }
+  };
+
+  const handleContactFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!listing || !seller || !user || user.uid === listing.sellerId) return;
+    const { firstName, lastName, email, phone, message } = contactForm;
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !message.trim() || !phone.trim()) {
+      setContactFormError('Tous les champs obligatoires doivent être renseignés.');
+      return;
+    }
+    setContactFormError('');
+    setContactFormSubmitting(true);
+    try {
+      const buyerName = `${firstName.trim()} ${lastName.trim()}`;
+      const conversation = await getOrCreateConversation({
+        listingId: listing.id,
+        listingTitle: listing.title,
+        listingPhoto: listing.photos[0] || '',
+        buyerId: user.uid,
+        buyerName,
+        sellerId: listing.sellerId,
+        sellerName: seller.companyName,
+      });
+      const fullMessage = `${message.trim()}\n\n— Contact : ${email}, tél. ${phone.trim()}`;
+      await sendMessage({
+        conversationId: conversation.id,
+        senderId: user.uid,
+        senderName: buyerName,
+        content: fullMessage,
+        isBuyer: true,
+      });
+      setShowContactForm(false);
+      router.push(`/messages/${conversation.id}`);
+    } catch (err) {
+      console.error('Error sending contact form:', err);
+      setContactFormError('Une erreur est survenue. Réessayez.');
+    } finally {
+      setContactFormSubmitting(false);
     }
   };
 
@@ -195,14 +280,24 @@ export default function ProductPage() {
 
             {/* Details */}
             <div>
-              {categoryLabel && (
-                <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, marginBottom: 16 }}>
-                  {categoryLabel}
-                </span>
-              )}
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {categoryLabel && (
+                  <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>
+                    {categoryLabel}
+                  </span>
+                )}
+                {listing.brand && (
+                  <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>
+                    {listing.brand}
+                  </span>
+                )}
+              </div>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
                 {listing.title}
               </h1>
+              {listing.listingNumber && (
+                <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
+              )}
               <p style={{ fontSize: 28, fontWeight: 600, marginBottom: 16 }}>{formatPrice(listing.price)}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: '#888', marginBottom: 24 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -233,34 +328,74 @@ export default function ProductPage() {
                   }}
                 >
                   <Heart size={18} fill={isFavorited ? '#fff' : 'none'} />
-                  {isFavorited ? 'Sauvegardé' : 'Sauvegarder'}
+                  {isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                 </button>
-              </div>
-
-              {user?.uid !== listing.sellerId && (
                 <button
-                  onClick={handleContactSeller}
-                  disabled={contactLoading}
+                  onClick={handleShare}
                   style={{
-                    width: '100%',
                     height: 50,
+                    padding: '0 20px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 8,
-                    backgroundColor: '#1d1d1f',
-                    color: '#fff',
-                    border: 'none',
+                    backgroundColor: '#fff',
+                    color: '#1d1d1f',
+                    border: '1.5px solid #d2d2d7',
                     borderRadius: 980,
                     fontSize: 15,
                     fontWeight: 500,
                     cursor: 'pointer',
-                    marginBottom: 32,
                   }}
                 >
-                  <MessageCircle size={18} />
-                  {contactLoading ? 'Chargement...' : 'Contacter le vendeur'}
+                  <Share2 size={18} />
+                  Partager
                 </button>
+              </div>
+
+              {user?.uid !== listing.sellerId && showContactForm && (
+                <div style={{ marginBottom: 32, padding: 24, backgroundColor: '#f9f9f9', borderRadius: 18, border: '1px solid #eee' }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Contacter le vendeur</h3>
+                  {contactFormError && (
+                    <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{contactFormError}</p>
+                  )}
+                  <form onSubmit={handleContactFormSubmit}>
+                    <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Prénom *</label>
+                        <input required value={contactForm.firstName} onChange={(e) => setContactForm((p) => ({ ...p, firstName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Prénom" />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Nom *</label>
+                        <input required value={contactForm.lastName} onChange={(e) => setContactForm((p) => ({ ...p, lastName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Nom" />
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Email *</label>
+                      <input type="email" required value={contactForm.email} onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="email@exemple.fr" />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Message *</label>
+                      <textarea required value={contactForm.message} onChange={(e) => setContactForm((p) => ({ ...p, message: e.target.value }))} rows={4} style={{ width: '100%', padding: 12, fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, resize: 'vertical' }} placeholder="Votre message" />
+                    </div>
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Téléphone *</label>
+                      <input type="tel" required value={contactForm.phone} onChange={(e) => setContactForm((p) => ({ ...p, phone: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="+33 6 12 34 56 78" />
+                    </div>
+                    <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>Obligatoire * — Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe. Veuillez ne pas mentionner vos données personnelles dans le contenu de votre message. Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement.</p>
+                    {!showLegalMore ? (
+                      <button type="button" onClick={() => setShowLegalMore(true)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#888', cursor: 'pointer', padding: 0, marginBottom: 16, textDecoration: 'underline' }}>Afficher plus</button>
+                    ) : (
+                      <>
+                        <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>Elles sont transmises directement au vendeur que vous souhaitez contacter et le cas échéant, aux vendeurs professionnels. Les données obligatoires sont celles signalées par un astérisque. Ces données sont utilisées à des fins de : mise en relation avec le vendeur ; mesure et étude de l&apos;audience du site ; lutte anti-fraude ; gestion de vos demandes d&apos;exercice de vos droits. Vous disposez d&apos;un droit d&apos;accès, de rectification, d&apos;effacement, de limitation, d&apos;opposition, à la portabilité et d&apos;introduire une réclamation auprès d&apos;une autorité de contrôle (CNIL). Pour en savoir plus : https://www.sectionluxe.fr/politique-confidentialite</p>
+                        <button type="button" onClick={() => setShowLegalMore(false)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#888', cursor: 'pointer', padding: 0, marginBottom: 16, textDecoration: 'underline' }}>Afficher moins</button>
+                      </>
+                    )}
+                    <button type="submit" disabled={contactFormSubmitting} style={{ width: '100%', height: 48, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 980, fontSize: 15, fontWeight: 500, cursor: contactFormSubmitting ? 'not-allowed' : 'pointer' }}>
+                      {contactFormSubmitting ? 'Envoi...' : 'Envoyer'}
+                    </button>
+                  </form>
+                </div>
               )}
 
               <div style={{ marginBottom: 32 }}>
@@ -271,13 +406,36 @@ export default function ProductPage() {
               {seller && (
                 <div style={{ padding: 20, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 48, height: 48, backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Store size={24} color="#888" />
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {seller.avatarUrl ? (
+                        <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <Store size={24} color="#888" />
+                      )}
                     </div>
-                    <div>
+                    <div style={{ flex: 1 }}>
                       <h3 style={{ fontSize: 15, fontWeight: 600 }}>{seller.companyName}</h3>
                       <p style={{ fontSize: 12, color: '#888' }}>Vendeur professionnel</p>
+                      {seller.address && <p style={{ fontSize: 12, color: '#666', marginTop: 6 }}>{seller.address}</p>}
                     </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPhone((v) => !v)}
+                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                    >
+                      <Phone size={18} />
+                      {showPhone ? seller.phone : 'N° téléphone'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm((v) => !v); }}
+                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                    >
+                      <MessageCircle size={18} />
+                      Message
+                    </button>
                   </div>
                 </div>
               )}
@@ -311,9 +469,14 @@ export default function ProductPage() {
             </div>
 
             {/* Details */}
-            {categoryLabel && (
-              <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, marginBottom: 12 }}>{categoryLabel}</span>
-            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {categoryLabel && (
+                <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>{categoryLabel}</span>
+              )}
+              {listing.brand && (
+                <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>{listing.brand}</span>
+              )}
+            </div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12 }}>{listing.title}</h1>
             <p style={{ fontSize: 24, fontWeight: 600, marginBottom: 12 }}>{formatPrice(listing.price)}</p>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: '#888', marginBottom: 20 }}>
@@ -321,23 +484,23 @@ export default function ProductPage() {
               <span>{formatDate(listing.createdAt)}</span>
             </div>
 
-            <button
-              onClick={handleFavoriteClick}
-              style={{ width: '100%', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isFavorited ? '#000' : '#fff', color: isFavorited ? '#fff' : '#000', border: '1px solid #000', fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 12 }}
-            >
-              <Heart size={18} fill={isFavorited ? '#fff' : 'none'} />
-              {isFavorited ? 'Sauvegardé' : 'Sauvegarder'}
-            </button>
-
-            {user?.uid !== listing.sellerId && (
+            <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
               <button
-                onClick={handleContactSeller}
-                style={{ width: '100%', height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#000', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: 'pointer', marginBottom: 24 }}
+                onClick={handleFavoriteClick}
+                disabled={favoriteLoading}
+                style={{ flex: 1, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: isFavorited ? '#000' : '#fff', color: isFavorited ? '#fff' : '#000', border: '1px solid #000', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
               >
-                <MessageCircle size={18} />
-                Contacter le vendeur
+                <Heart size={18} fill={isFavorited ? '#fff' : 'none'} />
+                {isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
               </button>
-            )}
+              <button
+                onClick={handleShare}
+                style={{ height: 48, padding: '0 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', color: '#000', border: '1px solid #000', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+              >
+                <Share2 size={18} />
+                Partager
+              </button>
+            </div>
 
             <div style={{ marginBottom: 24 }}>
               <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 10 }}>Description</h2>
@@ -347,13 +510,28 @@ export default function ProductPage() {
             {seller && (
               <div style={{ padding: 16, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ width: 40, height: 40, backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Store size={20} color="#888" />
+                  <div style={{ width: 40, height: 40, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {seller.avatarUrl ? (
+                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <Store size={20} color="#888" />
+                    )}
                   </div>
-                  <div>
+                  <div style={{ flex: 1 }}>
                     <h3 style={{ fontSize: 14, fontWeight: 600 }}>{seller.companyName}</h3>
                     <p style={{ fontSize: 11, color: '#888' }}>Vendeur professionnel</p>
+                    {seller.address && <p style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{seller.address}</p>}
                   </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                  <button type="button" onClick={() => setShowPhone((v) => !v)} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    <Phone size={16} />
+                    {showPhone ? seller.phone : 'N° téléphone'}
+                  </button>
+                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm((v) => !v); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                    <MessageCircle size={16} />
+                    Message
+                  </button>
                 </div>
               </div>
             )}

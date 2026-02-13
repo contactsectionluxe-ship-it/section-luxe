@@ -13,6 +13,7 @@ function rowToSeller(row: any): Seller {
     uid: row.id,
     email: row.email,
     companyName: row.company_name,
+    siret: row.siret || null,
     address: row.address,
     phone: row.phone,
     description: row.description,

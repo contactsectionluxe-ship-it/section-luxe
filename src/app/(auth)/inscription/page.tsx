@@ -19,7 +19,8 @@ const inputStyle = {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -41,7 +42,7 @@ export default function RegisterPage() {
     }
     setLoading(true);
     try {
-      await signUpBuyer(email, password, displayName);
+      await signUpBuyer(email, password, `${firstName.trim()} ${lastName.trim()}`.trim());
       router.push('/');
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -70,9 +71,15 @@ export default function RegisterPage() {
               </div>
             )}
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Nom complet</label>
-              <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Prénom Nom" required style={inputStyle} />
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Prénom</label>
+                <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" required style={inputStyle} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Nom</label>
+                <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" required style={inputStyle} />
+              </div>
             </div>
 
             <div style={{ marginBottom: 20 }}>

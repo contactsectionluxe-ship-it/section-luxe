@@ -10,7 +10,7 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, helperText, id, ...props }, ref) => {
+  ({ className, label, error, helperText, id, style, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
 
     return (
@@ -26,8 +26,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          style={{ paddingLeft: 18, paddingRight: 18, boxSizing: 'border-box', ...style }}
           className={cn(
-            'w-full h-11 px-4 text-sm bg-white border border-[#e8e8e8] text-[#1a1a1a] placeholder-[#999]',
+            'w-full h-11 text-sm bg-white border border-[#e8e8e8] text-[#1a1a1a] placeholder-[#999]',
             'transition-colors duration-200',
             'focus:outline-none focus:border-[#1a1a1a]',
             'disabled:bg-[#f5f5f5] disabled:cursor-not-allowed',

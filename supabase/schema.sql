@@ -20,12 +20,15 @@ CREATE TABLE IF NOT EXISTS public.sellers (
   company_name TEXT NOT NULL,
   siret TEXT,
   address TEXT NOT NULL,
+  city TEXT NOT NULL DEFAULT '',
+  postcode TEXT NOT NULL DEFAULT '',
   phone TEXT NOT NULL,
   description TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   id_card_front_url TEXT NOT NULL,
   id_card_back_url TEXT,
   kbis_url TEXT NOT NULL,
+  avatar_url TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -41,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.listings (
   category TEXT NOT NULL,
   photos TEXT[] DEFAULT '{}',
   likes_count INTEGER DEFAULT 0,
+  listing_number TEXT UNIQUE,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

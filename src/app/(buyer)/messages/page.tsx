@@ -53,8 +53,8 @@ export default function MessagesPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '30px 20px 60px' }}>
-        <div style={{ marginBottom: 32 }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', paddingTop: 38, paddingRight: 20, paddingBottom: 60, paddingLeft: 20 }}>
+        <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
             Messages
           </h1>

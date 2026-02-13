@@ -39,7 +39,7 @@ export async function uploadListingPhoto(
 ): Promise<string> {
   const client = checkSupabase();
   const extension = file.name.split('.').pop();
-  const path = `listings/${sellerId}/${listingId}/photo_${index}.${extension}`;
+  const path = `${sellerId}/${listingId}/photo_${index}.${extension}`;
 
   const { error } = await client.storage
     .from('listings')
@@ -70,15 +70,48 @@ export async function deleteListingPhoto(photoUrl: string): Promise<void> {
   }
 }
 
-// Upload multiple listing photos
+// Upload multiple listing photos (passe par l'API pour contourner la RLS Storage)
+// startIndex : lors d'une modification, nombre de photos déjà présentes (évite d'écraser photo_0, photo_1...)
 export async function uploadListingPhotos(
   sellerId: string,
   listingId: string,
-  files: File[]
+  files: File[],
+  startIndex: number = 0
 ): Promise<string[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase Storage non configuré');
+  }
+  if (files.length === 0) return [];
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    const formData = new FormData();
+    formData.set('listingId', listingId);
+    formData.set('startIndex', String(startIndex));
+    files.forEach((file) => formData.append('photos', file));
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    const res = await fetch(`${base}/api/upload-listing-photos`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      const msg = (body as { error?: string }).error || `Upload échoué (${res.status})`;
+      if (res.status === 503 && msg.includes('service role')) {
+        throw new Error(
+          'Upload des photos impossible : la clé Supabase service role n’est pas configurée. ' +
+          'Ajoutez SUPABASE_SERVICE_ROLE_KEY dans .env.local (Supabase → Settings → API → service_role), puis redémarrez le serveur.'
+        );
+      }
+      throw new Error(msg);
+    }
+    const { urls } = (await res.json()) as { urls: string[] };
+    return urls;
+  }
+
   const uploadPromises = files.map((file, index) =>
     uploadListingPhoto(sellerId, listingId, file, index)
   );
-
   return Promise.all(uploadPromises);
 }

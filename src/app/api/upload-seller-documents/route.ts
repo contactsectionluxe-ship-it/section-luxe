@@ -22,6 +22,14 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    const vRecto = validateDocumentFile(fileRecto);
+    if (!vRecto.ok) return NextResponse.json({ error: `Recto (CNI) : ${vRecto.error}` }, { status: 400 });
+    if (fileVerso?.size) {
+      const vVerso = validateDocumentFile(fileVerso);
+      if (!vVerso.ok) return NextResponse.json({ error: `Verso (CNI) : ${vVerso.error}` }, { status: 400 });
+    }
+    const vKbis = validateDocumentFile(fileKbis);
+    if (!vKbis.ok) return NextResponse.json({ error: `KBIS : ${vKbis.error}` }, { status: 400 });
 
     const tempId = `temp_${Date.now()}`;
     const bucket = 'documents';

@@ -43,12 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userData = await getUserData(supabaseUser.id);
     setUser(userData);
 
-    if (userData?.role === 'seller') {
-      const sellerData = await getSellerData(supabaseUser.id);
-      setSeller(sellerData);
-    } else {
-      setSeller(null);
-    }
+    // Charger seller si une fiche existe (même pour admin)
+    const sellerData = await getSellerData(supabaseUser.id);
+    setSeller(sellerData);
   };
 
   useEffect(() => {
@@ -66,10 +63,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await getUserData(sbUser.id);
           setUser(userData);
 
-          if (userData?.role === 'seller') {
-            const sellerData = await getSellerData(sbUser.id);
-            setSeller(sellerData);
-          }
+          // Charger seller si role='seller' OU si une fiche seller existe (même pour admin)
+          const sellerData = await getSellerData(sbUser.id);
+          setSeller(sellerData);
         } else {
           setUser(null);
           setSeller(null);
@@ -88,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     seller,
     loading,
     isAuthenticated: !!user,
-    isSeller: user?.role === 'seller',
+    isSeller: !!seller || user?.role === 'seller', // Vrai si une fiche seller existe OU si le rôle est 'seller'
     isApprovedSeller: seller?.status === 'approved',
     isAdmin: user?.role === 'admin',
     isSupabaseConfigured: Boolean(isSupabaseConfigured),

@@ -28,3 +28,6 @@ export type { AvatarProps } from './Avatar';
 
 export { Spinner, PageLoader } from './Spinner';
 export type { SpinnerProps } from './Spinner';
+
+export { AddressAutocomplete } from './AddressAutocomplete';
+export type { AddressAutocompleteProps } from './AddressAutocomplete';

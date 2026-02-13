@@ -19,31 +19,66 @@ function rowToListing(row: any): Listing {
     category: row.category,
     photos: row.photos || [],
     likesCount: row.likes_count || 0,
+    listingNumber: row.listing_number ?? null,
     isActive: row.is_active,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
+    brand: row.brand ?? null,
+    model: row.model ?? null,
+    condition: row.condition ?? null,
+    material: row.material ?? null,
+    color: row.color ?? null,
+    heightCm: row.height_cm != null ? Number(row.height_cm) : null,
+    widthCm: row.width_cm != null ? Number(row.width_cm) : null,
+    year: row.year ?? null,
+    packaging: row.packaging && Array.isArray(row.packaging) ? row.packaging : null,
   };
+}
+
+/** Génère le prochain numéro d'annonce (unique à vie, jamais réutilisé). Utilise la séquence Supabase. */
+export async function getNextListingNumber(): Promise<string> {
+  const client = checkSupabase();
+  const { data, error } = await client.rpc('get_next_listing_number');
+  if (error || data == null) {
+    throw new Error(
+      error?.message || 'Impossible de générer le numéro d\'annonce. Exécutez la migration supabase/migrations/listings_number_sequence.sql dans le SQL Editor Supabase.'
+    );
+  }
+  return String(data);
 }
 
 // Create a new listing
 export async function createListing(
-  data: Omit<Listing, 'id' | 'likesCount' | 'isActive' | 'createdAt' | 'updatedAt'>
+  data: Omit<Listing, 'id' | 'likesCount' | 'listingNumber' | 'isActive' | 'createdAt' | 'updatedAt'>
 ): Promise<string> {
   const client = checkSupabase();
-  
+  const listingNumber = await getNextListingNumber();
+
+  const insertData: Record<string, unknown> = {
+    seller_id: data.sellerId,
+    seller_name: data.sellerName,
+    title: data.title,
+    description: data.description,
+    price: data.price,
+    category: data.category,
+    photos: data.photos,
+    likes_count: 0,
+    listing_number: listingNumber,
+    is_active: true,
+  };
+  if (data.brand != null) insertData.brand = data.brand;
+  if (data.model != null) insertData.model = data.model;
+  if (data.condition != null) insertData.condition = data.condition;
+  if (data.material != null) insertData.material = data.material;
+  if (data.color != null) insertData.color = data.color;
+  if (data.heightCm != null) insertData.height_cm = data.heightCm;
+  if (data.widthCm != null) insertData.width_cm = data.widthCm;
+  if (data.year != null) insertData.year = data.year;
+  if (data.packaging != null && data.packaging.length) insertData.packaging = data.packaging;
+
   const { data: listing, error } = await client
     .from('listings')
-    .insert({
-      seller_id: data.sellerId,
-      seller_name: data.sellerName,
-      title: data.title,
-      description: data.description,
-      price: data.price,
-      category: data.category,
-      photos: data.photos,
-      likes_count: 0,
-      is_active: true,
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -66,6 +101,15 @@ export async function updateListing(
   if (data.category !== undefined) updateData.category = data.category;
   if (data.photos !== undefined) updateData.photos = data.photos;
   if (data.isActive !== undefined) updateData.is_active = data.isActive;
+  if (data.brand !== undefined) updateData.brand = data.brand;
+  if (data.model !== undefined) updateData.model = data.model;
+  if (data.condition !== undefined) updateData.condition = data.condition;
+  if (data.material !== undefined) updateData.material = data.material;
+  if (data.color !== undefined) updateData.color = data.color;
+  if (data.heightCm !== undefined) updateData.height_cm = data.heightCm;
+  if (data.widthCm !== undefined) updateData.width_cm = data.widthCm;
+  if (data.year !== undefined) updateData.year = data.year;
+  if (data.packaging !== undefined) updateData.packaging = data.packaging;
 
   const { error } = await client
     .from('listings')

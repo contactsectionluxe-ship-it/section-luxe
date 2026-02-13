@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
+import { isAdminEmail } from '@/lib/constants';
 
 const navigation = [
   { name: 'À la une', href: '/' },
@@ -14,7 +15,8 @@ const navigation = [
 ];
 
 export function Header() {
-  const { user, isAuthenticated, isSeller, isAdmin } = useAuth();
+  const { user, seller, isAuthenticated, isSeller, isAdmin } = useAuth();
+  const showAdmin = isAdmin && isAdminEmail(user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -96,8 +98,8 @@ export function Header() {
             justifyContent: 'space-between',
           }}
         >
-          <Link href="/" style={{ display: 'flex', alignItems: 'flex-start' }}>
-            <img src="/logo.png" alt="Section Luxe" style={{ height: 168, width: 'auto', display: 'block' }} />
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
+            <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -3 }} />
           </Link>
 
           <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
@@ -110,11 +112,11 @@ export function Header() {
 
           <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" style={iconLabelStyle}>
-              <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.75} /></div>
+              <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.5} /></div>
               <span>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
-              <div style={iconWrapStyle}><MessageCircle size={20} strokeWidth={1.75} /></div>
+              <div style={iconWrapStyle}><MessageCircle size={20} strokeWidth={1.5} /></div>
               <span>Messages</span>
             </Link>
             {isAuthenticated ? (
@@ -130,7 +132,9 @@ export function Header() {
                       fontFamily: 'inherit',
                     }}
                   >
-                    <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.75} /></div>
+                    <div style={{ ...iconWrapStyle, width: 24, height: 24 }}>
+                      <User size={24} strokeWidth={1.5} />
+                    </div>
                     <span>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
                   </button>
                   {userMenuOpen && (
@@ -148,16 +152,30 @@ export function Header() {
                       }}
                     >
                       <div style={{ padding: '16px 18px', borderBottom: '1px solid #f5f5f7' }}>
-                        <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 2, color: '#1d1d1f' }}>{user?.displayName || 'Utilisateur'}</p>
-                        <p style={{ fontSize: 13, color: '#86868b' }}>{user?.email}</p>
+                        <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 2, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.displayName || 'Utilisateur'}</p>
+                        <p style={{ fontSize: 13, color: '#86868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
                       </div>
                       <div style={{ padding: 8 }}>
-                        <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Heart size={18} /> Favoris</Link>
-                        <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Messages</Link>
-                        {isSeller && <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Store size={18} /> Espace vendeur</Link>}
-                        {isAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Administration</Link>}
-                        <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
-                        <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Déconnexion</button>
+                        {seller ? (
+                          <>
+                            <Link href="/vendeur/annonces/nouvelle" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><PlusCircle size={18} /> Déposer une annonce</Link>
+                            <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Package size={18} /> Mes annonces</Link>
+                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Ma messagerie</Link>
+                            <Link href="/vendeur/factures" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><FileText size={18} /> Mes factures</Link>
+                            <Link href="/vendeur/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
+                            {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
+                            <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
+                            <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Se déconnecter</button>
+                          </>
+                        ) : (
+                          <>
+                            <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Heart size={18} /> Favoris</Link>
+                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Messages</Link>
+                            {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
+                            <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
+                            <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Déconnexion</button>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -165,7 +183,7 @@ export function Header() {
               </>
             ) : (
               <Link href="/connexion" style={iconLabelStyle}>
-                <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.75} /></div>
+                <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.5} /></div>
                 <span>Se connecter</span>
               </Link>
             )}
@@ -211,13 +229,28 @@ export function Header() {
             {isAuthenticated ? (
               <div>
                 <p style={{ fontSize: 13, color: '#86868b', marginBottom: 4 }}>Connecté</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>{(user?.displayName || '').trim().split(/\s+/)[0] || user?.email || 'Compte'}</p>
+                <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>
+                  {(user?.displayName || '').trim().split(/\s+/)[0] || user?.email || 'Compte'}
+                </p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
-                  <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>
-                  {isSeller && <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Espace vendeur</Link>}
-                  {isAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Administration</Link>}
-                  <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Déconnexion</button>
+                  {seller ? (
+                    <>
+                      <Link href="/vendeur/annonces/nouvelle" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Déposer une annonce</Link>
+                      <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes annonces</Link>
+                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie</Link>
+                      <Link href="/vendeur/factures" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes factures</Link>
+                      <Link href="/vendeur/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
+                      {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
+                      <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Se déconnecter</button>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
+                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>
+                      {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
+                      <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Déconnexion</button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (

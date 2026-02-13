@@ -7,6 +7,7 @@ import { CheckCircle, Upload, X } from 'lucide-react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { signUpSeller } from '@/lib/supabase/auth';
 import { fetchCompanyBySiret, type CompanyInfo } from '@/lib/siret';
+import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 
 function FileUploadField({
   label,
@@ -88,6 +89,7 @@ function FileUploadField({
           <p style={{ fontSize: 13, color: '#666' }}>
             Glissez-déposez ou cliquez
           </p>
+          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>5 Mo max. JPEG, PNG, WebP ou PDF.</p>
         </div>
       )}
       {rejectMessage && (
@@ -106,6 +108,11 @@ export default function SellerRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  // Remonter le formulaire en haut à chaque changement d'étape
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step]);
   const [emailNotificationSent, setEmailNotificationSent] = useState(false);
   const [emailErrorDetail, setEmailErrorDetail] = useState('');
 
@@ -115,6 +122,10 @@ export default function SellerRegisterPage() {
   const [siretSuggestion, setSiretSuggestion] = useState<CompanyInfo | null>(null);
   const siretFetchRef = useRef<string | null>(null);
   const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [postcode, setPostcode] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
@@ -152,7 +163,7 @@ export default function SellerRegisterPage() {
   }, [siret]);
 
   const validateStep1 = () => {
-    if (!companyName || !siret || !address || !email || !phone || !description) {
+    if (!companyName || !siret || !address || !firstName?.trim() || !lastName?.trim() || !email || !phone || !description) {
       setError('Veuillez remplir tous les champs');
       return false;
     }
@@ -206,11 +217,14 @@ export default function SellerRegisterPage() {
         companyName,
         siret,
         address,
+        city: city.trim(),
+        postcode: postcode.trim(),
         phone,
         description,
         idCardFrontUrl,
         idCardBackUrl,
         kbisUrl,
+        displayName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       });
 
       const formDataEmail = new FormData();
@@ -508,16 +522,44 @@ export default function SellerRegisterPage() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Adresse
+                    Adresse <span style={{ color: '#dc2626' }}>*</span>
                   </label>
-                  <input
-                    type="text"
+                  <AddressAutocomplete
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="123 Avenue des Champs-Élysées, 75008 Paris"
+                    onChange={setAddress}
+                    onSuggestionSelect={(_addr, c, p) => { setCity(c); setPostcode(p); }}
+                    placeholder="25 avenue des Champs-Élysées, 75008 Paris"
                     required
-                    style={inputStyle}
                   />
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                      Prénom <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Prénom"
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                      Nom <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Nom"
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
                 </div>
 
                 <div style={{ marginBottom: 18 }}>

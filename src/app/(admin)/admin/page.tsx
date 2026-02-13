@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, CheckCircle, Clock, XCircle, Eye, ExternalLink, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { isAdminEmail } from '@/lib/constants';
 import { getAllSellers, getSellerStats, approveSeller, rejectSeller } from '@/lib/supabase/admin';
 import { Seller } from '@/types';
 import { formatDate } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
+  const canAccessAdmin = isAdmin && isAdminEmail(user?.email);
 
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
@@ -20,10 +22,10 @@ export default function AdminDashboardPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
 
   useEffect(() => {
-    if (!authLoading && !isAdmin) {
+    if (!authLoading && !canAccessAdmin) {
       router.push('/');
     }
-  }, [authLoading, isAdmin, router]);
+  }, [authLoading, canAccessAdmin, router]);
 
   useEffect(() => {
     async function loadData() {
@@ -37,8 +39,8 @@ export default function AdminDashboardPage() {
         setLoading(false);
       }
     }
-    if (isAdmin) loadData();
-  }, [isAdmin]);
+    if (canAccessAdmin) loadData();
+  }, [canAccessAdmin]);
 
   const handleApprove = async (sellerId: string) => {
     setActionLoading(true);
@@ -76,7 +78,7 @@ export default function AdminDashboardPage() {
     );
   }
 
-  if (!isAdmin) return null;
+  if (!canAccessAdmin) return null;
 
   const filteredSellers = sellers.filter((s) => filter === 'all' || s.status === filter);
 
@@ -229,15 +231,30 @@ export default function AdminDashboardPage() {
             <div style={{ marginBottom: 24 }}>
               <p style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Documents</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <a href={selectedSeller.idCardFrontUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
+                <a
+                  href={`/api/signed-document?url=${encodeURIComponent(selectedSeller.idCardFrontUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}
+                >
                   <ExternalLink size={14} /> CNI (recto)
                 </a>
                 {selectedSeller.idCardBackUrl && (
-                  <a href={selectedSeller.idCardBackUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
+                  <a
+                    href={`/api/signed-document?url=${encodeURIComponent(selectedSeller.idCardBackUrl)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}
+                  >
                     <ExternalLink size={14} /> CNI (verso)
                   </a>
                 )}
-                <a href={selectedSeller.kbisUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}>
+                <a
+                  href={`/api/signed-document?url=${encodeURIComponent(selectedSeller.kbisUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', backgroundColor: '#f5f5f5', fontSize: 13 }}
+                >
                   <ExternalLink size={14} /> KBIS
                 </a>
               </div>

@@ -6,20 +6,39 @@ import { useRouter } from 'next/navigation';
 import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerListings } from '@/lib/supabase/listings';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 
 export default function SellerDashboardPage() {
   const router = useRouter();
-  const { user, seller, isSeller, isApprovedSeller, loading: authLoading } = useAuth();
+  const { user, seller, isSeller, isApprovedSeller, loading: authLoading, refreshUser } = useAuth();
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && !isSeller) {
+    if (!authLoading && (!user || !seller)) {
       router.push('/connexion');
     }
-  }, [authLoading, isSeller, router]);
+  }, [authLoading, user, seller, router]);
+
+  // Synchronisation en temps réel du statut (validé/refusé) quand l'admin met à jour
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !user?.uid) return;
+    const channel = supabase
+      .channel('seller-status')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'sellers', filter: `id=eq.${user.uid}` },
+        () => {
+          refreshUser();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.uid, refreshUser]);
 
   useEffect(() => {
     async function loadListings() {
@@ -34,12 +53,12 @@ export default function SellerDashboardPage() {
       }
     }
 
-    if (user && isApprovedSeller) {
+    if (user) {
       loadListings();
     } else {
       setLoading(false);
     }
-  }, [user, isApprovedSeller]);
+  }, [user]);
 
   if (authLoading || loading) {
     return (
@@ -49,16 +68,16 @@ export default function SellerDashboardPage() {
     );
   }
 
-  if (!isSeller) return null;
+  if (!user || !seller) return null;
 
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
   const activeListings = listings.filter((l) => l.isActive).length;
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '30px 20px 60px' }}>
+      <div style={{ maxWidth: 1000, margin: '0 auto', paddingTop: 38, paddingRight: 20, paddingBottom: 60, paddingLeft: 20 }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
               Espace vendeur
@@ -83,8 +102,8 @@ export default function SellerDashboardPage() {
             </div>
           </div>
           {isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-              <Plus size={18} /> Créer une annonce
+            <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+              <Plus size={18} /> Déposer une annonce
             </Link>
           )}
         </div>
@@ -139,61 +158,63 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Listings */}
-        {isApprovedSeller && (
-          <div>
-            <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 20 }}>Mes annonces</h2>
+        <div>
+          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 20 }}>Mes annonces</h2>
 
-            {listings.length === 0 ? (
-              <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center' }}>
-                <Package size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
-                <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Aucune annonce</h3>
-                <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>Créez votre première annonce</p>
-                <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-                  <Plus size={18} /> Créer une annonce
+          {listings.length === 0 ? (
+            <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
+              <Package size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Aucune annonce</h3>
+              <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>Créez votre première annonce</p>
+              {isApprovedSeller && (
+                <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+                  <Plus size={18} /> Déposer une annonce
                 </Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {listings.map((listing) => (
-                  <div key={listing.id} style={{ padding: 16, border: '1px solid #eee', display: 'flex', gap: 16 }}>
-                    <div style={{ width: 80, height: 80, backgroundColor: '#f5f5f5', flexShrink: 0, overflow: 'hidden' }}>
-                      {listing.photos[0] ? (
-                        <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Package size={24} color="#ccc" />
-                        </div>
-                      )}
+              )}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+              {listings.map((listing) => (
+                <div key={listing.id} style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
+                  <div style={{ width: '100%', height: 200, backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
+                    {listing.photos[0] ? (
+                      <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Package size={48} color="#ccc" />
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ padding: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.title}</h3>
+                        <p style={{ fontSize: 18, fontWeight: 600, color: '#000' }}>{formatPrice(listing.price)}</p>
+                      </div>
+                      <span style={{ padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500, borderRadius: 4, flexShrink: 0 }}>
+                        {listing.isActive ? 'Active' : 'Inactive'}
+                      </span>
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                        <div>
-                          <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 4 }}>{listing.title}</h3>
-                          <p style={{ fontSize: 16, fontWeight: 600 }}>{formatPrice(listing.price)}</p>
-                        </div>
-                        <span style={{ padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500 }}>
-                          {listing.isActive ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: '#888', marginBottom: 12 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12} /> {listing.likesCount}</span>
-                        <span>{formatDate(listing.createdAt)}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <Link href={`/vendeur/annonces/${listing.id}`} style={{ padding: '6px 14px', border: '1px solid #ddd', fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: '#888', marginBottom: 12 }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12} /> {listing.likesCount}</span>
+                      <span>{formatDate(listing.createdAt)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {isApprovedSeller && (
+                        <Link href={`/vendeur/annonces/${listing.id}`} style={{ flex: 1, padding: '8px 14px', border: '1px solid #ddd', fontSize: 13, textAlign: 'center', borderRadius: 6, color: '#1d1d1f' }}>
                           Modifier
                         </Link>
-                        <Link href={`/produit/${listing.id}`} style={{ padding: '6px 14px', fontSize: 13, color: '#666' }}>
-                          Voir
-                        </Link>
-                      </div>
+                      )}
+                      <Link href={`/produit/${listing.id}`} style={{ flex: 1, padding: '8px 14px', backgroundColor: '#000', color: '#fff', fontSize: 13, textAlign: 'center', borderRadius: 6 }}>
+                        Voir
+                      </Link>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

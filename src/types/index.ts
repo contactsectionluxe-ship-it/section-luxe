@@ -26,13 +26,17 @@ export interface Seller {
   uid: string;
   email: string;
   companyName: string;
+  siret?: string | null;
   address: string;
+  city: string;
+  postcode: string;
   phone: string;
   description: string;
   status: SellerStatus;
   idCardFrontUrl: string;
   idCardBackUrl: string | null;
   kbisUrl: string;
+  avatarUrl?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,9 +51,19 @@ export interface Listing {
   category: ListingCategory;
   photos: string[];
   likesCount: number;
+  listingNumber?: string | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  brand?: string | null;
+  model?: string | null;
+  condition?: string | null;
+  material?: string | null;
+  color?: string | null;
+  heightCm?: number | null;
+  widthCm?: number | null;
+  year?: number | null;
+  packaging?: string[] | null;
 }
 
 export interface Favorite {
