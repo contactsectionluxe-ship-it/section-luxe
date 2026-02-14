@@ -73,8 +73,8 @@ export default function ConversationPage() {
       try {
         const data = await getConversation(conversationId);
         if (cancelled) return;
-        if (!data) {
-          router.push('/messages');
+        if (!data || !user) {
+          if (!data) router.push('/messages');
           return;
         }
         if (data.buyerId !== user.uid && data.sellerId !== user.uid) {
