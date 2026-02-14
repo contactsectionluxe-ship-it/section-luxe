@@ -53,6 +53,12 @@ button {
   cursor: pointer;
 }
 
+/* Bouton Envoyer messagerie : noir forcé */
+button.message-send-btn {
+  background: #000000 !important;
+  background-color: #000000 !important;
+}
+
 img {
   max-width: 100%;
   height: auto;

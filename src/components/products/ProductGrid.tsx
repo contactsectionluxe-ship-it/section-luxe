@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { ProductCard } from './ProductCard';
 import { Modal, Button } from '@/components/ui';
 import { Listing } from '@/types';
@@ -13,6 +14,8 @@ interface ProductGridProps {
 
 export function ProductGrid({ listings, favoritedIds = [] }: ProductGridProps) {
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const pathname = usePathname();
+  const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
 
   return (
     <>
@@ -38,12 +41,12 @@ export function ProductGrid({ listings, favoritedIds = [] }: ProductGridProps) {
             Connectez-vous ou créez un compte pour sauvegarder vos favoris.
           </p>
           <div className="flex gap-3">
-            <Link href="/connexion" className="flex-1">
+            <Link href={`/connexion${redirectUrl}`} className="flex-1">
               <Button variant="outline" fullWidth onClick={() => setShowAuthModal(false)}>
                 Connexion
               </Button>
             </Link>
-            <Link href="/inscription" className="flex-1">
+            <Link href={`/inscription${redirectUrl}`} className="flex-1">
               <Button fullWidth onClick={() => setShowAuthModal(false)}>
                 S&apos;inscrire
               </Button>

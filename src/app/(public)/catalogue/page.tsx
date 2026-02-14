@@ -3,10 +3,11 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronDown, Heart } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings } from '@/lib/supabase/listings';
-import { Listing } from '@/types';
+import { getSellerData } from '@/lib/supabase/auth';
+import { Listing, Seller } from '@/types';
 import {
   ARTICLE_TYPES,
   LUXURY_BRANDS,
@@ -82,6 +83,8 @@ function CatalogueContent() {
     const initial: Filters = { ...defaultFilters };
     const category = searchParams.get('category');
     if (category) initial.category = category;
+    const sellerId = searchParams.get('sellerId');
+    if (sellerId) initial.sellerId = sellerId;
     return initial;
   });
 
@@ -91,8 +94,32 @@ function CatalogueContent() {
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seller, setSeller] = useState<Seller | null>(null);
+  const [sellerLoading, setSellerLoading] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMapPopup, setShowMapPopup] = useState(false);
+  const [mapZoom, setMapZoom] = useState(15);
+
+  // Synchroniser sellerId depuis l'URL
+  useEffect(() => {
+    const sellerId = searchParams.get('sellerId');
+    setFilters((prev) => (prev.sellerId !== (sellerId || undefined) ? { ...prev, sellerId: sellerId || undefined } : prev));
+  }, [searchParams]);
+
+  // Charger les infos vendeur quand sellerId est présent
+  useEffect(() => {
+    if (!filters.sellerId) {
+      setSeller(null);
+      return;
+    }
+    setSellerLoading(true);
+    getSellerData(filters.sellerId)
+      .then((data) => {
+        setSeller(data || null);
+      })
+      .finally(() => setSellerLoading(false));
+  }, [filters.sellerId]);
 
   // Applique les filtres de prix manuellement
   const applyPriceFilter = () => {
@@ -419,6 +446,101 @@ function CatalogueContent() {
 
           {/* Main */}
           <main style={{ flex: 1, minWidth: 0 }}>
+            {/* Bloc vendeur : nom, logo, annonces */}
+            {filters.sellerId && (
+              <div
+                style={{
+                  marginBottom: 28,
+                  padding: 24,
+                  backgroundColor: '#fff',
+                  border: '1px solid #e5e5e7',
+                  borderRadius: 18,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 20,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {sellerLoading ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ width: 80, height: 80, borderRadius: 12, backgroundColor: '#f0f0f2' }} />
+                    <div>
+                      <div style={{ width: 180, height: 20, backgroundColor: '#f0f0f2', marginBottom: 8, borderRadius: 4 }} />
+                      <div style={{ width: 120, height: 14, backgroundColor: '#f0f0f2', borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ) : seller ? (
+                  <>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                      <div
+                        style={{
+                          width: 80,
+                          height: 80,
+                          borderRadius: 12,
+                          overflow: 'hidden',
+                          backgroundColor: '#f0f0f2',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {seller.avatarUrl ? (
+                          <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Store size={40} color="#888" />
+                        )}
+                      </div>
+                      <div>
+                        <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
+                          {seller.companyName}
+                        </h2>
+                        <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
+                          {listings.length} annonce{listings.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    {(seller.address || seller.city || seller.postcode) && (
+                      <div
+                        style={{
+                          height: 80,
+                          minWidth: 260,
+                          padding: '0 16px',
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 16,
+                          backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
+                          backgroundSize: '115%',
+                          backgroundPosition: 'center',
+                          backgroundColor: '#f6f6f8',
+                          border: '1px solid #c8c8cc',
+                          borderRadius: 14,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                          <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                          {seller.postcode && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>}
+                          {seller.city && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowMapPopup(true)}
+                          style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                        >
+                          Voir la carte
+                        </button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>Vendeur introuvable.</p>
+                )}
+              </div>
+            )}
+
             {/* Header */}
             <div
               style={{
@@ -439,7 +561,9 @@ function CatalogueContent() {
                     marginBottom: 4,
                   }}
                 >
-                  {filters.category
+                  {filters.sellerId && seller
+                    ? `Annonces de ${seller.companyName}`
+                    : filters.category
                     ? filters.category.charAt(0).toUpperCase() + filters.category.slice(1)
                     : 'Tous les articles'}
                 </h1>
@@ -640,6 +764,56 @@ function CatalogueContent() {
           </main>
         </div>
       </div>
+
+      {/* Popup Plan vendeur */}
+      {showMapPopup && seller && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: 24 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+                <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', left: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Retour">
+                  <ArrowLeft size={20} />
+                </button>
+                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, textAlign: 'center' }}>Plan vendeur</h2>
+                <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+                  <X size={20} />
+                </button>
+              </div>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>{seller.companyName}</p>
+              <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
+              <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
+                <iframe
+                  title="Carte du vendeur"
+                  src={`https://www.google.com/maps?q=${encodeURIComponent([seller.address, seller.postcode, seller.city].filter(Boolean).join(', '))}&z=${mapZoom}&output=embed`}
+                  style={{ width: '100%', height: '100%', border: 0 }}
+                  allowFullScreen
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.min(20, z + 1)); }}
+                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
+                    title="Zoom avant"
+                  >
+                    <Plus size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.max(10, z - 1)); }}
+                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
+                    title="Zoom arrière"
+                  >
+                    <Minus size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Filters Modal */}
       {mobileFiltersOpen && (

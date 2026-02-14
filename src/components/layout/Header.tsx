@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
+import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 
 const navigation = [
   { name: 'À la une', href: '/' },
@@ -20,6 +21,7 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -40,6 +42,48 @@ export function Header() {
       return () => document.removeEventListener('click', handleClick);
     }
   }, [userMenuOpen]);
+
+  const updateUnreadCount = useCallback(
+    (conversations: { unreadBuyer: number; unreadSeller: number }[]) => {
+      if (!user || !isAuthenticated) return;
+      const role = isSeller ? 'seller' : 'buyer';
+      const total = conversations.reduce((sum, c) => sum + (role === 'seller' ? c.unreadSeller : c.unreadBuyer), 0);
+      setUnreadMessages(total);
+    },
+    [user?.uid, isAuthenticated, isSeller]
+  );
+
+  useEffect(() => {
+    if (!user || !isAuthenticated) {
+      setUnreadMessages(0);
+      return;
+    }
+    const role = isSeller ? 'seller' : 'buyer';
+    const unsubscribe = subscribeToConversations(user.uid, role, updateUnreadCount);
+    return () => unsubscribe();
+  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount]);
+
+  const refreshUnread = useCallback(() => {
+    if (!user || !isAuthenticated) return;
+    const role = isSeller ? 'seller' : 'buyer';
+    getUserConversations(user.uid, role).then(updateUnreadCount);
+  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount]);
+
+  // Rafraîchir le compteur quand l'onglet redevient visible (autre onglet, autre appareil)
+  useEffect(() => {
+    if (!user || !isAuthenticated) return;
+    const onVisible = () => { if (document.visibilityState === 'visible') refreshUnread(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [refreshUnread]);
+
+  // Rafraîchir le compteur dès qu'une conversation est marquée lue (ouverture d'un fil)
+  useEffect(() => {
+    if (!user || !isAuthenticated) return;
+    const onRefresh = () => refreshUnread();
+    window.addEventListener('messages:refresh-unread', onRefresh);
+    return () => window.removeEventListener('messages:refresh-unread', onRefresh);
+  }, [refreshUnread]);
 
   const linkStyle = {
     fontSize: 14,
@@ -116,7 +160,32 @@ export function Header() {
               <span>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
-              <div style={iconWrapStyle}><MessageCircle size={20} strokeWidth={1.5} /></div>
+              <div style={{ position: 'relative', ...iconWrapStyle }}>
+                <MessageCircle size={20} strokeWidth={1.5} />
+                {unreadMessages > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      minWidth: 18,
+                      height: 18,
+                      padding: '0 5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#dc2626',
+                      color: '#fff',
+                      fontSize: 11,
+                      fontWeight: 600,
+                      borderRadius: 9,
+                      lineHeight: 1,
+                    }}
+                  >
+                    {unreadMessages > 99 ? '99+' : unreadMessages}
+                  </span>
+                )}
+              </div>
               <span>Messages</span>
             </Link>
             {isAuthenticated ? (
@@ -160,7 +229,7 @@ export function Header() {
                           <>
                             <Link href="/vendeur/annonces/nouvelle" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><PlusCircle size={18} /> Déposer une annonce</Link>
                             <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Package size={18} /> Mes annonces</Link>
-                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Ma messagerie</Link>
+                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Ma messagerie {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                             <Link href="/vendeur/factures" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><FileText size={18} /> Mes factures</Link>
                             <Link href="/vendeur/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
                             {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
@@ -170,7 +239,7 @@ export function Header() {
                         ) : (
                           <>
                             <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Heart size={18} /> Favoris</Link>
-                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Messages</Link>
+                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Messages {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                             {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
                             <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
                             <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Déconnexion</button>
@@ -237,7 +306,7 @@ export function Header() {
                     <>
                       <Link href="/vendeur/annonces/nouvelle" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Déposer une annonce</Link>
                       <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes annonces</Link>
-                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie</Link>
+                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                       <Link href="/vendeur/factures" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes factures</Link>
                       <Link href="/vendeur/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
                       {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
@@ -246,7 +315,7 @@ export function Header() {
                   ) : (
                     <>
                       <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
-                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>
+                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                       {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
                       <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Déconnexion</button>
                     </>

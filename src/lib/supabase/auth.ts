@@ -168,12 +168,14 @@ export async function getUserData(uid: string): Promise<User | null> {
 
   if (error || !data) return null;
 
+  const row = data as Record<string, unknown>;
   return {
     uid: data.id,
     email: data.email,
     displayName: data.display_name,
     role: data.role,
     createdAt: new Date(data.created_at),
+    phone: (row.phone as string) || null,
   };
 }
 
@@ -217,12 +219,13 @@ export async function getSellerData(uid: string): Promise<Seller | null> {
 // Mise à jour du profil utilisateur (public.users)
 export async function updateUserProfile(
   uid: string,
-  data: { displayName?: string; email?: string }
+  data: { displayName?: string; email?: string; phone?: string | null }
 ): Promise<void> {
   const client = checkSupabase();
   const updateData: Record<string, unknown> = {};
   if (data.displayName !== undefined) updateData.display_name = data.displayName;
   if (data.email !== undefined) updateData.email = data.email;
+  if (data.phone !== undefined) updateData.phone = data.phone;
   if (Object.keys(updateData).length === 0) return;
 
   const { error } = await client.from('users').update(updateData).eq('id', uid);

@@ -20,6 +20,7 @@ export interface User {
   displayName: string;
   role: UserRole;
   createdAt: Date;
+  phone?: string | null;
 }
 
 export interface Seller {
@@ -86,6 +87,9 @@ export interface Conversation {
   lastMessageAt: Date;
   unreadBuyer: number;
   unreadSeller: number;
+  /** Si défini : n'afficher que les messages après cette date (pour la personne qui avait "supprimé") */
+  buyerClearedAt?: Date | null;
+  sellerClearedAt?: Date | null;
 }
 
 export interface Message {
@@ -96,6 +100,7 @@ export interface Message {
   content: string;
   createdAt: Date;
   read: boolean;
+  imageUrl?: string | null;
 }
 
 // Types pour les formulaires

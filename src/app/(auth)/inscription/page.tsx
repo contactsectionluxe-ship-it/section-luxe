@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signUpBuyer } from '@/lib/supabase/auth';
 
 const inputStyle = {
@@ -19,6 +19,9 @@ const inputStyle = {
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+  const safeRedirect = redirect && redirect.startsWith('/') ? redirect : '/';
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -43,7 +46,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await signUpBuyer(email, password, `${firstName.trim()} ${lastName.trim()}`.trim());
-      router.push('/');
+      router.push(safeRedirect);
     } catch (err: any) {
       console.error('Registration error:', err);
       setError('Une erreur est survenue. Veuillez réessayer.');
@@ -190,7 +193,7 @@ export default function RegisterPage() {
         <div style={{ marginTop: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 12 }}>
             Déjà inscrit ?{' '}
-            <Link href="/connexion" style={{ color: '#0066cc', fontWeight: 500 }}>Se connecter</Link>
+            <Link href={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'} style={{ color: '#0066cc', fontWeight: 500 }}>Se connecter</Link>
           </p>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Vous êtes un professionnel ?{' '}

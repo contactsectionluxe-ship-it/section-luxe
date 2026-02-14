@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from '@/lib/supabase/auth';
 
 const inputStyle = {
@@ -19,6 +19,9 @@ const inputStyle = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get('redirect');
+  const safeRedirect = redirect && redirect.startsWith('/') ? redirect : '/';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +34,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await signIn(email, password);
-      router.push('/');
+      router.push(safeRedirect);
     } catch (err: any) {
       console.error('Login error:', err);
       setError('Email ou mot de passe incorrect');
@@ -127,7 +130,7 @@ export default function LoginPage() {
         <div style={{ marginTop: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 12 }}>
             Pas encore de compte ?{' '}
-            <Link href="/inscription" style={{ color: '#0066cc', fontWeight: 500 }}>Créer un compte</Link>
+            <Link href={redirect ? `/inscription?redirect=${encodeURIComponent(redirect)}` : '/inscription'} style={{ color: '#0066cc', fontWeight: 500 }}>Créer un compte</Link>
           </p>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Vous êtes un professionnel ?{' '}

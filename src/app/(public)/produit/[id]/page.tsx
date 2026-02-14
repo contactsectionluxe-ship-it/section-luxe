@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, getSellerListings, getListings } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
@@ -36,7 +36,9 @@ function getBarPosition(price: number, min: number, max: number): number {
 export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
   const listingId = params.id as string;
+  const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
   const { user, isAuthenticated } = useAuth();
 
   const [listing, setListing] = useState<Listing | null>(null);
@@ -56,7 +58,7 @@ export default function ProductPage() {
     lastName: '',
     email: '',
     phone: '',
-    message: 'Bonjour,\nVotre produit est-il toujours disponible ?',
+    message: 'Bonjour,\nVotre article est-il toujours disponible ?',
   });
   const [contactFormSubmitting, setContactFormSubmitting] = useState(false);
   const [contactFormError, setContactFormError] = useState('');
@@ -185,7 +187,6 @@ export default function ProductPage() {
       return;
     }
     if (!listing || !seller || contactLoading) return;
-    if (user?.uid === listing.sellerId) return;
     setContactLoading(true);
     try {
       const conversation = await getOrCreateConversation({
@@ -211,9 +212,9 @@ export default function ProductPage() {
       setShowAuthModal(true);
       return;
     }
-    if (!listing || !seller || !user || user.uid === listing.sellerId) return;
+    if (!listing || !seller || !user) return;
     const { firstName, lastName, email, phone, message } = contactForm;
-    if (!firstName.trim() || !lastName.trim() || !email.trim() || !message.trim() || !phone.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !message.trim()) {
       setContactFormError('Tous les champs obligatoires doivent être renseignés.');
       return;
     }
@@ -230,16 +231,28 @@ export default function ProductPage() {
         sellerId: listing.sellerId,
         sellerName: seller.companyName,
       });
-      const fullMessage = `${message.trim()}\n\n— Contact : ${email}, tél. ${phone.trim()}`;
+      const messageContent = phone.trim()
+        ? `${message.trim()}\n\nTél. ${phone.trim()}`
+        : message.trim();
       await sendMessage({
         conversationId: conversation.id,
         senderId: user.uid,
         senderName: buyerName,
-        content: fullMessage,
+        content: messageContent,
         isBuyer: true,
       });
+      if (phone.trim()) {
+        const { updateUserProfile } = await import('@/lib/supabase/auth');
+        updateUserProfile(user.uid, { phone: phone.trim() }).catch(() => {});
+      }
+      setContactFormError('');
+      setContactFormSubmitting(false);
       setShowContactForm(false);
-      router.push(`/messages/${conversation.id}`);
+      setShowLegalMore(false);
+      const targetUrl = `/messages/${conversation.id}`;
+      requestAnimationFrame(() => {
+        router.push(targetUrl);
+      });
     } catch (err) {
       console.error('Error sending contact form:', err);
       setContactFormError('Une erreur est survenue. Réessayez.');
@@ -379,51 +392,6 @@ export default function ProductPage() {
                 <span>Publié le {formatDate(listing.createdAt)}</span>
               </div>
 
-              {user?.uid !== listing.sellerId && showContactForm && (
-                <div style={{ marginBottom: 32, padding: 24, backgroundColor: '#f9f9f9', borderRadius: 18, border: '1px solid #eee' }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 20 }}>Contacter le vendeur</h3>
-                  {contactFormError && (
-                    <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{contactFormError}</p>
-                  )}
-                  <form onSubmit={handleContactFormSubmit}>
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Prénom *</label>
-                        <input required value={contactForm.firstName} onChange={(e) => setContactForm((p) => ({ ...p, firstName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Prénom" />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Nom *</label>
-                        <input required value={contactForm.lastName} onChange={(e) => setContactForm((p) => ({ ...p, lastName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Nom" />
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Email *</label>
-                      <input type="email" required value={contactForm.email} onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="email@exemple.fr" />
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Message *</label>
-                      <textarea required value={contactForm.message} onChange={(e) => setContactForm((p) => ({ ...p, message: e.target.value }))} rows={4} style={{ width: '100%', padding: 12, fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, resize: 'vertical' }} placeholder="Votre message" />
-                    </div>
-                    <div style={{ marginBottom: 16 }}>
-                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Téléphone *</label>
-                      <input type="tel" required value={contactForm.phone} onChange={(e) => setContactForm((p) => ({ ...p, phone: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="+33 6 12 34 56 78" />
-                    </div>
-                    <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>Obligatoire * — Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe. Veuillez ne pas mentionner vos données personnelles dans le contenu de votre message. Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement.</p>
-                    {!showLegalMore ? (
-                      <button type="button" onClick={() => setShowLegalMore(true)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#888', cursor: 'pointer', padding: 0, marginBottom: 16, textDecoration: 'underline' }}>Afficher plus</button>
-                    ) : (
-                      <>
-                        <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>Elles sont transmises directement au vendeur que vous souhaitez contacter et le cas échéant, aux vendeurs professionnels. Les données obligatoires sont celles signalées par un astérisque. Ces données sont utilisées à des fins de : mise en relation avec le vendeur ; mesure et étude de l&apos;audience du site ; lutte anti-fraude ; gestion de vos demandes d&apos;exercice de vos droits. Vous disposez d&apos;un droit d&apos;accès, de rectification, d&apos;effacement, de limitation, d&apos;opposition, à la portabilité et d&apos;introduire une réclamation auprès d&apos;une autorité de contrôle (CNIL). Pour en savoir plus : https://www.sectionluxe.fr/politique-confidentialite</p>
-                        <button type="button" onClick={() => setShowLegalMore(false)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#888', cursor: 'pointer', padding: 0, marginBottom: 16, textDecoration: 'underline' }}>Afficher moins</button>
-                      </>
-                    )}
-                    <button type="submit" disabled={contactFormSubmitting} style={{ width: '100%', height: 48, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 980, fontSize: 15, fontWeight: 500, cursor: contactFormSubmitting ? 'not-allowed' : 'pointer' }}>
-                      {contactFormSubmitting ? 'Envoi...' : 'Envoyer'}
-                    </button>
-                  </form>
-                </div>
-              )}
-
               {seller && (
                 <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -456,7 +424,7 @@ export default function ProductPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm((v) => !v); }}
+                      onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }}
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
                       <MessageCircle size={18} />
@@ -1031,7 +999,7 @@ top: -4,
                       </>
                     )}
                   </button>
-                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm((v) => !v); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     <MessageCircle size={16} />
                     Message
                   </button>
@@ -1103,18 +1071,86 @@ top: -4,
         </div>
       )}
 
+      {/* Popup Message / Contacter le vendeur */}
+      {showContactForm && listing && seller && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 28, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, paddingRight: 36 }}>
+              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 600, margin: 0, textAlign: 'center' }}>Contacter le vendeur</h2>
+              <button type="button" onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+                <X size={20} />
+              </button>
+            </div>
+            {contactFormError && (
+              <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{contactFormError}</p>
+            )}
+            <form onSubmit={handleContactFormSubmit}>
+              <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Prénom *</label>
+                  <input required value={contactForm.firstName} onChange={(e) => setContactForm((p) => ({ ...p, firstName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Prénom" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Nom *</label>
+                  <input required value={contactForm.lastName} onChange={(e) => setContactForm((p) => ({ ...p, lastName: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="Nom" />
+                </div>
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Email *</label>
+                <input type="email" required value={contactForm.email} onChange={(e) => setContactForm((p) => ({ ...p, email: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="email@exemple.fr" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Téléphone</label>
+                <input type="tel" value={contactForm.phone} onChange={(e) => setContactForm((p) => ({ ...p, phone: e.target.value }))} style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10 }} placeholder="+33 6 12 34 56 78" />
+              </div>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>Message *</label>
+                <textarea required value={contactForm.message} onChange={(e) => setContactForm((p) => ({ ...p, message: e.target.value }))} rows={4} style={{ width: '100%', padding: 12, fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, resize: 'vertical' }} placeholder="Votre message" />
+              </div>
+              <p style={{ fontSize: 11, color: '#666', marginBottom: 16, whiteSpace: 'pre-line' }}>
+                {!showLegalMore ? (
+                  <>
+                    {`Obligatoire *
+
+Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
+
+Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. `}
+                    <button type="button" onClick={() => setShowLegalMore(true)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#1d1d1f', fontWeight: 600, cursor: 'pointer', padding: 0, marginLeft: 4, textDecoration: 'underline' }}>Afficher plus</button>
+                  </>
+                ) : (
+                  <>
+                    {`Obligatoire *
+
+Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
+
+Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. Elles sont transmises directement au vendeur que vous souhaitez contacter et le cas échéant, aux vendeurs professionnels. Ces données sont utilisées à des fins de : mise en relation avec le vendeur que vous souhaitez contacter ; mesure et étude de l'audience du site, évaluer son utilisation et améliorer ses services ; lutte anti-fraude ; gestion de vos demandes d'exercice de vos droits. Vous disposez d'un droit d'accès, de rectification, d'effacement de ces données, d'un droit de limitation du traitement, d'un droit d'opposition, du droit à la portabilité de vos données et du droit d'introduire une réclamation auprès d'une autorité de contrôle (en France, la CNIL). Vous pouvez également retirer à tout moment votre consentement au traitement de vos données. Pour en savoir plus sur le traitement de vos données : `}
+                    <a href="https://www.sectionluxe.fr/politique-confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>https://www.sectionluxe.fr/politique-confidentialite</a>
+                    {' '}
+                    <button type="button" onClick={() => setShowLegalMore(false)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#1d1d1f', fontWeight: 600, cursor: 'pointer', padding: 0, marginLeft: 4, textDecoration: 'underline' }}>Afficher moins</button>
+                  </>
+                )}
+              </p>
+              <button type="submit" disabled={contactFormSubmitting} style={{ width: '100%', height: 48, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: contactFormSubmitting ? 'not-allowed' : 'pointer' }}>
+                {contactFormSubmitting ? 'Envoi...' : 'Envoyer'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Auth Modal */}
       {showAuthModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAuthModal(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 380, backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-            <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 8 }}>Connectez-vous</h2>
-            <p style={{ fontSize: 14, color: '#666', marginBottom: 24 }}>Créez un compte pour sauvegarder vos favoris et contacter les vendeurs.</p>
-            <Link href="/inscription" onClick={() => setShowAuthModal(false)} style={{ display: 'block', width: '100%', height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', marginBottom: 12, borderRadius: 980 }}>
-              Créer un compte
-            </Link>
-            <Link href="/connexion" onClick={() => setShowAuthModal(false)} style={{ display: 'block', width: '100%', height: 50, border: '1.5px solid #d2d2d7', color: '#1d1d1f', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', borderRadius: 980 }}>
+            <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>Connectez-vous</h2>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 24, textAlign: 'center' }}>Créez un compte pour ajouter vos favoris et contacter le vendeur.</p>
+            <Link href={`/connexion${redirectUrl}`} onClick={() => setShowAuthModal(false)} style={{ display: 'block', width: '100%', height: 50, border: '1.5px solid #d2d2d7', color: '#1d1d1f', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', marginBottom: 12, borderRadius: 980 }}>
               J&apos;ai déjà un compte
+            </Link>
+            <Link href={`/inscription${redirectUrl}`} onClick={() => setShowAuthModal(false)} style={{ display: 'block', width: '100%', height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', borderRadius: 980 }}>
+              Créer un compte
             </Link>
           </div>
         </div>

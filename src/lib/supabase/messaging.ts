@@ -23,6 +23,8 @@ function rowToConversation(row: any): Conversation {
     lastMessageAt: new Date(row.last_message_at),
     unreadBuyer: row.unread_buyer || 0,
     unreadSeller: row.unread_seller || 0,
+    buyerClearedAt: row.buyer_cleared_at ? new Date(row.buyer_cleared_at) : null,
+    sellerClearedAt: row.seller_cleared_at ? new Date(row.seller_cleared_at) : null,
   };
 }
 
@@ -35,6 +37,7 @@ function rowToMessage(row: any): Message {
     content: row.content,
     createdAt: new Date(row.created_at),
     read: row.read || false,
+    imageUrl: row.image_url || null,
   };
 }
 
@@ -50,38 +53,21 @@ export async function getOrCreateConversation(data: {
 }): Promise<Conversation> {
   const client = checkSupabase();
   
-  // Check if conversation already exists
-  const { data: existing } = await client
-    .from('conversations')
-    .select('*')
-    .eq('listing_id', data.listingId)
-    .eq('buyer_id', data.buyerId)
-    .single();
-
-  if (existing) {
-    return rowToConversation(existing);
-  }
-
-  // Create new conversation
-  const { data: newConv, error } = await client
-    .from('conversations')
-    .insert({
-      listing_id: data.listingId,
-      listing_title: data.listingTitle,
-      listing_photo: data.listingPhoto,
-      buyer_id: data.buyerId,
-      buyer_name: data.buyerName,
-      seller_id: data.sellerId,
-      seller_name: data.sellerName,
-      last_message: '',
-      unread_buyer: 0,
-      unread_seller: 0,
-    })
-    .select()
-    .single();
+  // RPC gère : créer si besoin, ou réafficher pour l'acheteur si il avait "supprimé" la conversation
+  const { data: rows, error } = await client.rpc('get_or_create_conversation', {
+    p_listing_id: data.listingId,
+    p_listing_title: data.listingTitle,
+    p_listing_photo: data.listingPhoto ?? '',
+    p_buyer_id: data.buyerId,
+    p_buyer_name: data.buyerName,
+    p_seller_id: data.sellerId,
+    p_seller_name: data.sellerName,
+  });
 
   if (error) throw error;
-  return rowToConversation(newConv);
+  const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!row) throw new Error('get_or_create_conversation n\'a pas renvoyé de conversation');
+  return rowToConversation(row);
 }
 
 // Get conversation by ID
@@ -124,6 +110,7 @@ export async function sendMessage(data: {
   senderName: string;
   content: string;
   isBuyer: boolean;
+  imageUrl?: string | null;
 }): Promise<Message> {
   const client = checkSupabase();
   
@@ -136,6 +123,7 @@ export async function sendMessage(data: {
       sender_name: data.senderName,
       content: data.content,
       read: false,
+      ...(data.imageUrl != null && data.imageUrl !== '' && { image_url: data.imageUrl }),
     })
     .select()
     .single();
@@ -154,10 +142,11 @@ export async function sendMessage(data: {
   
   const currentUnread = conv ? (conv as any)[unreadField] || 0 : 0;
 
+  const lastMessagePreview = data.content || (data.imageUrl ? '📷 Image' : '');
   await client
     .from('conversations')
     .update({
-      last_message: data.content,
+      last_message: lastMessagePreview,
       last_message_at: new Date().toISOString(),
       [unreadField]: currentUnread + 1,
     })
@@ -166,37 +155,49 @@ export async function sendMessage(data: {
   return rowToMessage(message);
 }
 
-// Get messages for a conversation
+// Get messages for a conversation (optionnel : since = n'afficher que les messages après cette date)
+// Avec since, on utilise la RPC pour garantir le filtre côté serveur.
 export async function getMessages(
   conversationId: string,
-  limitCount = 50
+  limitCount = 50,
+  since?: Date | null
 ): Promise<Message[]> {
   if (!isSupabaseConfigured || !supabase) return [];
-  
+  if (since) {
+    const { data: rows, error } = await supabase.rpc('get_messages_for_conversation', {
+      p_conversation_id: conversationId,
+      p_since_timestamptz: since.toISOString(),
+      p_limit: limitCount,
+    });
+    if (error) throw error;
+    return (Array.isArray(rows) ? rows : []).map(rowToMessage);
+  }
   const { data, error } = await supabase
     .from('messages')
     .select('*')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true })
     .limit(limitCount);
-
   if (error) throw error;
   return (data || []).map(rowToMessage);
 }
 
-// Subscribe to messages (real-time)
+// Subscribe to messages (real-time). since = n'afficher que les messages après cette date (ex. après "suppression")
 export function subscribeToMessages(
   conversationId: string,
-  callback: (messages: Message[]) => void
+  callback: (messages: Message[]) => void,
+  options?: { since?: Date | string | null }
 ): () => void {
   if (!isSupabaseConfigured || !supabase) {
     callback([]);
     return () => {};
   }
-  
-  // Initial load
-  getMessages(conversationId).then(callback);
-  
+  const raw = options?.since ?? null;
+  const since = raw instanceof Date ? raw : (raw ? new Date(raw) : null);
+
+  // Initial load (filtrée par since si fourni)
+  getMessages(conversationId, 50, since).then(callback);
+
   // Real-time subscription
   const channel = supabase
     .channel(`messages:${conversationId}`)
@@ -209,8 +210,7 @@ export function subscribeToMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       () => {
-        // Reload all messages on new insert
-        getMessages(conversationId).then(callback);
+        getMessages(conversationId, 50, since).then(callback);
       }
     )
     .subscribe();
@@ -235,10 +235,12 @@ export function subscribeToConversations(
   getUserConversations(userId, role).then(callback);
   
   const field = role === 'buyer' ? 'buyer_id' : 'seller_id';
-  
-  // Real-time subscription
+
+  const refetch = () => getUserConversations(userId, role).then(callback);
+
+  // Real-time subscription (INSERT/UPDATE/DELETE sur conversations)
   const channel = supabase
-    .channel(`conversations:${userId}`)
+    .channel(`conversations:${userId}:${role}`)
     .on(
       'postgres_changes',
       {
@@ -247,11 +249,11 @@ export function subscribeToConversations(
         table: 'conversations',
         filter: `${field}=eq.${userId}`,
       },
-      () => {
-        getUserConversations(userId, role).then(callback);
-      }
+      refetch
     )
-    .subscribe();
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') refetch();
+    });
 
   return () => {
     channel.unsubscribe();
@@ -270,4 +272,15 @@ export async function markConversationAsRead(
     .from('conversations')
     .update({ [unreadField]: 0 })
     .eq('id', conversationId);
+}
+
+// "Supprimer" une conversation côté utilisateur uniquement (masquée pour lui, reste visible pour l'autre)
+// Passe par une RPC SECURITY DEFINER pour éviter le blocage RLS sur la nouvelle ligne après UPDATE.
+export async function deleteConversation(conversationId: string, role: 'buyer' | 'seller'): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client.rpc('hide_conversation_for_me', {
+    p_conversation_id: conversationId,
+    p_is_buyer: role === 'buyer',
+  });
+  if (error) throw new Error(error.message || 'Erreur lors de la suppression.');
 }
