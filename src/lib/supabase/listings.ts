@@ -38,7 +38,7 @@ function rowToListing(row: any): Listing {
 /** Génère le prochain numéro d'annonce (unique à vie, jamais réutilisé). Utilise la séquence Supabase. */
 export async function getNextListingNumber(): Promise<string> {
   const client = checkSupabase();
-  const { data, error } = await client.rpc('get_next_listing_number');
+  const { data, error } = await client.rpc('get_next_listing_number', {});
   if (error || data == null) {
     throw new Error(
       error?.message || 'Impossible de générer le numéro d\'annonce. Exécutez la migration supabase/migrations/listings_number_sequence.sql dans le SQL Editor Supabase.'
@@ -148,6 +148,17 @@ export async function getListing(listingId: string): Promise<Listing | null> {
 // Get all active listings with optional filters
 export async function getListings(options?: {
   category?: string;
+  categories?: string[];
+  brand?: string;
+  brands?: string[];
+  model?: string;
+  models?: string[];
+  color?: string;
+  colors?: string[];
+  material?: string;
+  materials?: string[];
+  condition?: string;
+  conditions?: string[];
   sellerId?: string;
   year?: number | null;
   limitCount?: number;
@@ -157,6 +168,17 @@ export async function getListings(options?: {
   
   const {
     category,
+    categories,
+    brand,
+    brands,
+    model,
+    models,
+    color,
+    colors,
+    material,
+    materials,
+    condition,
+    conditions,
     sellerId,
     year,
     limitCount = 50,
@@ -168,8 +190,34 @@ export async function getListings(options?: {
     .select('*')
     .eq('is_active', true);
 
-  if (category) {
-    query = query.eq('category', category);
+  const cats = categories?.length ? categories : (category ? [category] : undefined);
+  if (cats?.length) {
+    query = query.in('category', cats);
+  }
+
+  const brandList = brands?.length ? brands : (brand ? [brand] : undefined);
+  if (brandList?.length) {
+    query = query.in('brand', brandList);
+  }
+
+  const modelList = models?.length ? models : (model ? [model] : undefined);
+  if (modelList?.length) {
+    query = query.in('model', modelList);
+  }
+
+  const colorList = colors?.length ? colors : (color ? [color] : undefined);
+  if (colorList?.length) {
+    query = query.in('color', colorList);
+  }
+
+  const materialList = materials?.length ? materials : (material ? [material] : undefined);
+  if (materialList?.length) {
+    query = query.in('material', materialList);
+  }
+
+  const conditionList = conditions?.length ? conditions : (condition ? [condition] : undefined);
+  if (conditionList?.length) {
+    query = query.in('condition', conditionList);
   }
 
   if (sellerId) {
@@ -206,6 +254,19 @@ export async function getListings(options?: {
 
   if (error) throw error;
   return (data || []).map(rowToListing);
+}
+
+/** Liste des marques présentes sur les annonces actives (en stock). */
+export async function getDistinctBrands(): Promise<string[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+  const { data, error } = await supabase
+    .from('listings')
+    .select('brand')
+    .eq('is_active', true)
+    .not('brand', 'is', null);
+  if (error) return [];
+  const brands = [...new Set((data || []).map((r) => (r.brand as string).trim()).filter(Boolean))];
+  return brands.sort((a, b) => a.localeCompare(b, 'fr'));
 }
 
 // Get listings by seller

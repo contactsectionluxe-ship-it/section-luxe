@@ -4,14 +4,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, Trash2, Upload } from 'lucide-react';
+import { Check, Euro, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
 import { createListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, COLORS, COLORS_BY_CATEGORY, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -262,9 +262,16 @@ export default function NewListingPage() {
       }
 
       router.push('/vendeur');
-    } catch (err: any) {
-      console.error(err);
-      const message = err?.message || 'Une erreur est survenue';
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof (err as { message?: string })?.message === 'string'
+            ? (err as { message: string }).message
+            : 'Une erreur est survenue';
+      if (process.env.NODE_ENV === 'development' && err instanceof Error) {
+        console.error('[createListing]', message, err);
+      }
       setError(
         message.includes('Storage') || message.includes('upload')
           ? `Erreur lors de l'upload des photos. Vérifiez que le bucket "listings" existe et que les politiques Storage sont appliquées (voir supabase/storage-policies.sql). Détail : ${message}`
@@ -502,7 +509,7 @@ export default function NewListingPage() {
                     style={{ ...inputStyle, paddingRight: 40, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center' }}
                   >
                     <option value="">Sélectionnez l&apos;état</option>
-                    {ETAT_OPTIONS.map((opt) => (
+                    {CONDITIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
@@ -837,7 +844,7 @@ export default function NewListingPage() {
                           type="checkbox"
                           checked={packaging.includes(opt.value)}
                           onChange={() => togglePackaging(opt.value)}
-                          style={{ width: 18, height: 18 }}
+                          style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
                         />
                         {opt.label}
                       </label>
@@ -893,16 +900,32 @@ export default function NewListingPage() {
                 onSubmit={handleSubmit}
               >
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Prix (€)</label>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    placeholder="Ex: 5000"
-                    required
-                    style={inputStyle}
-                  />
+                  <label style={labelStyle}>Prix</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="Ex: 5000"
+                      required
+                      style={{ ...inputStyle, paddingRight: 44 }}
+                    />
+                    <span
+                      style={{
+                        position: 'absolute',
+                        right: 14,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        pointerEvents: 'none',
+                        color: '#86868b',
+                        display: 'flex',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Euro size={17} strokeWidth={2} />
+                    </span>
+                  </div>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button

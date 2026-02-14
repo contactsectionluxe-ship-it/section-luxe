@@ -326,15 +326,15 @@ export default function ProductPage() {
               {/* Détails — même hauteur que la photo, bloc vendeur en bas */}
             <div style={{ flex: '0.85 0 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {categoryLabel && (
-                  <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>
+                {categoryLabel && listing.category && (
+                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                     {categoryLabel}
-                  </span>
+                  </Link>
                 )}
                 {listing.brand && (
-                  <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>
+                  <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                     {listing.brand}
-                  </span>
+                  </Link>
                 )}
               </div>
               <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#0a0a0a' }}>
@@ -493,14 +493,22 @@ export default function ProductPage() {
                         <Tag size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{categoryLabel || '…'}</span>
+                      {listing.category ? (
+                        <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, textDecoration: 'underline' }}>{categoryLabel || listing.category}</Link>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Award size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.brand || '…'}</span>
+                      {listing.brand ? (
+                        <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, textDecoration: 'underline' }}>{listing.brand}</Link>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -775,14 +783,22 @@ top: -4,
                         <Tag size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{categoryLabel || '…'}</span>
+                      {listing.category ? (
+                        <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, textDecoration: 'underline' }}>{categoryLabel || listing.category}</Link>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Award size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.brand || '…'}</span>
+                      {listing.brand ? (
+                        <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, textDecoration: 'underline' }}>{listing.brand}</Link>
+                      ) : (
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -920,11 +936,11 @@ top: -4,
 
             {/* Details */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {categoryLabel && (
-                <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>{categoryLabel}</span>
+              {categoryLabel && listing.category && (
+                <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
               )}
               {listing.brand && (
-                <span style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500 }}>{listing.brand}</span>
+                <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
               )}
             </div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{listing.title}</h1>

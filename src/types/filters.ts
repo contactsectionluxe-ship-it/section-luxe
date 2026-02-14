@@ -1,12 +1,15 @@
 export interface SearchFilters {
-  // Type d'article
-  category?: string;
+  // Type d'article (sélection multiple)
+  category?: string; // déprécié, préférer categories
+  categories?: string[];
   
-  // Marque
-  brand?: string;
+  // Marque (sélection multiple)
+  brand?: string; // déprécié, préférer brands
+  brands?: string[];
   
-  // Modèle / Collection
-  model?: string;
+  // Modèle / Collection (sélection multiple)
+  model?: string; // déprécié, préférer models
+  models?: string[];
   
   // Année
   yearMin?: number;
@@ -16,18 +19,21 @@ export interface SearchFilters {
   priceMin?: number;
   priceMax?: number;
   
-  // État
-  condition?: string;
+  // État (sélection multiple)
+  condition?: string; // déprécié, préférer conditions
+  conditions?: string[];
   
   // Localisation
   postalCode?: string;
   region?: string;
   deliveryAvailable?: boolean;
   
-  // Caractéristiques
-  color?: string;
-  material?: string;
-  
+  // Caractéristiques (couleur en multi-sélection comme Modèle)
+  color?: string; // déprécié, préférer colors
+  colors?: string[];
+  material?: string; // déprécié, préférer materials
+  materials?: string[];
+
   // Historique
   firstHand?: boolean;
   hasCertificate?: boolean;

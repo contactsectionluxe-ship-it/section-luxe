@@ -38,12 +38,12 @@ export const LUXURY_BRANDS = [
   'Autre',
 ];
 
+/** Options d’état (alignées sur le formulaire « Déposer une annonce »). */
 export const CONDITIONS = [
   { value: 'new', label: 'Neuf' },
-  { value: 'like_new', label: 'Comme neuf' },
   { value: 'very_good', label: 'Très bon état' },
   { value: 'good', label: 'Bon état' },
-  { value: 'correct', label: 'État correct' },
+  { value: 'correct', label: 'Correct' },
 ];
 
 export const COLORS = [
@@ -190,6 +190,29 @@ export const MATIERES_BY_CATEGORY: Record<string, { value: string; label: string
     _m('gold', 'Or'), _m('silver', 'Argent'), _m('stainless_steel', 'Acier'), _m('precious_stone', 'Pierre précieuse'),
     _m('other', 'Autre'),
   ],
+};
+
+/** Correspondance type d'article (value) → clés BRANDS_BY_CATEGORY. */
+export const ARTICLE_TYPE_TO_BRAND_KEYS: Record<string, string[]> = {
+  bag: ['sacs', 'maroquinerie'],
+  watch: ['montres'],
+  jewelry: ['bijoux'],
+  accessory: ['accessoires'],
+  clothing: ['vetements'],
+  shoes: ['chaussures'],
+  other: ['autre'],
+};
+
+/** Catégorie (valeur BDD, ex. sacs, montres) → clés pour BRANDS_BY_CATEGORY / MODELS etc. */
+export const CATEGORY_TO_BRAND_KEYS: Record<string, string[]> = {
+  sacs: ['sacs', 'maroquinerie'],
+  montres: ['montres'],
+  bijoux: ['bijoux'],
+  vetements: ['vetements'],
+  chaussures: ['chaussures'],
+  accessoires: ['accessoires'],
+  maroquinerie: ['maroquinerie', 'sacs'],
+  autre: ['autre'],
 };
 
 /** Marques proposées par catégorie (ordre alphabétique + Autre). */
