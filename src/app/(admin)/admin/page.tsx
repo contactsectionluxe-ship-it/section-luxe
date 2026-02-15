@@ -200,7 +200,7 @@ export default function AdminDashboardPage() {
             <button onClick={() => setSelectedSeller(null)} style={{ position: 'absolute', top: 16, right: 16, background: 'none', border: 'none', cursor: 'pointer' }}>
               <X size={20} />
             </button>
-            <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 20 }}>Détails du vendeur</h2>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', marginBottom: 20 }}>Détails du vendeur</h2>
 
             <div style={{ marginBottom: 20 }}>
               <p style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Statut</p>

@@ -1503,29 +1503,27 @@ function CatalogueContent() {
   );
 
   return (
-    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, backgroundColor: '#fff' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 24px', boxSizing: 'border-box' }}>
+    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, backgroundColor: '#fff', paddingTop: 'var(--header-height)' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '24px 24px 24px', boxSizing: 'border-box' }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
-        {/* Carte principale : même largeur que la page d'accueil (1100px) */}
+        {/* Carte principale : même largeur que la page d'accueil (1100px), espace sous le header */}
         <div
           style={{
             flex: 1,
-            minHeight: 'calc(100vh - var(--header-height))',
+            minHeight: 'calc(100vh - var(--header-height) - 48px)',
             display: 'flex',
             flexDirection: 'column',
             backgroundColor: '#fff',
-            borderTopLeftRadius: 0,
-            borderTopRightRadius: 0,
-            borderBottomLeftRadius: 0,
-            borderBottomRightRadius: 0,
+            borderRadius: 18,
             boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
             border: '1px solid #e8e6e3',
-            borderTop: 'none',
+            borderLeft: 'none',
+            borderRight: 'none',
             overflow: 'hidden',
           }}
         >
-          {/* Barre de recherche : marge haute pour ne pas passer sous le header fixe */}
-          <div style={{ padding: 'calc(var(--header-height) + 20px) 28px 20px 28px', borderBottom: '1px solid #e8e6e3', backgroundColor: '#fff' }}>
+          {/* Barre de recherche */}
+          <div style={{ padding: '20px 28px 20px 28px', borderBottom: '1px solid #e8e6e3', backgroundColor: '#fff' }}>
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12 }}>
               <div ref={searchBarRef} style={{ flex: 1, position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
@@ -2101,7 +2099,7 @@ function CatalogueContent() {
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', left: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Retour">
                   <ArrowLeft size={20} />
                 </button>
-                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, textAlign: 'center' }}>Plan vendeur</h2>
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Plan vendeur</h2>
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
                   <X size={20} />
                 </button>
@@ -2179,7 +2177,7 @@ function CatalogueContent() {
                 zIndex: 10,
               }}
             >
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', fontFamily: 'var(--font-playfair), Georgia, serif', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', display: 'flex', alignItems: 'center', gap: 10 }}>
                 <SlidersHorizontal size={20} style={{ flexShrink: 0 }} />
                 Filtres
               </h2>

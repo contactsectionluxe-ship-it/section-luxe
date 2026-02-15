@@ -397,7 +397,7 @@ export default function ConversationPage() {
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowPartyPopup(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 520, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 28, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #e5e5e7' }}>
-              <h3 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 600, margin: 0, textAlign: 'center', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', display: 'flex', alignItems: 'center', gap: 8 }}>
                 {popupSeller ? (
                   <>
                     <Store size={20} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0 }} />
@@ -527,7 +527,7 @@ export default function ConversationPage() {
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', left: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Retour">
                   <ArrowLeft size={20} />
                 </button>
-                <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, textAlign: 'center' }}>Plan vendeur</h2>
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Plan vendeur</h2>
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
                   <X size={20} />
                 </button>

@@ -32,6 +32,7 @@ function rowToListing(row: any): Listing {
     widthCm: row.width_cm != null ? Number(row.width_cm) : null,
     year: row.year ?? null,
     packaging: row.packaging && Array.isArray(row.packaging) ? row.packaging : null,
+    phoneRevealsCount: row.phone_reveals_count != null ? Number(row.phone_reveals_count) : 0,
   };
 }
 
@@ -338,6 +339,35 @@ export async function decrementLikesCount(listingId: string): Promise<void> {
     }
   }
 }
+
+/** Retourne un ID visiteur persistant (localStorage) pour les utilisateurs non connectés. */
+function getVisitorId(): string | null {
+  if (typeof window === 'undefined') return null;
+  const key = 'luxe_visitor_id';
+  let id = localStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID?.() ?? `v-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+    localStorage.setItem(key, id);
+  }
+  return id;
+}
+
+/**
+ * Incrémente le compteur d'affichage du numéro (clic sur "N° téléphone").
+ * Limite : 1 seul comptage par utilisateur (ou visiteur anonyme) par annonce.
+ * Pour les visiteurs non connectés, passer visitorId (ex. getVisitorId()).
+ */
+export async function incrementPhoneReveals(listingId: string, visitorId?: string | null): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return;
+  const payload: { p_listing_id: string; p_visitor_id?: string } = { p_listing_id: listingId };
+  if (visitorId != null && visitorId !== '') payload.p_visitor_id = visitorId;
+  const { error } = await supabase.rpc('increment_phone_reveals', payload);
+  if (error) {
+    console.error('[incrementPhoneReveals]', error.message, { listingId });
+  }
+}
+
+export { getVisitorId };
 
 // Get featured listings (most liked)
 export async function getFeaturedListings(limitCount = 8): Promise<Listing[]> {

@@ -223,7 +223,7 @@ export default function MessagesPage() {
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !deleting && setDeleteTargetId(null)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 380, backgroundColor: '#fff', padding: 32, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-            <h3 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 12, color: '#1d1d1f', textAlign: 'center' }}>
+            <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 12, color: '#0a0a0a', textAlign: 'center' }}>
               Supprimer la conversation
             </h3>
             <p style={{ fontSize: 14, color: '#6e6e73', textAlign: 'center', marginBottom: 24 }}>

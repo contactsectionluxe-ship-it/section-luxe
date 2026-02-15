@@ -8,7 +8,7 @@ import { ArrowLeft, Check, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
-import { getListing, updateListing, deleteListing } from '@/lib/supabase/listings';
+import { getListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
@@ -85,8 +85,6 @@ export default function EditListingPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [hoveredExistingIndex, setHoveredExistingIndex] = useState<number | null>(null);
   const [hoveredNewIndex, setHoveredNewIndex] = useState<number | null>(null);
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
@@ -378,20 +376,6 @@ export default function EditListingPage() {
       setError('Une erreur est survenue lors de la mise à jour');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await deleteListing(listingId);
-      router.push('/vendeur');
-    } catch (error) {
-      console.error('Error deleting listing:', error);
-      setError('Une erreur est survenue lors de la suppression');
-    } finally {
-      setDeleting(false);
-      setShowDeleteModal(false);
     }
   };
 
@@ -886,98 +870,6 @@ export default function EditListingPage() {
               )}
             </AnimatePresence>
           </form>
-
-          <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #eee', textAlign: 'center' }}>
-            <button
-              type="button"
-              onClick={() => setShowDeleteModal(true)}
-              style={{
-                fontSize: 14,
-                color: '#dc2626',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-              }}
-            >
-              <Trash2 size={16} />
-              Supprimer l&apos;annonce
-            </button>
-          </div>
-
-          {showDeleteModal && (
-            <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDeleteModal(false)} aria-hidden />
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  maxWidth: 340,
-                  backgroundColor: '#fff',
-                  padding: '24px 20px',
-                  borderRadius: 16,
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-                }}
-              >
-                <h2
-                  style={{
-                    fontFamily: 'var(--font-playfair), Georgia, serif',
-                    fontSize: 22,
-                    fontWeight: 500,
-                    marginBottom: 10,
-                    color: '#1d1d1f',
-                    letterSpacing: '-0.02em',
-                    textAlign: 'center',
-                  }}
-                >
-                  Supprimer l&apos;annonce
-                </h2>
-                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
-                  Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
-                </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteModal(false)}
-                    style={{
-                      flex: 1,
-                      height: 44,
-                      backgroundColor: '#fff',
-                      color: '#1d1d1f',
-                      fontSize: 14,
-                      fontWeight: 500,
-                      border: '1.5px solid #d2d2d7',
-                      borderRadius: 980,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    style={{
-                      flex: 1,
-                      height: 44,
-                      backgroundColor: '#dc2626',
-                      color: '#fff',
-                      fontSize: 14,
-                      fontWeight: 500,
-                      border: 'none',
-                      borderRadius: 980,
-                      cursor: deleting ? 'not-allowed' : 'pointer',
-                      opacity: deleting ? 0.7 : 1,
-                    }}
-                  >
-                    {deleting ? 'Suppression...' : 'Supprimer'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </motion.div>
       </div>
     </div>

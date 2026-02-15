@@ -237,7 +237,7 @@ export default function HomePage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {[1, 2, 3, 4].map((i) => (
                 <div key={i}>
-                  <div style={{ aspectRatio: '3/4', backgroundColor: '#f5f5f7', marginBottom: 16, borderRadius: 18 }} />
+                  <div style={{ aspectRatio: '1', backgroundColor: '#f5f5f7', marginBottom: 16, borderRadius: 18 }} />
                   <div style={{ height: 16, backgroundColor: '#f5f5f7', width: '70%', marginBottom: 10, borderRadius: 8 }} />
                   <div style={{ height: 14, backgroundColor: '#f5f5f7', width: '40%', borderRadius: 8 }} />
                 </div>
@@ -250,7 +250,7 @@ export default function HomePage() {
                   <article>
                     <div
                       style={{
-                        aspectRatio: '3/4',
+                        aspectRatio: '1',
                         backgroundColor: '#f5f5f7',
                         marginBottom: 16,
                         overflow: 'hidden',

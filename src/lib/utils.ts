@@ -52,12 +52,10 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 export const CATEGORIES: { value: string; label: string }[] = [
+  { value: 'vetements', label: 'Vêtement' },
   { value: 'sacs', label: 'Sac' },
   { value: 'montres', label: 'Montre' },
   { value: 'bijoux', label: 'Bijou' },
-  { value: 'vetements', label: 'Vêtement' },
   { value: 'chaussures', label: 'Chaussure' },
   { value: 'accessoires', label: 'Accessoire' },
-  { value: 'maroquinerie', label: 'Maroquinerie' },
-  { value: 'autre', label: 'Autre' },
 ];

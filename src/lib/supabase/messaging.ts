@@ -103,6 +103,28 @@ export async function getUserConversations(
   return (data || []).map(rowToConversation);
 }
 
+/** Nombre de conversations (utilisateurs ayant cliqué Message et envoyé le formulaire Contacter le vendeur) pour un vendeur. */
+export async function getSellerConversationsCount(sellerId: string): Promise<number> {
+  if (!isSupabaseConfigured || !supabase) return 0;
+  const { count, error } = await supabase
+    .from('conversations')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_id', sellerId);
+  if (error) return 0;
+  return count ?? 0;
+}
+
+/** Nombre de conversations (messages) pour une annonce donnée. */
+export async function getConversationsCountForListing(listingId: string): Promise<number> {
+  if (!isSupabaseConfigured || !supabase) return 0;
+  const { count, error } = await supabase
+    .from('conversations')
+    .select('id', { count: 'exact', head: true })
+    .eq('listing_id', listingId);
+  if (error) return 0;
+  return count ?? 0;
+}
+
 // Send a message
 export async function sendMessage(data: {
   conversationId: string;

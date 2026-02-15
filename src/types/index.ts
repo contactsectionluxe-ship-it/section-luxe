@@ -10,9 +10,7 @@ export type ListingCategory =
   | 'bijoux'
   | 'vetements'
   | 'chaussures'
-  | 'accessoires'
-  | 'maroquinerie'
-  | 'autre';
+  | 'accessoires';
 
 export interface User {
   uid: string;
@@ -67,6 +65,8 @@ export interface Listing {
   widthCm?: number | null;
   year?: number | null;
   packaging?: string[] | null;
+  /** Nombre de fois que le numéro de téléphone a été affiché (clic sur N° téléphone) */
+  phoneRevealsCount?: number;
 }
 
 export interface Favorite {

@@ -71,7 +71,7 @@ export function Modal({
               {(title || description) && (
                 <div className="px-6 pt-6 pb-2">
                   {title && (
-                    <h2 className="font-serif text-xl text-[#1a1a1a]">
+                    <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a' }}>
                       {title}
                     </h2>
                   )}

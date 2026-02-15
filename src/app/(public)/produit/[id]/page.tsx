@@ -5,7 +5,7 @@ import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getListing, getSellerListings, getListings } from '@/lib/supabase/listings';
+import { getListing, getSellerListings, getListings, incrementPhoneReveals, getVisitorId } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
 import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
@@ -429,7 +429,7 @@ export default function ProductPage() {
                   <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                     <button
                       type="button"
-                      onClick={() => setShowPhone((v) => !v)}
+                      onClick={() => { const next = !showPhone; if (next) incrementPhoneReveals(listing.id, isAuthenticated ? undefined : getVisitorId()).catch(() => {}); setShowPhone(next); }}
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
                       {showPhone ? (
@@ -1077,7 +1077,7 @@ export default function ProductPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                  <button type="button" onClick={() => setShowPhone((v) => !v)} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { const next = !showPhone; if (next) incrementPhoneReveals(listing.id, isAuthenticated ? undefined : getVisitorId()).catch(() => {}); setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     {showPhone ? (
                       <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
                     ) : (
@@ -1123,7 +1123,7 @@ export default function ProductPage() {
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <div style={{ padding: 24 }}>
-              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, marginBottom: 16, textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Plan vendeur</h2>
+              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, marginBottom: 16, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Plan vendeur</h2>
               <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
@@ -1172,7 +1172,7 @@ export default function ProductPage() {
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 28, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, paddingRight: 36 }}>
-              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 600, margin: 0, textAlign: 'center' }}>Contacter le vendeur</h2>
+              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Contacter le vendeur</h2>
               <button type="button" onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
                 <X size={20} />
               </button>
@@ -1286,7 +1286,7 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAuthModal(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 380, backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-            <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>Connectez-vous</h2>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 8, color: '#0a0a0a', textAlign: 'center' }}>Connectez-vous</h2>
             <p style={{ fontSize: 14, color: '#666', marginBottom: 24, textAlign: 'center' }}>Créez un compte pour ajouter vos favoris et contacter le vendeur.</p>
             <Link href={`/connexion${redirectUrl}`} onClick={() => setShowAuthModal(false)} style={{ display: 'block', width: '100%', height: 50, border: '1.5px solid #d2d2d7', color: '#1d1d1f', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', marginBottom: 12, borderRadius: 980 }}>
               J&apos;ai déjà un compte

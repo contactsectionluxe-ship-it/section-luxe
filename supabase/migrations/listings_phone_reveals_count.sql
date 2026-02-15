@@ -4,8 +4,8 @@
 ALTER TABLE public.listings
   ADD COLUMN IF NOT EXISTS phone_reveals_count INTEGER NOT NULL DEFAULT 0;
 
--- Incrémenter le compteur (appelé quand un visiteur affiche le numéro)
-CREATE OR REPLACE FUNCTION increment_phone_reveals(p_listing_id UUID)
+-- Incrémenter le compteur (appelé à chaque clic sur "N° téléphone" qui affiche le numéro)
+CREATE OR REPLACE FUNCTION public.increment_phone_reveals(p_listing_id UUID)
 RETURNS VOID AS $$
 BEGIN
   UPDATE public.listings
@@ -15,6 +15,9 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Tout le monde peut incrémenter (visiteur anonyme ou connecté)
-GRANT EXECUTE ON FUNCTION increment_phone_reveals(UUID) TO anon;
-GRANT EXECUTE ON FUNCTION increment_phone_reveals(UUID) TO authenticated;
-GRANT EXECUTE ON FUNCTION increment_phone_reveals(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.increment_phone_reveals(UUID) TO anon;
+GRANT EXECUTE ON FUNCTION public.increment_phone_reveals(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.increment_phone_reveals(UUID) TO service_role;
+
+-- Recharger le cache PostgREST pour que l'app trouve la fonction
+NOTIFY pgrst, 'reload schema';
