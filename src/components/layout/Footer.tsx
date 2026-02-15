@@ -38,7 +38,7 @@ export function Footer() {
               Catégories
             </h4>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link href="/catalogue?category=sacs" style={{ fontSize: 14, color: '#6e6e73' }}>Sacs</Link>
+              <Link href="/catalogue?category=sacs" style={{ fontSize: 14, color: '#6e6e73' }}>Sac</Link>
               <Link href="/catalogue?category=montres" style={{ fontSize: 14, color: '#6e6e73' }}>Montres</Link>
               <Link href="/catalogue?category=bijoux" style={{ fontSize: 14, color: '#6e6e73' }}>Bijoux</Link>
               <Link href="/catalogue?category=vetements" style={{ fontSize: 14, color: '#6e6e73' }}>Vêtements</Link>
@@ -51,7 +51,7 @@ export function Footer() {
             </h4>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Link href="/inscription-vendeur" style={{ fontSize: 14, color: '#6e6e73' }}>Devenir vendeur</Link>
-              <Link href="/vendeur" style={{ fontSize: 14, color: '#6e6e73' }}>Espace vendeur</Link>
+              <Link href="/vendeur" style={{ fontSize: 14, color: '#6e6e73' }}>Mes annonces</Link>
             </nav>
           </div>
 

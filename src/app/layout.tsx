@@ -21,7 +21,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: 'Section Luxe - Marketplace d\'articles de luxe',
   description:
-    'Découvrez des articles de luxe d\'exception sur Section Luxe, la marketplace réservée aux vendeurs professionnels. Sacs, montres, bijoux et plus encore.',
+    'Découvrez des articles de luxe d\'exception sur Section Luxe, la marketplace réservée aux vendeurs professionnels. Sac, montres, bijoux et plus encore.',
   keywords: ['luxe', 'marketplace', 'sacs', 'montres', 'bijoux', 'mode', 'occasion', 'section luxe'],
   icons: { icon: '/icon.png' },
 };

@@ -12,25 +12,12 @@ import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
+import { getDealLevel, getDealDefault, getBarPositionFromDeal } from '@/lib/deal';
 
 /** Affiche le téléphone au format 00 00 00 00 00 */
 function formatPhoneDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.replace(/(.{2})/g, '$1 ').trim();
-}
-
-function getDealLevel(price: number, average: number): { label: string; color: string; description: string } {
-  if (price <= average * 0.85) return { label: 'Très bonne affaire', color: '#248a3d', description: 'Le prix est très en-dessous de la moyenne des articles similaires.' };
-  if (price <= average * 0.95) return { label: 'Bonne affaire', color: '#248a3d', description: 'Le prix est en-dessous de la moyenne des articles similaires.' };
-  if (price <= average * 1.05) return { label: 'Offre équitable', color: '#6e6e73', description: 'Le prix est dans la moyenne des articles similaires.' };
-  return { label: 'Au-dessus du marché', color: '#ff9500', description: 'Le prix est supérieur à la moyenne des prix des articles similaires.' };
-}
-function getDealDefault(): { label: string; color: string; description: string } {
-  return { label: 'Offre équitable', color: '#6e6e73', description: 'Le prix de l\'annonce est dans la moyenne des prix des annonces similaires.' };
-}
-function getBarPosition(price: number, min: number, max: number): number {
-  if (max <= min) return 0.5;
-  return Math.max(0, Math.min(1, (price - min) / (max - min)));
 }
 
 export default function ProductPage() {
@@ -50,6 +37,7 @@ export default function ProductPage() {
   const [contactLoading, setContactLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const [showPhotoLightbox, setShowPhotoLightbox] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
   const [showLegalMore, setShowLegalMore] = useState(false);
@@ -91,6 +79,7 @@ export default function ProductPage() {
         const similar = await getListings({
           category: listingData.category,
           year: listingData.year ?? undefined,
+          model: listingData.model ?? undefined,
           limitCount: 100,
         });
         const others = similar.filter((l) => l.id !== listingData.id && l.price > 0);
@@ -120,6 +109,13 @@ export default function ProductPage() {
 
     loadData();
   }, [listingId, isAuthenticated, user, router]);
+
+  useEffect(() => {
+    if (!showPhotoLightbox) return;
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowPhotoLightbox(false); };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [showPhotoLightbox]);
 
   const handleFavoriteClick = async () => {
     if (!isAuthenticated) {
@@ -290,9 +286,15 @@ export default function ProductPage() {
           {/* Desktop: photo et détails même hauteur (hauteur = photo), puis miniatures en dessous */}
           <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
             <div style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
-              {/* Photo principale — définit la hauteur de la ligne (aspect 4/3) pour aligner le bas de la carte vendeur */}
-              <div style={{ flex: '1.15 0 0', minWidth: 0, aspectRatio: '4/3' }}>
-                <div style={{ width: '100%', height: '100%', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
+              {/* Photo principale — format carré, clic = agrandir */}
+              <div style={{ flex: '0 0 auto', width: 'min(100%, 520px)', aspectRatio: '1/1' }}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
+                  onKeyDown={(e) => e.key === 'Enter' && listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
+                  style={{ width: '100%', height: '100%', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
+                >
                   {listing.photos[currentPhotoIndex] ? (
                     <img
                       src={listing.photos[currentPhotoIndex]}
@@ -307,13 +309,15 @@ export default function ProductPage() {
                   {listing.photos.length > 1 && (
                     <>
                       <button
-                        onClick={() => setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1)}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1); }}
                         style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <ChevronLeft size={20} />
                       </button>
                       <button
-                        onClick={() => setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0)}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0); }}
                         style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <ChevronRight size={20} />
@@ -323,16 +327,16 @@ export default function ProductPage() {
                 </div>
               </div>
 
-              {/* Détails — même hauteur que la photo, bloc vendeur en bas */}
-            <div style={{ flex: '0.85 0 0', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              {/* Détails — reste de la ligne */}
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 {categoryLabel && listing.category && (
-                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
+                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                     {categoryLabel}
                   </Link>
                 )}
                 {listing.brand && (
-                  <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
+                  <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                     {listing.brand}
                   </Link>
                 )}
@@ -341,10 +345,23 @@ export default function ProductPage() {
                 {listing.title}
               </h1>
               {listing.listingNumber && (
-                <p style={{ fontSize: 13, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
+                <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 15, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
-                <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                  {(() => {
+                    const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                    return (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
+                        <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Euro size={9} color="#fff" strokeWidth={2.5} />
+                        </span>
+                        {deal.label}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <button
                     onClick={handleFavoriteClick}
@@ -385,15 +402,15 @@ export default function ProductPage() {
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 13, color: '#888', marginBottom: 24 }}>
+              <div style={{ fontFamily: 'var(--font-inter), var(--font-sans)', display: 'flex', alignItems: 'center', gap: 16, fontSize: 15, color: '#888', marginBottom: 24 }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Heart size={14} /> {likesCount} likes
+                  <Heart size={16} /> {likesCount} likes
                 </span>
                 <span>Publié le {formatDate(listing.createdAt)}</span>
               </div>
 
               {seller && (
-                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
+                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
@@ -403,7 +420,9 @@ export default function ProductPage() {
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>{seller.companyName}</h3>
+                      <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>{seller.companyName}</h3>
+                      </Link>
                       <p style={{ fontSize: 14, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                     </div>
                   </div>
@@ -418,7 +437,7 @@ export default function ProductPage() {
                       ) : (
                         <>
                           <Phone size={18} />
-                          N° téléphone
+                          <span style={{ fontSize: 16 }}>N° téléphone</span>
                         </>
                       )}
                     </button>
@@ -428,19 +447,26 @@ export default function ProductPage() {
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
                       <MessageCircle size={18} />
-                      Message
+                      <span style={{ fontSize: 16 }}>Message</span>
                     </button>
                   </div>
                   {seller.address && (
-                    <button
-                      type="button"
-                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                      style={{ width: '100%', marginTop: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14, cursor: 'pointer' }}
+                    <div
+                      style={{ width: '100%', marginTop: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
                     >
-                      <MapPin size={22} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
-                    </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                        style={{ padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        Voir la carte
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -481,8 +507,8 @@ export default function ProductPage() {
             {/* Informations puis Description en dessous — 50% gauche */}
             <div className="hide-mobile" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 0 }}>
               <div>
-                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
-                  <Info size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 3 }} />
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
                 <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
@@ -494,7 +520,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, textDecoration: 'underline' }}>{categoryLabel || listing.category}</Link>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{categoryLabel || listing.category}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
                       )}
@@ -505,7 +531,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, textDecoration: 'underline' }}>{listing.brand}</Link>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.brand}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
                       )}
@@ -566,17 +592,36 @@ export default function ProductPage() {
                 </div>
               </div>
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
-                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
-                  <FileText size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{seller.companyName}</p>}
+                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
                 <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                  {(() => {
+                    const has = Array.isArray(listing.packaging) ? listing.packaging : [];
+                    const items: { key: string; label: string }[] = [
+                      { key: 'box', label: 'Boîte' },
+                      { key: 'certificat', label: 'Certificat' },
+                      { key: 'facture', label: 'Facture' },
+                    ];
+                    return (
+                      <>
+                        {items.map(({ key, label }) => (
+                          <span key={key} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: has.includes(key) ? '#e8f5e9' : '#f5f5f5', fontSize: 13, fontWeight: 500, color: has.includes(key) ? '#2e7d32' : '#6e6e73', borderRadius: 4 }}>
+                            {label} : {has.includes(key) ? 'Oui' : 'Non'}
+                          </span>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
               {/* Section Prix — design type barre de comparaison (offre et prix) */}
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
-                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
-                  <Euro size={18} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Prix
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -597,15 +642,15 @@ export default function ProductPage() {
                 <div style={{ position: 'relative', marginBottom: 12 }}>
                   <div style={{ height: 8, display: 'flex', gap: 2, borderRadius: 4, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
                     <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
-                    <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                    <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
                     <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
                     <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
                   </div>
                   <div
                     style={{
                       position: 'absolute',
-                      left: `${priceStats ? getBarPosition(listing.price, priceStats.min, priceStats.max) * 100 : 62.5}%`,
-top: -4,
+                      left: `${getBarPositionFromDeal(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()) * 100}%`,
+                      top: -4,
                         width: 0,
                         height: 0,
                         borderLeft: '5px solid transparent',
@@ -620,7 +665,7 @@ top: -4,
                 </p>
                 {priceStats && (
                   <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}).
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
                   </p>
                 )}
                 <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -646,8 +691,8 @@ top: -4,
           {/* Section Vendeur Professionnel — même largeur que les autres (100 % colonne gauche) */}
           {seller && (
             <div style={{ marginTop: 24, borderTop: '1px solid #e5e5e7', paddingTop: 24, width: '100%' }}>
-              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 24 }}>
-                <Store size={20} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, alignSelf: 'center', marginTop: 2 }} />
+              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 24 }}>
+                <Store size={21} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                 Vendeur professionnel
               </h2>
               <div style={{ maxWidth: 480 }}>
@@ -660,7 +705,9 @@ top: -4,
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
+                    <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
+                    </Link>
                     {seller.description && (
                       <>
                         <p
@@ -696,34 +743,19 @@ top: -4,
                 >
                   Voir les annonces du vendeur ({sellerListingsCount})
                 </Link>
-                {seller.address && (
+                {(seller.address || seller.postcode || seller.city) && (
                   <div
-                    style={{
-                      width: '100%',
-                      minHeight: 140,
-                      padding: '20px 16px 16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 14,
-                      backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
-                      backgroundSize: '115%',
-                      backgroundPosition: 'center',
-                      backgroundColor: '#f6f6f8',
-                      border: '1px solid #c8c8cc',
-                      borderRadius: 14,
-                    }}
+                    style={{ width: '100%', marginTop: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                      <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                      <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                      style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                      style={{ padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
                     >
                       Voir la carte
                     </button>
@@ -747,7 +779,13 @@ top: -4,
           <div className="hide-desktop">
             {/* Gallery */}
             <div style={{ marginBottom: 24 }}>
-              <div style={{ aspectRatio: '4/3', backgroundColor: '#f5f5f7', marginBottom: 12, position: 'relative', overflow: 'hidden', borderRadius: 18 }}>
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
+                onKeyDown={(e) => e.key === 'Enter' && listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
+                style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
+              >
                 {listing.photos[currentPhotoIndex] ? (
                   <img src={listing.photos[currentPhotoIndex]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
@@ -771,8 +809,8 @@ top: -4,
               {/* Informations puis Description en dessous - mobile */}
               <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <div>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
-                  <Info size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 2 }} />
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                  <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
                   <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
@@ -784,7 +822,7 @@ top: -4,
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, textDecoration: 'underline' }}>{categoryLabel || listing.category}</Link>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{categoryLabel || listing.category}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
                       )}
@@ -795,7 +833,7 @@ top: -4,
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, textDecoration: 'underline' }}>{listing.brand}</Link>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.brand}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
                       )}
@@ -856,17 +894,36 @@ top: -4,
                 </div>
                 </div>
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
-                  <FileText size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                  <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{seller.companyName}</p>}
+                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+                  {(() => {
+                    const has = Array.isArray(listing.packaging) ? listing.packaging : [];
+                    const items: { key: string; label: string }[] = [
+                      { key: 'box', label: 'Boîte' },
+                      { key: 'certificat', label: 'Certificat' },
+                      { key: 'facture', label: 'Facture' },
+                    ];
+                    return (
+                      <>
+                        {items.map(({ key, label }) => (
+                          <span key={key} style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: has.includes(key) ? '#e8f5e9' : '#f5f5f5', fontSize: 12, fontWeight: 500, color: has.includes(key) ? '#2e7d32' : '#6e6e73', borderRadius: 4 }}>
+                            {label} : {has.includes(key) ? 'Oui' : 'Non'}
+                          </span>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </div>
                 </div>
                 {/* Section Prix - mobile */}
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, letterSpacing: '-0.02em', color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
-                    <Euro size={14} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, marginTop: 1 }} />
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                    <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                     Prix
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -887,14 +944,14 @@ top: -4,
                   <div style={{ position: 'relative', marginBottom: 10 }}>
                     <div style={{ height: 6, display: 'flex', gap: 1, borderRadius: 3, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
                       <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
-                      <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                      <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
                       <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
                       <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
                     </div>
                     <div
                       style={{
                         position: 'absolute',
-                        left: `${priceStats ? getBarPosition(listing.price, priceStats.min, priceStats.max) * 100 : 62.5}%`,
+                        left: `${getBarPositionFromDeal(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()) * 100}%`,
                         top: -3,
                         width: 0,
                         height: 0,
@@ -910,7 +967,7 @@ top: -4,
                   </p>
                   {priceStats && (
                     <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}).
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
@@ -937,15 +994,28 @@ top: -4,
             {/* Details */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
               {categoryLabel && listing.category && (
-                <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
+                <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
               )}
               {listing.brand && (
-                <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '4px 10px', backgroundColor: '#f5f5f5', fontSize: 11, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
+                <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
               )}
             </div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{listing.title}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12 }}>
-              <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                {(() => {
+                  const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                  return (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color }}>
+                      <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Euro size={8} color="#fff" strokeWidth={2.5} />
+                      </span>
+                      {deal.label}
+                    </span>
+                  );
+                })()}
+              </div>
               <button
                 onClick={handleFavoriteClick}
                 disabled={favoriteLoading}
@@ -984,13 +1054,13 @@ top: -4,
                 <Share2 size={18} />
               </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: '#888', marginBottom: 20 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12} /> {likesCount}</span>
-              <span>{formatDate(listing.createdAt)}</span>
+            <div style={{ fontFamily: 'var(--font-inter), var(--font-sans)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#888', marginBottom: 20 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={14} /> {likesCount} likes</span>
+              <span>Publié le {formatDate(listing.createdAt)}</span>
             </div>
 
             {seller && (
-              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18 }}>
+              <div style={{ padding: 24, backgroundColor: '#fafafb', borderRadius: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {seller.avatarUrl ? (
@@ -1000,7 +1070,9 @@ top: -4,
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
+                    <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
+                    </Link>
                     <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                   </div>
                 </div>
@@ -1011,25 +1083,32 @@ top: -4,
                     ) : (
                       <>
                         <Phone size={16} />
-                        N° téléphone
+                        <span style={{ fontSize: 15 }}>N° téléphone</span>
                       </>
                     )}
                   </button>
                   <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     <MessageCircle size={16} />
-                    Message
+                    <span style={{ fontSize: 15 }}>Message</span>
                   </button>
                 </div>
                 {seller.address && (
-                  <button
-                    type="button"
-                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                    style={{ width: '100%', marginTop: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14, cursor: 'pointer' }}
+                  <div
+                    style={{ width: '100%', marginTop: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
                   >
-                    <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>
-                  </button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                      style={{ padding: '6px 12px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      Voir la carte
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -1045,7 +1124,7 @@ top: -4,
           <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <div style={{ padding: 24 }}>
               <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, marginBottom: 16, textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Plan vendeur</h2>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>{seller.companyName}</p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
                 <iframe
@@ -1151,6 +1230,53 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
                 {contactFormSubmitting ? 'Envoi...' : 'Envoyer'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox photo agrandie */}
+      {showPhotoLightbox && listing?.photos?.[currentPhotoIndex] && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo agrandie"
+          style={{ position: 'fixed', inset: 0, zIndex: 199, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+        >
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)' }} onClick={() => setShowPhotoLightbox(false)} />
+          <button
+            type="button"
+            onClick={() => setShowPhotoLightbox(false)}
+            style={{ position: 'absolute', top: 16, right: 16, zIndex: 1, width: 44, height: 44, borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            aria-label="Fermer"
+          >
+            <X size={24} />
+          </button>
+          {listing.photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1); }}
+                style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="Photo précédente"
+              >
+                <ChevronLeft size={28} />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0); }}
+                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                aria-label="Photo suivante"
+              >
+                <ChevronRight size={28} />
+              </button>
+            </>
+          )}
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+            <img
+              src={listing.photos[currentPhotoIndex]}
+              alt={listing.title}
+              style={{ maxWidth: '90vw', maxHeight: '90vh', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: 8 }}
+            />
           </div>
         </div>
       )}

@@ -46,6 +46,8 @@ export interface Listing {
   id: string;
   sellerId: string;
   sellerName: string;
+  /** Code postal du vendeur (récupéré depuis sellers si disponible) */
+  sellerPostcode?: string | null;
   title: string;
   description: string;
   price: number;

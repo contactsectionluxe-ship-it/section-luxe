@@ -7,7 +7,7 @@ import { getFeaturedListings } from '@/lib/supabase/listings';
 import { Listing } from '@/types';
 
 const categories = [
-  { name: 'Sacs', href: '/catalogue?category=sacs' },
+  { name: 'Sac', href: '/catalogue?category=sacs' },
   { name: 'Montres', href: '/catalogue?category=montres' },
   { name: 'Bijoux', href: '/catalogue?category=bijoux' },
   { name: 'Vêtements', href: '/catalogue?category=vetements' },

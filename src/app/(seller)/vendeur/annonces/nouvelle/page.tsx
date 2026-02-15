@@ -21,9 +21,11 @@ const ETAT_OPTIONS = [
   { value: 'correct', label: 'Correct' },
 ];
 
-const PACKAGING_OPTIONS = [
+/** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
+const CONTENU_INCLUS_OPTIONS = [
   { value: 'box', label: 'Boîte' },
-  { value: 'papers', label: 'Papiers' },
+  { value: 'certificat', label: 'Certificat' },
+  { value: 'facture', label: 'Facture' },
 ];
 
 const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix'];
@@ -89,9 +91,11 @@ export default function NewListingPage() {
   const [widthCm, setWidthCm] = useState('');
   const [year, setYear] = useState('');
   const [packaging, setPackaging] = useState<string[]>([]);
+  const [contenuInclusTouched, setContenuInclusTouched] = useState<Record<string, boolean>>({ box: false, certificat: false, facture: false });
 
   // Étape 4
   const [price, setPrice] = useState('');
+  const [isActive, setIsActive] = useState(true);
 
   const categoryOptions = CATEGORIES;
   // Marques filtrées par catégorie (affichées seulement après choix de la catégorie)
@@ -155,22 +159,7 @@ export default function NewListingPage() {
       setError('Sélectionnez l\'état');
       return false;
     }
-    if (!material) {
-      setError('Sélectionnez la matière');
-      return false;
-    }
-    if (!color) {
-      setError('Sélectionnez la couleur');
-      return false;
-    }
-    if (material === 'other' && !customMaterial.trim()) {
-      setError('Précisez la matière');
-      return false;
-    }
-    if (color === 'other' && !customColor.trim()) {
-      setError('Précisez la couleur');
-      return false;
-    }
+    // Matière, couleur : optionnels
     setError('');
     return true;
   };
@@ -185,8 +174,9 @@ export default function NewListingPage() {
   };
 
   const validateStep3 = () => {
-    if (!description.trim()) {
-      setError('Rédigez une description');
+    const allContenuAnswered = CONTENU_INCLUS_OPTIONS.every((opt) => contenuInclusTouched[opt.value]);
+    if (!allContenuAnswered) {
+      setError('Veuillez indiquer le contenu inclus pour la boîte, le certificat et la facture (Oui ou Non pour chaque).');
       return false;
     }
     setError('');
@@ -238,7 +228,7 @@ export default function NewListingPage() {
         sellerId: user!.uid,
         sellerName: seller!.companyName,
         title,
-        description: description.trim(),
+        description: description.trim() || '',
         price: priceNum,
         category: (category === 'autre' ? customCategory.trim() : category) as ListingCategory,
         photos: [],
@@ -251,6 +241,7 @@ export default function NewListingPage() {
         widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
         year: year ? parseInt(year, 10) : null,
         packaging: packaging.length ? packaging : null,
+        isActive,
       });
 
       let photoUrls: string[] = [];
@@ -282,9 +273,10 @@ export default function NewListingPage() {
     }
   };
 
-  const togglePackaging = (value: string) => {
+  const setContenuInclus = (key: string, included: boolean) => {
+    setContenuInclusTouched((prev) => ({ ...prev, [key]: true }));
     setPackaging((prev) =>
-      prev.includes(value) ? prev.filter((p) => p !== value) : [...prev, value]
+      included ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((p) => p !== key)
     );
   };
 
@@ -379,7 +371,7 @@ export default function NewListingPage() {
                 transition={{ duration: 0.25 }}
               >
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Catégorie</label>
+                  <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <select
                     value={category}
                     onChange={(e) => {
@@ -405,7 +397,7 @@ export default function NewListingPage() {
                 </div>
                 {category === 'autre' && (
                   <div style={{ marginBottom: 18 }}>
-                    <label style={labelStyle}>Catégorie personnalisée</label>
+                    <label style={labelStyle}>Catégorie personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
                     <input
                       type="text"
                       value={customCategory}
@@ -416,7 +408,7 @@ export default function NewListingPage() {
                   </div>
                 )}
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Marque</label>
+                  <label style={labelStyle}>Marque <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <select
                     value={brand}
                     onChange={(e) => {
@@ -450,7 +442,7 @@ export default function NewListingPage() {
                 </div>
                 {brand === 'Autre' && (
                   <div style={{ marginBottom: 18 }}>
-                    <label style={labelStyle}>Marque personnalisée</label>
+                    <label style={labelStyle}>Marque personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
                     <input
                       type="text"
                       value={customBrand}
@@ -461,7 +453,7 @@ export default function NewListingPage() {
                   </div>
                 )}
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Modèle</label>
+                  <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
                   {modelOptions.length > 0 ? (
                     <>
                       <select
@@ -501,7 +493,7 @@ export default function NewListingPage() {
                   )}
                 </div>
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>État</label>
+                  <label style={labelStyle}>État <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <select
                     value={condition}
                     onChange={(e) => setCondition(e.target.value)}
@@ -521,10 +513,7 @@ export default function NewListingPage() {
                     onChange={(e) => {
                       setMaterial(e.target.value);
                       if (e.target.value !== 'other') setCustomMaterial('');
-                      setColor('');
-                      setCustomColor('');
                     }}
-                    required
                     disabled={!category}
                     style={{
                       ...inputStyle,
@@ -562,7 +551,6 @@ export default function NewListingPage() {
                   <select
                     value={color}
                     onChange={(e) => { setColor(e.target.value); if (e.target.value !== 'other') setCustomColor(''); }}
-                    required
                     disabled={!category}
                     style={{
                       ...inputStyle,
@@ -624,7 +612,7 @@ export default function NewListingPage() {
                 transition={{ duration: 0.25 }}
               >
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Photos (minimum 1, maximum 9)</label>
+                  <label style={labelStyle}>Photos (minimum 1, maximum 9) <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>
                     La première photo sera l&apos;image principale. Insérez ou supprimez des photos.
                   </p>
@@ -772,7 +760,6 @@ export default function NewListingPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Décrivez votre produit en précisant : état, caractéristiques, éventuelles imperfections, taille et dimensions."
-                    required
                     style={{
                       width: '100%',
                       minHeight: 100,
@@ -788,24 +775,24 @@ export default function NewListingPage() {
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
                   <div>
-                    <label style={labelStyle}>Hauteur (cm) <span style={{ fontWeight: 400, color: '#86868b' }}>(optionnel)</span></label>
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={heightCm}
-                      onChange={(e) => setHeightCm(e.target.value)}
-                      placeholder="Ex: 25"
-                      style={inputStyle}
-                    />
-                  </div>
-                  <div>
-                    <label style={labelStyle}>Largeur (cm) <span style={{ fontWeight: 400, color: '#86868b' }}>(optionnel)</span></label>
+                    <label style={labelStyle}>Longueur (cm)</label>
                     <input
                       type="text"
                       inputMode="decimal"
                       value={widthCm}
                       onChange={(e) => setWidthCm(e.target.value)}
                       placeholder="Ex: 35"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Hauteur (cm)</label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={heightCm}
+                      onChange={(e) => setHeightCm(e.target.value)}
+                      placeholder="Ex: 25"
                       style={inputStyle}
                     />
                   </div>
@@ -823,31 +810,45 @@ export default function NewListingPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Emballage (sélection multiple)</label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-                    {PACKAGING_OPTIONS.map((opt) => (
-                      <label
-                        key={opt.value}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          cursor: 'pointer',
-                          fontSize: 14,
-                          padding: '10px 16px',
-                          border: `1px solid ${packaging.includes(opt.value) ? '#1d1d1f' : '#d2d2d7'}`,
-                          borderRadius: 12,
-                          backgroundColor: packaging.includes(opt.value) ? '#f5f5f7' : '#fff',
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={packaging.includes(opt.value)}
-                          onChange={() => togglePackaging(opt.value)}
-                          style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
-                        />
-                        {opt.label}
-                      </label>
+                  <label style={labelStyle}>Contenu inclus <span style={{ color: '#c00', fontWeight: 600 }}>*</span></label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {CONTENU_INCLUS_OPTIONS.map((opt) => (
+                      <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                        <span style={{ fontSize: 15, color: '#1d1d1f' }}>{opt.label}</span>
+                        <div style={{ display: 'flex', gap: 0, border: '1px solid #d2d2d7', borderRadius: 10, overflow: 'hidden' }}>
+                          <button
+                            type="button"
+                            onClick={() => setContenuInclus(opt.value, true)}
+                            style={{
+                              padding: '10px 20px',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              border: 'none',
+                              cursor: 'pointer',
+                              backgroundColor: packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
+                              color: packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                            }}
+                          >
+                            Oui
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setContenuInclus(opt.value, false)}
+                            style={{
+                              padding: '10px 20px',
+                              fontSize: 14,
+                              fontWeight: 500,
+                              border: 'none',
+                              borderLeft: '1px solid #d2d2d7',
+                              cursor: 'pointer',
+                              backgroundColor: !packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
+                              color: !packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                            }}
+                          >
+                            Non
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -900,7 +901,7 @@ export default function NewListingPage() {
                 onSubmit={handleSubmit}
               >
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Prix</label>
+                  <label style={labelStyle}>Prix <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
@@ -926,6 +927,18 @@ export default function NewListingPage() {
                       <Euro size={17} strokeWidth={2} />
                     </span>
                   </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                  <input
+                    type="checkbox"
+                    id="isActiveNew"
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
+                    style={{ width: 20, height: 20, accentColor: '#1d1d1f' }}
+                  />
+                  <label htmlFor="isActiveNew" style={{ fontSize: 14, color: '#333' }}>
+                    Annonce active (visible dans le catalogue)
+                  </label>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button

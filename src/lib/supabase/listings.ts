@@ -49,7 +49,7 @@ export async function getNextListingNumber(): Promise<string> {
 
 // Create a new listing
 export async function createListing(
-  data: Omit<Listing, 'id' | 'likesCount' | 'listingNumber' | 'isActive' | 'createdAt' | 'updatedAt'>
+  data: Omit<Listing, 'id' | 'likesCount' | 'listingNumber' | 'createdAt' | 'updatedAt'> & { isActive?: boolean }
 ): Promise<string> {
   const client = checkSupabase();
   const listingNumber = await getNextListingNumber();
@@ -60,11 +60,11 @@ export async function createListing(
     title: data.title,
     description: data.description,
     price: data.price,
-    category: data.category,
+    category: (data.category || '').toLowerCase(),
     photos: data.photos,
     likes_count: 0,
     listing_number: listingNumber,
-    is_active: true,
+    is_active: data.isActive !== undefined ? data.isActive : true,
   };
   if (data.brand != null) insertData.brand = data.brand;
   if (data.model != null) insertData.model = data.model;
@@ -98,7 +98,7 @@ export async function updateListing(
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.price !== undefined) updateData.price = data.price;
-  if (data.category !== undefined) updateData.category = data.category;
+  if (data.category !== undefined) updateData.category = (data.category || '').toLowerCase();
   if (data.photos !== undefined) updateData.photos = data.photos;
   if (data.isActive !== undefined) updateData.is_active = data.isActive;
   if (data.brand !== undefined) updateData.brand = data.brand;
@@ -192,7 +192,8 @@ export async function getListings(options?: {
 
   const cats = categories?.length ? categories : (category ? [category] : undefined);
   if (cats?.length) {
-    query = query.in('category', cats);
+    const catsNormalized = cats.map((c) => (c || '').toLowerCase());
+    query = query.in('category', catsNormalized);
   }
 
   const brandList = brands?.length ? brands : (brand ? [brand] : undefined);
@@ -253,7 +254,16 @@ export async function getListings(options?: {
   const { data, error } = await query;
 
   if (error) throw error;
-  return (data || []).map(rowToListing);
+  const listings = (data || []).map(rowToListing);
+  if (listings.length === 0) return listings;
+
+  const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
+  const { data: sellersData } = await supabase.from('sellers').select('id, postcode').in('id', sellerIds);
+  const postcodeBySeller: Record<string, string> = {};
+  (sellersData || []).forEach((s: { id: string; postcode?: string }) => {
+    if (s.postcode) postcodeBySeller[s.id] = s.postcode;
+  });
+  return listings.map((l) => ({ ...l, sellerPostcode: postcodeBySeller[l.sellerId] ?? null }));
 }
 
 /** Liste des marques présentes sur les annonces actives (en stock). */

@@ -81,7 +81,7 @@ export default function SellerDashboardPage() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
-              Espace vendeur
+              Mes annonces
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={{ fontSize: 14, color: '#666' }}>{seller?.companyName}</span>
@@ -160,8 +160,6 @@ export default function SellerDashboardPage() {
 
         {/* Listings */}
         <div>
-          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, marginBottom: 20 }}>Mes annonces</h2>
-
           {listings.length === 0 ? (
             <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
               <Package size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />

@@ -70,6 +70,21 @@ input, select, textarea, button {
   font-size: inherit;
 }
 
+/* Pas de contour bleu au focus */
+button:focus,
+button:focus-visible,
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible,
+a:focus,
+a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 ::selection {
   background-color: #1a1a1a;
   color: #ffffff;

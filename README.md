@@ -88,7 +88,7 @@ luxe-marketplace/
 │   │   ├── (public)/           # Pages publiques
 │   │   ├── (auth)/             # Authentification
 │   │   ├── (buyer)/            # Espace acheteur
-│   │   ├── (seller)/           # Espace vendeur
+│   │   ├── (seller)/           # Mes annonces
 │   │   └── (admin)/            # Administration
 │   ├── components/
 │   │   ├── ui/                 # Composants UI réutilisables
@@ -105,7 +105,7 @@ luxe-marketplace/
 
 ## Catégories disponibles
 
-- Sacs
+- Sac
 - Montres
 - Bijoux
 - Vêtements

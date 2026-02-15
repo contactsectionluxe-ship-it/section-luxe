@@ -3,12 +3,15 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
+import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
+import { getDealLevel, getDealDefault } from '@/lib/deal';
+import { useAuth } from '@/hooks/useAuth';
 import { Listing, Seller } from '@/types';
-import { CATEGORIES } from '@/lib/utils';
+import { CATEGORIES, formatDate } from '@/lib/utils';
 import {
   BRANDS_BY_CATEGORY,
   CATEGORY_TO_BRAND_KEYS,
@@ -20,6 +23,9 @@ import {
   MATERIALS,
 } from '@/lib/constants';
 
+const iconSize = 14;
+const iconColor = '#6e6e73';
+
 const SORT_OPTIONS = [
   { value: 'date_desc', label: 'Plus récents' },
   { value: 'date_asc', label: 'Plus anciens' },
@@ -27,6 +33,38 @@ const SORT_OPTIONS = [
   { value: 'price_desc', label: 'Prix décroissant' },
   { value: 'likes', label: 'Populaires' },
 ];
+
+/** 6 marques les plus connues par type d'article (suggestion en tête du menu Marque) */
+const MARQUES_PLUS_CONNUES_PAR_TYPE: Record<string, string[]> = {
+  sacs: ['Hermès', 'Louis Vuitton', 'Chanel', 'Gucci', 'Prada', 'Dior'],
+  maroquinerie: ['Hermès', 'Louis Vuitton', 'Chanel', 'Gucci', 'Prada', 'Dior'],
+  montres: ['Rolex', 'Omega', 'Cartier', 'Patek Philippe', 'Audemars Piguet', 'Tag Heuer'],
+  bijoux: ['Cartier', 'Van Cleef & Arpels', 'Bulgari', 'Tiffany', 'Chopard', 'Chaumet'],
+  vetements: ['Chanel', 'Dior', 'Gucci', 'Louis Vuitton', 'Prada', 'Saint Laurent'],
+  chaussures: ['Christian Louboutin', 'Gucci', 'Chanel', 'Prada', 'Saint Laurent', 'Dior'],
+  accessoires: ['Louis Vuitton', 'Chanel', 'Gucci', 'Hermès', 'Prada', 'Dior'],
+  autre: ['Hermès', 'Louis Vuitton', 'Chanel', 'Gucci', 'Prada', 'Dior'],
+};
+
+/** 6 modèles les plus connus par marque (suggestion en tête du menu Modèle, filtrée par type + marque) */
+const MODELES_PLUS_CONNUS_PAR_MARQUE: Record<string, string[]> = {
+  'Hermès': ['Birkin', 'Kelly', 'Constance', 'Lindy', 'Évelyne', 'Picotin'],
+  'Louis Vuitton': ['Neverfull', 'Speedy 25', 'Speedy 30', 'Alma', 'Capucines', 'Pochette Métis'],
+  'Chanel': ['Classic Flap', '2.55', 'Boy', 'Gabrielle', 'Coco Handle', '19'],
+  'Gucci': ['Dionysus', 'Marmont', 'Jackie', 'Horsebit', 'Ophidia', 'Bamboo'],
+  'Prada': ['Galleria', 'Saffiano', 'Re-Edition', 'Cleo', 'Nylon', 'Sidonie'],
+  'Dior': ['Lady Dior', 'Saddle', 'Book Tote', 'Bobby', 'Caro', 'Diorama'],
+  'Rolex': ['Submariner', 'Submariner Date', 'Daytona', 'Datejust', 'GMT-Master II', 'Day-Date'],
+  'Omega': ['Speedmaster', 'Seamaster', 'Constellation', 'Aqua Terra', 'Moonwatch', 'Planet Ocean'],
+  'Cartier': ['Tank', 'Santos', 'Ballon Bleu', 'Panthère', 'Love', 'Clé'],
+  'Patek Philippe': ['Nautilus', 'Aquanaut', 'Calatrava', 'Complications', 'Twenty~4', 'World Time'],
+  'Audemars Piguet': ['Royal Oak', 'Royal Oak Offshore', 'Code 11.59', 'Millenary', 'Royal Oak Concept', 'Jules Audemars'],
+  'Tag Heuer': ['Monaco', 'Carrera', 'Aquaracer', 'Autavia', 'Formula 1', 'Link'],
+  'Saint Laurent': ['Sac de Jour', 'LouLou', 'Kate', 'Niki', 'Le 5 à 7', 'Solferino'],
+  'Van Cleef & Arpels': ['Alhambra', 'Perlée', 'Frivole', 'Between the Finger', 'Magic', 'Sweet'],
+  'Bulgari': ['Serpenti', 'Divas\' Dream', 'Bvlgari Bvlgari', 'Octo', 'Octo Finissimo', 'Diagono'],
+  'Tiffany': ['Atlas', 'T True', 'Return to Tiffany', 'HardWear', 'T1', 'Knot'],
+};
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
@@ -42,35 +80,40 @@ function FilterSection({
   children,
   defaultOpen = false,
   collapsible = true,
+  noBorder = false,
 }: {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
   collapsible?: boolean;
+  noBorder?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
+  const borderStyle = noBorder ? undefined : { borderBottom: '1px solid #e8e6e3' as const };
 
   if (!collapsible) {
-    return (
-      <div style={{ borderBottom: '1px solid #e8e6e3' }}>
-        <div
-          style={{
-            padding: '14px 0 0',
-            marginBottom: 12,
-            fontSize: 14,
-            fontWeight: 600,
-            color: '#1d1d1f',
-          }}
-        >
-          {title}
-        </div>
+  return (
+      <div style={borderStyle}>
+        {title ? (
+          <div
+            style={{
+              padding: '14px 0 0',
+              marginBottom: 12,
+              fontSize: 14,
+              fontWeight: 600,
+              color: '#1d1d1f',
+            }}
+          >
+            {title}
+          </div>
+        ) : null}
         <div style={{ paddingBottom: 16 }}>{children}</div>
       </div>
     );
   }
 
   return (
-    <div style={{ borderBottom: '1px solid #e8e6e3' }}>
+    <div style={borderStyle}>
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -88,7 +131,7 @@ function FilterSection({
         }}
       >
         {title}
-        <ChevronDown
+        <ChevronRight
           size={16}
           style={{
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -167,6 +210,44 @@ function CatalogueContent() {
     ];
   }, [filters.categories, filters.category]);
 
+  /** 6 marques les plus connues selon le type (toujours nombre pair : 6, 4, 2 ou 0) */
+  const marquesSuggestion = useMemo(() => {
+    const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
+    const firstType = selectedTypes.length > 0 ? selectedTypes[0] : 'sacs';
+    const list = MARQUES_PLUS_CONNUES_PAR_TYPE[firstType] ?? MARQUES_PLUS_CONNUES_PAR_TYPE.sacs;
+    const fromType = list.filter((b) => marquesAlphabetiques.includes(b));
+    const max6 = fromType.length >= 6 ? fromType.slice(0, 6) : [...fromType, ...marquesAlphabetiques.filter((b) => !fromType.includes(b))].slice(0, 6);
+    const n = Math.min(max6.length, 6);
+    const even = n % 2 === 0 ? n : n - 1;
+    return max6.slice(0, Math.max(0, even));
+  }, [filters.categories, filters.category, marquesAlphabetiques]);
+
+  /** 6 modèles les plus connus selon le type et la marque (toujours nombre pair : 6, 4, 2 ou 0) */
+  const modelesSuggestion = useMemo(() => {
+    const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
+    let fromSuggest: string[] = [];
+    if (selectedBrands.length === 1) {
+      const list = MODELES_PLUS_CONNUS_PAR_MARQUE[selectedBrands[0]] ?? [];
+      fromSuggest = list.filter((m) => modelesAlphabetiques.includes(m));
+    } else if (selectedBrands.length > 1) {
+      const seen = new Set<string>();
+      for (const brand of selectedBrands) {
+        const list = MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? [];
+        for (const m of list) {
+          if (modelesAlphabetiques.includes(m)) seen.add(m);
+        }
+      }
+      fromSuggest = [...seen];
+    } else {
+      const fallback = ['Submariner', 'Birkin', 'Kelly', 'Speedmaster', 'Santos', 'Lady Dior'];
+      fromSuggest = fallback.filter((m) => modelesAlphabetiques.includes(m));
+    }
+    const max6 = fromSuggest.length >= 6 ? fromSuggest.slice(0, 6) : [...fromSuggest, ...modelesAlphabetiques.filter((m) => !fromSuggest.includes(m))].slice(0, 6);
+    const n = Math.min(max6.length, 6);
+    const even = n % 2 === 0 ? n : n - 1;
+    return max6.slice(0, Math.max(0, even));
+  }, [filters.brands, filters.brand, modelesAlphabetiques]);
+
   /** Couleurs proposées selon le(s) type(s) d'article sélectionné(s) (COLORS_BY_CATEGORY). */
   const couleursDisponibles = useMemo(() => {
     const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
@@ -214,13 +295,23 @@ function CatalogueContent() {
   const [localYearMax, setLocalYearMax] = useState('');
 
   const [listings, setListings] = useState<Listing[]>([]);
+  /** Étiquette prix (même logique que page produit section Prix) : id → { label, color } */
+  const [dealByListingId, setDealByListingId] = useState<Record<string, { label: string; color: string }>>({});
   const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
+  /** Ids des annonces mises en favoris par l'utilisateur connecté */
+  const [favoritedListingIds, setFavoritedListingIds] = useState<Record<string, boolean>>({});
+  const [loadingFavoriteId, setLoadingFavoriteId] = useState<string | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  /** Titres d'annonces pour les suggestions de recherche (sans appliquer les filtres) */
+  const [allListingTitlesForSearch, setAllListingTitlesForSearch] = useState<string[]>([]);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [mapZoom, setMapZoom] = useState(15);
 
@@ -229,6 +320,13 @@ function CatalogueContent() {
     const sellerId = searchParams.get('sellerId');
     setFilters((prev) => (prev.sellerId !== (sellerId || undefined) ? { ...prev, sellerId: sellerId || undefined } : prev));
   }, [searchParams]);
+
+  // Charger des titres d'annonces sans filtre pour les suggestions de la barre de recherche (toujours les mêmes qu'il y ait des filtres ou non)
+  useEffect(() => {
+    getListings({ limitCount: 150 })
+      .then((list) => setAllListingTitlesForSearch(list.map((l) => l.title).filter(Boolean)))
+      .catch(() => setAllListingTitlesForSearch([]));
+  }, []);
 
   // Charger les infos vendeur quand sellerId est présent
   useEffect(() => {
@@ -262,6 +360,7 @@ function CatalogueContent() {
 
   const loadListings = useCallback(async () => {
     setLoading(true);
+    setDealByListingId({});
     try {
       let sortBy: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes' = 'newest';
       if (filters.sortBy === 'date_asc') sortBy = 'oldest';
@@ -289,6 +388,33 @@ function CatalogueContent() {
       }
 
       setListings(filtered);
+
+      // Calcul des étiquettes « bonne affaire » (même logique que page produit : similaires = même catégorie, année, modèle)
+      const keyToPair = new Map<string, { category: string; year: number | undefined; model: string | undefined }>();
+      filtered.forEach((l) => {
+        const k = `${l.category}_${l.year ?? 'all'}_${l.model ?? 'all'}`;
+        if (!keyToPair.has(k)) keyToPair.set(k, { category: l.category, year: l.year ?? undefined, model: l.model ?? undefined });
+      });
+      const pairs = [...keyToPair.entries()];
+      const similarLists = await Promise.all(
+        pairs.map(([, p]) => getListings({ category: p.category, year: p.year, model: p.model, limitCount: 100 }))
+      );
+      const similarByKey = new Map<string, { id: string; price: number }[]>();
+      pairs.forEach(([k], i) => {
+        similarByKey.set(
+          k,
+          similarLists[i].filter((l) => l.price > 0).map((l) => ({ id: l.id, price: l.price }))
+        );
+      });
+      const next: Record<string, { label: string; color: string }> = {};
+      filtered.forEach((listing) => {
+        const k = `${listing.category}_${listing.year ?? 'all'}_${listing.model ?? 'all'}`;
+        const others = (similarByKey.get(k) ?? []).filter((x) => x.id !== listing.id);
+        const average = others.length ? others.reduce((s, x) => s + x.price, 0) / others.length : 0;
+        const deal = others.length ? getDealLevel(listing.price, average) : getDealDefault();
+        next[listing.id] = { label: deal.label, color: deal.color };
+      });
+      setDealByListingId(next);
     } catch (error) {
       console.error(error);
     } finally {
@@ -299,6 +425,42 @@ function CatalogueContent() {
   useEffect(() => {
     loadListings();
   }, [loadListings]);
+
+  /** Charger les favoris de l'utilisateur pour les annonces affichées */
+  useEffect(() => {
+    if (!isAuthenticated || !user || listings.length === 0) return;
+    getUserFavoriteListingIds(user.uid).then((ids) => {
+      setFavoritedListingIds((prev) => {
+        const next = { ...prev };
+        ids.forEach((id) => (next[id] = true));
+        return next;
+      });
+    });
+  }, [isAuthenticated, user, listings.length]);
+
+  const handleFavoriteClick = useCallback(
+    async (e: React.MouseEvent, listingId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!user || loadingFavoriteId) return;
+      setLoadingFavoriteId(listingId);
+      try {
+        const isFav = favoritedListingIds[listingId];
+        if (isFav) {
+          await removeFavorite(user.uid, listingId);
+          setFavoritedListingIds((prev) => ({ ...prev, [listingId]: false }));
+        } else {
+          await addFavorite(user.uid, listingId);
+          setFavoritedListingIds((prev) => ({ ...prev, [listingId]: true }));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingFavoriteId(null);
+      }
+    },
+    [user, loadingFavoriteId, favoritedListingIds]
+  );
 
   useLayoutEffect(() => {
     if (!marqueDropdownOpen) setMarqueSearchQuery('');
@@ -320,9 +482,11 @@ function CatalogueContent() {
       materialDropdownRef;
     const onMouseDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpenDropdown(null);
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) setSortDropdownOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpenDropdown(null);
+      if (e.key === 'Escape') setSortDropdownOpen(false);
     };
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('keydown', onKeyDown);
@@ -330,7 +494,7 @@ function CatalogueContent() {
       document.removeEventListener('mousedown', onMouseDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [openDropdown]);
+  }, [openDropdown, sortDropdownOpen]);
 
   const updateFilter = (key: keyof Filters, value: any) => {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
@@ -396,6 +560,7 @@ function CatalogueContent() {
     setLocalPriceMin('');
     setLocalPriceMax('');
     setOpenDropdown(null);
+    setSortDropdownOpen(false);
     setMarqueSearchQuery('');
     setModeleSearchQuery('');
   };
@@ -403,22 +568,25 @@ function CatalogueContent() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchSuggestionsOpen(false);
-    setFilters((prev) => ({ ...prev, query: searchQuery }));
+    const categoryMatch = CATEGORIES.find((c) => c.label === searchQuery.trim());
+    const baseFromSearch = { ...defaultFilters, sellerId: filters.sellerId };
+    if (categoryMatch) {
+      setFilters({ ...baseFromSearch, categories: [categoryMatch.value] });
+    } else {
+      setFilters({ ...baseFromSearch, query: searchQuery.trim() || undefined });
+    }
   };
 
-  /** Suggestions pour la barre de recherche (types d'article + marques + titres d'annonces) */
+  /** Suggestions pour la barre de recherche (types + marques + titres), toujours les mêmes qu'il y ait des filtres ou non */
   const searchSuggestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const types = CATEGORIES.map((t) => t.label);
     const brands = [...new Set(Object.values(BRANDS_BY_CATEGORY).flat())].filter((b) => b !== 'Autre');
-    const fromListings = listings
-      .slice(0, 50)
-      .map((l) => l.title)
-      .filter(Boolean);
+    const fromListings = [...new Set(allListingTitlesForSearch)].slice(0, 50);
     const all = [...new Set([...types, ...brands, ...fromListings])];
     if (!q) return all.slice(0, 10);
     return all.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
-  }, [searchQuery, listings]);
+  }, [searchQuery, allListingTitlesForSearch]);
 
   useEffect(() => {
     if (!searchSuggestionsOpen) return;
@@ -487,8 +655,20 @@ function CatalogueContent() {
   // Filters sidebar content - utiliser une variable JSX au lieu d'une fonction
   const filtersContent = (
     <>
-      {/* Type d'article — toujours visible, pas repliable */}
-      <FilterSection title="Type d'article" defaultOpen collapsible={false}>
+      {/* Recherche — même police que Année */}
+      <div
+        style={{
+          marginBottom: 12,
+          fontSize: 14,
+          fontWeight: 600,
+          color: '#1d1d1f',
+        }}
+      >
+        Recherche
+      </div>
+      {/* Type d'article — libellé dans la case + pastille nombre si sélection */}
+      <div>
+        <FilterSection title="" defaultOpen collapsible={false} noBorder>
         <div ref={typeDropdownRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -507,18 +687,36 @@ function CatalogueContent() {
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer',
+              gap: 8,
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedTypes.length === 0
-                ? 'Tous les types'
-                : selectedTypes.length === 1
-                  ? CATEGORIES.find((t) => t.value === selectedTypes[0])?.label ?? selectedTypes[0]
-                  : `${selectedTypes.length} types sélectionnés`}
+              Type d'article
             </span>
-            <ChevronDown
+            {selectedTypes.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedTypes.length}
+              </span>
+            )}
+            <ChevronRight
               size={16}
-              style={{ flexShrink: 0, marginLeft: 8, transform: typeDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#86868b' }}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
             />
           </button>
           {typeDropdownOpen && (
@@ -527,13 +725,13 @@ function CatalogueContent() {
                 position: 'absolute',
                 top: 0,
                 left: '100%',
-                marginLeft: 8,
+                marginLeft: 20,
                 minWidth: 415,
                 maxHeight: 360,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
-                border: '1px solid #e8e6e3',
+                border: '1px solid #d2d2d7',
                 borderRadius: 12,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 9999,
@@ -549,7 +747,7 @@ function CatalogueContent() {
                   color: '#1d1d1f',
                   background: '#fff',
                   border: 'none',
-                  borderBottom: '1px solid #e8e6e3',
+                  borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: selectedTypes.length === 0 ? 600 : 400,
@@ -558,80 +756,100 @@ function CatalogueContent() {
               >
                 Tous les types
               </button>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: 8 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: 8, backgroundColor: '#fff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                   {CATEGORIES.map((type) => (
-                    <label
-                      key={type.value}
+            <label
+              key={type.value}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
-                    >
-                      <input
+            >
+              <input
                         type="checkbox"
                         checked={selectedTypes.includes(type.value)}
                         onChange={() => toggleType(type.value)}
                         style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                       />
                       <span style={{ fontSize: 14, color: '#1d1d1f' }}>{type.label}</span>
-                    </label>
-                  ))}
+            </label>
+          ))}
                 </div>
                 {selectedTypes.length > 0 && (
-                  <button
+            <button
                     type="button"
                     onClick={() => { setFilters((p) => ({ ...p, categories: undefined, category: undefined })); setOpenDropdown(null); }}
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
+              style={{
+                      marginTop: 2,
+                      marginBottom: 0,
+                fontSize: 12,
                       color: '#6e6e73',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      padding: '6px 4px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'left',
+                      padding: '2px 4px',
                       width: '100%',
-                    }}
-                  >
+              }}
+            >
                     Réinitialiser les types
-                  </button>
+            </button>
                 )}
               </div>
             </div>
           )}
         </div>
       </FilterSection>
+      </div>
 
-      {/* Marque — toujours visible, pas repliable */}
-      <FilterSection title="Marque" defaultOpen collapsible={false}>
+      {/* Marque — libellé dans la case + pastille nombre si sélection */}
+      <FilterSection title="" defaultOpen collapsible={false} noBorder>
         <div ref={marqueDropdownRef} style={{ position: 'relative' }}>
           <button
             type="button"
             onClick={() => setOpenDropdown((prev) => (prev === 'marque' ? null : 'marque'))}
-            style={{
-              width: '100%',
+          style={{
+            width: '100%',
               height: 44,
               padding: '0 14px',
               fontSize: 14,
               border: '1px solid #d2d2d7',
               borderRadius: 12,
-              backgroundColor: '#fff',
+            backgroundColor: '#fff',
               color: '#1d1d1f',
               textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer',
+              gap: 8,
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedBrands.length === 0
-                ? 'Toutes les marques'
-                : selectedBrands.length === 1
-                  ? selectedBrands[0]
-                  : `${selectedBrands.length} marques sélectionnées`}
+              Marque
             </span>
-            <ChevronDown
+            {selectedBrands.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedBrands.length}
+              </span>
+            )}
+            <ChevronRight
               size={16}
-              style={{ flexShrink: 0, marginLeft: 8, transform: marqueDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#86868b' }}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
             />
           </button>
           {marqueDropdownOpen && (
@@ -640,13 +858,13 @@ function CatalogueContent() {
                 position: 'absolute',
                 top: 0,
                 left: '100%',
-                marginLeft: 8,
+                marginLeft: 20,
                 minWidth: 415,
                 maxHeight: 360,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
-                border: '1px solid #e8e6e3',
+                border: '1px solid #d2d2d7',
                 borderRadius: 12,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 9999,
@@ -662,7 +880,7 @@ function CatalogueContent() {
                   color: '#1d1d1f',
                   background: '#fff',
                   border: 'none',
-                  borderBottom: '1px solid #e8e6e3',
+                  borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: selectedBrands.length === 0 ? 600 : 400,
@@ -671,7 +889,7 @@ function CatalogueContent() {
               >
                 Toutes les marques
               </button>
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid #e8e6e3', flexShrink: 0 }}>
+              <div style={{ padding: '8px 12px 0 12px', flexShrink: 0 }}>
                 <div style={{ position: 'relative' }}>
                   <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#86868b' }} />
                   <input
@@ -694,41 +912,70 @@ function CatalogueContent() {
                   />
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
+                {/* 6 marques les plus connues (défilent avec le reste) */}
+                {(() => {
+                  const marquesTop = marquesSuggestion;
+                  if (marquesTop.length > 0) {
+                    return (
+                      <div style={{ paddingBottom: 6, marginBottom: 6 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                          {marquesTop.map((brand) => (
+                            <label
+                              key={brand}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedBrands.includes(brand)}
+                                onChange={() => toggleBrand(brand)}
+                                style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                              />
+                              <span style={{ fontSize: 14, color: '#1d1d1f' }}>{brand}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div style={{ marginLeft: 4, marginRight: 4, marginTop: 6, borderBottom: '1px solid #e8e6e3' }} />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                   {marquesAlphabetiques.filter((b) => b.toLowerCase().includes(marqueSearchQuery.toLowerCase().trim())).map((brand) => (
                     <label
                       key={brand}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
                     >
-                      <input
+              <input
                         type="checkbox"
                         checked={selectedBrands.includes(brand)}
                         onChange={() => toggleBrand(brand)}
                         style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                       />
                       <span style={{ fontSize: 14, color: '#1d1d1f' }}>{brand}</span>
-                    </label>
-                  ))}
-                </div>
+            </label>
+          ))}
+        </div>
                 {selectedBrands.length > 0 && (
-                  <button
+            <button
                     type="button"
                     onClick={() => { setFilters((p) => ({ ...p, brands: undefined, brand: undefined })); setOpenDropdown(null); setMarqueSearchQuery(''); }}
-                    style={{
-                      marginTop: 8,
-                      fontSize: 12,
+              style={{
+                      marginTop: 2,
+                      marginBottom: 0,
+                fontSize: 12,
                       color: '#6e6e73',
                       background: 'none',
                       border: 'none',
-                      cursor: 'pointer',
+                cursor: 'pointer',
                       textAlign: 'left',
-                      padding: '6px 4px',
+                      padding: '2px 4px',
                       width: '100%',
-                    }}
-                  >
+              }}
+            >
                     Réinitialiser les marques
-                  </button>
+            </button>
                 )}
               </div>
             </div>
@@ -736,13 +983,13 @@ function CatalogueContent() {
         </div>
       </FilterSection>
 
-      {/* Modèle — toujours visible, même style que Marque */}
-      <FilterSection title="Modèle" defaultOpen collapsible={false}>
+      {/* Modèle — libellé dans la case + pastille nombre si sélection */}
+      <FilterSection title="" defaultOpen collapsible={false}>
         <div ref={modeleDropdownRef} style={{ position: 'relative' }}>
-          <button
+            <button
             type="button"
             onClick={() => setOpenDropdown((prev) => (prev === 'modele' ? null : 'modele'))}
-            style={{
+              style={{
               width: '100%',
               height: 44,
               padding: '0 14px',
@@ -756,18 +1003,36 @@ function CatalogueContent() {
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer',
+              gap: 8,
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedModels.length === 0
-                ? 'Tous les modèles'
-                : selectedModels.length === 1
-                  ? selectedModels[0]
-                  : `${selectedModels.length} modèles sélectionnés`}
+              Modèle
             </span>
-            <ChevronDown
+            {selectedModels.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedModels.length}
+              </span>
+            )}
+            <ChevronRight
               size={16}
-              style={{ flexShrink: 0, marginLeft: 8, transform: modeleDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#86868b' }}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
             />
           </button>
           {modeleDropdownOpen && (
@@ -776,13 +1041,13 @@ function CatalogueContent() {
                 position: 'absolute',
                 top: 0,
                 left: '100%',
-                marginLeft: 8,
+                marginLeft: 20,
                 minWidth: 415,
                 maxHeight: 360,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
-                border: '1px solid #e8e6e3',
+                border: '1px solid #d2d2d7',
                 borderRadius: 12,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 9999,
@@ -798,16 +1063,16 @@ function CatalogueContent() {
                   color: '#1d1d1f',
                   background: '#fff',
                   border: 'none',
-                  borderBottom: '1px solid #e8e6e3',
-                  cursor: 'pointer',
+                  borderBottom: '1px solid #d2d2d7',
+                cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: selectedModels.length === 0 ? 600 : 400,
                   flexShrink: 0,
-                }}
-              >
+              }}
+            >
                 Tous les modèles
-              </button>
-              <div style={{ padding: '8px 12px', borderBottom: '1px solid #e8e6e3', flexShrink: 0 }}>
+            </button>
+              <div style={{ padding: '8px 12px 0 12px', flexShrink: 0 }}>
                 <div style={{ position: 'relative' }}>
                   <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#86868b' }} />
                   <input
@@ -830,7 +1095,35 @@ function CatalogueContent() {
                   />
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
+                {/* 6 modèles les plus connus (défilent avec le reste) */}
+                {(() => {
+                  const modelesTop = modelesSuggestion;
+                  if (modelesTop.length > 0) {
+                    return (
+                      <div style={{ paddingBottom: 6, marginBottom: 6 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                          {modelesTop.map((model) => (
+                            <label
+                              key={model}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedModels.includes(model)}
+                                onChange={() => toggleModele(model)}
+                                style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                              />
+                              <span style={{ fontSize: 14, color: '#1d1d1f' }}>{model}</span>
+                            </label>
+          ))}
+        </div>
+                        <div style={{ marginLeft: 4, marginRight: 4, marginTop: 6, borderBottom: '1px solid #e8e6e3' }} />
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                   {modelesAlphabetiques.filter((m) => m.toLowerCase().includes(modeleSearchQuery.toLowerCase().trim())).map((model) => (
                     <label
@@ -852,14 +1145,15 @@ function CatalogueContent() {
                     type="button"
                     onClick={() => { setFilters((p) => ({ ...p, models: undefined, model: undefined })); setOpenDropdown(null); setModeleSearchQuery(''); }}
                     style={{
-                      marginTop: 8,
+                      marginTop: 2,
+                      marginBottom: 0,
                       fontSize: 12,
                       color: '#6e6e73',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      padding: '6px 4px',
+                      padding: '2px 4px',
                       width: '100%',
                     }}
                   >
@@ -876,9 +1170,9 @@ function CatalogueContent() {
       <FilterSection title="Année" defaultOpen collapsible={false}>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}>
-            <input
-              type="text"
-              inputMode="numeric"
+      <input
+        type="text"
+        inputMode="numeric"
               value={localYearMin}
               onChange={(e) => setLocalYearMin(e.target.value.replace(/\D/g, ''))}
               onBlur={applyYearFilter}
@@ -902,14 +1196,14 @@ function CatalogueContent() {
 
       {priceInputs}
 
-      {/* Couleur — menu comme Modèle */}
-      <FilterSection title="Couleur" defaultOpen collapsible={false}>
+      {/* Finition — libellé « Couleur » dans la case + pastille comme Marque */}
+      <FilterSection title="Finition" defaultOpen collapsible={false} noBorder>
         <div ref={colorDropdownRef} style={{ position: 'relative' }}>
           <button
             type="button"
             onClick={() => setOpenDropdown((prev) => (prev === 'color' ? null : 'color'))}
-            style={{
-              width: '100%',
+        style={{
+          width: '100%',
               height: 44,
               padding: '0 14px',
               fontSize: 14,
@@ -922,18 +1216,36 @@ function CatalogueContent() {
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer',
+              gap: 8,
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedColors.length === 0
-                ? 'Toutes les couleurs'
-                : selectedColors.length === 1
-                  ? (COLORS.find((c) => c.value === selectedColors[0])?.label ?? selectedColors[0])
-                  : `${selectedColors.length} couleurs sélectionnées`}
+              Couleur
             </span>
-            <ChevronDown
+            {selectedColors.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedColors.length}
+              </span>
+            )}
+            <ChevronRight
               size={16}
-              style={{ flexShrink: 0, marginLeft: 8, transform: colorDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#86868b' }}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
             />
           </button>
           {colorDropdownOpen && (
@@ -942,13 +1254,13 @@ function CatalogueContent() {
                 position: 'absolute',
                 top: 0,
                 left: '100%',
-                marginLeft: 8,
+                marginLeft: 20,
                 minWidth: 415,
                 maxHeight: 360,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
-                border: '1px solid #e8e6e3',
+                border: '1px solid #d2d2d7',
                 borderRadius: 12,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 9999,
@@ -964,23 +1276,23 @@ function CatalogueContent() {
                   color: '#1d1d1f',
                   background: '#fff',
                   border: 'none',
-                  borderBottom: '1px solid #e8e6e3',
+                  borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: selectedColors.length === 0 ? 600 : 400,
                   flexShrink: 0,
                 }}
               >
-                Toutes les couleurs
+                Toutes les finitions
               </button>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                   {couleursDisponibles.map((color) => (
                     <label
                       key={color.value}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
                     >
-                      <input
+      <input
                         type="checkbox"
                         checked={selectedColors.includes(color.value)}
                         onChange={() => toggleColor(color.value)}
@@ -994,19 +1306,20 @@ function CatalogueContent() {
                   <button
                     type="button"
                     onClick={() => { setFilters((p) => ({ ...p, colors: undefined, color: undefined })); setOpenDropdown(null); }}
-                    style={{
-                      marginTop: 8,
+        style={{
+                      marginTop: 2,
+                      marginBottom: 0,
                       fontSize: 12,
                       color: '#6e6e73',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      padding: '6px 4px',
-                      width: '100%',
+                      padding: '2px 4px',
+          width: '100%',
                     }}
                   >
-                    Réinitialiser les couleurs
+                    Réinitialiser les finitions
                   </button>
                 )}
               </div>
@@ -1015,8 +1328,8 @@ function CatalogueContent() {
         </div>
       </FilterSection>
 
-      {/* Matière — menu comme Couleur */}
-      <FilterSection title="Matière" defaultOpen collapsible={false}>
+      {/* Matière — libellé dans la case + pastille comme Marque */}
+      <FilterSection title="" defaultOpen collapsible={false}>
         <div ref={materialDropdownRef} style={{ position: 'relative' }}>
           <button
             type="button"
@@ -1035,18 +1348,36 @@ function CatalogueContent() {
               alignItems: 'center',
               justifyContent: 'space-between',
               cursor: 'pointer',
+              gap: 8,
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {selectedMaterials.length === 0
-                ? 'Toutes les matières'
-                : selectedMaterials.length === 1
-                  ? (MATERIALS.find((m) => m.value === selectedMaterials[0])?.label ?? selectedMaterials[0])
-                  : `${selectedMaterials.length} matières sélectionnées`}
+              Matière
             </span>
-            <ChevronDown
+            {selectedMaterials.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedMaterials.length}
+              </span>
+            )}
+            <ChevronRight
               size={16}
-              style={{ flexShrink: 0, marginLeft: 8, transform: materialDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#86868b' }}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
             />
           </button>
           {materialDropdownOpen && (
@@ -1055,29 +1386,29 @@ function CatalogueContent() {
                 position: 'absolute',
                 top: 0,
                 left: '100%',
-                marginLeft: 8,
+                marginLeft: 20,
                 minWidth: 415,
                 maxHeight: 360,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
-                border: '1px solid #e8e6e3',
+                border: '1px solid #d2d2d7',
                 borderRadius: 12,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 9999,
                 overflow: 'hidden',
               }}
             >
-              <button
-                type="button"
+      <button
+        type="button"
                 onClick={() => { setFilters((p) => ({ ...p, materials: undefined, material: undefined })); setOpenDropdown(null); }}
-                style={{
+        style={{
                   padding: '10px 12px',
                   fontSize: 14,
                   color: '#1d1d1f',
                   background: '#fff',
                   border: 'none',
-                  borderBottom: '1px solid #e8e6e3',
+                  borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
                   fontWeight: selectedMaterials.length === 0 ? 600 : 400,
@@ -1086,7 +1417,7 @@ function CatalogueContent() {
               >
                 Toutes les matières
               </button>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8 }}>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                   {matieresDisponibles.map((mat) => (
                     <label
@@ -1108,15 +1439,16 @@ function CatalogueContent() {
                     type="button"
                     onClick={() => { setFilters((p) => ({ ...p, materials: undefined, material: undefined })); setOpenDropdown(null); }}
                     style={{
-                      marginTop: 8,
+                      marginTop: 2,
+                      marginBottom: 0,
                       fontSize: 12,
                       color: '#6e6e73',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      padding: '6px 4px',
-                      width: '100%',
+                      padding: '2px 4px',
+          width: '100%',
                     }}
                   >
                     Réinitialiser les matières
@@ -1129,7 +1461,7 @@ function CatalogueContent() {
       </FilterSection>
 
       {/* État — sélection multiple, même style que Type / Marque / Modèle (carré bords ronds) */}
-      <FilterSection title="État" defaultOpen collapsible={false}>
+      <FilterSection title="État" defaultOpen collapsible={false} noBorder>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {CONDITIONS.map((c) => (
             <label
@@ -1150,21 +1482,22 @@ function CatalogueContent() {
               type="button"
               onClick={() => setFilters((p) => ({ ...p, conditions: undefined, condition: undefined }))}
               style={{
-                marginTop: 8,
-                fontSize: 12,
+                marginTop: 2,
+                marginBottom: 0,
+          fontSize: 12,
                 color: '#6e6e73',
                 background: 'none',
-                border: 'none',
-                cursor: 'pointer',
+          border: 'none',
+          cursor: 'pointer',
                 textAlign: 'left',
-                padding: '6px 4px',
+                padding: '2px 4px',
                 width: '100%',
-              }}
-            >
+        }}
+      >
               Réinitialiser les états
-            </button>
+      </button>
           )}
-        </div>
+    </div>
       </FilterSection>
     </>
   );
@@ -1193,29 +1526,29 @@ function CatalogueContent() {
         >
           {/* Barre de recherche : marge haute pour ne pas passer sous le header fixe */}
           <div style={{ padding: 'calc(var(--header-height) + 20px) 28px 20px 28px', borderBottom: '1px solid #e8e6e3', backgroundColor: '#fff' }}>
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12 }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12 }}>
               <div ref={searchBarRef} style={{ flex: 1, position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchSuggestionsOpen(true)}
                   placeholder="Rechercher un article..."
                   autoComplete="off"
-                  style={{
-                    width: '100%',
-                    height: 48,
-                    paddingLeft: 46,
-                    paddingRight: 18,
-                    fontSize: 15,
-                    border: '1px solid #d2d2d7',
-                    borderRadius: 12,
-                    backgroundColor: '#fff',
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                  }}
-                />
+                style={{
+                  width: '100%',
+                  height: 48,
+                  paddingLeft: 46,
+                  paddingRight: 18,
+                  fontSize: 15,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                }}
+              />
                 {searchSuggestionsOpen && searchSuggestions.length > 0 && (
                   <div
                     style={{
@@ -1233,14 +1566,22 @@ function CatalogueContent() {
                       overflowY: 'auto',
                     }}
                   >
-                    {searchSuggestions.map((suggestion) => (
+                    {searchSuggestions.map((suggestion) => {
+                      const categoryMatch = CATEGORIES.find((c) => c.label === suggestion);
+                      const isCategory = !!categoryMatch;
+                      return (
                       <button
                         key={suggestion}
                         type="button"
                         onClick={() => {
                           setSearchQuery(suggestion);
                           setSearchSuggestionsOpen(false);
-                          setFilters((prev) => ({ ...prev, query: suggestion }));
+                          const baseFromSearch = { ...defaultFilters, sellerId: filters.sellerId };
+                          if (isCategory) {
+                            setFilters({ ...baseFromSearch, categories: [categoryMatch!.value] });
+                          } else {
+                            setFilters({ ...baseFromSearch, query: suggestion });
+                          }
                         }}
                         style={{
                           width: '100%',
@@ -1256,100 +1597,100 @@ function CatalogueContent() {
                       >
                         {suggestion}
                       </button>
-                    ))}
+                    ); })}
                   </div>
                 )}
-              </div>
-              <button
-                type="submit"
-                style={{
-                  height: 48,
-                  padding: '0 24px',
-                  backgroundColor: '#1d1d1f',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  border: 'none',
-                  borderRadius: 12,
-                  cursor: 'pointer',
-                }}
-              >
-                Rechercher
-              </button>
-            </form>
-          </div>
+            </div>
+            <button
+              type="submit"
+              style={{
+                height: 48,
+                padding: '0 24px',
+                backgroundColor: '#1d1d1f',
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 500,
+                border: 'none',
+                borderRadius: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Rechercher
+            </button>
+          </form>
+      </div>
 
           <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0 }}>
-            {/* Sidebar - Desktop */}
-            <aside
-              className="hide-mobile"
+          {/* Sidebar - Desktop */}
+          <aside
+            className="hide-mobile"
               style={{ position: 'relative', zIndex: 10, width: 260, flexShrink: 0, borderRight: '1px solid #e8e6e3', padding: '24px 20px', overflow: 'visible' }}
-            >
+          >
               <div style={{ position: 'sticky', top: 100, overflow: 'visible', paddingBottom: 32 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 20,
-                  }}
-                >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: 20,
+                }}
+              >
                   <h2 style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', fontFamily: 'var(--font-inter), var(--font-sans)', display: 'flex', alignItems: 'center', gap: 8 }}>
                     <SlidersHorizontal size={20} style={{ flexShrink: 0 }} />
                     Filtres
                   </h2>
-                  <button
-                    onClick={handleReset}
-                    style={{
+                <button
+                  onClick={handleReset}
+                  style={{
                       fontSize: 13,
                       color: '#6e6e73',
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
                       textDecoration: 'underline',
-                    }}
-                  >
-                    Réinitialiser
-                  </button>
-                </div>
-                {filtersContent}
+                  }}
+                >
+                  Réinitialiser
+                </button>
               </div>
-            </aside>
+              {filtersContent}
+            </div>
+          </aside>
 
-            {/* Main */}
+          {/* Main */}
             <main style={{ flex: 1, minWidth: 0, padding: '24px 28px 32px' }}>
             {/* Bloc vendeur : nom, logo, annonces */}
             {filters.sellerId && (
-              <div
-                style={{
+            <div
+              style={{
                   marginBottom: 24,
-                  padding: 20,
+                  padding: 12,
                   backgroundColor: '#fafaf9',
                   border: '1px solid #e8e6e3',
                   borderRadius: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 20,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
                   flexWrap: 'wrap',
-                }}
-              >
+              }}
+            >
                 {sellerLoading ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 80, height: 80, borderRadius: 12, backgroundColor: '#f0f0f2' }} />
-                    <div>
+                    <div style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: '#f0f0f2' }} />
+              <div>
                       <div style={{ width: 180, height: 20, backgroundColor: '#f0f0f2', marginBottom: 8, borderRadius: 4 }} />
                       <div style={{ width: 120, height: 14, backgroundColor: '#f0f0f2', borderRadius: 4 }} />
                     </div>
                   </div>
                 ) : seller ? (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
-                        style={{
-                          width: 80,
-                          height: 80,
-                          borderRadius: 12,
+                  style={{
+                          width: 64,
+                          height: 64,
+                          borderRadius: 10,
                           overflow: 'hidden',
                           backgroundColor: '#f0f0f2',
                           display: 'flex',
@@ -1361,49 +1702,57 @@ function CatalogueContent() {
                         {seller.avatarUrl ? (
                           <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
-                          <Store size={40} color="#888" />
+                          <Store size={32} color="#888" />
                         )}
                       </div>
                       <div>
-                        <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
-                          {seller.companyName}
-                        </h2>
+                        <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
+                            {seller.companyName}
+                          </h2>
+                        </Link>
                         <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
                           {listings.length} annonce{listings.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
+                </p>
+              </div>
                     </div>
                     {(seller.address || seller.city || seller.postcode) && (
-                      <div
-                        style={{
-                          height: 80,
-                          minWidth: 260,
-                          padding: '0 16px',
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: 16,
-                          backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
-                          backgroundSize: '115%',
-                          backgroundPosition: 'center',
-                          backgroundColor: '#f6f6f8',
-                          border: '1px solid #c8c8cc',
-                          borderRadius: 14,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-                          <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                          {seller.postcode && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>}
-                          {seller.city && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{seller.city}</span>}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setShowMapPopup(true)}
-                          style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                      <div style={{ height: 64, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                        <p style={{ fontSize: 13, color: '#6e6e73', margin: 0, lineHeight: 1.2 }}>
+                          Membre depuis {formatDate(seller.createdAt)}
+                        </p>
+                        <div
+                          style={{
+                            height: 42,
+                            minWidth: 180,
+                            flexShrink: 0,
+                            padding: '0 12px',
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: 10,
+                            backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
+                            backgroundSize: '115%',
+                            backgroundPosition: 'center',
+                            backgroundColor: '#f6f6f8',
+                            border: '1px solid #c8c8cc',
+                            borderRadius: 10,
+                          }}
                         >
-                          Voir la carte
-                        </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+<MapPin size={16} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                          {seller.postcode && <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>}
+                          {seller.city && <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPopup(true)}
+                            style={{ padding: '4px 12px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                          >
+                            Voir la carte
+                          </button>
+                        </div>
                       </div>
                     )}
                   </>
@@ -1446,42 +1795,79 @@ function CatalogueContent() {
                   Filtres
                 </button>
 
-                {/* Sort */}
-                <div style={{ position: 'relative' }}>
-                  <select
-                    value={filters.sortBy}
-                    onChange={(e) => updateFilter('sortBy', e.target.value)}
+                {/* Sort — menu déroulant personnalisé (pas de contour bleu, affiché sous la case) */}
+                <div ref={sortDropdownRef} style={{ position: 'relative' }}>
+                  <button
+                    type="button"
+                    onClick={() => setSortDropdownOpen((v) => !v)}
                     style={{
-                      appearance: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
                       height: 40,
-                      padding: '0 32px 0 14px',
+                      padding: '0 12px 0 14px',
                       border: '1px solid #d2d2d7',
                       borderRadius: 12,
                       backgroundColor: '#fff',
                       fontSize: 14,
                       color: '#1d1d1f',
                       cursor: 'pointer',
+                      outline: 'none',
+                      boxShadow: 'none',
+                      minWidth: 160,
                     }}
                   >
-                    {SORT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={16}
+                    <span style={{ flex: 1, textAlign: 'left' }}>
+                      {SORT_OPTIONS.find((o) => o.value === filters.sortBy)?.label ?? 'Trier'}
+                    </span>
+                    <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+                  </button>
+                  {sortDropdownOpen && (
+                    <div
                     style={{
                       position: 'absolute',
-                      right: 12,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                      color: '#86868b',
-                    }}
-                  />
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 12,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 9999,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {SORT_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            updateFilter('sortBy', opt.value);
+                            setSortDropdownOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: 'none',
+                            background: filters.sortBy === opt.value ? '#f5f5f7' : 'transparent',
+                            fontSize: 14,
+                            color: '#1d1d1f',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            outline: 'none',
+                            boxShadow: 'none',
+                            fontWeight: filters.sortBy === opt.value ? 600 : 400,
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                 </div>
+                  )}
               </div>
+            </div>
 
             {/* Results */}
             {loading ? (
@@ -1502,24 +1888,61 @@ function CatalogueContent() {
                 ))}
               </div>
             ) : listings.length > 0 ? (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: 20,
-                }}
-              >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {listings.map((listing) => (
-                  <Link key={listing.id} href={`/produit/${listing.id}`}>
-                    <article style={{ position: 'relative' }}>
+                  <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                    <article
+                style={{
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'row',
+                        backgroundColor: '#fff',
+                        borderRadius: 8,
+                        overflow: 'hidden',
+                        border: '1px solid #e8e6e3',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        minHeight: 56,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => handleFavoriteClick(e, listing.id)}
+                        disabled={!!loadingFavoriteId}
+                        aria-label={favoritedListingIds[listing.id] ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          zIndex: 1,
+                          width: 36,
+                          height: 36,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: user ? 'pointer' : 'default',
+                          padding: 0,
+                          transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                        }}
+                      >
+                        <Heart
+                          size={18}
+                          color={favoritedListingIds[listing.id] ? '#1d1d1f' : '#6e6e73'}
+                          fill={favoritedListingIds[listing.id] ? '#1d1d1f' : 'none'}
+                          strokeWidth={2}
+                        />
+                      </button>
                       <div
                         style={{
-                          position: 'relative',
-                          aspectRatio: '3/4',
+                          width: '28%',
+                          minWidth: 64,
+                          aspectRatio: '1',
                           backgroundColor: '#f5f5f7',
                           overflow: 'hidden',
-                          marginBottom: 14,
-                          borderRadius: 18,
+                          flexShrink: 0,
                         }}
                       >
                         {listing.photos[0] ? (
@@ -1529,65 +1952,114 @@ function CatalogueContent() {
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                           />
                         ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#ccc',
-                              fontSize: 12,
-                            }}
-                          >
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 9 }}>
                             Photo
                           </div>
                         )}
-                        {listing.likesCount > 0 && (
+                      </div>
                             <div
                             style={{
-                              position: 'absolute',
-                              bottom: 10,
-                              left: 10,
+                          flex: 1,
                               display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              padding: '6px 10px',
-                              backgroundColor: '#fff',
-                              fontSize: 11,
-                              fontWeight: 500,
-                              borderRadius: 10,
-                            }}
-                          >
-                            <Heart size={12} /> {listing.likesCount}
-                          </div>
-                        )}
-                      </div>
-                      <p
-                        style={{
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.5,
-                          color: '#999',
-                          marginBottom: 4,
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          padding: '10px 10px 10px 14px',
+                          minWidth: 0,
                         }}
                       >
-                        {listing.sellerName}
-                      </p>
-                      <h3
+                        <div style={{ paddingBottom: 6 }}>
+                          <h3
                         style={{
-                          fontSize: 13,
+                              fontSize: 22,
+                          fontWeight: 600,
+                              color: '#1d1d1f',
+                              margin: 0,
+                              marginBottom: 5,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.4,
+                            }}
+                          >
+                            {listing.title}
+                          </h3>
+                          {(listing.category || listing.year != null || listing.condition || listing.color || listing.material) && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '11px 15px', marginBottom: 6, fontSize: 13, color: '#6e6e73', lineHeight: 1.35 }}>
+                              {listing.category && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+                                  {CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category}
+                                </span>
+                              )}
+                              {listing.year != null && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <Calendar size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+                                  {listing.year}
+                                </span>
+                              )}
+                              {listing.condition && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <CircleCheck size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+                                  {CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition}
+                                </span>
+                              )}
+                              {listing.color && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <Palette size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+                                  {COLORS.find((c) => c.value === listing.color)?.label ?? listing.color}
+                                </span>
+                              )}
+                              {listing.material && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                                  <Layers size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+                                  {MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                            <p style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
+                              {formatPrice(listing.price)}
+                            </p>
+                            {(() => {
+                              const deal = dealByListingId[listing.id] ?? getDealDefault();
+                              return (
+                                <span
+                        style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 3,
+                                    padding: '3px 6px',
+                                    marginLeft: 4,
+                                    backgroundColor: '#fff',
+                                    border: `1px solid ${deal.color}`,
+                                    borderRadius: 4,
+                                    fontSize: 10,
                           fontWeight: 500,
-                          marginBottom: 6,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                                    color: deal.color,
                           whiteSpace: 'nowrap',
                         }}
                       >
-                        {listing.title}
-                      </h3>
-                      <p style={{ fontSize: 14, fontWeight: 600 }}>{formatPrice(listing.price)}</p>
+                                  <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Euro size={8} color="#fff" strokeWidth={2.5} />
+                                  </span>
+                                  {deal.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                        <div style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
+                          <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {listing.sellerName}
+                          </p>
+                          {listing.sellerPostcode && (
+                            <p style={{ fontSize: 15, color: '#6e6e73', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.4 }}>
+                              <MapPin size={15} /> {listing.sellerPostcode}
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     </article>
                   </Link>
                 ))}
@@ -1616,8 +2088,8 @@ function CatalogueContent() {
               </div>
             )}
           </main>
-          </div>
         </div>
+      </div>
 
       {/* Popup Plan vendeur */}
       {showMapPopup && seller && (
@@ -1634,7 +2106,7 @@ function CatalogueContent() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>{seller.companyName}</p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe
@@ -1753,7 +2225,7 @@ function CatalogueContent() {
           </div>
         </div>
       )}
-        </div>
+    </div>
       </div>
     </main>
   );
