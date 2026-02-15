@@ -43,7 +43,7 @@ export default function NewListingPage() {
   }, [step]);
 
   // Étape 1
-  const [category, setCategory] = useState<ListingCategory | ''>('');
+  const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
@@ -375,7 +375,7 @@ export default function NewListingPage() {
                   <select
                     value={category}
                     onChange={(e) => {
-                    setCategory(e.target.value as ListingCategory);
+                    setCategory(e.target.value as ListingCategory | 'autre');
                     if (e.target.value !== 'autre') setCustomCategory('');
                     setBrand('');
                     setCustomBrand('');

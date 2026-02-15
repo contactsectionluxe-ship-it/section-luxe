@@ -61,7 +61,7 @@ export default function EditListingPage() {
   const { user, seller, isApprovedSeller, loading: authLoading } = useAuth();
 
   const [listing, setListing] = useState<Listing | null>(null);
-  const [category, setCategory] = useState<ListingCategory | ''>('');
+  const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
@@ -96,7 +96,7 @@ export default function EditListingPage() {
 
   const brandOptions = category && BRANDS_BY_CATEGORY[category] ? BRANDS_BY_CATEGORY[category].map((b) => ({ value: b, label: b })) : [];
   const brandForModels = brand === 'Autre' ? customBrand.trim() : brand;
-  const modelOptions = category && category !== 'autre' && brandForModels ? (MODELS_BY_CATEGORY_BRAND[category]?.[brandForModels] ?? []) : [];
+  const modelOptions = category && brandForModels ? (MODELS_BY_CATEGORY_BRAND[category]?.[brandForModels] ?? []) : [];
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS) : [];
   const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS) : [];
 
@@ -160,7 +160,7 @@ export default function EditListingPage() {
           setBrand('');
           setCustomBrand('');
         }
-        const modelsForBrand = data.category && data.category !== 'autre' && (data.brand || '')
+        const modelsForBrand = data.category && (data.brand || '')
           ? (MODELS_BY_CATEGORY_BRAND[data.category]?.[data.brand || ''] ?? [])
           : [];
         if (data.model && modelsForBrand.includes(data.model)) {
@@ -462,7 +462,7 @@ export default function EditListingPage() {
               <select
                 value={category}
                 onChange={(e) => {
-                  const v = e.target.value as ListingCategory;
+                  const v = e.target.value as ListingCategory | 'autre';
                   setCategory(v);
                   if (v !== 'autre') setCustomCategory('');
                   setBrand('');
