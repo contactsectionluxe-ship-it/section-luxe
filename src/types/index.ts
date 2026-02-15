@@ -50,6 +50,8 @@ export interface Listing {
   description: string;
   price: number;
   category: ListingCategory;
+  /** Genre(s) : un ou plusieurs parmi 'homme', 'femme' */
+  genre?: ('homme' | 'femme')[] | null;
   photos: string[];
   likesCount: number;
   listingNumber?: string | null;

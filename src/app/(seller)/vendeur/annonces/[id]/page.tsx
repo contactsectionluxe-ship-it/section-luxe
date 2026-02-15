@@ -12,7 +12,7 @@ import { getListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -62,6 +62,7 @@ export default function EditListingPage() {
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
+  const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
@@ -76,8 +77,7 @@ export default function EditListingPage() {
   const [heightCm, setHeightCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
   const [year, setYear] = useState('');
-  const [packaging, setPackaging] = useState<string[]>([]);
-  const [contenuInclusTouched, setContenuInclusTouched] = useState<Record<string, boolean>>({ box: false, certificat: false, facture: false });
+  const [contenuInclus, setContenuInclusState] = useState<Record<string, true | false | null>>({ box: null, certificat: null, facture: null });
   const [price, setPrice] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
@@ -94,9 +94,29 @@ export default function EditListingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
-  const brandOptions = category && BRANDS_BY_CATEGORY[category] ? BRANDS_BY_CATEGORY[category].map((b) => ({ value: b, label: b })) : [];
+  const brandOptions = (() => {
+    if (!category || genre.length === 0) return [];
+    const byGenre = BRANDS_BY_CATEGORY_AND_GENRE[category];
+    if (!byGenre) return [];
+    const set = new Set<string>();
+    if (genre.includes('femme')) byGenre.femme.forEach((b) => set.add(b));
+    if (genre.includes('homme')) byGenre.homme.forEach((b) => set.add(b));
+    const list = [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+    if (brand && !list.includes(brand)) list.unshift(brand);
+    return list.map((b) => ({ value: b, label: b }));
+  })();
   const brandForModels = brand === 'Autre' ? customBrand.trim() : brand;
-  const modelOptions = category && brandForModels ? (MODELS_BY_CATEGORY_BRAND[category]?.[brandForModels] ?? []) : [];
+  const modelOptions = (() => {
+    if (!category || !brandForModels || genre.length === 0) return [];
+    const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
+    if (!byBrand) return [];
+    const set = new Set<string>();
+    if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
+    if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
+    const list = [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+    if (model && !list.includes(model)) list.unshift(model);
+    return list;
+  })();
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS) : [];
   const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS) : [];
 
@@ -148,6 +168,7 @@ export default function EditListingPage() {
 
         setListing(data);
         setCategory(data.category);
+        setGenre(Array.isArray(data.genre) && data.genre.length > 0 ? data.genre : []);
         setCustomCategory('');
         const brandsForCat = data.category && BRANDS_BY_CATEGORY[data.category] ? BRANDS_BY_CATEGORY[data.category] : [];
         if (data.brand && brandsForCat.includes(data.brand)) {
@@ -202,8 +223,12 @@ export default function EditListingPage() {
         setHeightCm(data.heightCm != null ? String(data.heightCm) : '');
         setWidthCm(data.widthCm != null ? String(data.widthCm) : '');
         setYear(data.year != null ? String(data.year) : '');
-        setPackaging(Array.isArray(data.packaging) ? data.packaging : []);
-        setContenuInclusTouched({ box: true, certificat: true, facture: true });
+        const pkg = Array.isArray(data.packaging) ? data.packaging : [];
+        setContenuInclusState({
+          box: pkg.includes('box') ? true : null,
+          certificat: pkg.includes('certificat') ? true : null,
+          facture: pkg.includes('facture') ? true : null,
+        });
         setPrice(data.price.toString());
         setIsActive(data.isActive);
         setExistingPhotos(data.photos || []);
@@ -235,13 +260,18 @@ export default function EditListingPage() {
   };
 
   const setContenuInclus = (key: string, included: boolean) => {
-    setContenuInclusTouched((prev) => ({ ...prev, [key]: true }));
-    setPackaging((prev) =>
-      included ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((p) => p !== key)
-    );
+    setContenuInclusState((prev) => {
+      const current = prev[key];
+      if (included) return { ...prev, [key]: current === true ? null : true };
+      return { ...prev, [key]: current === false ? null : false };
+    });
   };
 
   const validateStep1 = () => {
+    if (genre.length === 0) {
+      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      return false;
+    }
     if (!category) {
       setError('Sélectionnez une catégorie');
       return false;
@@ -276,11 +306,6 @@ export default function EditListingPage() {
   };
 
   const validateStep3 = () => {
-    const allContenuAnswered = CONTENU_INCLUS_OPTIONS.every((opt) => contenuInclusTouched[opt.value]);
-    if (!allContenuAnswered) {
-      setError('Veuillez indiquer le contenu inclus pour la boîte, le certificat et la facture (Oui ou Non pour chaque).');
-      return false;
-    }
     setError('');
     return true;
   };
@@ -302,6 +327,10 @@ export default function EditListingPage() {
     e.preventDefault();
     setError('');
 
+    if (genre.length === 0) {
+      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      return;
+    }
     if (!category) {
       setError('Sélectionnez une catégorie');
       return;
@@ -326,12 +355,6 @@ export default function EditListingPage() {
       setError('Veuillez ajouter au moins une photo');
       return;
     }
-    const allContenuAnswered = CONTENU_INCLUS_OPTIONS.every((opt) => contenuInclusTouched[opt.value]);
-    if (!allContenuAnswered) {
-      setError('Veuillez indiquer le contenu inclus pour la boîte, le certificat et la facture (Oui ou Non pour chaque).');
-      return;
-    }
-
     const priceNum = parseFloat(price.replace(',', '.'));
     if (isNaN(priceNum) || priceNum <= 0) {
       setError('Veuillez entrer un prix valide');
@@ -357,6 +380,7 @@ export default function EditListingPage() {
         description: description.trim() || '',
         price: priceNum,
         category: (category === 'autre' ? customCategory.trim() : category) as ListingCategory,
+        genre: genre.length > 0 ? genre : null,
         photos: allPhotos,
         isActive,
         brand: brandToSave || null,
@@ -367,13 +391,21 @@ export default function EditListingPage() {
         heightCm: heightCm ? parseFloat(heightCm.replace(',', '.')) : null,
         widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
         year: year ? parseInt(year, 10) : null,
-        packaging: packaging.length ? packaging : null,
+        packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
       });
 
       router.push('/vendeur');
     } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof (err as { message?: string })?.message === 'string'
+            ? (err as { message: string }).message
+            : err != null && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+              ? (err as { message: string }).message
+              : 'Une erreur est survenue lors de la mise à jour';
       console.error('Error updating listing:', err);
-      setError('Une erreur est survenue lors de la mise à jour');
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -481,6 +513,50 @@ export default function EditListingPage() {
                 ))}
               </select>
             </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 10, overflow: 'hidden' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGenre(genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme']);
+                    setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: genre.includes('femme') ? '#1d1d1f' : '#fff',
+                    color: genre.includes('femme') ? '#fff' : '#6e6e73',
+                  }}
+                >
+                  Femme
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGenre(genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme']);
+                    setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: 'none',
+                    borderLeft: '1px solid #d2d2d7',
+                    cursor: 'pointer',
+                    backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
+                    color: genre.includes('homme') ? '#fff' : '#6e6e73',
+                  }}
+                >
+                  Homme
+                </button>
+              </div>
+            </div>
             {category === 'autre' && (
               <div style={{ marginBottom: 18 }}>
                 <label style={labelStyle}>Catégorie personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -498,10 +574,10 @@ export default function EditListingPage() {
                   setCustomModel('');
                 }}
                 required
-                disabled={!category}
-                style={selectStyle(!category)}
+                disabled={!category || genre.length === 0}
+                style={selectStyle(!category || genre.length === 0)}
               >
-                <option value="">{category ? 'Sélectionnez la marque' : "Sélectionnez d'abord une catégorie"}</option>
+                <option value="">{!category ? "Sélectionnez d'abord une catégorie" : genre.length === 0 ? "Sélectionnez d'abord un genre (Femme / Homme)" : 'Sélectionnez la marque'}</option>
                 {brandOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
@@ -789,7 +865,7 @@ export default function EditListingPage() {
               <input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Ex: 2020" min={1900} max={new Date().getFullYear() + 1} style={inputStyle} />
             </div>
             <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Contenu inclus <span style={{ color: '#c00', fontWeight: 600 }}>*</span></label>
+              <label style={labelStyle}>Contenu inclus</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {CONTENU_INCLUS_OPTIONS.map((opt) => (
                   <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -804,8 +880,8 @@ export default function EditListingPage() {
                           fontWeight: 500,
                           border: 'none',
                           cursor: 'pointer',
-                          backgroundColor: packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
-                          color: packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                          backgroundColor: contenuInclus[opt.value] === true ? '#1d1d1f' : '#fff',
+                          color: contenuInclus[opt.value] === true ? '#fff' : '#6e6e73',
                         }}
                       >
                         Oui
@@ -820,8 +896,8 @@ export default function EditListingPage() {
                           border: 'none',
                           borderLeft: '1px solid #d2d2d7',
                           cursor: 'pointer',
-                          backgroundColor: !packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
-                          color: !packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                          backgroundColor: contenuInclus[opt.value] === false ? '#1d1d1f' : '#fff',
+                          color: contenuInclus[opt.value] === false ? '#fff' : '#6e6e73',
                         }}
                       >
                         Non

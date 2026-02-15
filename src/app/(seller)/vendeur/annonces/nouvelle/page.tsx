@@ -11,7 +11,7 @@ import { createListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY_AND_GENRE, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -44,6 +44,7 @@ export default function NewListingPage() {
 
   // Étape 1
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
+  const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
@@ -90,26 +91,35 @@ export default function NewListingPage() {
   const [heightCm, setHeightCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
   const [year, setYear] = useState('');
-  const [packaging, setPackaging] = useState<string[]>([]);
-  const [contenuInclusTouched, setContenuInclusTouched] = useState<Record<string, boolean>>({ box: false, certificat: false, facture: false });
+  const [contenuInclus, setContenuInclusState] = useState<Record<string, true | false | null>>({ box: null, certificat: null, facture: null });
 
   // Étape 4
   const [price, setPrice] = useState('');
   const [isActive, setIsActive] = useState(true);
 
   const categoryOptions = CATEGORIES;
-  // Marques filtrées par catégorie (affichées seulement après choix de la catégorie)
-  const brandOptions =
-    category && BRANDS_BY_CATEGORY[category]
-      ? BRANDS_BY_CATEGORY[category].map((b) => ({ value: b, label: b }))
-      : [];
+  // Marques filtrées par catégorie et genre (Homme / Femme)
+  const brandOptions = (() => {
+    if (!category || genre.length === 0) return [];
+    const byGenre = BRANDS_BY_CATEGORY_AND_GENRE[category];
+    if (!byGenre) return [];
+    const set = new Set<string>();
+    if (genre.includes('femme')) byGenre.femme.forEach((b) => set.add(b));
+    if (genre.includes('homme')) byGenre.homme.forEach((b) => set.add(b));
+    return [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr'))).map((b) => ({ value: b, label: b }));
+  })();
 
-  // Modèles selon catégorie et marque (vide si marque "Autre" ou non renseignée)
+  // Modèles selon catégorie, marque et genre (Homme / Femme)
   const brandForModels = brand === 'Autre' ? customBrand.trim() : brand;
-  const modelOptions =
-    category && category !== 'autre' && brandForModels
-      ? (MODELS_BY_CATEGORY_BRAND[category]?.[brandForModels] ?? [])
-      : [];
+  const modelOptions = (() => {
+    if (!category || category === 'autre' || !brandForModels || genre.length === 0) return [];
+    const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
+    if (!byBrand) return [];
+    const set = new Set<string>();
+    if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
+    if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
+    return [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+  })();
 
   // Matières selon catégorie (puis marque/modèle pris en compte via la catégorie)
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS) : [];
@@ -124,6 +134,10 @@ export default function NewListingPage() {
   }
 
   const validateStep1 = () => {
+    if (genre.length === 0) {
+      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      return false;
+    }
     if (!category) {
       setError('Sélectionnez une catégorie');
       return false;
@@ -174,11 +188,6 @@ export default function NewListingPage() {
   };
 
   const validateStep3 = () => {
-    const allContenuAnswered = CONTENU_INCLUS_OPTIONS.every((opt) => contenuInclusTouched[opt.value]);
-    if (!allContenuAnswered) {
-      setError('Veuillez indiquer le contenu inclus pour la boîte, le certificat et la facture (Oui ou Non pour chaque).');
-      return false;
-    }
     setError('');
     return true;
   };
@@ -231,6 +240,7 @@ export default function NewListingPage() {
         description: description.trim() || '',
         price: priceNum,
         category: (category === 'autre' ? customCategory.trim() : category) as ListingCategory,
+        genre: genre.length > 0 ? genre : null,
         photos: [],
         brand: brandToSave || null,
         model: modelToSave || null,
@@ -240,7 +250,7 @@ export default function NewListingPage() {
         heightCm: heightCm ? parseFloat(heightCm.replace(',', '.')) : null,
         widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
         year: year ? parseInt(year, 10) : null,
-        packaging: packaging.length ? packaging : null,
+        packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         isActive,
       });
 
@@ -274,10 +284,11 @@ export default function NewListingPage() {
   };
 
   const setContenuInclus = (key: string, included: boolean) => {
-    setContenuInclusTouched((prev) => ({ ...prev, [key]: true }));
-    setPackaging((prev) =>
-      included ? (prev.includes(key) ? prev : [...prev, key]) : prev.filter((p) => p !== key)
-    );
+    setContenuInclusState((prev) => {
+      const current = prev[key];
+      if (included) return { ...prev, [key]: current === true ? null : true };
+      return { ...prev, [key]: current === false ? null : false };
+    });
   };
 
   const inputStyle: React.CSSProperties = {
@@ -316,7 +327,7 @@ export default function NewListingPage() {
             Déposer une annonce
           </h1>
           <p style={{ fontSize: 15, color: '#6e6e73' }}>
-            Créez une nouvelle annonce pour votre article de luxe
+            Créez une nouvelle annonce pour la publier
           </p>
         </div>
 
@@ -395,6 +406,50 @@ export default function NewListingPage() {
                     ))}
                   </select>
                 </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
+                  <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 10, overflow: 'hidden' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenre(genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme']);
+                        setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px 20px',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        border: 'none',
+                        cursor: 'pointer',
+backgroundColor: genre.includes('femme') ? '#1d1d1f' : '#fff',
+                          color: genre.includes('femme') ? '#fff' : '#6e6e73',
+                      }}
+                    >
+                      Femme
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setGenre(genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme']);
+                        setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '10px 20px',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        border: 'none',
+                        borderLeft: '1px solid #d2d2d7',
+                        cursor: 'pointer',
+backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
+                          color: genre.includes('homme') ? '#fff' : '#6e6e73',
+                      }}
+                    >
+                      Homme
+                    </button>
+                  </div>
+                </div>
                 {category === 'autre' && (
                   <div style={{ marginBottom: 18 }}>
                     <label style={labelStyle}>Catégorie personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -420,12 +475,12 @@ export default function NewListingPage() {
                       setCustomMaterial('');
                     }}
                     required
-                    disabled={!category}
+                    disabled={!category || genre.length === 0}
                     style={{
                       ...inputStyle,
                       paddingRight: 40,
-                      cursor: category ? 'pointer' : 'not-allowed',
-                      opacity: category ? 1 : 0.7,
+                      cursor: category && genre.length > 0 ? 'pointer' : 'not-allowed',
+                      opacity: category && genre.length > 0 ? 1 : 0.7,
                       appearance: 'none',
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
@@ -433,7 +488,7 @@ export default function NewListingPage() {
                     }}
                   >
                     <option value="">
-                      {category ? 'Sélectionnez la marque' : 'Sélectionnez d\'abord une catégorie'}
+                      {!category ? 'Sélectionnez d\'abord une catégorie' : genre.length === 0 ? 'Sélectionnez d\'abord un genre (Femme / Homme)' : 'Sélectionnez la marque'}
                     </option>
                     {brandOptions.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -810,7 +865,7 @@ export default function NewListingPage() {
                   />
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Contenu inclus <span style={{ color: '#c00', fontWeight: 600 }}>*</span></label>
+                  <label style={labelStyle}>Contenu inclus</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {CONTENU_INCLUS_OPTIONS.map((opt) => (
                       <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -825,8 +880,8 @@ export default function NewListingPage() {
                               fontWeight: 500,
                               border: 'none',
                               cursor: 'pointer',
-                              backgroundColor: packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
-                              color: packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                              backgroundColor: contenuInclus[opt.value] === true ? '#1d1d1f' : '#fff',
+                              color: contenuInclus[opt.value] === true ? '#fff' : '#6e6e73',
                             }}
                           >
                             Oui
@@ -841,8 +896,8 @@ export default function NewListingPage() {
                               border: 'none',
                               borderLeft: '1px solid #d2d2d7',
                               cursor: 'pointer',
-                              backgroundColor: !packaging.includes(opt.value) ? '#1d1d1f' : '#fff',
-                              color: !packaging.includes(opt.value) ? '#fff' : '#6e6e73',
+                              backgroundColor: contenuInclus[opt.value] === false ? '#1d1d1f' : '#fff',
+                              color: contenuInclus[opt.value] === false ? '#fff' : '#6e6e73',
                             }}
                           >
                             Non

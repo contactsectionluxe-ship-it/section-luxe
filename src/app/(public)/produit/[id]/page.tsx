@@ -55,6 +55,7 @@ export default function ProductPage() {
   const [sellerListingsCount, setSellerListingsCount] = useState(0);
   const [showMoreAbout, setShowMoreAbout] = useState(false);
   const [showPrixEnSavoirPlus, setShowPrixEnSavoirPlus] = useState(false);
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   /** Comparaison de prix : moyenne / min / max des annonces même catégorie et même année (hors annonce actuelle) */
   const [priceStats, setPriceStats] = useState<{ average: number; min: number; max: number; count: number } | null>(null);
 
@@ -272,7 +273,7 @@ export default function ProductPage() {
   return (
     <>
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px 20px 60px' }}>
+      <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
           href="/catalogue"
@@ -522,7 +523,7 @@ export default function ProductPage() {
                       {listing.category ? (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{categoryLabel || listing.category}</span>
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -533,7 +534,7 @@ export default function ProductPage() {
                       {listing.brand ? (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.brand}</span>
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>…</span>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -548,7 +549,7 @@ export default function ProductPage() {
                         <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.year != null ? listing.year : '…'}</span>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.year != null ? listing.year : ' '}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -558,7 +559,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
-                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : '…'}
+                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -567,7 +568,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
-                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : '…'}
+                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -576,7 +577,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
-                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : '…'}
+                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -585,7 +586,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
-                        L. {listing.widthCm != null ? listing.widthCm : '   '} × H. {listing.heightCm != null ? listing.heightCm : '   '} cm
+                        L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>
                   </div>
@@ -597,26 +598,29 @@ export default function ProductPage() {
                   Description
                 </h2>
                 {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
-                <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                  {(() => {
-                    const has = Array.isArray(listing.packaging) ? listing.packaging : [];
-                    const items: { key: string; label: string }[] = [
-                      { key: 'box', label: 'Boîte' },
-                      { key: 'certificat', label: 'Certificat' },
-                      { key: 'facture', label: 'Facture' },
-                    ];
-                    return (
-                      <>
-                        {items.map(({ key, label }) => (
-                          <span key={key} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: has.includes(key) ? '#e8f5e9' : '#f5f5f5', fontSize: 13, fontWeight: 500, color: has.includes(key) ? '#2e7d32' : '#6e6e73', borderRadius: 4 }}>
-                            {label} : {has.includes(key) ? 'Oui' : 'Non'}
-                          </span>
-                        ))}
-                      </>
-                    );
-                  })()}
+                <div style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
+                  <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                 </div>
+                {listing.description && listing.description.length > 120 && (
+                  <button type="button" onClick={() => setDescriptionExpanded((e) => !e)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, lineHeight: 1.7, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                    {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
+                  </button>
+                )}
+                {(() => {
+                  const has = Array.isArray(listing.packaging) ? listing.packaging : [];
+                  const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
+                  const included = has.filter((key) => labels[key]);
+                  if (included.length === 0) return null;
+                  return (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+                      {included.map((key) => (
+                        <span key={key} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#e8f5e9', fontSize: 13, fontWeight: 500, color: '#2e7d32', borderRadius: 4 }}>
+                          {labels[key]} : Oui
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
               {/* Section Prix — design type barre de comparaison (offre et prix) */}
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
@@ -672,7 +676,7 @@ export default function ProductPage() {
                   L&apos;estimation indiquée est donnée à titre informatif et peut différer de la valeur réelle du marché. Nous vous recommandons de réaliser votre propre analyse.
                 </p>
                 {!showPrixEnSavoirPlus ? (
-                  <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                  <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                     Voir plus
                   </button>
                 ) : (
@@ -680,7 +684,7 @@ export default function ProductPage() {
                     <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: 0 }}>
                       Cette estimation ne constitue pas une valeur contractuelle et peut comporter des variations ou des erreurs. Nous vous recommandons d&apos;effectuer votre propre comparaison et vos vérifications avant toute décision d&apos;achat.
                     </p>
-                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                       Voir moins
                     </button>
                   </>
@@ -824,7 +828,7 @@ export default function ProductPage() {
                       {listing.category ? (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{categoryLabel || listing.category}</span>
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -835,7 +839,7 @@ export default function ProductPage() {
                       {listing.brand ? (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.brand}</span>
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>…</span>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -843,14 +847,14 @@ export default function ProductPage() {
                         <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Modèle</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.model || '…'}</span>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.model || ' '}</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Calendar size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Année</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.year != null ? listing.year : '…'}</span>
+                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.year != null ? listing.year : ' '}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -860,7 +864,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
-                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : '…'}
+                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -869,7 +873,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Matière</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
-                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : '…'}
+                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -878,7 +882,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Couleur</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
-                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : '…'}
+                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
                       </span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -887,7 +891,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimensions</span>
                       </div>
                       <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
-                        L. {listing.widthCm != null ? listing.widthCm : '   '} × H. {listing.heightCm != null ? listing.heightCm : '   '} cm
+                        L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>
                   </div>
@@ -899,26 +903,29 @@ export default function ProductPage() {
                   Description
                 </h2>
                   {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
-                  <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+                  <div style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
+                    <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+                  </div>
+                  {listing.description && listing.description.length > 120 && (
+                    <button type="button" onClick={() => setDescriptionExpanded((e) => !e)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 12, lineHeight: 1.7, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                      {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
+                    </button>
+                  )}
                   {(() => {
                     const has = Array.isArray(listing.packaging) ? listing.packaging : [];
-                    const items: { key: string; label: string }[] = [
-                      { key: 'box', label: 'Boîte' },
-                      { key: 'certificat', label: 'Certificat' },
-                      { key: 'facture', label: 'Facture' },
-                    ];
+                    const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
+                    const included = has.filter((key) => labels[key]);
+                    if (included.length === 0) return null;
                     return (
-                      <>
-                        {items.map(({ key, label }) => (
-                          <span key={key} style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: has.includes(key) ? '#e8f5e9' : '#f5f5f5', fontSize: 12, fontWeight: 500, color: has.includes(key) ? '#2e7d32' : '#6e6e73', borderRadius: 4 }}>
-                            {label} : {has.includes(key) ? 'Oui' : 'Non'}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
+                        {included.map((key) => (
+                          <span key={key} style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#e8f5e9', fontSize: 12, fontWeight: 500, color: '#2e7d32', borderRadius: 4 }}>
+                            {labels[key]} : Oui
                           </span>
                         ))}
-                      </>
+                      </div>
                     );
                   })()}
-                </div>
                 </div>
                 {/* Section Prix - mobile */}
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
@@ -974,7 +981,7 @@ export default function ProductPage() {
                     L&apos;estimation indiquée est donnée à titre informatif et peut différer de la valeur réelle du marché. Nous vous recommandons de réaliser votre propre analyse.
                   </p>
                   {!showPrixEnSavoirPlus ? (
-                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 4, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                    <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                       Voir plus
                     </button>
                   ) : (
@@ -982,7 +989,7 @@ export default function ProductPage() {
                       <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: 0 }}>
                         Cette estimation ne constitue pas une valeur contractuelle et peut comporter des variations ou des erreurs. Nous vous recommandons d&apos;effectuer votre propre comparaison et vos vérifications avant toute décision d&apos;achat.
                       </p>
-                      <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
+                      <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                         Voir moins
                       </button>
                     </>

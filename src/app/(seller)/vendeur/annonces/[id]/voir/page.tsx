@@ -309,27 +309,27 @@ export default function VoirAnnoncePage() {
             </div>
           )}
 
-          {Object.keys(CONTENU_INCLUS_LABELS).length > 0 && (
+          {hasPackaging.length > 0 && (
             <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
               <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                 <Gift size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                 Contenu inclus
               </h2>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 0 }}>
-                {Object.entries(CONTENU_INCLUS_LABELS).map(([key, label]) => (
+                {hasPackaging.filter((key) => CONTENU_INCLUS_LABELS[key]).map((key) => (
                   <span
                     key={key}
                     style={{
                       display: 'inline-block',
                       padding: '6px 12px',
-                      backgroundColor: hasPackaging.includes(key) ? '#e8f5e9' : '#f5f5f5',
+                      backgroundColor: '#e8f5e9',
                       fontSize: 13,
                       fontWeight: 500,
-                      color: hasPackaging.includes(key) ? '#2e7d32' : '#6e6e73',
+                      color: '#2e7d32',
                       borderRadius: 4,
                     }}
                   >
-                    {label} : {hasPackaging.includes(key) ? 'Oui' : 'Non'}
+                    {CONTENU_INCLUS_LABELS[key]} : Oui
                   </span>
                 ))}
               </div>

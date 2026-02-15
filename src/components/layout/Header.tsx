@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
+import { HeaderFilters } from './HeaderFilters';
 
 const navigation = [
   { name: 'À la une', href: '/' },
@@ -121,7 +122,6 @@ export function Header() {
           top: 0,
           left: 0,
           right: 0,
-          height: 72,
           overflow: 'visible',
           backgroundColor: scrolled ? 'rgba(251,251,251,0.92)' : '#fbfbfb',
           backdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none',
@@ -129,6 +129,8 @@ export function Header() {
           borderBottom: '1px solid rgba(0,0,0,0.06)',
           zIndex: 100,
           transition: 'background-color 0.2s, backdrop-filter 0.2s',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
         <div
@@ -136,17 +138,19 @@ export function Header() {
             maxWidth: 1100,
             margin: '0 auto',
             padding: '0 24px',
-            height: '100%',
-            display: 'flex',
+            width: '100%',
+            height: 72,
+            display: 'grid',
+            gridTemplateColumns: '1fr auto 1fr',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: 16,
           }}
         >
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
             <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -3 }} />
           </Link>
 
-          <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
+          <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
             {navigation.map((item) => (
               <Link key={item.name} href={item.href} style={linkStyle} onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')} onMouseLeave={(e) => (e.currentTarget.style.color = '#6e6e73')}>
                 {item.name}
@@ -154,7 +158,8 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
+            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" style={iconLabelStyle}>
               <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.5} /></div>
               <span>Favoris</span>
@@ -218,6 +223,7 @@ export function Header() {
                         borderRadius: 14,
                         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                         overflow: 'hidden',
+                        zIndex: 110,
                       }}
                     >
                       <div style={{ padding: '16px 18px', borderBottom: '1px solid #f5f5f7' }}>
@@ -256,16 +262,18 @@ export function Header() {
                 <span>Se connecter</span>
               </Link>
             )}
+            </div>
+            <button
+              className="hide-desktop"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12 }}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
-
-          <button
-            className="hide-desktop"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12 }}
-          >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
         </div>
+
+        <HeaderFilters />
       </header>
 
       {mobileMenuOpen && (

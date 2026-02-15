@@ -16,6 +16,16 @@
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
 }
 
+@media (min-width: 768px) {
+  :root {
+    --header-height: 116px;
+  }
+}
+
+.header-filters-bar::-webkit-scrollbar {
+  display: none;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -141,5 +151,78 @@ a:focus-visible {
 @media (min-width: 900px) {
   .catalogue-search-inner {
     padding-left: 220px !important;
+  }
+}
+
+/* Catalogue desktop : bouton tri (Plus récents) à droite */
+@media (min-width: 768px) {
+  .catalogue-barre-tri {
+    justify-content: flex-end !important;
+  }
+}
+
+/* Page d'accueil mobile : étirer la photo hero, réduire espace au-dessus du titre et sous les boutons */
+@media (max-width: 767px) {
+  .hero-section {
+    background-size: cover !important;
+    background-position: center center !important;
+    padding-top: calc(var(--header-height) + 40px) !important;
+    padding-bottom: 40px !important;
+  }
+  .hero-sous-titre {
+    display: none !important;
+  }
+}
+
+/* Catalogue mobile : mêmes marges latérales que la page produit (24px), liste pleine largeur */
+@media (max-width: 767px) {
+  .catalogue-page-wrap {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+  .catalogue-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+  }
+  .catalogue-page-search {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  .catalogue-page-main {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  /* Masquer les caractéristiques (catégorie, année, état, etc.) sous le titre dans la liste catalogue */
+  .catalogue-listing-caracteristiques {
+    display: none !important;
+  }
+  /* Masquer étiquette offre équitable et nom du vendeur (garder la ligne et le code postal) */
+  .catalogue-listing-deal-badge,
+  .catalogue-listing-vendeur-nom {
+    display: none !important;
+  }
+  /* Prix plus petit sur la liste articles catalogue */
+  .catalogue-listing-prix {
+    font-size: 18px !important;
+  }
+  /* Moins d'espace entre prix / ligne / code postal */
+  .catalogue-listing-vendeur-block {
+    margin-top: 4px !important;
+    padding-top: 4px !important;
+  }
+  .catalogue-listing-codepostal {
+    margin-top: 2px !important;
+  }
+  /* Bouton recherche : plus petit, icône loupe seule */
+  .catalogue-search-submit {
+    height: 44px !important;
+    width: 44px !important;
+    min-width: 44px !important;
+    padding: 0 !important;
+  }
+  .catalogue-search-submit-text {
+    display: none !important;
   }
 }

@@ -154,6 +154,8 @@ function CatalogueContent() {
     if (category) initial.categories = [category];
     const brand = searchParams.get('brand');
     if (brand) initial.brands = [decodeURIComponent(brand)];
+    const model = searchParams.get('model');
+    if (model) initial.models = [decodeURIComponent(model)];
     const sellerId = searchParams.get('sellerId');
     if (sellerId) initial.sellerId = sellerId;
     return initial;
@@ -1503,27 +1505,22 @@ function CatalogueContent() {
   );
 
   return (
-    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, backgroundColor: '#fff', paddingTop: 'var(--header-height)' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '24px 24px 24px', boxSizing: 'border-box' }}>
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 1100, width: '100%', margin: '0 auto' }}>
-        {/* Carte principale : même largeur que la page d'accueil (1100px), espace sous le header */}
+    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 'var(--header-height)' }}>
+      <div className="catalogue-page-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 calc(24px - 0.5mm) 24px 24px', boxSizing: 'border-box' }}>
+        <div className="catalogue-page-inner" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 'calc(1100px + 1cm)', width: '100%', margin: '0 auto' }}>
+        {/* Contenu catalogue : 1100px + 0,5cm de chaque côté */}
         <div
           style={{
             flex: 1,
             minHeight: 'calc(100vh - var(--header-height) - 48px)',
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: '#fff',
-            borderRadius: 18,
-            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
-            border: '1px solid #e8e6e3',
-            borderLeft: 'none',
-            borderRight: 'none',
             overflow: 'hidden',
           }}
         >
           {/* Barre de recherche */}
-          <div style={{ padding: '20px 28px 20px 28px', borderBottom: '1px solid #e8e6e3', backgroundColor: '#fff' }}>
+          <div className="catalogue-page-search" style={{ padding: '20px calc(24px - 0.5mm) 20px 20px' }}>
+          <div style={{ borderBottom: '1px solid #e8e6e3', paddingBottom: 20, marginBottom: -20 }}>
           <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12 }}>
               <div ref={searchBarRef} style={{ flex: 1, position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
@@ -1601,6 +1598,7 @@ function CatalogueContent() {
             </div>
             <button
               type="submit"
+              className="catalogue-search-submit"
               style={{
                 height: 48,
                 padding: '0 24px',
@@ -1611,11 +1609,17 @@ function CatalogueContent() {
                 border: 'none',
                 borderRadius: 12,
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
               }}
             >
-              Rechercher
+              <Search size={20} strokeWidth={2} />
+              <span className="catalogue-search-submit-text">Rechercher</span>
             </button>
           </form>
+        </div>
       </div>
 
           <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0 }}>
@@ -1656,7 +1660,7 @@ function CatalogueContent() {
           </aside>
 
           {/* Main */}
-            <main style={{ flex: 1, minWidth: 0, padding: '24px 28px 32px' }}>
+            <main className="catalogue-page-main" style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 32px 24px' }}>
             {/* Bloc vendeur : nom, logo, annonces */}
             {filters.sellerId && (
             <div
@@ -1760,18 +1764,19 @@ function CatalogueContent() {
               </div>
             )}
 
-            {/* Barre tri + filtre mobile */}
+            {/* Barre tri + filtre : sur desktop "Plus récents" à droite, sur mobile Filtres à gauche / Trier à droite */}
             <div
+              className="catalogue-barre-tri"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
+                justifyContent: 'space-between',
                 marginBottom: 20,
                 flexWrap: 'wrap',
                 gap: 10,
               }}
             >
-                {/* Mobile filter button */}
+                {/* Mobile filter button — à gauche */}
                 <button
                   onClick={() => setMobileFiltersOpen(true)}
                   className="hide-desktop"
@@ -1793,7 +1798,7 @@ function CatalogueContent() {
                   Filtres
                 </button>
 
-                {/* Sort — menu déroulant personnalisé (pas de contour bleu, affiché sous la case) */}
+                {/* Sort — menu déroulant à droite */}
                 <div ref={sortDropdownRef} style={{ position: 'relative' }}>
                   <button
                     type="button"
@@ -1982,7 +1987,7 @@ function CatalogueContent() {
                             {listing.title}
                           </h3>
                           {(listing.category || listing.year != null || listing.condition || listing.color || listing.material) && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '11px 15px', marginBottom: 6, fontSize: 13, color: '#6e6e73', lineHeight: 1.35 }}>
+                            <div className="catalogue-listing-caracteristiques" style={{ display: 'flex', flexWrap: 'wrap', gap: '11px 15px', marginBottom: 6, fontSize: 13, color: '#6e6e73', lineHeight: 1.35 }}>
                               {listing.category && (
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                   <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
@@ -2016,13 +2021,14 @@ function CatalogueContent() {
                             </div>
                           )}
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <p style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
+                            <p className="catalogue-listing-prix" style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
                               {formatPrice(listing.price)}
                             </p>
                             {(() => {
                               const deal = dealByListingId[listing.id] ?? getDealDefault();
                               return (
                                 <span
+                                  className="catalogue-listing-deal-badge"
                         style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -2047,12 +2053,12 @@ function CatalogueContent() {
                             })()}
                           </div>
                         </div>
-                        <div style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
-                          <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
+                          <p className="catalogue-listing-vendeur-nom" style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {listing.sellerName}
                           </p>
                           {listing.sellerPostcode && (
-                            <p style={{ fontSize: 15, color: '#6e6e73', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.4 }}>
+                            <p className="catalogue-listing-codepostal" style={{ fontSize: 15, color: '#6e6e73', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.4 }}>
                               <MapPin size={15} /> {listing.sellerPostcode}
                             </p>
                           )}
@@ -2161,7 +2167,8 @@ function CatalogueContent() {
               height: '100%',
               backgroundColor: '#fff',
               overflowY: 'auto',
-              marginLeft: 'auto',
+              marginRight: 'auto',
+              left: 0,
             }}
           >
             <div
@@ -2195,7 +2202,7 @@ function CatalogueContent() {
               style={{
                 position: 'fixed',
                 bottom: 0,
-                right: 0,
+                left: 0,
                 width: '100%',
                 maxWidth: 340,
                 padding: 20,

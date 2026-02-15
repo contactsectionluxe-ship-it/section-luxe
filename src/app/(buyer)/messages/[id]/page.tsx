@@ -219,38 +219,38 @@ export default function ConversationPage() {
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <Link
-                href="/messages"
+            <Link
+              href="/messages"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, color: '#1d1d1f', backgroundColor: '#f5f5f7' }}
                 aria-label="Retour aux messages"
-              >
+            >
                 <ArrowLeft size={20} />
-              </Link>
-              <Link
-                href={`/produit/${conversation.listingId}`}
+            </Link>
+            <Link
+              href={`/produit/${conversation.listingId}`}
                 style={{ width: 48, height: 48, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', flexShrink: 0, border: '1px solid #e8e6e3' }}
-              >
-                {conversation.listingPhoto ? (
+            >
+              {conversation.listingPhoto ? (
                   <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Package size={22} color="#86868b" />
-                  </div>
-                )}
-              </Link>
+                </div>
+              )}
+            </Link>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <button type="button" onClick={handleShowPartyInfo} style={{ background: 'none', border: 'none', padding: 0, fontSize: 15, fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, cursor: 'pointer', textAlign: 'left', width: '100%', textDecoration: 'underline' }}>
                   {otherPartyName}
                 </button>
-                <Link
-                  href={`/produit/${conversation.listingId}`}
+              <Link
+                href={`/produit/${conversation.listingId}`}
                   style={{ fontSize: 13, color: '#6e6e73', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: 2 }}
-                >
-                  {conversation.listingTitle}
-                </Link>
-              </div>
-            </div>
+              >
+                {conversation.listingTitle}
+              </Link>
           </div>
+        </div>
+      </div>
 
           {/* Zone des messages */}
           <div
@@ -267,7 +267,7 @@ export default function ConversationPage() {
           >
             {messages.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '48px 20px', color: '#6e6e73', fontSize: 14 }}>
-                Démarrez la conversation avec {otherPartyName}
+                  Démarrez la conversation avec {otherPartyName}
               </div>
             ) : (
               messages.map((message) => {
@@ -313,9 +313,9 @@ export default function ConversationPage() {
                       })()}
                       {message.content?.trim() && (
                         <p style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
-                          {message.content}
-                        </p>
-                      )}
+                        {message.content}
+                      </p>
+                        )}
                       <p style={{ fontSize: 11, marginTop: 8, marginBottom: 0, opacity: isOwn ? 0.7 : 0.85 }}>
                         {formatRelativeTime(message.createdAt)}
                       </p>
@@ -562,9 +562,9 @@ export default function ConversationPage() {
                   </button>
                 </div>
               </div>
-            </div>
-          </div>
         </div>
+      </div>
+    </div>
       )}
     </main>
   );

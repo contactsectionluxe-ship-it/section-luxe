@@ -262,6 +262,30 @@ export const BRANDS_BY_CATEGORY: Record<string, string[]> = {
   ],
 };
 
+/** Marques par catégorie et genre (Homme / Femme). Utilisé pour filtrer le sélecteur Marque. */
+export const BRANDS_BY_CATEGORY_AND_GENRE: Record<string, { femme: string[]; homme: string[] }> = {
+  sacs: { femme: BRANDS_BY_CATEGORY.sacs, homme: BRANDS_BY_CATEGORY.sacs },
+  maroquinerie: { femme: BRANDS_BY_CATEGORY.maroquinerie, homme: BRANDS_BY_CATEGORY.maroquinerie },
+  montres: {
+    femme: [
+      'Cartier', 'Chanel', 'Chopard', 'Dior', 'Hermès', 'Louis Vuitton', 'Omega', 'Piaget',
+      'Van Cleef & Arpels', 'Bulgari', 'Blancpain', 'Breguet', 'Girard-Perregaux', 'Jaeger-LeCoultre',
+      'Audemars Piguet', 'Patek Philippe', 'Rolex', 'Tudor', 'Zenith', 'Autre',
+    ],
+    homme: [
+      'Rolex', 'Omega', 'Audemars Piguet', 'Patek Philippe', 'Cartier', 'IWC', 'Panerai', 'Breitling',
+      'Tag Heuer', 'Tudor', 'Vacheron Constantin', 'Hermès', 'Louis Vuitton', 'Chopard', 'Hublot',
+      'Richard Mille', 'Blancpain', 'Breguet', 'Girard-Perregaux', 'Jaeger-LeCoultre', 'Zenith',
+      'Bulgari', 'Corum', 'Chanel', 'Dior', 'Autre',
+    ],
+  },
+  bijoux: { femme: BRANDS_BY_CATEGORY.bijoux, homme: BRANDS_BY_CATEGORY.bijoux },
+  vetements: { femme: BRANDS_BY_CATEGORY.vetements, homme: BRANDS_BY_CATEGORY.vetements },
+  chaussures: { femme: BRANDS_BY_CATEGORY.chaussures, homme: BRANDS_BY_CATEGORY.chaussures },
+  accessoires: { femme: BRANDS_BY_CATEGORY.accessoires, homme: BRANDS_BY_CATEGORY.accessoires },
+  autre: { femme: BRANDS_BY_CATEGORY.autre, homme: BRANDS_BY_CATEGORY.autre },
+};
+
 /** Modèles par catégorie et marque (maximum de modèles par marque). */
 export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> = {
   sacs: {
@@ -455,3 +479,16 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Chloé': ['Marcie', 'Drew', 'Sac', 'Vêtement', 'Autre'],
   },
 };
+
+/** Modèles par catégorie, marque et genre (Homme / Femme). Dérivé de MODELS_BY_CATEGORY_BRAND. */
+export const MODELS_BY_CATEGORY_BRAND_AND_GENRE: Record<string, Record<string, { femme: string[]; homme: string[] }>> = (() => {
+  const out: Record<string, Record<string, { femme: string[]; homme: string[] }>> = {};
+  for (const cat of Object.keys(MODELS_BY_CATEGORY_BRAND)) {
+    out[cat] = {};
+    for (const brand of Object.keys(MODELS_BY_CATEGORY_BRAND[cat])) {
+      const models = MODELS_BY_CATEGORY_BRAND[cat][brand];
+      out[cat][brand] = { femme: models, homme: models };
+    }
+  }
+  return out;
+})();

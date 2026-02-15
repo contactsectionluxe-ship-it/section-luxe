@@ -17,6 +17,11 @@ function rowToListing(row: any): Listing {
     description: row.description,
     price: row.price,
     category: row.category,
+    genre: (() => {
+      if (Array.isArray(row.genre)) return row.genre.filter((g: string) => g === 'homme' || g === 'femme');
+      if (row.genre === 'homme' || row.genre === 'femme') return [row.genre];
+      return null;
+    })(),
     photos: row.photos || [],
     likesCount: row.likes_count || 0,
     listingNumber: row.listing_number ?? null,
@@ -76,6 +81,7 @@ export async function createListing(
   if (data.widthCm != null) insertData.width_cm = data.widthCm;
   if (data.year != null) insertData.year = data.year;
   if (data.packaging != null && data.packaging.length) insertData.packaging = data.packaging;
+  if (data.genre != null && Array.isArray(data.genre) && data.genre.length > 0) insertData.genre = data.genre;
 
   const { data: listing, error } = await client
     .from('listings')
@@ -111,13 +117,14 @@ export async function updateListing(
   if (data.widthCm !== undefined) updateData.width_cm = data.widthCm;
   if (data.year !== undefined) updateData.year = data.year;
   if (data.packaging !== undefined) updateData.packaging = data.packaging;
+  if (data.genre !== undefined) updateData.genre = (Array.isArray(data.genre) && data.genre.length > 0) ? data.genre : null;
 
   const { error } = await client
     .from('listings')
     .update(updateData)
     .eq('id', listingId);
 
-  if (error) throw error;
+  if (error) throw new Error(error.message || JSON.stringify(error));
 }
 
 // Delete a listing
