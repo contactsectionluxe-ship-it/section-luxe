@@ -7,8 +7,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
-import { HeaderFilters } from './HeaderFilters';
-
 const navigation = [
   { name: 'À la une', href: '/' },
   { name: 'Catalogue', href: '/catalogue' },
@@ -272,8 +270,6 @@ export function Header() {
             </button>
           </div>
         </div>
-
-        <HeaderFilters />
       </header>
 
       {mobileMenuOpen && (
