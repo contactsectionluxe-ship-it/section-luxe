@@ -66,6 +66,8 @@ export async function signUpSeller(
     description: string;
     idCardFrontUrl: string;
     idCardBackUrl: string | null;
+    /** Type du document recto : 'passeport' ou 'cni_recto' */
+    idRectoType?: 'passeport' | 'cni_recto' | null;
     kbisUrl: string;
     displayName?: string; // Prénom + Nom pour l'affichage utilisateur
   }
@@ -113,6 +115,7 @@ export async function signUpSeller(
       status: 'pending',
       id_card_front_url: sellerData.idCardFrontUrl,
       id_card_back_url: sellerData.idCardBackUrl ?? null,
+      id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
       kbis_url: sellerData.kbisUrl,
     });
 
@@ -130,6 +133,7 @@ export async function signUpSeller(
     status: 'pending',
     idCardFrontUrl: sellerData.idCardFrontUrl,
     idCardBackUrl: sellerData.idCardBackUrl,
+    idRectoType: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
     kbisUrl: sellerData.kbisUrl,
     createdAt: new Date(),
     updatedAt: new Date(),

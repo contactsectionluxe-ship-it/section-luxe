@@ -22,6 +22,7 @@ function rowToSeller(row: any): Seller {
     status: row.status,
     idCardFrontUrl: row.id_card_front_url,
     idCardBackUrl: row.id_card_back_url,
+    idRectoType: row.id_recto_type === 'passeport' || row.id_recto_type === 'cni_recto' ? row.id_recto_type : null,
     kbisUrl: row.kbis_url,
     avatarUrl: row.avatar_url ?? null,
     createdAt: new Date(row.created_at),
@@ -29,7 +30,7 @@ function rowToSeller(row: any): Seller {
   };
 }
 
-// Get all seller applications
+// Get all seller applications (avec display_name depuis users pour prénom/nom)
 export async function getAllSellers(): Promise<Seller[]> {
   if (!isSupabaseConfigured || !supabase) return [];
   
@@ -39,7 +40,38 @@ export async function getAllSellers(): Promise<Seller[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map(rowToSeller);
+  const sellers = (data || []).map(rowToSeller);
+  if (sellers.length === 0) return sellers;
+
+  const { data: usersData } = await supabase
+    .from('users')
+    .select('id, display_name')
+    .in('id', sellers.map((s) => s.uid));
+
+  const displayNameByUid: Record<string, string> = {};
+  (usersData || []).forEach((u: { id: string; display_name?: string }) => {
+    if (u.display_name) displayNameByUid[u.id] = u.display_name;
+  });
+
+  return sellers.map((s) => ({ ...s, displayName: displayNameByUid[s.uid] ?? null }));
+}
+
+// Get one seller by id (avec display_name depuis users)
+export async function getSellerById(uid: string): Promise<Seller | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  const { data: row, error } = await supabase
+    .from('sellers')
+    .select('*')
+    .eq('id', uid)
+    .single();
+  if (error || !row) return null;
+  const seller = rowToSeller(row);
+  const { data: userRow } = await supabase
+    .from('users')
+    .select('display_name')
+    .eq('id', uid)
+    .single();
+  return { ...seller, displayName: (userRow as { display_name?: string } | null)?.display_name ?? null };
 }
 
 // Get sellers by status

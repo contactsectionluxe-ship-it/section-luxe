@@ -4,6 +4,13 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   --header-height: 72px;
+  /* Catalogue : marge gauche zone principale */
+  --catalogue-line-gap: 24px;
+  /* Catalogue : espace au-dessus du premier article (-4px + 0,5mm) */
+  --catalogue-results-gap: calc(-4px + 0.5mm);
+  /* Réactiver l'espace sous-header (barre Nouveautés/Femme/Homme/catégories) : réafficher <HeaderFilters /> dans Header.tsx puis ajouter :
+     @media (min-width: 768px) { :root { --header-height: 116px; } }
+  */
   /* Apple-style radii */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -14,12 +21,6 @@
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
-}
-
-@media (min-width: 768px) {
-  :root {
-    --header-height: 116px;
-  }
 }
 
 .header-filters-bar::-webkit-scrollbar {
@@ -159,6 +160,11 @@ a:focus-visible {
   .catalogue-barre-tri {
     justify-content: flex-end !important;
   }
+}
+
+/* Catalogue : espace au-dessus du premier article */
+.catalogue-results {
+  margin-top: var(--catalogue-results-gap, calc(-4px + 0.5mm)) !important;
 }
 
 /* Page d'accueil mobile : étirer la photo hero, réduire espace au-dessus du titre et sous les boutons */

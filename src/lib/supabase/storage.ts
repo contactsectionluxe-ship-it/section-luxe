@@ -111,7 +111,7 @@ export async function uploadListingPhotos(
   }
 
   const uploadPromises = files.map((file, index) =>
-    uploadListingPhoto(sellerId, listingId, file, index)
+    uploadListingPhoto(sellerId, listingId, file, startIndex + index)
   );
   return Promise.all(uploadPromises);
 }

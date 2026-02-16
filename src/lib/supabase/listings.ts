@@ -388,5 +388,14 @@ export async function getFeaturedListings(limitCount = 8): Promise<Listing[]> {
     .limit(limitCount);
 
   if (error) throw error;
-  return (data || []).map(rowToListing);
+  const listings = (data || []).map(rowToListing);
+  if (listings.length === 0) return listings;
+
+  const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
+  const { data: sellersData } = await supabase.from('sellers').select('id, postcode').in('id', sellerIds);
+  const postcodeBySeller: Record<string, string> = {};
+  (sellersData || []).forEach((s: { id: string; postcode?: string }) => {
+    if (s.postcode) postcodeBySeller[s.id] = s.postcode;
+  });
+  return listings.map((l) => ({ ...l, sellerPostcode: postcodeBySeller[l.sellerId] ?? null }));
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
 import { Listing } from '@/types';
 
@@ -287,8 +287,11 @@ export default function HomePage() {
                       ) : (
                         <span
                           style={{
-                            fontSize: 15,
+                            fontFamily: 'var(--font-playfair), Georgia, serif',
+                            fontSize: 17,
                             fontWeight: 500,
+                            letterSpacing: '-0.02em',
+                            color: '#1d1d1f',
                           }}
                         >
                           {cat.name}
@@ -298,7 +301,7 @@ export default function HomePage() {
                     <span
                       style={{
                         fontSize: 15,
-                        fontWeight: 500,
+                        color: '#6e6e73',
                         textAlign: 'center',
                         lineHeight: 1.2,
                       }}
@@ -417,10 +420,16 @@ export default function HomePage() {
                         />
                       )}
                     </div>
-                    <p style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', marginBottom: 6 }}>
-                      {listing.sellerName}
+                    <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <span>{listing.sellerName}</span>
+                      {listing.sellerPostcode && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                          <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                          {listing.sellerPostcode}
+                        </span>
+                      )}
                     </p>
-                    <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1d1d1f' }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1d1d1f' }}>
                       {listing.title}
                     </h3>
                     <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>

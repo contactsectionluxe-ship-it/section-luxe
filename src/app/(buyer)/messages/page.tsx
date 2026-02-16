@@ -81,28 +81,27 @@ export default function MessagesPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '16px 24px 80px' }}>
-        {/* Titre (style Devenir vendeur) */}
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 28,
-              fontWeight: 500,
-              marginBottom: 8,
-              color: '#1d1d1f',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Ma messagerie
-          </h1>
-          <p style={{ fontSize: 15, color: '#6e6e73' }}>
-            {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
-          </p>
-        </div>
-
-        {/* Filtres Tous / Non lus / Lus */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        {/* Titre à gauche, filtres Tous / Non lus / Lus à droite, alignés sur la même ligne */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div>
+            <h1
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Ma messagerie
+            </h1>
+            <p style={{ fontSize: 14, color: '#888' }}>
+              {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {(['all', 'unread', 'read'] as const).map((tab) => (
             <button
               key={tab}
@@ -122,6 +121,7 @@ export default function MessagesPage() {
               {tab === 'all' ? 'Tous' : tab === 'read' ? 'Lus' : 'Non lus'}
             </button>
           ))}
+          </div>
         </div>
 
         {/* Carte liste (style Devenir vendeur) */}

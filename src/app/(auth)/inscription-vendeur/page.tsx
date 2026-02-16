@@ -136,6 +136,7 @@ export default function SellerRegisterPage() {
 
   const [idCardFront, setIdCardFront] = useState<File | null>(null);
   const [idCardBack, setIdCardBack] = useState<File | null>(null);
+  const [idRectoType, setIdRectoType] = useState<'passeport' | 'cni_recto' | null>(null);
   const [kbis, setKbis] = useState<File | null>(null);
 
   // Recherche entreprise quand le SIRET complet (14 chiffres) → affiche un menu déroulant (suggestion)
@@ -193,6 +194,10 @@ export default function SellerRegisterPage() {
       setError('Veuillez télécharger le KBIS et le Justificatif d\'identité.');
       return;
     }
+    if (!idRectoType) {
+      setError('Veuillez indiquer le type de justificatif d\'identité (Passeport ou CNI).');
+      return;
+    }
 
     setLoading(true);
 
@@ -223,6 +228,7 @@ export default function SellerRegisterPage() {
         description,
         idCardFrontUrl,
         idCardBackUrl,
+        idRectoType,
         kbisUrl,
         displayName: `${firstName.trim()} ${lastName.trim()}`.trim(),
       });
@@ -730,19 +736,49 @@ export default function SellerRegisterPage() {
                   hint="Document officiel prouvant l'existence de votre entreprise"
                 />
 
-                <FileUploadField
-                  label="Justificatif d'identité recto : CNI ou Passeport"
-                  file={idCardFront}
-                  onFileChange={setIdCardFront}
-                  hint="Photo ou scan de la carte d'identité ou du passeport (recto)"
-                />
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', marginBottom: 10 }}>
+                    Type de justificatif d&apos;identité
+                  </p>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1d1d1f' }}>
+                      <input
+                        type="radio"
+                        name="idRectoType"
+                        checked={idRectoType === 'passeport'}
+                        onChange={() => setIdRectoType('passeport')}
+                        style={{ width: 18, height: 18 }}
+                      />
+                      Passeport
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1d1d1f' }}>
+                      <input
+                        type="radio"
+                        name="idRectoType"
+                        checked={idRectoType === 'cni_recto'}
+                        onChange={() => setIdRectoType('cni_recto')}
+                        style={{ width: 18, height: 18 }}
+                      />
+                      CNI (recto)
+                    </label>
+                  </div>
+                </div>
 
                 <FileUploadField
-                  label="Justificatif d'identité verso : CNI"
-                  file={idCardBack}
-                  onFileChange={setIdCardBack}
-                  hint="Photo ou scan de la carte d'identité (verso)"
+                  label={idRectoType === 'cni_recto' ? 'Justificatif d\'identité recto : CNI' : idRectoType === 'passeport' ? 'Justificatif d\'identité : Passeport' : 'Justificatif d\'identité recto'}
+                  file={idCardFront}
+                  onFileChange={setIdCardFront}
+                  hint={idRectoType === 'passeport' ? 'Photo ou scan du passeport' : 'Photo ou scan de la carte d\'identité (recto)'}
                 />
+
+                {idRectoType === 'cni_recto' && (
+                  <FileUploadField
+                    label="Justificatif d'identité verso : CNI"
+                    file={idCardBack}
+                    onFileChange={setIdCardBack}
+                    hint="Photo ou scan de la carte d'identité (verso)"
+                  />
+                )}
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button

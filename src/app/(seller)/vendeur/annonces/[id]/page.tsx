@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
+import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
@@ -37,7 +38,7 @@ const inputStyle: React.CSSProperties = {
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
-  fontSize: 13,
+  fontSize: 14,
   fontWeight: 500,
   marginBottom: 8,
   color: '#333',
@@ -66,14 +67,31 @@ export default function EditListingPage() {
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
+  const [marqueSearchQuery, setMarqueSearchQuery] = useState('');
   const [model, setModel] = useState('');
   const [customModel, setCustomModel] = useState('');
+  const [modeleSearchQuery, setModeleSearchQuery] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [marqueOpen, setMarqueOpen] = useState(false);
+  const [modeleOpen, setModeleOpen] = useState(false);
+  const [conditionOpen, setConditionOpen] = useState(false);
+  const categoryListRef = useRef<HTMLDivElement>(null);
+  const marqueListRef = useRef<HTMLDivElement>(null);
+  const modeleListRef = useRef<HTMLDivElement>(null);
+  const conditionListRef = useRef<HTMLDivElement>(null);
+  const materialListRef = useRef<HTMLDivElement>(null);
+  const colorListRef = useRef<HTMLDivElement>(null);
   const [condition, setCondition] = useState('');
   const [material, setMaterial] = useState('');
+  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
+  const [materialOpen, setMaterialOpen] = useState(false);
   const [customMaterial, setCustomMaterial] = useState('');
   const [color, setColor] = useState('');
+  const [colorSearchQuery, setColorSearchQuery] = useState('');
+  const [colorOpen, setColorOpen] = useState(false);
   const [customColor, setCustomColor] = useState('');
   const [description, setDescription] = useState('');
+  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [heightCm, setHeightCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
   const [year, setYear] = useState('');
@@ -90,6 +108,12 @@ export default function EditListingPage() {
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
   const [step, setStep] = useState(1);
 
+  // Refs pour avoir toujours la dernière valeur des photos à l'enregistrement (évite état périmé)
+  const existingPhotosRef = useRef<string[]>([]);
+  const newPhotosRef = useRef<File[]>([]);
+  existingPhotosRef.current = existingPhotos;
+  newPhotosRef.current = newPhotos;
+
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
@@ -101,11 +125,11 @@ export default function EditListingPage() {
     const set = new Set<string>();
     if (genre.includes('femme')) byGenre.femme.forEach((b) => set.add(b));
     if (genre.includes('homme')) byGenre.homme.forEach((b) => set.add(b));
-    const list = [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+    const list = [...set].filter((b) => b !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
     if (brand && !list.includes(brand)) list.unshift(brand);
     return list.map((b) => ({ value: b, label: b }));
   })();
-  const brandForModels = brand === 'Autre' ? customBrand.trim() : brand;
+  const brandForModels = brand || marqueSearchQuery.trim();
   const modelOptions = (() => {
     if (!category || !brandForModels || genre.length === 0) return [];
     const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
@@ -113,7 +137,7 @@ export default function EditListingPage() {
     const set = new Set<string>();
     if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
     if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
-    const list = [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+    const list = [...set].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
     if (model && !list.includes(model)) list.unshift(model);
     return list;
   })();
@@ -173,12 +197,15 @@ export default function EditListingPage() {
         const brandsForCat = data.category && BRANDS_BY_CATEGORY[data.category] ? BRANDS_BY_CATEGORY[data.category] : [];
         if (data.brand && brandsForCat.includes(data.brand)) {
           setBrand(data.brand);
+          setMarqueSearchQuery(data.brand);
           setCustomBrand('');
         } else if (data.brand) {
-          setBrand('Autre');
-          setCustomBrand(data.brand);
+          setBrand('');
+          setMarqueSearchQuery(data.brand);
+          setCustomBrand('');
         } else {
           setBrand('');
+          setMarqueSearchQuery('');
           setCustomBrand('');
         }
         const modelsForBrand = data.category && (data.brand || '')
@@ -186,12 +213,15 @@ export default function EditListingPage() {
           : [];
         if (data.model && modelsForBrand.includes(data.model)) {
           setModel(data.model);
+          setModeleSearchQuery(data.model);
           setCustomModel('');
         } else if (data.model && modelsForBrand.length > 0) {
-          setModel('Autre');
-          setCustomModel(data.model);
+          setModel(data.model);
+          setModeleSearchQuery(data.model);
+          setCustomModel('');
         } else {
           setModel('');
+          setModeleSearchQuery('');
           setCustomModel(data.model || '');
         }
         setCondition(data.condition || '');
@@ -199,27 +229,42 @@ export default function EditListingPage() {
         const matValues = matOpts.map((o: { value: string }) => o.value);
         if (data.material && matValues.includes(data.material)) {
           setMaterial(data.material);
+          setMaterialSearchQuery(matOpts.find((o: { value: string; label: string }) => o.value === data.material)?.label ?? data.material);
           setCustomMaterial('');
         } else if (data.material) {
           setMaterial('other');
+          setMaterialSearchQuery('Autre');
           setCustomMaterial(data.material);
         } else {
           setMaterial('');
+          setMaterialSearchQuery('');
           setCustomMaterial('');
         }
         const colOpts = data.category ? (COLORS_BY_CATEGORY[data.category] ?? COLORS) : [];
         const colValues = colOpts.map((o: { value: string }) => o.value);
         if (data.color && colValues.includes(data.color)) {
           setColor(data.color);
+          setColorSearchQuery(colOpts.find((o: { value: string; label: string }) => o.value === data.color)?.label ?? data.color);
           setCustomColor('');
         } else if (data.color) {
           setColor('other');
+          setColorSearchQuery('Autre');
           setCustomColor(data.color);
         } else {
           setColor('');
+          setColorSearchQuery('');
           setCustomColor('');
         }
         setDescription(data.description || '');
+        try {
+          const draft = typeof window !== 'undefined' ? localStorage.getItem(`luxe-annonce-draft-${listingId}`) : null;
+          if (draft) {
+            const o = JSON.parse(draft) as { description?: string };
+            if (o?.description != null && typeof o.description === 'string') setDescription(o.description);
+          }
+        } catch {
+          // ignore
+        }
         setHeightCm(data.heightCm != null ? String(data.heightCm) : '');
         setWidthCm(data.widthCm != null ? String(data.widthCm) : '');
         setYear(data.year != null ? String(data.year) : '');
@@ -247,6 +292,30 @@ export default function EditListingPage() {
     }
   }, [listingId, user, isApprovedSeller, authLoading, router]);
 
+  // Sauvegarder la description en brouillon (localStorage) quand elle change (modifier annonce)
+  useEffect(() => {
+    if (!listingId) return;
+    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    draftTimeoutRef.current = setTimeout(() => {
+      try {
+        if (typeof window !== 'undefined') {
+          const key = `luxe-annonce-draft-${listingId}`;
+          if (description.trim()) {
+            localStorage.setItem(key, JSON.stringify({ description }));
+          } else {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch {
+        // ignore
+      }
+      draftTimeoutRef.current = null;
+    }, 400);
+    return () => {
+      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    };
+  }, [listingId, description]);
+
   if (authLoading || loading) {
     return <PageLoader />;
   }
@@ -269,27 +338,29 @@ export default function EditListingPage() {
 
   const validateStep1 = () => {
     if (genre.length === 0) {
-      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      setError('Sélectionner au moins un genre (Femme et/ou Homme)');
       return false;
     }
     if (!category) {
-      setError('Sélectionnez une catégorie');
+      setError('Sélectionner une catégorie');
       return false;
     }
-    if (!brand.trim()) {
-      setError('Sélectionnez la marque');
+    const hasBrand = !!(brand || marqueSearchQuery.trim());
+    if (!hasBrand) {
+      setError('Rechercher ou préciser la marque');
       return false;
     }
-    if (brand === 'Autre' && !customBrand.trim()) {
-      setError('Précisez la marque');
-      return false;
-    }
-    if (modelOptions.length > 0 && !model) {
-      setError('Sélectionnez le modèle');
+    if (modelOptions.length > 0) {
+      if (!model) {
+        setError('Sélectionner ou préciser le modèle');
+        return false;
+      }
+    } else if (brandForModels && !customModel.trim()) {
+      setError('Précisez le modèle');
       return false;
     }
     if (!condition) {
-      setError("Sélectionnez l'état");
+      setError("Sélectionner l'état");
       return false;
     }
     setError('');
@@ -328,30 +399,34 @@ export default function EditListingPage() {
     setError('');
 
     if (genre.length === 0) {
-      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      setError('Sélectionner au moins un genre (Femme et/ou Homme)');
       return;
     }
     if (!category) {
-      setError('Sélectionnez une catégorie');
+      setError('Sélectionner une catégorie');
       return;
     }
-    if (!brand.trim()) {
-      setError('Sélectionnez la marque');
+    const hasBrand = !!(brand || marqueSearchQuery.trim());
+    if (!hasBrand) {
+      setError('Rechercher ou préciser la marque');
       return;
     }
-    if (brand === 'Autre' && !customBrand.trim()) {
-      setError('Précisez la marque');
-      return;
-    }
-    if (modelOptions.length > 0 && !model) {
-      setError('Sélectionnez le modèle');
+    if (modelOptions.length > 0) {
+      if (!model) {
+        setError('Sélectionner ou préciser le modèle');
+        return;
+      }
+    } else if (brandForModels && !customModel.trim()) {
+      setError('Précisez le modèle');
       return;
     }
     if (!condition) {
-      setError("Sélectionnez l'état");
+      setError("Sélectionner l'état");
       return;
     }
-    if (existingPhotos.length === 0 && newPhotos.length === 0) {
+    const currentExisting = existingPhotosRef.current;
+    const currentNew = newPhotosRef.current;
+    if (currentExisting.length === 0 && currentNew.length === 0) {
       setError('Veuillez ajouter au moins une photo');
       return;
     }
@@ -364,15 +439,15 @@ export default function EditListingPage() {
     setSaving(true);
 
     try {
-      let allPhotos = [...existingPhotos];
-      if (newPhotos.length > 0) {
-        const newPhotoUrls = await uploadListingPhotos(user!.uid, listingId, newPhotos, existingPhotos.length);
+      let allPhotos = [...currentExisting];
+      if (currentNew.length > 0) {
+        const newPhotoUrls = await uploadListingPhotos(user!.uid, listingId, currentNew, currentExisting.length);
         allPhotos = [...allPhotos, ...newPhotoUrls];
       }
 
       const categoryLabel = category === 'autre' ? customCategory.trim() : (CATEGORIES.find((c) => c.value === category)?.label || category);
-      const brandToSave = brand === 'Autre' ? customBrand.trim() : brand.trim();
-      const modelToSave = modelOptions.length > 0 ? (model === 'Autre' ? customModel.trim() : model) || null : customModel.trim() || null;
+      const brandToSave = (brand.trim() || marqueSearchQuery.trim());
+      const modelToSave = modelOptions.length > 0 ? (model || null) : (customModel.trim() || null);
       const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${categoryLabel}`;
 
       await updateListing(listingId, {
@@ -394,6 +469,19 @@ export default function EditListingPage() {
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
       });
 
+      if (isActive) {
+        try {
+          await ensureInvoiceForListing(listingId);
+        } catch (e) {
+          console.error('Création facture après activation annonce', e);
+        }
+      }
+
+      try {
+        if (typeof window !== 'undefined') localStorage.removeItem(`luxe-annonce-draft-${listingId}`);
+      } catch {
+        // ignore
+      }
       router.push('/vendeur');
     } catch (err: unknown) {
       const message =
@@ -447,6 +535,7 @@ export default function EditListingPage() {
           transition={{ duration: 0.4 }}
           style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}
         >
+          <style dangerouslySetInnerHTML={{ __html: '.listing-dropdown-list button:hover { background: #e8e8ed !important; }' }} />
           {error && (
             <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 20 }}>
               {error}
@@ -489,29 +578,80 @@ export default function EditListingPage() {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.25 }}
                 >
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <select
-                value={category}
-                onChange={(e) => {
-                  const v = e.target.value as ListingCategory | 'autre';
-                  setCategory(v);
-                  if (v !== 'autre') setCustomCategory('');
-                  setBrand('');
-                  setCustomBrand('');
-                  setModel('');
-                  setCustomModel('');
-                  setMaterial('');
-                  setColor('');
+              <button
+                type="button"
+                onClick={() => setCategoryOpen((o) => !o)}
+                onBlur={() => setTimeout(() => setCategoryOpen(false), 200)}
+                style={{
+                  ...selectStyle(),
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: category ? '#1d1d1f' : '#86868b',
                 }}
-                required
-                style={selectStyle()}
               >
-                <option value="">Sélectionnez une catégorie</option>
-                {CATEGORIES.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                {category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
+              </button>
+              {categoryOpen && (
+                <div
+                  ref={categoryListRef}
+                  className="listing-dropdown-list"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    maxHeight: 'calc(228px - 3mm)',
+                    overflowY: 'auto',
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 10,
+                  }}
+                >
+                  {CATEGORIES.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        const v = opt.value as ListingCategory | 'autre';
+                        setCategory(v);
+                        if (v !== 'autre') setCustomCategory('');
+                        setBrand('');
+                        setCustomBrand('');
+                        setMarqueSearchQuery('');
+                        setModel('');
+                        setCustomModel('');
+                        setModeleSearchQuery('');
+                        setMaterial('');
+setMaterialSearchQuery('');
+                          setCustomMaterial('');
+                          setColor('');
+                          setColorSearchQuery('');
+                          setCustomColor('');
+                          setCategoryOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '6px 12px',
+                        textAlign: 'left',
+                        fontSize: 15,
+                        color: '#1d1d1f',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -520,7 +660,7 @@ export default function EditListingPage() {
                   type="button"
                   onClick={() => {
                     setGenre(genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme']);
-                    setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                   }}
                   style={{
                     flex: 1,
@@ -539,7 +679,7 @@ export default function EditListingPage() {
                   type="button"
                   onClick={() => {
                     setGenre(genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme']);
-                    setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                   }}
                   style={{
                     flex: 1,
@@ -563,77 +703,295 @@ export default function EditListingPage() {
                 <input type="text" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Indiquez la catégorie" style={inputStyle} />
               </div>
             )}
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Marque <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <select
-                value={brand}
+              <input
+                type="text"
+                value={marqueSearchQuery}
                 onChange={(e) => {
-                  setBrand(e.target.value);
-                  if (e.target.value !== 'Autre') setCustomBrand('');
-                  setModel('');
-                  setCustomModel('');
+                  setMarqueSearchQuery(e.target.value);
+                  if (brand && e.target.value !== brand) setBrand('');
+                  setMarqueOpen(true);
                 }}
-                required
+                onFocus={() => { if (category && genre.length > 0) setMarqueOpen(true); }}
+                onBlur={() => setTimeout(() => setMarqueOpen(false), 200)}
+                placeholder={!category || genre.length === 0 ? (genre.length === 0 ? "Sélectionner d'abord Femme et/ou Homme" : "Sélectionner une catégorie") : 'Rechercher ou préciser la marque...'}
                 disabled={!category || genre.length === 0}
-                style={selectStyle(!category || genre.length === 0)}
-              >
-                <option value="">{!category ? "Sélectionnez d'abord une catégorie" : genre.length === 0 ? "Sélectionnez d'abord un genre (Femme / Homme)" : 'Sélectionnez la marque'}</option>
-                {brandOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                style={{
+                  ...inputStyle,
+                  cursor: category && genre.length > 0 ? 'text' : 'not-allowed',
+                  opacity: category && genre.length > 0 ? 1 : 0.7,
+                }}
+              />
+              {category && genre.length > 0 && marqueOpen && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
+                <div
+                  ref={marqueListRef}
+                  className="listing-dropdown-list"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    maxHeight: 'calc(228px - 5mm)',
+                    overflowY: 'auto',
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 10,
+                  }}
+                >
+                  {brandOptions
+                    .filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase()))
+                    .map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setBrand(opt.value);
+                          setMarqueSearchQuery(opt.label);
+                          setModel('');
+                          setCustomModel('');
+                          setModeleSearchQuery('');
+                          setMaterial('');
+                          setMaterialSearchQuery('');
+                          setCustomMaterial('');
+                          setColor('');
+                          setColorSearchQuery('');
+                          setCustomColor('');
+                          setMarqueOpen(false);
+                        }}
+                        style={{
+                          display: 'block',
+                          width: '100%',
+                          padding: '6px 12px',
+                          textAlign: 'left',
+                          fontSize: 15,
+                          color: '#1d1d1f',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
-            {brand === 'Autre' && (
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Marque personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
-                <input type="text" value={customBrand} onChange={(e) => setCustomBrand(e.target.value)} placeholder="Indiquez la marque" style={inputStyle} />
-              </div>
-            )}
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
               {modelOptions.length > 0 ? (
                 <>
-                  <select
-                    value={model}
-                    onChange={(e) => { setModel(e.target.value); if (e.target.value !== 'Autre') setCustomModel(''); }}
-                    required
-                    style={selectStyle()}
-                  >
-                    <option value="">Sélectionnez le modèle</option>
-                    {modelOptions.map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
-                  {model === 'Autre' && (
-                    <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="Indiquez le modèle" style={{ ...inputStyle, marginTop: 10 }} />
+                  <input
+                    type="text"
+                    value={modeleSearchQuery}
+                    onChange={(e) => {
+                      setModeleSearchQuery(e.target.value);
+                      if (model && e.target.value !== model) setModel('');
+                      setModeleOpen(true);
+                    }}
+                    onFocus={() => setModeleOpen(true)}
+                    onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
+                    placeholder="Rechercher ou préciser le modèle..."
+                    style={inputStyle}
+                  />
+                  {modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
+                    <div
+                      ref={modeleListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {modelOptions
+                        .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
+                        .map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setModel(name);
+                              setModeleSearchQuery(name);
+                              setModeleOpen(false);
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              fontSize: 15,
+                              color: '#1d1d1f',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                    </div>
                   )}
                 </>
               ) : (
-                <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="Indiquez le modèle (ex. Birkin 30, Submariner)" style={inputStyle} />
+                <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="Précisez le modèle" style={inputStyle} />
               )}
             </div>
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>État <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <select value={condition} onChange={(e) => setCondition(e.target.value)} required style={selectStyle()}>
-                <option value="">Sélectionnez l&apos;état</option>
-                {CONDITIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Matière</label>
-              <select
-                value={material}
-                onChange={(e) => { setMaterial(e.target.value); if (e.target.value !== 'other') setCustomMaterial(''); }}
-                disabled={!category}
-                style={selectStyle(!category)}
+              <button
+                type="button"
+                onClick={() => setConditionOpen((o) => !o)}
+                onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
+                style={{
+                  ...inputStyle,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: condition ? '#1d1d1f' : '#86868b',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 14px center',
+                  paddingRight: 40,
+                }}
               >
-                <option value="">{category ? 'Sélectionnez la matière' : "Sélectionnez d'abord une catégorie"}</option>
-                {materialOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+                {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
+              </button>
+              {conditionOpen && (
+                <div
+                  ref={conditionListRef}
+                  className="listing-dropdown-list"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    maxHeight: 'calc(228px - 3mm)',
+                    overflowY: 'auto',
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 10,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 10,
+                  }}
+                >
+                  {CONDITIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setCondition(opt.value);
+                        setConditionOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '6px 12px',
+                        textAlign: 'left',
+                        fontSize: 15,
+                        color: '#1d1d1f',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
+              <label style={labelStyle}>Matière</label>
+              {category ? (
+                <>
+                  <input
+                    type="text"
+                    value={materialSearchQuery}
+                    onChange={(e) => {
+                      setMaterialSearchQuery(e.target.value);
+                      if (material && e.target.value !== (materialOptions.find((o) => o.value === material)?.label ?? '')) setMaterial('');
+                      setMaterialOpen(true);
+                    }}
+                    onFocus={() => setMaterialOpen(true)}
+                    onBlur={() => setTimeout(() => setMaterialOpen(false), 200)}
+                    placeholder="Indiquer ou rechercher une matière..."
+                    style={inputStyle}
+                  />
+                  {materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
+                    <div
+                      ref={materialListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {materialOptions
+                        .filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase()))
+                        .map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setMaterial(opt.value);
+                              setMaterialSearchQuery(opt.label);
+                              if (opt.value !== 'other') setCustomMaterial('');
+                              setMaterialOpen(false);
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              fontSize: 15,
+                              color: '#1d1d1f',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <input
+                  type="text"
+                  readOnly
+                  value=""
+                  placeholder="Sélectionner d'abord une catégorie"
+                  style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              )}
             </div>
             {material === 'other' && (
               <div style={{ marginBottom: 18 }}>
@@ -641,14 +999,82 @@ export default function EditListingPage() {
                 <input type="text" value={customMaterial} onChange={(e) => setCustomMaterial(e.target.value)} placeholder="Indiquez la matière" style={inputStyle} />
               </div>
             )}
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Couleur</label>
-              <select value={color} onChange={(e) => { setColor(e.target.value); if (e.target.value !== 'other') setCustomColor(''); }} disabled={!category} style={selectStyle(!category)}>
-                <option value="">{category ? 'Sélectionnez la couleur' : "Sélectionnez d'abord une catégorie"}</option>
-                {colorOptions.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
+              {category ? (
+                <>
+                  <input
+                    type="text"
+                    value={colorSearchQuery}
+                    onChange={(e) => {
+                      setColorSearchQuery(e.target.value);
+                      if (color && e.target.value !== (colorOptions.find((o) => o.value === color)?.label ?? '')) setColor('');
+                      setColorOpen(true);
+                    }}
+                    onFocus={() => setColorOpen(true)}
+                    onBlur={() => setTimeout(() => setColorOpen(false), 200)}
+                    placeholder="Indiquer ou rechercher une couleur..."
+                    style={inputStyle}
+                  />
+                  {colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
+                    <div
+                      ref={colorListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {colorOptions
+                        .filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase()))
+                        .map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setColor(opt.value);
+                              setColorSearchQuery(opt.label);
+                              if (opt.value !== 'other') setCustomColor('');
+                              setColorOpen(false);
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              fontSize: 15,
+                              color: '#1d1d1f',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <input
+                  type="text"
+                  readOnly
+                  value=""
+                  placeholder="Sélectionner d'abord une catégorie"
+                  style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
+                />
+              )}
             </div>
             {color === 'other' && (
               <div style={{ marginBottom: 18 }}>
@@ -865,7 +1291,7 @@ export default function EditListingPage() {
               <input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Ex: 2020" min={1900} max={new Date().getFullYear() + 1} style={inputStyle} />
             </div>
             <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Contenu inclus</label>
+              <label style={labelStyle}>Contenu inclus :</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {CONTENU_INCLUS_OPTIONS.map((opt) => (
                   <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>

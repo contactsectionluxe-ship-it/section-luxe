@@ -25,6 +25,8 @@ export interface Seller {
   uid: string;
   email: string;
   companyName: string;
+  /** Prénom + Nom (depuis users.display_name) */
+  displayName?: string | null;
   siret?: string | null;
   address: string;
   city: string;
@@ -34,6 +36,8 @@ export interface Seller {
   status: SellerStatus;
   idCardFrontUrl: string;
   idCardBackUrl: string | null;
+  /** Type du document recto envoyé par le vendeur (pour l’affichage admin) */
+  idRectoType?: 'passeport' | 'cni_recto' | null;
   kbisUrl: string;
   avatarUrl?: string | null;
   createdAt: Date;

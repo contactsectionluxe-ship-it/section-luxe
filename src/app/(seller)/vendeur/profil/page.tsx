@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, FileText, Camera } from 'lucide-react';
+import { Mail, FileText, Camera, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/utils';
-import { updateUserProfile, updateSellerProfile } from '@/lib/supabase/auth';
+import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { ACCEPT_IMAGES, validateImageFile } from '@/lib/file-validation';
 
@@ -48,6 +48,12 @@ export default function ProfilVendeurPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // aperçu local avant envoi
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteCompanyName, setDeleteCompanyName] = useState('');
+  const [deletePhrase, setDeletePhrase] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -139,6 +145,42 @@ export default function ProfilVendeurPage() {
       setError('Une erreur est survenue. Réessayez.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openDeleteModal = () => {
+    setDeleteCompanyName('');
+    setDeletePhrase('');
+    setDeleteError('');
+    setDeleteModalOpen(true);
+  };
+
+  const deleteAccountValid =
+    seller &&
+    deleteCompanyName.trim().toLowerCase() === seller.companyName.trim().toLowerCase() &&
+    deletePhrase.trim().toLowerCase() === 'supprimer mon compte';
+
+  const handleDeleteAccount = async () => {
+    if (!deleteAccountValid || !user) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const { getSession } = await import('@/lib/supabase/auth');
+      const session = await getSession();
+      if (!session?.access_token) throw new Error('Session expirée');
+      const res = await fetch('/api/delete-account', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((data as { error?: string }).error || 'Échec de la suppression');
+      await signOut();
+      router.push('/');
+      router.refresh();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Impossible de supprimer le compte.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -355,7 +397,155 @@ export default function ProfilVendeurPage() {
             {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
         </form>
+
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e5e5e7' }}>
+          <button
+            type="button"
+            onClick={openDeleteModal}
+            style={{
+              width: '100%',
+              padding: '14px 20px',
+              fontSize: 14,
+              color: '#dc2626',
+              background: 'transparent',
+              border: '1px solid #fecaca',
+              borderRadius: 12,
+              cursor: 'pointer',
+            }}
+          >
+            Supprimer mon compte
+          </button>
+        </div>
       </div>
+
+      {deleteModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={(e) => e.target === e.currentTarget && !deleting && setDeleteModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 16,
+              maxWidth: 420,
+              width: '100%',
+              paddingTop: 24,
+              paddingRight: 24,
+              paddingBottom: 16,
+              paddingLeft: 24,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f' }}>Supprimer mon compte</h2>
+              <button
+                type="button"
+                onClick={() => !deleting && setDeleteModalOpen(false)}
+                style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#86868b' }}
+                aria-label="Fermer"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 12,
+                padding: '14px 16px',
+                backgroundColor: '#fef3c7',
+                borderRadius: 10,
+                marginBottom: 24,
+              }}
+            >
+              <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: 2 }} />
+              <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.5 }}>
+                <strong>Pensez à télécharger toutes vos factures</strong> avant de supprimer votre compte. Cette action est irréversible.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ ...labelStyle, marginBottom: 6 }}>
+                Recopiez le nom de votre entreprise : <strong>{seller?.companyName}</strong>
+              </label>
+              <input
+                type="text"
+                value={deleteCompanyName}
+                onChange={(e) => setDeleteCompanyName(e.target.value)}
+                placeholder="Nom de l'entreprise"
+                style={inputStyle}
+                disabled={deleting}
+              />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ ...labelStyle, marginBottom: 6 }}>
+                Tapez « supprimer mon compte »
+              </label>
+              <input
+                type="text"
+                value={deletePhrase}
+                onChange={(e) => setDeletePhrase(e.target.value)}
+                placeholder="supprimer mon compte"
+                style={inputStyle}
+                disabled={deleting}
+              />
+            </div>
+
+            {deleteError && (
+              <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, borderRadius: 10 }}>
+                {deleteError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => !deleting && setDeleteModalOpen(false)}
+                disabled={deleting}
+                style={{
+                  padding: '12px 20px',
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                  background: '#f5f5f7',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: deleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={!deleteAccountValid || deleting}
+                style={{
+                  padding: '12px 20px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#fff',
+                  background: deleteAccountValid && !deleting ? '#dc2626' : '#d2d2d7',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: deleteAccountValid && !deleting ? 'pointer' : 'not-allowed',
+                }}
+              >
+                {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

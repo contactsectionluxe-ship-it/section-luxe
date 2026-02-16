@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
@@ -9,15 +10,31 @@ import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 const navigation = [
   { name: 'À la une', href: '/' },
-  { name: 'Catalogue', href: '/catalogue' },
+  { name: 'Catalogue', href: '/catalogue?reset=1' },
+  { name: 'Occasion', href: '/catalogue?condition=occasion' },
+  { name: 'Neuf', href: '/catalogue?condition=new' },
   { name: 'À propos', href: '/a-propos' },
   { name: 'Devenir vendeur', href: '/inscription-vendeur' },
 ];
 
 export function Header() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, seller, isAuthenticated, isSeller, isAdmin } = useAuth();
   const showAdmin = isAdmin && isAdminEmail(user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const isNavActive = (href: string) => {
+    if (href === '/') return pathname === '/';
+    if (href === '/catalogue') return pathname === '/catalogue' && !searchParams.get('condition');
+    if (href.startsWith('/catalogue?')) {
+      const params = new URLSearchParams(href.split('?')[1] || '');
+      const wantCondition = params.get('condition');
+      if (pathname !== '/catalogue') return false;
+      if (wantCondition === null) return !searchParams.get('condition');
+      return searchParams.get('condition') === wantCondition;
+    }
+    return pathname === href || pathname.startsWith(href + '/');
+  };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
@@ -85,7 +102,7 @@ export function Header() {
   }, [refreshUnread]);
 
   const linkStyle = {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 500,
     color: '#6e6e73',
     transition: 'color 0.2s',
@@ -149,11 +166,20 @@ export function Header() {
           </Link>
 
           <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
-            {navigation.map((item) => (
-              <Link key={item.name} href={item.href} style={linkStyle} onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')} onMouseLeave={(e) => (e.currentTarget.style.color = '#6e6e73')}>
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => {
+              const active = isNavActive(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  style={{ ...linkStyle, color: active ? '#434346' : linkStyle.color }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = active ? '#434346' : '#6e6e73')}
+                >
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
@@ -288,16 +314,26 @@ export function Header() {
         >
           <div style={{ padding: 24 }}>
             <nav style={{ marginBottom: 32 }}>
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: 'block', padding: '16px 0', fontSize: 17, fontWeight: 500, color: '#1d1d1f', borderBottom: '1px solid #f5f5f7' }}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => {
+                const active = isNavActive(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'block',
+                      padding: '16px 0',
+                      fontSize: 17,
+                      fontWeight: 500,
+                      color: active ? '#1d1d1f' : '#6e6e73',
+                      borderBottom: '1px solid #f5f5f7',
+                    }}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
             </nav>
             {isAuthenticated ? (
               <div>

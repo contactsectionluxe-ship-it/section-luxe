@@ -23,7 +23,9 @@ export interface SearchFilters {
   condition?: string; // déprécié, préférer conditions
   conditions?: string[];
   
-  // Localisation
+  // Localisation (sélection multiple : villes, codes postaux, régions)
+  /** Chaque entrée = un libellé affiché + liste de préfixes code postal (ex. 75, 2A) pour matcher les vendeurs. */
+  locations?: Array<{ label: string; prefixes: string[] }>;
   postalCode?: string;
   region?: string;
   deliveryAvailable?: boolean;

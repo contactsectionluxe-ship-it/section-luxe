@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
@@ -21,6 +21,8 @@ import {
   CONDITIONS,
   COLORS,
   MATERIALS,
+  REGIONS_FR,
+  DEPARTEMENTS_FR,
 } from '@/lib/constants';
 
 const iconSize = 14;
@@ -72,6 +74,22 @@ function formatPrice(price: number): string {
     currency: 'EUR',
     minimumFractionDigits: 0,
   }).format(price);
+}
+
+/** Normalise pour la recherche : minuscules, sans accents, sans tirets ni apostrophes (ex. "Île-de-France" → "iledefrance"). */
+function normalizeForSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[-'\s]+/g, '');
+}
+
+/** Ordinal pour arrondissement : "01" → "1er", "02" → "2e", … "20" → "20e" */
+function arrondissementOrdinal(lastTwo: string): string {
+  const n = parseInt(lastTwo, 10);
+  if (n === 1) return '1er';
+  return `${n}e`;
 }
 
 // Filter Section Component
@@ -145,7 +163,10 @@ function FilterSection({
   );
 }
 
+const OCCASION_CONDITIONS = ['very_good', 'good', 'correct'];
+
 function CatalogueContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState<Filters>(() => {
@@ -158,6 +179,9 @@ function CatalogueContent() {
     if (model) initial.models = [decodeURIComponent(model)];
     const sellerId = searchParams.get('sellerId');
     if (sellerId) initial.sellerId = sellerId;
+    const condition = searchParams.get('condition');
+    if (condition === 'new') initial.conditions = ['new'];
+    if (condition === 'occasion') initial.conditions = ['very_good', 'good', 'correct'];
     return initial;
   });
 
@@ -313,15 +337,77 @@ function CatalogueContent() {
   /** Titres d'annonces pour les suggestions de recherche (sans appliquer les filtres) */
   const [allListingTitlesForSearch, setAllListingTitlesForSearch] = useState<string[]>([]);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [mapZoom, setMapZoom] = useState(15);
+  /** Évite que l'effet "retirer condition" ne s'exécute juste après une synchro URL → filtres (clic Neuf/Occasion). */
+  const justSyncedConditionFromUrlRef = useRef(false);
+  /** Localisation : saisie pour suggestions (code postal ou région) */
+  const [locationQuery, setLocationQuery] = useState('');
+  const [locationSuggestionsOpen, setLocationSuggestionsOpen] = useState(false);
+  const locationInputRef = useRef<HTMLDivElement>(null);
 
-  // Synchroniser sellerId depuis l'URL
+  // Synchroniser depuis l'URL. Clic sur Catalogue dans le header (reset=1) : tout réinitialiser. Clic sur Neuf/Occasion : tout réinitialiser + présélectionner l'état. Sans param condition dans l'URL, on ne touche pas aux filtres état.
   useEffect(() => {
+    if (searchParams.get('reset') === '1') {
+      setFilters(defaultFilters);
+      setLocalPriceMin('');
+      setLocalPriceMax('');
+      setLocalYearMin('');
+      setLocalYearMax('');
+      setSearchQuery('');
+      setMarqueSearchQuery('');
+      setModeleSearchQuery('');
+      setOpenDropdown(null);
+      setSortDropdownOpen(false);
+      router.replace('/catalogue', { scroll: false });
+      return;
+    }
     const sellerId = searchParams.get('sellerId');
-    setFilters((prev) => (prev.sellerId !== (sellerId || undefined) ? { ...prev, sellerId: sellerId || undefined } : prev));
+    const condition = searchParams.get('condition');
+    let nextConditions: string[] | undefined;
+    if (condition === 'new') nextConditions = ['new'];
+    else if (condition === 'occasion') nextConditions = OCCASION_CONDITIONS;
+    else nextConditions = undefined;
+    if (nextConditions !== undefined) {
+      justSyncedConditionFromUrlRef.current = true;
+      setFilters({ ...defaultFilters, sellerId: sellerId || undefined, conditions: nextConditions });
+      setLocalPriceMin('');
+      setLocalPriceMax('');
+      setLocalYearMin('');
+      setLocalYearMax('');
+      setSearchQuery('');
+      setMarqueSearchQuery('');
+      setModeleSearchQuery('');
+      setOpenDropdown(null);
+      return;
+    }
+    setFilters((prev) => {
+      const sameSeller = prev.sellerId === (sellerId || undefined);
+      if (!sameSeller) return { ...prev, sellerId: sellerId || undefined };
+      return prev;
+    });
   }, [searchParams]);
+
+  // Si on était sur Neuf ou Occasion (lien header) et que l'utilisateur change le filtre état, repasser l'URL en /catalogue pour garder « Catalogue » actif. Ne pas retirer condition juste après un clic Neuf/Occasion (synchro URL → filtres).
+  useEffect(() => {
+    if (justSyncedConditionFromUrlRef.current) {
+      justSyncedConditionFromUrlRef.current = false;
+      return;
+    }
+    const urlCondition = searchParams.get('condition');
+    if (!urlCondition) return;
+    const conds = filters.conditions ?? [];
+    const matchNew = conds.length === 1 && conds[0] === 'new';
+    const matchOccasion = conds.length === OCCASION_CONDITIONS.length && OCCASION_CONDITIONS.every((c, i) => conds[i] === c);
+    const stillMatches = (urlCondition === 'new' && matchNew) || (urlCondition === 'occasion' && matchOccasion);
+    if (stillMatches) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('condition');
+    const q = params.toString();
+    router.replace(q ? `/catalogue?${q}` : '/catalogue', { scroll: false });
+  }, [filters.conditions, searchParams, router]);
 
   // Charger des titres d'annonces sans filtre pour les suggestions de la barre de recherche (toujours les mêmes qu'il y ait des filtres ou non)
   useEffect(() => {
@@ -374,8 +460,9 @@ function CatalogueContent() {
       const brands = filters.brands?.length ? filters.brands : (filters.brand ? [filters.brand] : undefined);
       const models = filters.models?.length ? filters.models : (filters.model ? [filters.model] : undefined);
       const colors = filters.colors?.length ? filters.colors : (filters.color ? [filters.color] : undefined);
+      const materials = filters.materials?.length ? filters.materials : (filters.material ? [filters.material] : undefined);
       const conditions = filters.conditions?.length ? filters.conditions : (filters.condition ? [filters.condition] : undefined);
-      const data = await getListings({ categories, brands, models, colors, conditions, sellerId: filters.sellerId, sortBy });
+      const data = await getListings({ categories, brands, models, colors, materials, conditions, sellerId: filters.sellerId, sortBy });
 
       let filtered = data;
       if (filters.priceMin) filtered = filtered.filter((l) => l.price >= filters.priceMin!);
@@ -387,6 +474,30 @@ function CatalogueContent() {
         filtered = filtered.filter(
           (l) => l.title.toLowerCase().includes(q) || l.description.toLowerCase().includes(q)
         );
+      }
+      /** Filtre localisation (multi : villes, codes postaux, régions) */
+      const locList = filters.locations?.length
+        ? filters.locations
+        : filters.postalCode
+          ? [{ label: filters.postalCode, prefixes: (() => {
+              const code = filters.postalCode!.replace(/\s/g, '').slice(0, 2);
+              return code === '2A' || code === '2B' ? ['2A', '2B'] : [code];
+            })() }]
+          : filters.region
+            ? (REGIONS_FR.find((r) => r.name === filters.region) ? [{ label: filters.region!, prefixes: REGIONS_FR.find((r) => r.name === filters.region)!.depts }] : [])
+            : [];
+      if (locList.length > 0) {
+        const allowedPrefixes = locList.flatMap((x) => x.prefixes);
+        filtered = filtered.filter((l) => {
+          const pc = l.sellerPostcode?.replace(/\s/g, '');
+          if (!pc) return false;
+          return allowedPrefixes.some((prefix) => {
+            if (prefix === '2A' || prefix === '2B') return pc.startsWith('20');
+            if (prefix.length > 2) return pc.startsWith(prefix);
+            const dept = pc.startsWith('20') ? '20' : pc.slice(0, 2);
+            return dept === prefix || pc.startsWith(prefix);
+          });
+        });
       }
 
       setListings(filtered);
@@ -484,11 +595,14 @@ function CatalogueContent() {
       materialDropdownRef;
     const onMouseDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpenDropdown(null);
-      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) setSortDropdownOpen(false);
+      const inSort = sortDropdownRef.current?.contains(e.target as Node) || sortDropdownRefMobile.current?.contains(e.target as Node);
+      if (!inSort) setSortDropdownOpen(false);
+      if (locationInputRef.current && !locationInputRef.current.contains(e.target as Node)) setLocationSuggestionsOpen(false);
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpenDropdown(null);
       if (e.key === 'Escape') setSortDropdownOpen(false);
+      if (e.key === 'Escape') setLocationSuggestionsOpen(false);
     };
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('keydown', onKeyDown);
@@ -547,6 +661,131 @@ function CatalogueContent() {
     });
   };
 
+  const [locationCitySuggestions, setLocationCitySuggestions] = useState<Array<{ nom: string; codesPostaux: string[] }>>([]);
+  const [locationCityLoading, setLocationCityLoading] = useState(false);
+
+  /** Convertir codes postaux en préfixes pour le filtre (20 → 2A, 2B pour la Corse) */
+  const codesToPrefixes = useCallback((codes: string[]): string[] => {
+    const set = new Set<string>();
+    for (const c of codes) {
+      const p = c.replace(/\s/g, '').slice(0, 2);
+      if (p === '20') {
+        set.add('2A');
+        set.add('2B');
+      } else {
+        set.add(p);
+      }
+    }
+    return [...set];
+  }, []);
+
+  /** Suggestions localisation : régions + départements (statiques) + villes (API geo.api.gouv.fr), sans accents ni tirets */
+  const locationSuggestionsStatic = useMemo(() => {
+    const q = normalizeForSearch(locationQuery.trim());
+    if (q.length < 1) return [];
+    const out: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    for (const r of REGIONS_FR) {
+      if (normalizeForSearch(r.name).includes(q)) out.push({ type: 'region', label: r.name, prefixes: r.depts });
+    }
+    for (const d of DEPARTEMENTS_FR) {
+      const codeNorm = normalizeForSearch(d.code);
+      const nameNorm = normalizeForSearch(d.name);
+      if (codeNorm.startsWith(q) || nameNorm.includes(q)) {
+        const prefixes = d.code === '2A' || d.code === '2B' ? ['2A', '2B'] : [d.code];
+        out.push({ type: 'postal', label: `${d.code} - ${d.name}`, prefixes });
+      }
+    }
+    return out;
+  }, [locationQuery]);
+
+  /** Appel API communes (villes de France) avec debounce */
+  useEffect(() => {
+    const q = locationQuery.trim();
+    if (q.length < 2) {
+      setLocationCitySuggestions([]);
+      return;
+    }
+    const t = setTimeout(async () => {
+      setLocationCityLoading(true);
+      try {
+        const res = await fetch(
+          `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&limit=15&boost=population`
+        );
+        const data = (await res.json()) as Array<{ nom: string; codesPostaux: string[] }>;
+        setLocationCitySuggestions(Array.isArray(data) ? data : []);
+      } catch {
+        setLocationCitySuggestions([]);
+      } finally {
+        setLocationCityLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [locationQuery]);
+
+  /** Fusion suggestions statiques + villes API. Pour les villes : une ligne "Ville (XX)" puis une ligne par arrondissement si plusieurs codes. */
+  /** Ne pas afficher "XX - Ville" (département) quand "Ville (XX)" est déjà présent (évite doublon 75 - Paris / Paris (75)). */
+  const locationSuggestions = useMemo(() => {
+    const fromCities: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    for (const c of locationCitySuggestions) {
+      const codes = c.codesPostaux?.length ? c.codesPostaux : [];
+      const deptPrefixes = codesToPrefixes(codes);
+      const deptLabel = codes[0]
+        ? (codes[0].startsWith('20') ? codes[0].slice(0, 2) : codes[0].slice(0, 2))
+        : '';
+      fromCities.push({ type: 'city', label: `${c.nom} (${deptLabel})`, prefixes: deptPrefixes });
+      if (codes.length > 1) {
+        for (const code of codes) {
+          const lastTwo = code.replace(/\s/g, '').slice(-2);
+          const ord = arrondissementOrdinal(lastTwo);
+          fromCities.push({ type: 'city', label: `${c.nom} ${ord} (${code})`, prefixes: [code.replace(/\s/g, '')] });
+        }
+      }
+    }
+    const cityLabelSet = new Set(fromCities.map((s) => s.label));
+    const seen = new Set<string>();
+    const out: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    for (const s of locationSuggestionsStatic) {
+      if (s.type === 'postal') {
+        const matchDept = s.label.match(/^(\d{2}|2A|2B)\s*-\s*(.+)$/);
+        if (matchDept) {
+          const code = matchDept[1];
+          const name = matchDept[2].trim();
+          if (cityLabelSet.has(`${name} (${code})`)) continue;
+        }
+      }
+      const k = s.label;
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(s);
+      }
+    }
+    for (const s of fromCities) {
+      const k = s.label;
+      if (!seen.has(k)) {
+        seen.add(k);
+        out.push(s);
+      }
+    }
+    return out;
+  }, [locationSuggestionsStatic, locationCitySuggestions, codesToPrefixes]);
+
+  /** Liste des localisations sélectionnées (multi) : depuis locations ou anciens champs postalCode/region */
+  const selectedLocations = useMemo(() => {
+    const list = filters.locations ?? [];
+    if (list.length > 0) return list;
+    if (filters.postalCode) {
+      const d = DEPARTEMENTS_FR.find((x) => x.code === filters.postalCode?.replace(/\s/g, ''));
+      const prefix = (filters.postalCode?.replace(/\s/g, '') || '').slice(0, 2);
+      const prefixes = prefix === '2A' || prefix === '2B' ? ['2A', '2B'] : [prefix];
+      return [{ label: d ? `${d.code} - ${d.name}` : filters.postalCode!, prefixes }];
+    }
+    if (filters.region) {
+      const r = REGIONS_FR.find((x) => x.name === filters.region);
+      return r ? [{ label: r.name, prefixes: r.depts }] : [];
+    }
+    return [];
+  }, [filters.locations, filters.postalCode, filters.region]);
+
   const selectedConditions = filters.conditions ?? (filters.condition ? [filters.condition] : []);
   const toggleCondition = (conditionValue: string) => {
     setFilters((prev) => {
@@ -561,10 +800,16 @@ function CatalogueContent() {
     setSearchQuery('');
     setLocalPriceMin('');
     setLocalPriceMax('');
+    setLocalYearMin('');
+    setLocalYearMax('');
     setOpenDropdown(null);
     setSortDropdownOpen(false);
     setMarqueSearchQuery('');
     setModeleSearchQuery('');
+    setLocationQuery('');
+    setLocationSuggestionsOpen(false);
+    setFilters((p) => ({ ...p, locations: undefined, postalCode: undefined, region: undefined }));
+    router.replace('/catalogue', { scroll: false });
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -579,15 +824,15 @@ function CatalogueContent() {
     }
   };
 
-  /** Suggestions pour la barre de recherche (types + marques + titres), toujours les mêmes qu'il y ait des filtres ou non */
+  /** Suggestions pour la barre de recherche (types + marques + titres), sans tenir compte des accents */
   const searchSuggestions = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = normalizeForSearch(searchQuery.trim());
     const types = CATEGORIES.map((t) => t.label);
     const brands = [...new Set(Object.values(BRANDS_BY_CATEGORY).flat())].filter((b) => b !== 'Autre');
     const fromListings = [...new Set(allListingTitlesForSearch)].slice(0, 50);
     const all = [...new Set([...types, ...brands, ...fromListings])];
     if (!q) return all.slice(0, 10);
-    return all.filter((s) => s.toLowerCase().includes(q)).slice(0, 10);
+    return all.filter((s) => normalizeForSearch(s).includes(q)).slice(0, 10);
   }, [searchQuery, allListingTitlesForSearch]);
 
   useEffect(() => {
@@ -914,10 +1159,10 @@ function CatalogueContent() {
                   />
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
-                {/* 6 marques les plus connues (défilent avec le reste) */}
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 5mm)', padding: 8, backgroundColor: '#fff' }}>
+                {/* 6 marques les plus connues (masquées dès que l'utilisateur tape une recherche) */}
                 {(() => {
-                  const marquesTop = marquesSuggestion;
+                  const marquesTop = marqueSearchQuery.trim() === '' ? marquesSuggestion : [];
                   if (marquesTop.length > 0) {
                     return (
                       <div style={{ paddingBottom: 6, marginBottom: 6 }}>
@@ -944,7 +1189,7 @@ function CatalogueContent() {
                   return null;
                 })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                  {marquesAlphabetiques.filter((b) => b.toLowerCase().includes(marqueSearchQuery.toLowerCase().trim())).map((brand) => (
+                  {marquesAlphabetiques.filter((b) => normalizeForSearch(b).includes(normalizeForSearch(marqueSearchQuery.trim()))).map((brand) => (
                     <label
                       key={brand}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -1097,10 +1342,10 @@ function CatalogueContent() {
                   />
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 252, padding: 8, backgroundColor: '#fff' }}>
-                {/* 6 modèles les plus connus (défilent avec le reste) */}
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 5mm)', padding: 8, backgroundColor: '#fff' }}>
+                {/* 6 modèles les plus connus (masqués dès que l'utilisateur tape une recherche) */}
                 {(() => {
-                  const modelesTop = modelesSuggestion;
+                  const modelesTop = modeleSearchQuery.trim() === '' ? modelesSuggestion : [];
                   if (modelesTop.length > 0) {
                     return (
                       <div style={{ paddingBottom: 6, marginBottom: 6 }}>
@@ -1127,7 +1372,7 @@ function CatalogueContent() {
                   return null;
                 })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                  {modelesAlphabetiques.filter((m) => m.toLowerCase().includes(modeleSearchQuery.toLowerCase().trim())).map((model) => (
+                  {modelesAlphabetiques.filter((m) => normalizeForSearch(m).includes(normalizeForSearch(modeleSearchQuery.trim()))).map((model) => (
                     <label
                       key={model}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -1462,6 +1707,137 @@ function CatalogueContent() {
         </div>
       </FilterSection>
 
+      {/* Localisation — villes, codes postaux, régions (sélection multiple) */}
+      <div style={{ borderBottom: '1px solid #e8e6e3' }}>
+        <FilterSection title="Localisation" defaultOpen collapsible={false} noBorder>
+        <div ref={locationInputRef} style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="text"
+              value={locationQuery}
+              onChange={(e) => {
+                setLocationQuery(e.target.value);
+                setLocationSuggestionsOpen(true);
+              }}
+              onFocus={() => setLocationSuggestionsOpen(locationQuery.trim().length > 0 || locationSuggestions.length > 0)}
+              placeholder="Ville, région…"
+              autoComplete="off"
+              style={{
+                flex: 1,
+                height: 40,
+                padding: '8px 12px',
+                fontSize: 14,
+                border: '1px solid #d2d2d7',
+                borderRadius: 8,
+                backgroundColor: '#fff',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          {locationSuggestionsOpen && (locationSuggestions.length > 0 || locationCityLoading) && (
+            <div
+              style={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: '100%',
+                marginTop: 4,
+                backgroundColor: '#fff',
+                border: '1px solid #e8e6e3',
+                borderRadius: 8,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                zIndex: 1000,
+                maxHeight: 'calc(220px - 3mm)',
+                overflowY: 'auto',
+              }}
+            >
+              {locationCityLoading && locationSuggestions.length === 0 ? (
+                <div style={{ padding: '12px 12px', fontSize: 13, color: '#6e6e73' }}>Recherche en cours…</div>
+              ) : (
+                <>
+                {locationSuggestions.map((s, si) => (
+                  <button
+                    key={`${s.type}-${s.label}-${si}`}
+                    type="button"
+                    onClick={() => {
+                      const entry = { label: s.label, prefixes: s.prefixes };
+                      const current = filters.locations ?? selectedLocations;
+                      const exists = current.some((l) => l.label === entry.label && l.prefixes.length === entry.prefixes.length);
+                      if (exists) {
+                        setLocationQuery('');
+                        setLocationSuggestionsOpen(false);
+                        return;
+                      }
+                      setFilters((p) => ({
+                        ...p,
+                        locations: [...(p.locations ?? []), entry],
+                        postalCode: undefined,
+                        region: undefined,
+                      }));
+                      setLocationQuery('');
+                      setLocationSuggestionsOpen(false);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      fontSize: 14,
+                      color: '#1d1d1f',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'block',
+                    }}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+                </>
+              )}
+            </div>
+          )}
+          {selectedLocations.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {selectedLocations.map((loc, idx) => (
+                <span
+                  key={`${loc.label}-${idx}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    padding: '4px 10px',
+                    backgroundColor: '#f5f5f7',
+                    borderRadius: 8,
+                    fontSize: 13,
+                    color: '#1d1d1f',
+                  }}
+                >
+                  {loc.label}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = selectedLocations.filter((_, i) => i !== idx);
+                      setFilters((p) => ({
+                        ...p,
+                        locations: next.length ? next : undefined,
+                        postalCode: undefined,
+                        region: undefined,
+                      }));
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#6e6e73', display: 'flex' }}
+                    aria-label="Retirer"
+                  >
+                    <X size={14} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </FilterSection>
+      </div>
+
       {/* État — sélection multiple, même style que Type / Marque / Modèle (carré bords ronds) */}
       <FilterSection title="État" defaultOpen collapsible={false} noBorder>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -1518,11 +1894,11 @@ function CatalogueContent() {
             overflow: 'hidden',
           }}
         >
-          {/* Barre de recherche */}
-          <div className="catalogue-page-search" style={{ padding: '20px calc(24px - 0.5mm) 20px 20px' }}>
-          <div style={{ borderBottom: '1px solid #e8e6e3', paddingBottom: 20, marginBottom: -20 }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12 }}>
-              <div ref={searchBarRef} style={{ flex: 1, position: 'relative' }}>
+          {/* Barre de recherche — même espace au-dessus (header) et en dessous (ligne) */}
+          <div className="catalogue-page-search" style={{ padding: '24px calc(24px - 0.5mm) 24px 20px' }}>
+          <div style={{ borderBottom: '1px solid #e8e6e3', paddingBottom: 24, marginBottom: -24, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>
+              <div ref={searchBarRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
               <input
                 type="text"
@@ -1619,6 +1995,78 @@ function CatalogueContent() {
               <span className="catalogue-search-submit-text">Rechercher</span>
             </button>
           </form>
+                {/* Tri "Plus récents" à droite du bouton Rechercher (desktop) */}
+                <div ref={sortDropdownRef} className="hide-mobile" style={{ position: 'relative', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setSortDropdownOpen((v) => !v)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      height: 48,
+                      padding: '0 14px 0 16px',
+                      border: '1px solid #d2d2d7',
+                      borderRadius: 12,
+                      backgroundColor: '#fff',
+                      fontSize: 14,
+                      color: '#1d1d1f',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      boxShadow: 'none',
+                      minWidth: 160,
+                    }}
+                  >
+                    <span style={{ flex: 1, textAlign: 'left' }}>
+                      {SORT_OPTIONS.find((o) => o.value === filters.sortBy)?.label ?? 'Trier'}
+                    </span>
+                    <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+                  </button>
+                  {sortDropdownOpen && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 12,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 9999,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {SORT_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => {
+                            updateFilter('sortBy', opt.value);
+                            setSortDropdownOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '10px 14px',
+                            border: 'none',
+                            background: filters.sortBy === opt.value ? '#f5f5f7' : 'transparent',
+                            fontSize: 14,
+                            color: '#1d1d1f',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            outline: 'none',
+                            boxShadow: 'none',
+                            fontWeight: filters.sortBy === opt.value ? 600 : 400,
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
         </div>
       </div>
 
@@ -1660,7 +2108,7 @@ function CatalogueContent() {
           </aside>
 
           {/* Main */}
-            <main className="catalogue-page-main" style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 32px 24px' }}>
+            <main className="catalogue-page-main" style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 32px var(--catalogue-line-gap, 24px)' }}>
             {/* Bloc vendeur : nom, logo, annonces */}
             {filters.sellerId && (
             <div
@@ -1764,14 +2212,14 @@ function CatalogueContent() {
               </div>
             )}
 
-            {/* Barre tri + filtre : sur desktop "Plus récents" à droite, sur mobile Filtres à gauche / Trier à droite */}
+            {/* Barre tri + filtre : même espace en dessous qu'entre "Plus récents" et la ligne au-dessus */}
             <div
               className="catalogue-barre-tri"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: 20,
+                marginBottom: 0,
                 flexWrap: 'wrap',
                 gap: 10,
               }}
@@ -1798,8 +2246,8 @@ function CatalogueContent() {
                   Filtres
                 </button>
 
-                {/* Sort — menu déroulant à droite */}
-                <div ref={sortDropdownRef} style={{ position: 'relative' }}>
+                {/* Sort — menu déroulant à droite (mobile uniquement ; desktop : tri à côté de la barre de recherche) */}
+                <div ref={sortDropdownRefMobile} className="hide-desktop" style={{ position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => setSortDropdownOpen((v) => !v)}
@@ -1872,9 +2320,10 @@ function CatalogueContent() {
               </div>
             </div>
 
-            {/* Results */}
+            {/* Results — marginTop 24 pour même espace qu'entre "Plus récents" et la ligne au-dessus */}
             {loading ? (
               <div
+                className="catalogue-results"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
@@ -1891,7 +2340,7 @@ function CatalogueContent() {
                 ))}
               </div>
             ) : listings.length > 0 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {listings.map((listing) => (
                   <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                     <article

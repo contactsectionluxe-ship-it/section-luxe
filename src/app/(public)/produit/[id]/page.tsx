@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useParams, usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X } from 'lucide-react';
@@ -56,8 +56,73 @@ export default function ProductPage() {
   const [showMoreAbout, setShowMoreAbout] = useState(false);
   const [showPrixEnSavoirPlus, setShowPrixEnSavoirPlus] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
+  const [descriptionOverflows, setDescriptionOverflows] = useState(false);
+  const descriptionRefDesktop = useRef<HTMLDivElement>(null);
+  const descriptionRefMobile = useRef<HTMLDivElement>(null);
+  const [sellerDescriptionOverflows, setSellerDescriptionOverflows] = useState(false);
+  const sellerDescriptionRef = useRef<HTMLParagraphElement>(null);
   /** Comparaison de prix : moyenne / min / max des annonces même catégorie et même année (hors annonce actuelle) */
   const [priceStats, setPriceStats] = useState<{ average: number; min: number; max: number; count: number } | null>(null);
+
+  /** Afficher « Voir plus » seulement si la description a strictement plus de 5 lignes. Plusieurs vérifications (dont délais) pour que ça marche sur toutes les annonces quel que soit le chargement (polices, viewport). */
+  useLayoutEffect(() => {
+    if (!listing?.description || descriptionExpanded) {
+      setDescriptionOverflows(false);
+      return;
+    }
+    const check = () => {
+      const d = descriptionRefDesktop.current;
+      const m = descriptionRefMobile.current;
+      const overflowD = d && d.clientHeight > 0 && d.scrollHeight > d.clientHeight;
+      const overflowM = m && m.clientHeight > 0 && m.scrollHeight > m.clientHeight;
+      const overflowFromDom = overflowD || overflowM;
+      const overflowFromLines = listing.description.split(/\r?\n/).filter(Boolean).length > 5;
+      setDescriptionOverflows((prev) => {
+        const next = !!(overflowFromDom || overflowFromLines);
+        return next !== prev ? next : prev;
+      });
+    };
+    check();
+    requestAnimationFrame(check);
+    const t1 = window.setTimeout(check, 100);
+    const t2 = window.setTimeout(check, 400);
+    const ro = new ResizeObserver(check);
+    if (descriptionRefDesktop.current) ro.observe(descriptionRefDesktop.current);
+    if (descriptionRefMobile.current) ro.observe(descriptionRefMobile.current);
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      ro.disconnect();
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [listing?.id, listing?.description, descriptionExpanded]);
+
+  /** Même règle pour la description vendeur (À propos) : « Voir plus » seulement si plus de 5 lignes. */
+  useLayoutEffect(() => {
+    if (!seller?.description || showMoreAbout) {
+      setSellerDescriptionOverflows(false);
+      return;
+    }
+    const el = sellerDescriptionRef.current;
+    if (!el) return;
+    const check = () => setSellerDescriptionOverflows((prev) => {
+      const next = el.clientHeight > 0 && el.scrollHeight > el.clientHeight;
+      return next !== prev ? next : prev;
+    });
+    check();
+    requestAnimationFrame(check);
+    const t1 = window.setTimeout(check, 100);
+    const t2 = window.setTimeout(check, 400);
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      ro.disconnect();
+    };
+  }, [seller?.uid, seller?.description, showMoreAbout]);
 
   useEffect(() => {
     async function loadData() {
@@ -430,7 +495,7 @@ export default function ProductPage() {
                   <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                     <button
                       type="button"
-                      onClick={() => { const next = !showPhone; if (next) incrementPhoneReveals(listing.id, isAuthenticated ? undefined : getVisitorId()).catch(() => {}); setShowPhone(next); }}
+                      onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.id ? user.id : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }}
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
                       {showPhone ? (
@@ -598,10 +663,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                 {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
-                <div style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
+                <div ref={descriptionRefDesktop} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                   <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                 </div>
-                {listing.description && listing.description.length > 120 && (
+                {listing.description && (descriptionOverflows || descriptionExpanded) && (
                   <button type="button" onClick={() => setDescriptionExpanded((e) => !e)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, lineHeight: 1.7, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                     {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
                   </button>
@@ -715,17 +780,19 @@ export default function ProductPage() {
                     {seller.description && (
                       <>
                         <p
+                          ref={sellerDescriptionRef}
                           style={{
                             fontSize: 14,
                             color: '#666',
                             margin: 0,
                             lineHeight: 1.5,
-                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
+                            whiteSpace: 'pre-line',
+                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
                           }}
                         >
                           {seller.description}
                         </p>
-                        {seller.description.length > 100 && (
+                        {(sellerDescriptionOverflows || showMoreAbout) && (
                           <button
                             type="button"
                             onClick={() => setShowMoreAbout((v) => !v)}
@@ -903,10 +970,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                   {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
-                  <div style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
+                  <div ref={descriptionRefMobile} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                     <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                   </div>
-                  {listing.description && listing.description.length > 120 && (
+                  {listing.description && (descriptionOverflows || descriptionExpanded) && (
                     <button type="button" onClick={() => setDescriptionExpanded((e) => !e)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 12, lineHeight: 1.7, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>
                       {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
                     </button>
@@ -1084,7 +1151,7 @@ export default function ProductPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                  <button type="button" onClick={() => { const next = !showPhone; if (next) incrementPhoneReveals(listing.id, isAuthenticated ? undefined : getVisitorId()).catch(() => {}); setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.id ? user.id : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     {showPhone ? (
                       <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
                     ) : (

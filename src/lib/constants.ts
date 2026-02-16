@@ -1,3 +1,5 @@
+import { ALL_BRANDS } from './brands-list';
+
 /** Seul ce compte voit le menu Admin et peut accéder à /admin */
 export const ADMIN_EMAIL = 'contact.sectionluxe@gmail.com';
 
@@ -43,7 +45,7 @@ export const CONDITIONS = [
   { value: 'new', label: 'Neuf' },
   { value: 'very_good', label: 'Très bon état' },
   { value: 'good', label: 'Bon état' },
-  { value: 'correct', label: 'Correct' },
+  { value: 'correct', label: 'État correct' },
 ];
 
 export const COLORS = [
@@ -215,79 +217,8 @@ export const CATEGORY_TO_BRAND_KEYS: Record<string, string[]> = {
   autre: ['autre'],
 };
 
-/** Marques proposées par catégorie (ordre alphabétique + Autre). */
-export const BRANDS_BY_CATEGORY: Record<string, string[]> = {
-  sacs: [
-    'Alexander McQueen', 'Balenciaga', 'Bally', 'Bottega Veneta', 'Bulgari', 'Celine', 'Chanel',
-    'Chloé', 'Delvaux', 'Dior', 'Fendi', 'Givenchy', 'Goyard', 'Gucci', 'Hermès', 'Lanvin', 'Loewe',
-    'Louis Vuitton', 'Marni', 'Moynat', 'Mulberry', 'Prada', 'Saint Laurent', 'Salvatore Ferragamo',
-    'Tod\'s', 'Valentino', 'Valextra', 'Autre',
-  ],
-  maroquinerie: [
-    'Alexander McQueen', 'Balenciaga', 'Bally', 'Bottega Veneta', 'Bulgari', 'Celine', 'Chanel',
-    'Chloé', 'Delvaux', 'Dior', 'Fendi', 'Givenchy', 'Goyard', 'Gucci', 'Hermès', 'Lanvin', 'Loewe',
-    'Louis Vuitton', 'Marni', 'Moynat', 'Mulberry', 'Prada', 'Saint Laurent', 'Salvatore Ferragamo',
-    'Tod\'s', 'Valentino', 'Valextra', 'Autre',
-  ],
-  montres: [
-    'Audemars Piguet', 'Blancpain', 'Breguet', 'Breitling', 'Bulgari', 'Cartier', 'Chanel', 'Chopard',
-    'Corum', 'Dior', 'Girard-Perregaux', 'Hermès', 'Hublot', 'IWC', 'Jaeger-LeCoultre', 'Louis Vuitton',
-    'Omega', 'Panerai', 'Patek Philippe', 'Piaget', 'Richard Mille', 'Rolex', 'Tag Heuer', 'Tudor',
-    'Vacheron Constantin', 'Van Cleef & Arpels', 'Zenith', 'Autre',
-  ],
-  bijoux: [
-    'Boucheron', 'Bulgari', 'Cartier', 'Chaumet', 'Chanel', 'Chopard', 'David Yurman', 'De Beers',
-    'Dior', 'Graff', 'Gucci', 'Harry Winston', 'Hermès', 'Louis Vuitton', 'Messika', 'Piaget',
-    'Pomellato', 'Prada', 'Tiffany', 'Van Cleef & Arpels', 'Autre',
-  ],
-  vetements: [
-    'Alexander McQueen', 'Balenciaga', 'Bottega Veneta', 'Brunello Cucinelli', 'Chanel', 'Chloé',
-    'Dior', 'Fendi', 'Givenchy', 'Gucci', 'Hermès', 'Loewe', 'Louis Vuitton', 'Marni', 'Max Mara',
-    'Prada', 'Saint Laurent', 'Salvatore Ferragamo', 'Valentino', 'Versace', 'Autre',
-  ],
-  chaussures: [
-    'Aquazzura', 'Balenciaga', 'Bottega Veneta', 'Chanel', 'Christian Louboutin', 'Dior', 'Fendi',
-    'Givenchy', 'Gucci', 'Hermès', 'Jimmy Choo', 'Loewe', 'Louis Vuitton', 'Manolo Blahnik', 'Prada',
-    'Roger Vivier', 'Saint Laurent', 'Salvatore Ferragamo', 'Valentino', 'Autre',
-  ],
-  accessoires: [
-    'Bottega Veneta', 'Burberry', 'Cartier', 'Chanel', 'Chloé', 'Dior', 'Fendi', 'Givenchy', 'Gucci',
-    'Hermès', 'Loewe', 'Louis Vuitton', 'Longchamp', 'Prada', 'Saint Laurent', 'Salvatore Ferragamo',
-    'Valentino', 'Autre',
-  ],
-  autre: [
-    'Audemars Piguet', 'Bottega Veneta', 'Cartier', 'Chanel', 'Chloé', 'Dior', 'Fendi', 'Gucci',
-    'Hermès', 'Loewe', 'Louis Vuitton', 'Prada', 'Patek Philippe', 'Rolex', 'Saint Laurent',
-    'Tiffany', 'Van Cleef & Arpels', 'Autre',
-  ],
-};
-
-/** Marques par catégorie et genre (Homme / Femme). Utilisé pour filtrer le sélecteur Marque. */
-export const BRANDS_BY_CATEGORY_AND_GENRE: Record<string, { femme: string[]; homme: string[] }> = {
-  sacs: { femme: BRANDS_BY_CATEGORY.sacs, homme: BRANDS_BY_CATEGORY.sacs },
-  maroquinerie: { femme: BRANDS_BY_CATEGORY.maroquinerie, homme: BRANDS_BY_CATEGORY.maroquinerie },
-  montres: {
-    femme: [
-      'Cartier', 'Chanel', 'Chopard', 'Dior', 'Hermès', 'Louis Vuitton', 'Omega', 'Piaget',
-      'Van Cleef & Arpels', 'Bulgari', 'Blancpain', 'Breguet', 'Girard-Perregaux', 'Jaeger-LeCoultre',
-      'Audemars Piguet', 'Patek Philippe', 'Rolex', 'Tudor', 'Zenith', 'Autre',
-    ],
-    homme: [
-      'Rolex', 'Omega', 'Audemars Piguet', 'Patek Philippe', 'Cartier', 'IWC', 'Panerai', 'Breitling',
-      'Tag Heuer', 'Tudor', 'Vacheron Constantin', 'Hermès', 'Louis Vuitton', 'Chopard', 'Hublot',
-      'Richard Mille', 'Blancpain', 'Breguet', 'Girard-Perregaux', 'Jaeger-LeCoultre', 'Zenith',
-      'Bulgari', 'Corum', 'Chanel', 'Dior', 'Autre',
-    ],
-  },
-  bijoux: { femme: BRANDS_BY_CATEGORY.bijoux, homme: BRANDS_BY_CATEGORY.bijoux },
-  vetements: { femme: BRANDS_BY_CATEGORY.vetements, homme: BRANDS_BY_CATEGORY.vetements },
-  chaussures: { femme: BRANDS_BY_CATEGORY.chaussures, homme: BRANDS_BY_CATEGORY.chaussures },
-  accessoires: { femme: BRANDS_BY_CATEGORY.accessoires, homme: BRANDS_BY_CATEGORY.accessoires },
-  autre: { femme: BRANDS_BY_CATEGORY.autre, homme: BRANDS_BY_CATEGORY.autre },
-};
-
-/** Modèles par catégorie et marque (maximum de modèles par marque). */
-export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> = {
+/** Modèles par catégorie et marque (base : marques avec modèles détaillés). */
+const _MODELS_BY_CATEGORY_BRAND_BASE: Record<string, Record<string, string[]>> = {
   sacs: {
     'Hermès': ['Birkin 25', 'Birkin 30', 'Birkin 35', 'Birkin 40', 'Kelly 25', 'Kelly 28', 'Kelly 32', 'Kelly 35', 'Constance', 'Lindy', 'Évelyne', 'Bolide', 'Picotin', 'Garden Party', 'Herbag', 'Roulis', '24/24', 'Verrou', 'Jypsière', 'In-The-Loop', 'Steeple', 'Mini Lindy', 'Autre'],
     'Louis Vuitton': ['Neverfull', 'Speedy 25', 'Speedy 30', 'Speedy 35', 'Speedy Bandoulière', 'Keepall', 'Alma', 'Capucines', 'Pochette Métis', 'Noé', 'Petite Malle', 'Twist', 'Dauphine', 'OnTheGo', 'Cannes', 'Boulogne', 'Bella', 'Soft Trunk', 'Carryall', 'Loop', 'Autre'],
@@ -316,6 +247,8 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Bally': ['Janelle', 'Sergeant', 'Scribe', 'Metropolis', 'Autre'],
     'Celine': ['Triomphe', 'Ava', 'Triomphe Canvas', 'Luggage', 'Autre'],
     'Lanvin': ['Pencil', 'Cat Bag', 'Autre'],
+    'Polène': ['Numéro Un', 'Numéro Huit', 'Numéro Neuf', 'Numéro Dix', 'Béri', 'Autre'],
+    'Strathberry': ['Mosaic', 'East/West', 'Multrees', 'Charlotte', 'Kite Hobo', 'Autre'],
   },
   maroquinerie: {
     'Hermès': ['Birkin', 'Kelly', 'Constance', 'Lindy', 'Évelyne', 'Bolide', 'Picotin', 'Garden Party', 'Herbag', 'Roulis', '24/24', 'Verrou', 'Portefeuille', 'Portefeuille long', 'Porte-cartes', 'Porte-monnaie', 'Porte-clés', 'Pochette', 'Étui à lunettes', 'Autre'],
@@ -345,6 +278,8 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Bally': ['Janelle', 'Sergeant', 'Scribe', 'Metropolis', 'Portefeuille', 'Portefeuille long', 'Porte-cartes', 'Porte-monnaie', 'Pochette', 'Autre'],
     'Celine': ['Triomphe', 'Ava', 'Triomphe Canvas', 'Luggage', 'Portefeuille', 'Portefeuille long', 'Porte-cartes', 'Porte-monnaie', 'Pochette', 'Autre'],
     'Lanvin': ['Pencil', 'Cat Bag', 'Portefeuille', 'Portefeuille long', 'Porte-cartes', 'Pochette', 'Autre'],
+    'Polène': ['Numéro Un', 'Numéro Huit', 'Numéro Neuf', 'Numéro Dix', 'Portefeuille', 'Porte-cartes', 'Pochette', 'Autre'],
+    'Strathberry': ['Mosaic', 'East/West', 'Multrees', 'Charlotte', 'Portefeuille', 'Porte-cartes', 'Pochette', 'Autre'],
   },
   montres: {
     'Rolex': ['Submariner', 'Submariner Date', 'Daytona', 'Datejust', 'Day-Date', 'GMT-Master II', 'Explorer', 'Explorer II', 'Yacht-Master', 'Oyster Perpetual', 'Sky-Dweller', 'Sea-Dweller', 'Milgauss', 'Air-King', 'Cellini', 'Lady-Datejust', 'Autre'],
@@ -375,6 +310,13 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Zenith': ['Chronomaster', 'Defy', 'Pilot', 'El Primero', 'Autre'],
     'Girard-Perregaux': ['Laureato', 'Cat\'s Eye', 'Traveller', 'Vintage 1945', 'Autre'],
     'Corum': ['Bubble', 'Admiral', 'Golden Bridge', 'Autre'],
+    'Longines': ['Master Collection', 'Conquest', 'Spirit', 'Elegance', 'Heritage', 'HydroConquest', 'DolceVita', 'Autre'],
+    'Tissot': ['PRX', 'Seastar', 'PR 100', 'Gentleman', 'Le Locle', 'Autre'],
+    'Hamilton': ['Ventura', 'Khaki', 'Khaki Aviation', 'Jazzmaster', 'Autre'],
+    'Raymond Weil': ['Freelancer', 'Millesime', 'Toccata', 'Maestro', 'Tango', 'Noemia', 'Autre'],
+    'Baume et Mercier': ['Riviera', 'Clifton', 'Autre'],
+    'Nomos': ['Tangente', 'Orion', 'Autre'],
+    'Mido': ['Multifort', 'Baroncelli', 'Autre'],
   },
   bijoux: {
     'Cartier': ['Love', 'Juste un Clou', 'Panthère', 'Trinity', 'Écrou', 'Clash', 'Maillon Panthère', 'Baignoire', 'Amulette', 'Destinée', 'Autre'],
@@ -397,6 +339,11 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Graff': ['Butterfly', 'Graff Diamond', 'Spiral', 'Autre'],
     'Messika': ['Move', 'My Way', 'Glam\'azon', 'Autre'],
     'Pomellato': ['Nudo', 'Ritorno', 'Mango', 'Autre'],
+    'Fred': ['Force 10', 'Bracelet', 'Bague', 'Collier', 'Boucles d\'oreilles', 'Autre'],
+    'Repossi': ['Antifer', 'Serti sur vide', 'Berbère', 'Blast', 'Serti inversé', 'Autre'],
+    'Mauboussin': ['1827', 'Étoile divine', 'Belle comme le vent', 'Trop smart', 'Union chance', 'Autre'],
+    'Courbet': ['Tennis', 'Les solitaires', 'Origine', 'Pont des arts', 'Autre'],
+    'Swarovski': ['Mesmera', 'Symbolica', 'Vienna', 'Octagon', 'Autre'],
   },
   vetements: {
     'Chanel': ['Tweed', 'Cardigan', 'Veste classique', 'Robe', 'Jupe', 'Pantalon', 'Manteau', 'Autre'],
@@ -477,8 +424,54 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
     'Tiffany': ['Atlas', 'T True', 'Bijou', 'Autre'],
     'Van Cleef & Arpels': ['Alhambra', 'Perlée', 'Bijou', 'Montre', 'Autre'],
     'Chloé': ['Marcie', 'Drew', 'Sac', 'Vêtement', 'Autre'],
+    'Fred': ['Force 10', 'Bijou', 'Autre'],
+    'Repossi': ['Antifer', 'Berbère', 'Bijou', 'Autre'],
+    'Mauboussin': ['Bijou', 'Montre', 'Autre'],
+    'Polène': ['Numéro Un', 'Numéro Huit', 'Sac', 'Autre'],
+    'Strathberry': ['Mosaic', 'Charlotte', 'Sac', 'Autre'],
+    'Longines': ['Master Collection', 'Conquest', 'Montre', 'Autre'],
+    'Tissot': ['PRX', 'Seastar', 'Montre', 'Autre'],
+    'Hamilton': ['Ventura', 'Khaki', 'Montre', 'Autre'],
+    'Raymond Weil': ['Freelancer', 'Toccata', 'Montre', 'Autre'],
+    'Baume et Mercier': ['Riviera', 'Clifton', 'Montre', 'Autre'],
+    'Nomos': ['Tangente', 'Orion', 'Montre', 'Autre'],
+    'Mido': ['Multifort', 'Baroncelli', 'Montre', 'Autre'],
+    'Courbet': ['Tennis', 'Bijou', 'Autre'],
+    'Swarovski': ['Mesmera', 'Symbolica', 'Bijou', 'Autre'],
   },
 };
+
+/** Marques proposées par catégorie (uniquement les marques ayant des modèles pour cette catégorie). */
+export const BRANDS_BY_CATEGORY: Record<string, string[]> = (() => {
+  const out: Record<string, string[]> = {};
+  for (const cat of Object.keys(_MODELS_BY_CATEGORY_BRAND_BASE)) {
+    out[cat] = Object.keys(_MODELS_BY_CATEGORY_BRAND_BASE[cat]).sort((a, b) => a.localeCompare(b, 'fr'));
+  }
+  return out;
+})();
+
+/** Marques par catégorie et genre (Homme / Femme). Utilisé pour filtrer le sélecteur Marque. */
+export const BRANDS_BY_CATEGORY_AND_GENRE: Record<string, { femme: string[]; homme: string[] }> = (() => {
+  const out: Record<string, { femme: string[]; homme: string[] }> = {};
+  for (const cat of Object.keys(BRANDS_BY_CATEGORY)) {
+    const list = BRANDS_BY_CATEGORY[cat];
+    out[cat] = { femme: list, homme: list };
+  }
+  return out;
+})();
+
+/** Modèles par catégorie et marque : base + toutes les marques ajoutées avec au moins « Autre ». */
+export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> = (() => {
+  const base = _MODELS_BY_CATEGORY_BRAND_BASE;
+  const result: Record<string, Record<string, string[]>> = {};
+  for (const cat of Object.keys(base)) {
+    result[cat] = { ...base[cat] };
+    for (const brand of ALL_BRANDS) {
+      if (!(brand in result[cat])) result[cat][brand] = ['Autre'];
+    }
+  }
+  return result;
+})();
 
 /** Modèles par catégorie, marque et genre (Homme / Femme). Dérivé de MODELS_BY_CATEGORY_BRAND. */
 export const MODELS_BY_CATEGORY_BRAND_AND_GENRE: Record<string, Record<string, { femme: string[]; homme: string[] }>> = (() => {
@@ -492,3 +485,56 @@ export const MODELS_BY_CATEGORY_BRAND_AND_GENRE: Record<string, Record<string, {
   }
   return out;
 })();
+
+// ——— Localisation (catalogue) ———
+/** Régions françaises et codes départements pour filtrage par localisation. */
+export const REGIONS_FR: { name: string; depts: string[] }[] = [
+  { name: 'Île-de-France', depts: ['75', '77', '78', '91', '92', '93', '94', '95'] },
+  { name: 'Auvergne-Rhône-Alpes', depts: ['01', '03', '07', '15', '26', '38', '42', '43', '63', '69', '73', '74'] },
+  { name: 'Nouvelle-Aquitaine', depts: ['16', '17', '19', '23', '24', '33', '40', '47', '64', '79', '86', '87'] },
+  { name: 'Occitanie', depts: ['09', '11', '12', '30', '31', '32', '34', '46', '48', '66', '81', '82'] },
+  { name: 'Hauts-de-France', depts: ['02', '59', '60', '62', '80'] },
+  { name: 'Provence-Alpes-Côte d\'Azur', depts: ['04', '05', '06', '13', '83', '84'] },
+  { name: 'Grand Est', depts: ['08', '10', '51', '52', '54', '55', '57', '67', '88'] },
+  { name: 'Pays de la Loire', depts: ['44', '49', '53', '72', '85'] },
+  { name: 'Bretagne', depts: ['22', '29', '35', '56'] },
+  { name: 'Normandie', depts: ['27', '50', '61', '76', '14'] },
+  { name: 'Bourgogne-Franche-Comté', depts: ['21', '25', '39', '58', '70', '71', '89', '90'] },
+  { name: 'Centre-Val de Loire', depts: ['18', '28', '36', '37', '41', '45'] },
+  { name: 'Corse', depts: ['2A', '2B'] },
+];
+
+/** Départements (code + libellé) pour suggestions code postal. */
+export const DEPARTEMENTS_FR: { code: string; name: string }[] = [
+  { code: '75', name: 'Paris' }, { code: '69', name: 'Rhône' }, { code: '13', name: 'Bouches-du-Rhône' },
+  { code: '33', name: 'Gironde' }, { code: '31', name: 'Haute-Garonne' }, { code: '59', name: 'Nord' },
+  { code: '44', name: 'Loire-Atlantique' }, { code: '34', name: 'Hérault' }, { code: '67', name: 'Bas-Rhin' },
+  { code: '64', name: 'Pyrénées-Atlantiques' }, { code: '29', name: 'Finistère' }, { code: '06', name: 'Alpes-Maritimes' },
+  { code: '35', name: 'Ille-et-Vilaine' }, { code: '74', name: 'Haute-Savoie' }, { code: '49', name: 'Maine-et-Loire' },
+  { code: '84', name: 'Vaucluse' }, { code: '26', name: 'Drôme' }, { code: '38', name: 'Isère' },
+  { code: '77', name: 'Seine-et-Marne' }, { code: '78', name: 'Yvelines' }, { code: '92', name: 'Hauts-de-Seine' },
+  { code: '93', name: 'Seine-Saint-Denis' }, { code: '94', name: 'Val-de-Marne' }, { code: '95', name: 'Val-d\'Oise' },
+  { code: '91', name: 'Essonne' }, { code: '62', name: 'Pas-de-Calais' }, { code: '83', name: 'Var' },
+  { code: '30', name: 'Gard' }, { code: '66', name: 'Pyrénées-Orientales' }, { code: '17', name: 'Charente-Maritime' },
+  { code: '24', name: 'Dordogne' }, { code: '40', name: 'Landes' }, { code: '19', name: 'Corrèze' },
+  { code: '87', name: 'Haute-Vienne' }, { code: '79', name: 'Deux-Sèvres' }, { code: '86', name: 'Vienne' },
+  { code: '16', name: 'Charente' }, { code: '23', name: 'Creuse' }, { code: '47', name: 'Lot-et-Garonne' },
+  { code: '02', name: 'Aisne' }, { code: '60', name: 'Oise' }, { code: '80', name: 'Somme' },
+  { code: '08', name: 'Ardennes' }, { code: '10', name: 'Aube' }, { code: '51', name: 'Marne' },
+  { code: '52', name: 'Haute-Marne' }, { code: '54', name: 'Meurthe-et-Moselle' }, { code: '55', name: 'Meuse' },
+  { code: '57', name: 'Moselle' }, { code: '88', name: 'Vosges' }, { code: '53', name: 'Mayenne' },
+  { code: '72', name: 'Sarthe' }, { code: '85', name: 'Vendée' }, { code: '22', name: 'Côtes-d\'Armor' },
+  { code: '56', name: 'Morbihan' }, { code: '27', name: 'Eure' }, { code: '50', name: 'Manche' },
+  { code: '61', name: 'Orne' }, { code: '76', name: 'Seine-Maritime' }, { code: '14', name: 'Calvados' },
+  { code: '21', name: 'Côte-d\'Or' }, { code: '25', name: 'Doubs' }, { code: '39', name: 'Jura' },
+  { code: '58', name: 'Nièvre' }, { code: '70', name: 'Haute-Saône' }, { code: '71', name: 'Saône-et-Loire' },
+  { code: '89', name: 'Yonne' }, { code: '90', name: 'Territoire de Belfort' }, { code: '18', name: 'Cher' },
+  { code: '28', name: 'Eure-et-Loir' }, { code: '36', name: 'Indre' }, { code: '37', name: 'Indre-et-Loire' },
+  { code: '41', name: 'Loir-et-Cher' }, { code: '45', name: 'Loiret' }, { code: '01', name: 'Ain' },
+  { code: '03', name: 'Allier' }, { code: '07', name: 'Ardèche' }, { code: '15', name: 'Cantal' },
+  { code: '42', name: 'Loire' }, { code: '43', name: 'Haute-Loire' }, { code: '63', name: 'Puy-de-Dôme' },
+  { code: '73', name: 'Savoie' }, { code: '09', name: 'Ariège' }, { code: '11', name: 'Aude' },
+  { code: '12', name: 'Aveyron' }, { code: '32', name: 'Gers' }, { code: '46', name: 'Lot' },
+  { code: '48', name: 'Lozère' }, { code: '81', name: 'Tarn' }, { code: '82', name: 'Tarn-et-Garonne' },
+  { code: '04', name: 'Alpes-de-Haute-Provence' }, { code: '05', name: 'Hautes-Alpes' }, { code: '2A', name: 'Corse-du-Sud' }, { code: '2B', name: 'Haute-Corse' },
+];

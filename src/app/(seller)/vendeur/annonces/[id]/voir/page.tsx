@@ -313,7 +313,7 @@ export default function VoirAnnoncePage() {
             <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
               <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                 <Gift size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
-                Contenu inclus
+                Contenu inclus :
               </h2>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 0 }}>
                 {hasPackaging.filter((key) => CONTENU_INCLUS_LABELS[key]).map((key) => (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import { Check, Euro, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
 import { createListing, updateListing } from '@/lib/supabase/listings';
+import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
@@ -30,6 +31,8 @@ const CONTENU_INCLUS_OPTIONS = [
 
 const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix'];
 
+const DRAFT_KEY_NEW = 'luxe-annonce-nouvelle-draft';
+
 export default function NewListingPage() {
   const router = useRouter();
   const { user, seller, isApprovedSeller, loading: authLoading } = useAuth();
@@ -42,18 +45,47 @@ export default function NewListingPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
 
+  // Restaurer le brouillon de description au chargement (nouvelle annonce)
+  useEffect(() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(DRAFT_KEY_NEW) : null;
+      if (raw) {
+        const o = JSON.parse(raw) as { description?: string };
+        if (o?.description != null && typeof o.description === 'string') setDescription(o.description);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   // Étape 1
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
+  const [marqueSearchQuery, setMarqueSearchQuery] = useState('');
   const [model, setModel] = useState('');
   const [customModel, setCustomModel] = useState('');
+  const [modeleSearchQuery, setModeleSearchQuery] = useState('');
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [marqueOpen, setMarqueOpen] = useState(false);
+  const [modeleOpen, setModeleOpen] = useState(false);
+  const [conditionOpen, setConditionOpen] = useState(false);
+  const [materialOpen, setMaterialOpen] = useState(false);
+  const categoryListRef = useRef<HTMLDivElement>(null);
+  const marqueListRef = useRef<HTMLDivElement>(null);
+  const modeleListRef = useRef<HTMLDivElement>(null);
+  const conditionListRef = useRef<HTMLDivElement>(null);
+  const materialListRef = useRef<HTMLDivElement>(null);
+  const colorListRef = useRef<HTMLDivElement>(null);
   const [condition, setCondition] = useState('');
   const [material, setMaterial] = useState('');
+  const [materialSearchQuery, setMaterialSearchQuery] = useState('');
   const [customMaterial, setCustomMaterial] = useState('');
   const [color, setColor] = useState('');
+  const [colorSearchQuery, setColorSearchQuery] = useState('');
+  const [colorOpen, setColorOpen] = useState(false);
   const [customColor, setCustomColor] = useState('');
 
   // Étape 2
@@ -88,10 +120,33 @@ export default function NewListingPage() {
 
   // Étape 3
   const [description, setDescription] = useState('');
+  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [heightCm, setHeightCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
   const [year, setYear] = useState('');
   const [contenuInclus, setContenuInclusState] = useState<Record<string, true | false | null>>({ box: null, certificat: null, facture: null });
+
+  // Sauvegarder la description en brouillon (localStorage) quand elle change
+  useEffect(() => {
+    if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    draftTimeoutRef.current = setTimeout(() => {
+      try {
+        if (typeof window !== 'undefined') {
+          if (description.trim()) {
+            localStorage.setItem(DRAFT_KEY_NEW, JSON.stringify({ description }));
+          } else {
+            localStorage.removeItem(DRAFT_KEY_NEW);
+          }
+        }
+      } catch {
+        // ignore
+      }
+      draftTimeoutRef.current = null;
+    }, 400);
+    return () => {
+      if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
+    };
+  }, [description]);
 
   // Étape 4
   const [price, setPrice] = useState('');
@@ -106,19 +161,19 @@ export default function NewListingPage() {
     const set = new Set<string>();
     if (genre.includes('femme')) byGenre.femme.forEach((b) => set.add(b));
     if (genre.includes('homme')) byGenre.homme.forEach((b) => set.add(b));
-    return [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr'))).map((b) => ({ value: b, label: b }));
+    return [...set].filter((b) => b !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr')).map((b) => ({ value: b, label: b }));
   })();
 
-  // Modèles selon catégorie, marque et genre (Homme / Femme)
-  const brandForModels = brand === 'Autre' ? customBrand.trim() : brand;
+  // Modèles selon catégorie, marque et genre (Homme / Femme) — marque = sélection ou texte saisi
+  const brandForModels = brand || marqueSearchQuery.trim();
   const modelOptions = (() => {
     if (!category || category === 'autre' || !brandForModels || genre.length === 0) return [];
     const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
-    if (!byBrand) return [];
+    if (!byBrand) return []; // Marque sans modèles prédéfinis → champ libre
     const set = new Set<string>();
     if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
     if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
-    return [...set].sort((a, b) => (a === 'Autre' ? 1 : b === 'Autre' ? -1 : a.localeCompare(b, 'fr')));
+    return [...set].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
   })();
 
   // Matières selon catégorie (puis marque/modèle pris en compte via la catégorie)
@@ -135,42 +190,35 @@ export default function NewListingPage() {
 
   const validateStep1 = () => {
     if (genre.length === 0) {
-      setError('Sélectionnez au moins un genre (Femme et/ou Homme)');
+      setError('Sélectionner au moins un genre (Femme et/ou Homme)');
       return false;
     }
     if (!category) {
-      setError('Sélectionnez une catégorie');
+      setError('Sélectionner une catégorie');
       return false;
     }
     if (category === 'autre' && !customCategory.trim()) {
       setError('Précisez la catégorie');
       return false;
     }
-    if (!brand.trim()) {
-      setError('Sélectionnez la marque');
-      return false;
-    }
-    if (brand === 'Autre' && !customBrand.trim()) {
-      setError('Précisez la marque');
+    const hasBrand = !!(brand || marqueSearchQuery.trim());
+    if (!hasBrand) {
+      setError('Rechercher ou préciser la marque');
       return false;
     }
     if (modelOptions.length > 0) {
       if (!model) {
-        setError('Sélectionnez le modèle');
-        return false;
-      }
-      if (model === 'Autre' && !customModel.trim()) {
-        setError('Précisez le modèle');
+        setError('Sélectionner ou préciser le modèle');
         return false;
       }
     } else if (category && category !== 'autre' && brandForModels) {
       if (!customModel.trim()) {
-        setError('Indiquez le modèle');
+        setError('Précisez le modèle');
         return false;
       }
     }
     if (!condition) {
-      setError('Sélectionnez l\'état');
+      setError('Sélectionner l\'état');
       return false;
     }
     // Matière, couleur : optionnels
@@ -224,11 +272,8 @@ export default function NewListingPage() {
 
     try {
       const categoryLabel = category === 'autre' ? customCategory.trim() : (CATEGORIES.find((c) => c.value === category)?.label || category);
-      const brandToSave = brand === 'Autre' ? customBrand.trim() : brand.trim();
-      const modelToSave =
-        modelOptions.length > 0
-          ? (model === 'Autre' ? customModel.trim() : model) || null
-          : customModel.trim() || null;
+      const brandToSave = (brand.trim() || marqueSearchQuery.trim());
+      const modelToSave = modelOptions.length > 0 ? (model || null) : (customModel.trim() || null);
       const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${categoryLabel}`;
       const priceNum = parseFloat(price.replace(',', '.'));
 
@@ -262,6 +307,19 @@ export default function NewListingPage() {
         }
       }
 
+      if (isActive) {
+        try {
+          await ensureInvoiceForListing(listingId);
+        } catch (e) {
+          console.error('Création facture après dépôt annonce', e);
+        }
+      }
+
+      try {
+        if (typeof window !== 'undefined') localStorage.removeItem(DRAFT_KEY_NEW);
+      } catch {
+        // ignore
+      }
       router.push('/vendeur');
     } catch (err: unknown) {
       const message =
@@ -304,7 +362,7 @@ export default function NewListingPage() {
 
   const labelStyle: React.CSSProperties = {
     display: 'block',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 500,
     marginBottom: 8,
     color: '#333',
@@ -365,6 +423,7 @@ export default function NewListingPage() {
           ))}
         </div>
 
+        <style dangerouslySetInnerHTML={{ __html: '.listing-dropdown-list button:hover { background: #e8e8ed !important; }' }} />
         <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           {error && (
             <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 20 }}>
@@ -381,30 +440,83 @@ export default function NewListingPage() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.25 }}
               >
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 18, position: 'relative' }}>
                   <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
-                  <select
-                    value={category}
-                    onChange={(e) => {
-                    setCategory(e.target.value as ListingCategory | 'autre');
-                    if (e.target.value !== 'autre') setCustomCategory('');
-                    setBrand('');
-                    setCustomBrand('');
-                    setModel('');
-                    setCustomModel('');
-                    setMaterial('');
-                    setCustomMaterial('');
-                    setColor('');
-                    setCustomColor('');
-                  }}
-                    required
-                    style={{ ...inputStyle, paddingRight: 40, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center' }}
+                  <button
+                    type="button"
+                    onClick={() => setCategoryOpen((o) => !o)}
+                    onBlur={() => setTimeout(() => setCategoryOpen(false), 200)}
+                    style={{
+                      ...inputStyle,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: category ? '#1d1d1f' : '#86868b',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 14px center',
+                      paddingRight: 40,
+                    }}
                   >
-                    <option value="">Sélectionnez une catégorie</option>
-                    {categoryOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    {category ? (categoryOptions.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
+                  </button>
+                  {categoryOpen && (
+                    <div
+                      ref={categoryListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 3mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {categoryOptions.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCategory(opt.value as ListingCategory | 'autre');
+                            if (opt.value !== 'autre') setCustomCategory('');
+                            setBrand('');
+                            setCustomBrand('');
+                            setMarqueSearchQuery('');
+                            setModel('');
+                            setCustomModel('');
+                            setModeleSearchQuery('');
+                            setMaterial('');
+                            setCustomMaterial('');
+                            setMaterialSearchQuery('');
+                            setColor('');
+                            setColorSearchQuery('');
+                            setCustomColor('');
+                            setCategoryOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '6px 12px',
+                            textAlign: 'left',
+                            fontSize: 15,
+                            color: '#1d1d1f',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div style={{ marginBottom: 18 }}>
                   <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -413,7 +525,7 @@ export default function NewListingPage() {
                       type="button"
                       onClick={() => {
                         setGenre(genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme']);
-                        setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                        setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                       }}
                       style={{
                         flex: 1,
@@ -432,7 +544,7 @@ backgroundColor: genre.includes('femme') ? '#1d1d1f' : '#fff',
                       type="button"
                       onClick={() => {
                         setGenre(genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme']);
-                        setBrand(''); setCustomBrand(''); setModel(''); setCustomModel('');
+                        setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                       }}
                       style={{
                         flex: 1,
@@ -462,79 +574,148 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     />
                   </div>
                 )}
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 18, position: 'relative' }}>
                   <label style={labelStyle}>Marque <span style={{ color: '#1d1d1f' }}>*</span></label>
-                  <select
-                    value={brand}
+                  <input
+                    type="text"
+                    value={marqueSearchQuery}
                     onChange={(e) => {
-                      setBrand(e.target.value);
-                      if (e.target.value !== 'Autre') setCustomBrand('');
-                      setModel('');
-                      setCustomModel('');
-                      setMaterial('');
-                      setCustomMaterial('');
+                      setMarqueSearchQuery(e.target.value);
+                      if (brand && e.target.value !== brand) setBrand('');
+                      setMarqueOpen(true);
                     }}
-                    required
+                    onFocus={() => { if (category && genre.length > 0) setMarqueOpen(true); }}
+                    onBlur={() => setTimeout(() => setMarqueOpen(false), 200)}
+                    placeholder={!category || genre.length === 0 ? (genre.length === 0 ? 'Sélectionner d\'abord Femme et/ou Homme' : 'Sélectionner une catégorie') : 'Rechercher ou préciser la marque...'}
                     disabled={!category || genre.length === 0}
                     style={{
                       ...inputStyle,
-                      paddingRight: 40,
-                      cursor: category && genre.length > 0 ? 'pointer' : 'not-allowed',
+                      cursor: category && genre.length > 0 ? 'text' : 'not-allowed',
                       opacity: category && genre.length > 0 ? 1 : 0.7,
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 14px center',
                     }}
-                  >
-                    <option value="">
-                      {!category ? 'Sélectionnez d\'abord une catégorie' : genre.length === 0 ? 'Sélectionnez d\'abord un genre (Femme / Homme)' : 'Sélectionnez la marque'}
-                    </option>
-                    {brandOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                {brand === 'Autre' && (
-                  <div style={{ marginBottom: 18 }}>
-                    <label style={labelStyle}>Marque personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
-                    <input
-                      type="text"
-                      value={customBrand}
-                      onChange={(e) => setCustomBrand(e.target.value)}
-                      placeholder="Indiquez la marque"
-                      style={inputStyle}
-                    />
+                  />
+                  {category && genre.length > 0 && marqueOpen && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
+                    <div
+                      ref={marqueListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {brandOptions
+                        .filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase()))
+                        .map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setBrand(opt.value);
+                              setMarqueSearchQuery(opt.label);
+                              setModel('');
+                              setCustomModel('');
+                              setModeleSearchQuery('');
+                              setMaterial('');
+                              setCustomMaterial('');
+                              setMaterialSearchQuery('');
+                              setMarqueOpen(false);
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              fontSize: 15,
+                              color: '#1d1d1f',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                    </div>
+                  )}
                   </div>
-                )}
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 18, position: 'relative' }}>
                   <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
                   {modelOptions.length > 0 ? (
                     <>
-                      <select
-                        value={model}
+                      <input
+                        type="text"
+                        value={modeleSearchQuery}
                         onChange={(e) => {
-                          setModel(e.target.value);
-                          if (e.target.value !== 'Autre') setCustomModel('');
-                          setMaterial('');
-                          setCustomMaterial('');
+                          setModeleSearchQuery(e.target.value);
+                          if (model && e.target.value !== model) setModel('');
+                          setModeleOpen(true);
                         }}
-                        required
-                        style={{ ...inputStyle, paddingRight: 40, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center' }}
-                      >
-                        <option value="">Sélectionnez le modèle</option>
-                        {modelOptions.map((name) => (
-                          <option key={name} value={name}>{name}</option>
-                        ))}
-                      </select>
-                      {model === 'Autre' && (
-                        <input
-                          type="text"
-                          value={customModel}
-                          onChange={(e) => setCustomModel(e.target.value)}
-                          placeholder="Indiquez le modèle"
-                          style={{ ...inputStyle, marginTop: 10 }}
-                        />
+                        onFocus={() => setModeleOpen(true)}
+                        onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
+                        placeholder="Rechercher ou préciser le modèle..."
+                        style={inputStyle}
+                      />
+                      {modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
+                        <div
+                          ref={modeleListRef}
+                          className="listing-dropdown-list"
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: 4,
+                            maxHeight: 'calc(228px - 5mm)',
+                            overflowY: 'auto',
+                            backgroundColor: '#fff',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                          }}
+                        >
+                          {modelOptions
+                            .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
+                            .map((name) => (
+                              <button
+                                key={name}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setModel(name);
+                                  setModeleSearchQuery(name);
+                                  setMaterial('');
+                                  setCustomMaterial('');
+                                  setMaterialSearchQuery('');
+                                  setModeleOpen(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '6px 12px',
+                                  textAlign: 'left',
+                                  fontSize: 15,
+                                  color: '#1d1d1f',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {name}
+                              </button>
+                            ))}
+                        </div>
                       )}
                     </>
                   ) : (
@@ -542,52 +723,152 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       type="text"
                       value={customModel}
                       onChange={(e) => setCustomModel(e.target.value)}
-                      placeholder="Indiquez le modèle (ex. Birkin 30, Submariner)"
+                      placeholder="Précisez le modèle"
                       style={inputStyle}
                     />
                   )}
                 </div>
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 18, position: 'relative' }}>
                   <label style={labelStyle}>État <span style={{ color: '#1d1d1f' }}>*</span></label>
-                  <select
-                    value={condition}
-                    onChange={(e) => setCondition(e.target.value)}
-                    required
-                    style={{ ...inputStyle, paddingRight: 40, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center' }}
-                  >
-                    <option value="">Sélectionnez l&apos;état</option>
-                    {CONDITIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Matière</label>
-                  <select
-                    value={material}
-                    onChange={(e) => {
-                      setMaterial(e.target.value);
-                      if (e.target.value !== 'other') setCustomMaterial('');
-                    }}
-                    disabled={!category}
+                  <button
+                    type="button"
+                    onClick={() => setConditionOpen((o) => !o)}
+                    onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
                     style={{
                       ...inputStyle,
-                      paddingRight: 40,
-                      cursor: category ? 'pointer' : 'not-allowed',
-                      opacity: category ? 1 : 0.7,
-                      appearance: 'none',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: condition ? '#1d1d1f' : '#86868b',
                       backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'right 14px center',
+                      paddingRight: 40,
                     }}
                   >
-                    <option value="">
-                      {category ? 'Sélectionnez la matière' : 'Sélectionnez d\'abord une catégorie'}
-                    </option>
-                    {materialOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
+                  </button>
+                  {conditionOpen && (
+                    <div
+                      ref={conditionListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 3mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {CONDITIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setCondition(opt.value);
+                            setConditionOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '6px 12px',
+                            textAlign: 'left',
+                            fontSize: 15,
+                            color: '#1d1d1f',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginBottom: 18, position: 'relative' }}>
+                  <label style={labelStyle}>Matière</label>
+                  {category ? (
+                    <>
+                      <input
+                        type="text"
+                        value={materialSearchQuery}
+                        onChange={(e) => {
+                          setMaterialSearchQuery(e.target.value);
+                          if (material && e.target.value !== (materialOptions.find((o) => o.value === material)?.label ?? '')) setMaterial('');
+                          setMaterialOpen(true);
+                        }}
+                        onFocus={() => setMaterialOpen(true)}
+                        onBlur={() => setTimeout(() => setMaterialOpen(false), 200)}
+                        placeholder="Indiquer ou rechercher une matière..."
+                        style={inputStyle}
+                      />
+                      {materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
+                        <div
+                          ref={materialListRef}
+                          className="listing-dropdown-list"
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: 4,
+                            maxHeight: 'calc(228px - 5mm)',
+                            overflowY: 'auto',
+                            backgroundColor: '#fff',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                          }}
+                        >
+                          {materialOptions
+                            .filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase()))
+                            .map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setMaterial(opt.value);
+                                  setMaterialSearchQuery(opt.label);
+                                  if (opt.value !== 'other') setCustomMaterial('');
+                                  setMaterialOpen(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '6px 12px',
+                                  textAlign: 'left',
+                                  fontSize: 15,
+                                  color: '#1d1d1f',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <input
+                      type="text"
+                      readOnly
+                      value=""
+                      placeholder="Sélectionner d'abord une catégorie"
+                      style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
+                    />
+                  )}
                 </div>
                 {material === 'other' && (
                   <div style={{ marginBottom: 18 }}>
@@ -601,30 +882,82 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     />
                   </div>
                 )}
-                <div style={{ marginBottom: color === 'other' ? 18 : 24 }}>
+                <div style={{ marginBottom: color === 'other' ? 18 : 24, position: 'relative' }}>
                   <label style={labelStyle}>Couleur</label>
-                  <select
-                    value={color}
-                    onChange={(e) => { setColor(e.target.value); if (e.target.value !== 'other') setCustomColor(''); }}
-                    disabled={!category}
-                    style={{
-                      ...inputStyle,
-                      paddingRight: 40,
-                      cursor: category ? 'pointer' : 'not-allowed',
-                      opacity: category ? 1 : 0.7,
-                      appearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 14px center',
-                    }}
-                  >
-                    <option value="">
-                      {category ? 'Sélectionnez la couleur' : 'Sélectionnez d\'abord une catégorie'}
-                    </option>
-                    {colorOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                  {category ? (
+                    <>
+                      <input
+                        type="text"
+                        value={colorSearchQuery}
+                        onChange={(e) => {
+                          setColorSearchQuery(e.target.value);
+                          if (color && e.target.value !== (colorOptions.find((o) => o.value === color)?.label ?? '')) setColor('');
+                          setColorOpen(true);
+                        }}
+                        onFocus={() => setColorOpen(true)}
+                        onBlur={() => setTimeout(() => setColorOpen(false), 200)}
+                        placeholder="Indiquer ou rechercher une couleur..."
+                        style={inputStyle}
+                      />
+                      {colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
+                        <div
+                          ref={colorListRef}
+                          className="listing-dropdown-list"
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: 4,
+                            maxHeight: 'calc(228px - 5mm)',
+                            overflowY: 'auto',
+                            backgroundColor: '#fff',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                          }}
+                        >
+                          {colorOptions
+                            .filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase()))
+                            .map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setColor(opt.value);
+                                  setColorSearchQuery(opt.label);
+                                  if (opt.value !== 'other') setCustomColor('');
+                                  setColorOpen(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '6px 12px',
+                                  textAlign: 'left',
+                                  fontSize: 15,
+                                  color: '#1d1d1f',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <input
+                      type="text"
+                      readOnly
+                      value=""
+                      placeholder="Sélectionner d'abord une catégorie"
+                      style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
+                    />
+                  )}
                 </div>
                 {color === 'other' && (
                   <div style={{ marginBottom: 24 }}>
@@ -865,7 +1198,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                   />
                 </div>
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Contenu inclus</label>
+                  <label style={labelStyle}>Contenu inclus :</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {CONTENU_INCLUS_OPTIONS.map((opt) => (
                       <div key={opt.value} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
