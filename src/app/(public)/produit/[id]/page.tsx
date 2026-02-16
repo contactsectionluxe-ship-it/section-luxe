@@ -495,7 +495,7 @@ export default function ProductPage() {
                   <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
                     <button
                       type="button"
-                      onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.id ? user.id : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }}
+                      onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }}
                       style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
                     >
                       {showPhone ? (
@@ -1151,7 +1151,7 @@ export default function ProductPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.id ? user.id : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
                     {showPhone ? (
                       <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
                     ) : (
