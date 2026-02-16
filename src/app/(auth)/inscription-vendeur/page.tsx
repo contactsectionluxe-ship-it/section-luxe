@@ -310,12 +310,13 @@ export default function SellerRegisterPage() {
       setSuccess(true);
       setEmailNotificationSent(emailSent);
     } catch (err: unknown) {
-      const msg =
-        (err && typeof err === 'object' && 'message' in err && String((err as { message?: unknown }).message)) ||
-        (err && typeof err === 'object' && 'error_description' in err && String((err as { error_description?: unknown }).error_description)) ||
-        (err && typeof err === 'object' && 'details' in err && String((err as { details?: unknown }).details)) ||
-        (err && typeof err === 'object' && 'msg' in err && String((err as { msg?: unknown }).msg)) ||
+      const raw =
+        (err && typeof err === 'object' && 'message' in err && (err as { message?: unknown }).message) ||
+        (err && typeof err === 'object' && 'error_description' in err && (err as { error_description?: unknown }).error_description) ||
+        (err && typeof err === 'object' && 'details' in err && (err as { details?: unknown }).details) ||
+        (err && typeof err === 'object' && 'msg' in err && (err as { msg?: unknown }).msg) ||
         (typeof err === 'string' ? err : '');
+      const msg = typeof raw === 'string' ? raw : raw != null ? String(raw) : '';
       if (msg) console.error('Registration error:', msg, err);
       else console.error('Registration error (object):', err);
       if (msg.includes('row-level security') || msg.includes('policy')) {

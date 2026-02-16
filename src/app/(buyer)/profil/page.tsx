@@ -81,9 +81,10 @@ export default function ProfilPage() {
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err: unknown) {
-      const msg =
-        (err && typeof err === 'object' && 'message' in err && String((err as { message?: unknown }).message)) ||
+      const raw =
+        (err && typeof err === 'object' && 'message' in err && (err as { message?: unknown }).message) ||
         (typeof err === 'string' ? err : '');
+      const msg = typeof raw === 'string' ? raw : raw != null ? String(raw) : '';
       if (msg) console.error('Error updating profile:', msg, err);
       else console.error('Error updating profile (object):', err);
       setError(msg || 'Une erreur est survenue. Réessayez.');
