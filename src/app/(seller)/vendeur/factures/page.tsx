@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { FileText, ChevronDown } from 'lucide-react';
+import { FileText, ChevronDown, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerInvoices, ensureInvoicesForActiveListings, type SellerInvoice } from '@/lib/supabase/invoices';
 
@@ -26,6 +26,7 @@ export default function FacturesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -64,13 +65,23 @@ export default function FacturesPage() {
       to.setHours(23, 59, 59, 999);
       list = list.filter((inv) => inv.issuedAt <= to);
     }
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter(
+        (inv) =>
+          (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) ||
+          (inv.listingTitle && inv.listingTitle.toLowerCase().includes(q)) ||
+          (inv.issuer && inv.issuer.toLowerCase().includes(q)) ||
+          formatDate(inv.issuedAt).toLowerCase().includes(q)
+      );
+    }
     list.sort((a, b) =>
       sortOrder === 'newest'
         ? b.issuedAt.getTime() - a.issuedAt.getTime()
         : a.issuedAt.getTime() - b.issuedAt.getTime()
     );
     return list;
-  }, [invoices, dateFrom, dateTo, sortOrder]);
+  }, [invoices, dateFrom, dateTo, sortOrder, searchQuery]);
 
   if (authLoading || loading) {
     return (
@@ -95,6 +106,28 @@ export default function FacturesPage() {
               : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'} (émetteur : Section luxe)`}
           </p>
         </div>
+
+        {invoices.length > 0 && (
+          <div style={{ marginBottom: 20, position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher dans mes factures..."
+              autoComplete="off"
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 44px',
+                fontSize: 15,
+                border: '1px solid #d2d2d7',
+                borderRadius: 10,
+                backgroundColor: '#fff',
+                outline: 'none',
+              }}
+            />
+          </div>
+        )}
 
         {invoices.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
@@ -210,8 +243,8 @@ export default function FacturesPage() {
               <span
                 role="button"
                 tabIndex={0}
-                onClick={() => { setDateFrom(''); setDateTo(''); setSortOrder('newest'); setSortDropdownOpen(false); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSortOrder('newest'); setSortDropdownOpen(false); } }}
+                onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); } }}
                 style={{
                   fontSize: 14,
                   color: '#6e6e73',
@@ -292,6 +325,10 @@ export default function FacturesPage() {
               <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
                 Aucune facture pour le moment
               </h2>
+            </div>
+          ) : searchQuery.trim() ? (
+            <div style={{ padding: '40px 32px', textAlign: 'center' }}>
+              <p style={{ fontSize: 15, color: '#6e6e73' }}>Aucun résultat pour « {searchQuery.trim()} »</p>
             </div>
           ) : (
             <div style={{ padding: '40px 32px', textAlign: 'center' }}>

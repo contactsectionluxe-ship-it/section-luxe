@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (!transporter) {
       console.error('SMTP non configuré (SMTP_HOST, SMTP_USER, SMTP_PASS)');
       return NextResponse.json(
-        { error: 'SMTP non configuré', detail: 'Ajoutez SMTP_HOST, SMTP_USER et SMTP_PASS dans Vercel (Settings → Environment Variables).' },
+        { error: 'Envoi email indisponible' },
         { status: 503 }
       );
     }
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     console.error('Erreur envoi email devenir vendeur:', err);
     const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: 'Envoi email échoué', detail: msg },
+      { error: 'Envoi email échoué' },
       { status: 500 }
     );
   }

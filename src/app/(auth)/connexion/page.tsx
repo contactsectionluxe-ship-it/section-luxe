@@ -122,7 +122,7 @@ function LoginForm() {
                 opacity: loading ? 0.7 : 1,
               }}
             >
-              {loading ? 'Connexion...' : 'Se connecter'}
+              {loading ? 'Connexion...' : 'Connexion'}
             </button>
           </form>
         </div>

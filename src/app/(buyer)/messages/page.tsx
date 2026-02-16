@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MessageCircle, Trash2 } from 'lucide-react';
+import { MessageCircle, Trash2, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { subscribeToConversations, deleteConversation } from '@/lib/supabase/messaging';
 import { Conversation } from '@/types';
@@ -17,6 +17,7 @@ export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterTab>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -42,11 +43,20 @@ export default function MessagesPage() {
   const hasUnread = (c: Conversation) => getUnreadCount(c) > 0;
   const getOtherPartyName = (c: Conversation) => (isSeller ? c.buyerName : c.sellerName);
 
-  const filteredConversations = conversations.filter((c) => {
+  const filteredByTab = conversations.filter((c) => {
     if (filter === 'unread') return hasUnread(c);
     if (filter === 'read') return !hasUnread(c);
     return true;
   });
+  const q = searchQuery.trim().toLowerCase();
+  const filteredConversations = q
+    ? filteredByTab.filter(
+        (c) =>
+          getOtherPartyName(c).toLowerCase().includes(q) ||
+          (c.listingTitle && c.listingTitle.toLowerCase().includes(q)) ||
+          (c.lastMessage && c.lastMessage.toLowerCase().includes(q))
+      )
+    : filteredByTab;
 
   const handleDelete = async (conversationId: string) => {
     if (!conversationId || deleting) return;
@@ -124,6 +134,28 @@ export default function MessagesPage() {
           </div>
         </div>
 
+        {conversations.length > 0 && (
+          <div style={{ marginBottom: 20, position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher dans ma messagerie..."
+              autoComplete="off"
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 44px',
+                fontSize: 15,
+                border: '1px solid #d2d2d7',
+                borderRadius: 10,
+                backgroundColor: '#fff',
+                outline: 'none',
+              }}
+            />
+          </div>
+        )}
+
         {/* Carte liste (style Devenir vendeur) */}
         <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           {filteredConversations.length > 0 ? (
@@ -194,6 +226,10 @@ export default function MessagesPage() {
                 );
               })}
             </div>
+          ) : q ? (
+            <div style={{ textAlign: 'center', padding: '60px 28px' }}>
+              <p style={{ fontSize: 15, color: '#6e6e73' }}>Aucun résultat pour « {searchQuery.trim()} »</p>
+            </div>
           ) : (
             <div style={{ textAlign: 'center', padding: '60px 28px' }}>
               <div style={{ width: 64, height: 64, backgroundColor: '#f5f5f7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '1px solid #e8e6e3' }}>
@@ -210,7 +246,7 @@ export default function MessagesPage() {
                   href="/catalogue"
                   style={{ display: 'inline-block', padding: '14px 28px', backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, borderRadius: 12 }}
                 >
-                  Découvrir le catalogue
+                  Voir catalogue
                 </Link>
               )}
             </div>

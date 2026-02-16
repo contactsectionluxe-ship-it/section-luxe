@@ -86,7 +86,10 @@ export async function signUpSeller(
     },
   });
 
-  if (authError) throw authError;
+  if (authError) {
+    const msg = authError.message || (authError as { error_description?: string }).error_description || 'Erreur d\'inscription';
+    throw new Error(msg);
+  }
   if (!authData.user) throw new Error('Erreur lors de la création du compte');
 
   // Create user profile
@@ -99,7 +102,10 @@ export async function signUpSeller(
       role: 'seller',
     });
 
-  if (profileError) throw profileError;
+  if (profileError) {
+    const msg = profileError.message || profileError.details || 'Erreur lors de la création du profil';
+    throw new Error(String(msg));
+  }
 
   // Create seller profile (city/postcode réactivés après migration sellers_city_postcode.sql)
   const { error: sellerError } = await client
@@ -119,7 +125,10 @@ export async function signUpSeller(
       kbis_url: sellerData.kbisUrl,
     });
 
-  if (sellerError) throw sellerError;
+  if (sellerError) {
+    const msg = sellerError.message || sellerError.details || 'Erreur lors de l\'enregistrement vendeur';
+    throw new Error(String(msg));
+  }
 
   return {
     uid: authData.user.id,
@@ -233,7 +242,10 @@ export async function updateUserProfile(
   if (Object.keys(updateData).length === 0) return;
 
   const { error } = await client.from('users').update(updateData).eq('id', uid);
-  if (error) throw error;
+  if (error) {
+    const msg = error.message || (error as { details?: string }).details || 'Erreur lors de la mise à jour du profil';
+    throw new Error(String(msg));
+  }
 }
 
 // Mise à jour du profil vendeur (sellers) — modifiable par le vendeur

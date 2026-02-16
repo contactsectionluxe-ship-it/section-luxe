@@ -136,7 +136,7 @@ export default function AProposPage() {
               borderRadius: 980,
             }}
           >
-            Découvrir le catalogue
+            Voir catalogue
           </Link>
         </div>
       </div>

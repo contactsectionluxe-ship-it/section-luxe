@@ -14,11 +14,13 @@ function FileUploadField({
   file,
   onFileChange,
   hint,
+  required,
 }: {
   label: string;
   file: File | null;
   onFileChange: (file: File | null) => void;
   hint: string;
+  required?: boolean;
 }) {
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
 
@@ -52,6 +54,7 @@ function FileUploadField({
     <div style={{ marginBottom: 20 }}>
       <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
         {label}
+        {required && <span style={{ color: '#1d1d1f' }}> *</span>}
       </label>
       {file ? (
         <div
@@ -113,6 +116,11 @@ export default function SellerRegisterPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
+
+  // Remonter en haut pour voir le message d'erreur
+  useEffect(() => {
+    if (error) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [error]);
   const [emailNotificationSent, setEmailNotificationSent] = useState(false);
   const [emailErrorDetail, setEmailErrorDetail] = useState('');
 
@@ -164,8 +172,13 @@ export default function SellerRegisterPage() {
   }, [siret]);
 
   const validateStep1 = () => {
-    if (!companyName || !siret || !address || !firstName?.trim() || !lastName?.trim() || !email || !phone || !description) {
+    if (!companyName || !siret || !address || !firstName?.trim() || !lastName?.trim() || !email || !phone) {
       setError('Veuillez remplir tous les champs');
+      return false;
+    }
+    const emailTrimmed = email.trim();
+    if (!emailTrimmed.includes('@') || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed)) {
+      setError('L\'email professionnel doit avoir un format valide');
       return false;
     }
     if (password !== confirmPassword) {
@@ -190,18 +203,51 @@ export default function SellerRegisterPage() {
     e.preventDefault();
     setError('');
 
-    if (!idCardFront || !kbis) {
-      setError('Veuillez télécharger le KBIS et le Justificatif d\'identité.');
-      return;
-    }
     if (!idRectoType) {
       setError('Veuillez indiquer le type de justificatif d\'identité (Passeport ou CNI).');
       return;
+    }
+    if (!kbis) {
+      setError('Veuillez télécharger un document dans Extrait KBIS de moins de 3 mois.');
+      return;
+    }
+    if (idRectoType === 'passeport') {
+      if (!idCardFront) {
+        setError('Veuillez déposer un document dans Justificatif d\'identité : Passeport.');
+        return;
+      }
+    } else {
+      if (!idCardFront) {
+        setError('Veuillez déposer un document dans Justificatif d\'identité : CNI recto.');
+        return;
+      }
+      if (!idCardBack) {
+        setError('Veuillez déposer un document dans Justificatif d\'identité : CNI verso.');
+        return;
+      }
     }
 
     setLoading(true);
 
     try {
+      const siretDigits = siret.replace(/\D/g, '');
+      const resCheck = await fetch(
+        `/api/check-seller-availability?email=${encodeURIComponent(email.trim())}&siret=${encodeURIComponent(siretDigits)}`
+      );
+      if (resCheck.ok) {
+        const { emailTaken, siretTaken } = await resCheck.json();
+        if (emailTaken) {
+          setError('Cet email est déjà utilisé par un compte vendeur.');
+          setLoading(false);
+          return;
+        }
+        if (siretTaken) {
+          setError('Ce SIRET est déjà utilisé par un compte vendeur.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const formUpload = new FormData();
       formUpload.set('fileRecto', idCardFront);
       formUpload.set('fileKbis', kbis);
@@ -263,13 +309,21 @@ export default function SellerRegisterPage() {
 
       setSuccess(true);
       setEmailNotificationSent(emailSent);
-    } catch (err: any) {
-      console.error('Registration error:', err);
-      const msg = err?.message || err?.error_description || '';
+    } catch (err: unknown) {
+      const msg =
+        (err && typeof err === 'object' && 'message' in err && String((err as { message?: unknown }).message)) ||
+        (err && typeof err === 'object' && 'error_description' in err && String((err as { error_description?: unknown }).error_description)) ||
+        (err && typeof err === 'object' && 'details' in err && String((err as { details?: unknown }).details)) ||
+        (err && typeof err === 'object' && 'msg' in err && String((err as { msg?: unknown }).msg)) ||
+        (typeof err === 'string' ? err : '');
+      if (msg) console.error('Registration error:', msg, err);
+      else console.error('Registration error (object):', err);
       if (msg.includes('row-level security') || msg.includes('policy')) {
         setError('Configuration Supabase : vérifiez les politiques RLS et que la confirmation email est désactivée (Auth → Providers → Email).');
       } else if (msg.includes('Bucket') || msg.includes('storage') || msg.includes('documents')) {
         setError('Stockage : créez le bucket "documents" dans Supabase (Storage) et exécutez supabase/storage-policies.sql.');
+      } else if (msg.includes('already registered') || msg.includes('already exists') || msg.includes('User already registered')) {
+        setError('Cet email est déjà utilisé. Connectez-vous ou utilisez un autre email.');
       } else if (msg) {
         setError(`Erreur : ${msg}`);
       } else {
@@ -379,21 +433,6 @@ export default function SellerRegisterPage() {
               </p>
             </div>
           </div>
-          {!emailNotificationSent && (
-            <div style={{ marginBottom: 24, textAlign: 'center' }}>
-              <p style={{ fontSize: 13, color: '#b45309', marginBottom: 4 }}>
-                La notification par email n&apos;a pas pu être envoyée.
-              </p>
-              {emailErrorDetail && (
-                <p style={{ fontSize: 12, color: '#86868b', maxWidth: 380, margin: '0 auto' }}>
-                  {emailErrorDetail}
-                </p>
-              )}
-              <p style={{ fontSize: 12, color: '#86868b', marginTop: 8 }}>
-                Vérifiez SMTP_HOST, SMTP_USER, SMTP_PASS sur Vercel (Environment Variables) et refaites un déploiement.
-              </p>
-            </div>
-          )}
           <Link
             href="/"
             style={{
@@ -452,7 +491,7 @@ export default function SellerRegisterPage() {
               <>
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Nom de l&apos;entreprise
+                    Nom de l&apos;entreprise <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -466,7 +505,7 @@ export default function SellerRegisterPage() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    SIRET
+                    Siret <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <input
                     type="text"
@@ -528,7 +567,7 @@ export default function SellerRegisterPage() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Adresse <span style={{ color: '#dc2626' }}>*</span>
+                    Adresse <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <AddressAutocomplete
                     value={address}
@@ -542,7 +581,7 @@ export default function SellerRegisterPage() {
                 <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                      Prénom <span style={{ color: '#dc2626' }}>*</span>
+                      Prénom <span style={{ color: '#1d1d1f' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -555,7 +594,7 @@ export default function SellerRegisterPage() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                      Nom <span style={{ color: '#dc2626' }}>*</span>
+                      Nom <span style={{ color: '#1d1d1f' }}>*</span>
                     </label>
                     <input
                       type="text"
@@ -570,7 +609,7 @@ export default function SellerRegisterPage() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Email professionnel
+                    Email professionnel <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <input
                     type="email"
@@ -578,13 +617,15 @@ export default function SellerRegisterPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="contact@boutique.com"
                     required
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                    title="Indiquez un email avec un @ (ex. contact@entreprise.com)"
                     style={inputStyle}
                   />
                 </div>
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Téléphone
+                    Téléphone <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <input
                     type="tel"
@@ -604,7 +645,6 @@ export default function SellerRegisterPage() {
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Décrivez votre entreprise et votre activité..."
-                    required
                     style={{
                       width: '100%',
                       minHeight: 100,
@@ -621,7 +661,7 @@ export default function SellerRegisterPage() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Mot de passe
+                    Mot de passe <span style={{ color: '#1d1d1f' }}>*</span>
                   </label>
                   <div style={{ position: 'relative' }}>
                     <input
@@ -733,7 +773,8 @@ export default function SellerRegisterPage() {
                   label="Extrait KBIS de moins de 3 mois"
                   file={kbis}
                   onFileChange={setKbis}
-                  hint="Document officiel prouvant l'existence de votre entreprise"
+                  hint="Obligatoire. Document officiel prouvant l'existence de votre entreprise"
+                  required
                 />
 
                 <div style={{ marginBottom: 16 }}>
@@ -747,7 +788,7 @@ export default function SellerRegisterPage() {
                         name="idRectoType"
                         checked={idRectoType === 'passeport'}
                         onChange={() => setIdRectoType('passeport')}
-                        style={{ width: 18, height: 18 }}
+                        style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
                       />
                       Passeport
                     </label>
@@ -757,26 +798,28 @@ export default function SellerRegisterPage() {
                         name="idRectoType"
                         checked={idRectoType === 'cni_recto'}
                         onChange={() => setIdRectoType('cni_recto')}
-                        style={{ width: 18, height: 18 }}
+                        style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
                       />
-                      CNI (recto)
+                      CNI
                     </label>
                   </div>
                 </div>
 
                 <FileUploadField
-                  label={idRectoType === 'cni_recto' ? 'Justificatif d\'identité recto : CNI' : idRectoType === 'passeport' ? 'Justificatif d\'identité : Passeport' : 'Justificatif d\'identité recto'}
+                  label={idRectoType === 'cni_recto' ? 'Justificatif d\'identité : CNI recto' : idRectoType === 'passeport' ? 'Justificatif d\'identité : Passeport' : 'Justificatif d\'identité : CNI recto'}
                   file={idCardFront}
                   onFileChange={setIdCardFront}
-                  hint={idRectoType === 'passeport' ? 'Photo ou scan du passeport' : 'Photo ou scan de la carte d\'identité (recto)'}
+                  hint={idRectoType === 'passeport' ? 'Obligatoire. Photo ou scan du passeport' : 'Obligatoire. Photo ou scan de la carte d\'identité (recto)'}
+                  required
                 />
 
                 {idRectoType === 'cni_recto' && (
                   <FileUploadField
-                    label="Justificatif d'identité verso : CNI"
+                    label="Justificatif d'identité : CNI verso"
                     file={idCardBack}
                     onFileChange={setIdCardBack}
-                    hint="Photo ou scan de la carte d'identité (verso)"
+                    hint="Obligatoire. Photo ou scan de la carte d'identité (verso)"
+                    required
                   />
                 )}
 
@@ -826,7 +869,7 @@ export default function SellerRegisterPage() {
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Déjà inscrit ?{' '}
             <Link href="/connexion" style={{ color: '#0066cc', fontWeight: 500 }}>
-              Se connecter
+              Connexion
             </Link>
           </p>
         </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, CheckCircle, Clock, XCircle, Eye } from 'lucide-react';
+import { Users, CheckCircle, Clock, XCircle, Eye, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdminEmail } from '@/lib/constants';
 import { getAllSellers, getSellerStats, approveSeller, rejectSeller } from '@/lib/supabase/admin';
@@ -20,6 +20,7 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!authLoading && !canAccessAdmin) {
@@ -78,7 +79,16 @@ export default function AdminDashboardPage() {
 
   if (!canAccessAdmin) return null;
 
-  const filteredSellers = sellers.filter((s) => filter === 'all' || s.status === filter);
+  const filteredByTab = sellers.filter((s) => filter === 'all' || s.status === filter);
+  const q = searchQuery.trim().toLowerCase();
+  const filteredSellers = q
+    ? filteredByTab.filter(
+        (s) =>
+          (s.companyName && s.companyName.toLowerCase().includes(q)) ||
+          (s.email && s.email.toLowerCase().includes(q)) ||
+          (s.displayName && s.displayName.toLowerCase().includes(q))
+      )
+    : filteredByTab;
 
   const filterLabels = {
     pending: `En attente (${stats.pending})`,
@@ -161,15 +171,43 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
+        <div style={{ marginBottom: 20, position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher dans les vendeurs..."
+            autoComplete="off"
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 44px',
+              fontSize: 15,
+              border: '1px solid #d2d2d7',
+              borderRadius: 10,
+              backgroundColor: '#fff',
+              outline: 'none',
+            }}
+          />
+        </div>
+
         {/* Liste vendeurs — cartes comme les annonces */}
         {filteredSellers.length === 0 ? (
           <div style={{ padding: 60, border: '1px solid #e8e8ed', borderRadius: 12, textAlign: 'center', backgroundColor: '#fff' }}>
             <Users size={48} color="#d2d2d7" style={{ display: 'block', margin: '0 auto 16px' }} />
             <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
-              {filter === 'rejected' ? 'Aucun refusé' : filter === 'approved' ? 'Aucun validé' : filter === 'pending' ? 'Aucune demande en attente' : 'Aucune demande'}
+              {q
+                ? `Aucun résultat pour « ${searchQuery.trim()} »`
+                : filter === 'rejected'
+                  ? 'Aucun refusé'
+                  : filter === 'approved'
+                    ? 'Aucun validé'
+                    : filter === 'pending'
+                      ? 'Aucune demande en attente'
+                      : 'Aucune demande'}
             </h3>
             <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 14, fontWeight: 400, color: '#6e6e73' }}>
-              {filter === 'rejected' ? 'Aucune demande refusée actuellement.' : filter === 'approved' ? 'Aucun validé actuellement.' : filter === 'pending' ? "Vous n'avez aucune demande en attente à ce jour." : 'Aucune demande pour le moment.'}
+              {q ? 'Modifiez votre recherche.' : filter === 'rejected' ? 'Aucune demande refusée actuellement.' : filter === 'approved' ? 'Aucun validé actuellement.' : filter === 'pending' ? "Vous n'avez aucune demande en attente à ce jour." : 'Aucune demande pour le moment.'}
             </p>
           </div>
         ) : (

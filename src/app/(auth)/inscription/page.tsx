@@ -193,7 +193,7 @@ function RegisterForm() {
         <div style={{ marginTop: 28, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 12 }}>
             Déjà inscrit ?{' '}
-            <Link href={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'} style={{ color: '#0066cc', fontWeight: 500 }}>Se connecter</Link>
+            <Link href={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'} style={{ color: '#0066cc', fontWeight: 500 }}>Connexion</Link>
           </p>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Vous êtes un professionnel ?{' '}

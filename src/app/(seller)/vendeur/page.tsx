@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone } from 'lucide-react';
+import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerListings } from '@/lib/supabase/listings';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
+import { CATEGORIES } from '@/lib/utils';
 
 export default function SellerDashboardPage() {
   const router = useRouter();
@@ -17,6 +18,7 @@ export default function SellerDashboardPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [totalMessages, setTotalMessages] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -80,6 +82,16 @@ export default function SellerDashboardPage() {
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
   const activeListings = listings.filter((l) => l.isActive).length;
   const totalAppels = listings.reduce((sum, l) => sum + (l.phoneRevealsCount ?? 0), 0);
+
+  const q = searchQuery.trim().toLowerCase();
+  const filteredListings = q
+    ? listings.filter(
+        (l) =>
+          l.title.toLowerCase().includes(q) ||
+          (l.brand && l.brand.toLowerCase().includes(q)) ||
+          (l.category && CATEGORIES.find((c) => c.value === l.category)?.label.toLowerCase().includes(q))
+      )
+    : listings;
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
@@ -183,6 +195,28 @@ export default function SellerDashboardPage() {
           </div>
         )}
 
+        {listings.length > 0 && (
+          <div style={{ marginBottom: 20, position: 'relative' }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher dans mes annonces..."
+              autoComplete="off"
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 44px',
+                fontSize: 15,
+                border: '1px solid #d2d2d7',
+                borderRadius: 10,
+                backgroundColor: '#fff',
+                outline: 'none',
+              }}
+            />
+          </div>
+        )}
+
         {/* Listings */}
         <div>
           {listings.length === 0 ? (
@@ -196,9 +230,9 @@ export default function SellerDashboardPage() {
                 </Link>
               )}
             </div>
-          ) : (
+          ) : filteredListings.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
-              {listings.map((listing) => (
+              {filteredListings.map((listing) => (
                 <div key={listing.id} style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                   <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
@@ -238,6 +272,10 @@ export default function SellerDashboardPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          ) : (
+            <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
+              <p style={{ fontSize: 15, color: '#6e6e73' }}>Aucun résultat pour « {searchQuery.trim()} »</p>
             </div>
           )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle } from 'lucide-react';
@@ -35,6 +35,8 @@ export function Header() {
     return pathname === href || pathname.startsWith(href + '/');
   };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [userMenuRight, setUserMenuRight] = useState(24);
   const [scrolled, setScrolled] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -49,6 +51,13 @@ export function Header() {
     setUserMenuOpen(false);
     setMobileMenuOpen(false);
   };
+
+  useEffect(() => {
+    if (userMenuOpen && userMenuButtonRef.current) {
+      const rect = userMenuButtonRef.current.getBoundingClientRect();
+      setUserMenuRight(window.innerWidth - rect.right);
+    }
+  }, [userMenuOpen]);
 
   useEffect(() => {
     const handleClick = () => setUserMenuOpen(false);
@@ -161,7 +170,7 @@ export function Header() {
           }}
         >
           <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
-            <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -3 }} />
+            <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
           </Link>
 
           <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
@@ -218,8 +227,9 @@ export function Header() {
             </Link>
             {isAuthenticated ? (
               <>
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative', minWidth: 64 }}>
                   <button
+                    ref={userMenuButtonRef}
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
                     style={{
                       ...iconLabelStyle,
@@ -232,17 +242,19 @@ export function Header() {
                     <div style={{ ...iconWrapStyle, width: 24, height: 24 }}>
                       <User size={24} strokeWidth={1.5} />
                     </div>
-                    <span>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
+                    <span style={{ width: 64, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
                   </button>
                   {userMenuOpen && (
                     <div
                       onClick={(e) => e.stopPropagation()}
                       style={{
-                        position: 'absolute',
-                        right: 0,
-                        top: 52,
+                        position: 'fixed',
+                        top: 'calc(var(--header-height) + 1px)',
+                        right: userMenuRight,
                         width: 240,
                         backgroundColor: '#fff',
+                        borderTopLeftRadius: 0,
+                        borderTopRightRadius: 0,
                         borderRadius: 14,
                         boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
                         overflow: 'hidden',
@@ -260,7 +272,7 @@ export function Header() {
                             <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Package size={18} /> Mes annonces</Link>
                             <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Ma messagerie {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                             <Link href="/vendeur/factures" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><FileText size={18} /> Mes factures</Link>
-                            <Link href="/vendeur/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
+                            <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
                             {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
                             <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
                             <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Se déconnecter</button>
@@ -269,6 +281,7 @@ export function Header() {
                           <>
                             <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Heart size={18} /> Favoris</Link>
                             <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Messages {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
+                            <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
                             {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Settings size={18} /> Admin</Link>}
                             <div style={{ height: 1, backgroundColor: '#f5f5f7', margin: '8px 0' }} />
                             <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10 }}><LogOut size={18} /> Déconnexion</button>
@@ -280,9 +293,9 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <Link href="/connexion" style={iconLabelStyle}>
+              <Link href="/connexion" style={{ ...iconLabelStyle, minWidth: 64 }}>
                 <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.5} /></div>
-                <span>Se connecter</span>
+                <span style={{ width: 64, textAlign: 'center' }}>Connexion</span>
               </Link>
             )}
             </div>
@@ -347,7 +360,7 @@ export function Header() {
                       <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes annonces</Link>
                       <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                       <Link href="/vendeur/factures" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes factures</Link>
-                      <Link href="/vendeur/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
+                      <Link href="/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
                       {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
                       <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Se déconnecter</button>
                     </>
@@ -355,6 +368,7 @@ export function Header() {
                     <>
                       <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
                       <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
+                      <Link href="/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
                       {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
                       <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Déconnexion</button>
                     </>
@@ -362,7 +376,11 @@ export function Header() {
                 </div>
               </div>
             ) : (
-              <Link href="/connexion" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 50, padding: '0 32px', fontSize: 15, fontWeight: 500, border: '1.5px solid #d2d2d7', color: '#1d1d1f', borderRadius: 980 }}>Connexion</Link>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Favoris</Link>
+                <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>
+                <Link href="/connexion" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 50, padding: '0 32px', fontSize: 15, fontWeight: 500, border: '1.5px solid #d2d2d7', color: '#1d1d1f', borderRadius: 980, marginTop: 8 }}>Connexion</Link>
+              </div>
             )}
           </div>
         </div>

@@ -232,14 +232,17 @@ export default function ProductPage() {
   };
 
   useEffect(() => {
-    if (user?.displayName) {
+    if (!user) return;
+    const updates: { firstName?: string; lastName?: string; email?: string; phone?: string } = {};
+    if (user.displayName) {
       const parts = user.displayName.trim().split(/\s+/);
-      setContactForm((prev) => ({
-        ...prev,
-        firstName: parts[0] || prev.firstName,
-        lastName: parts.slice(1).join(' ') || prev.lastName,
-        email: user.email || prev.email,
-      }));
+      updates.firstName = parts[0] || '';
+      updates.lastName = parts.slice(1).join(' ') || '';
+    }
+    if (user.email) updates.email = user.email;
+    if (user.phone?.trim()) updates.phone = user.phone.trim();
+    if (Object.keys(updates).length > 0) {
+      setContactForm((prev) => ({ ...prev, ...updates }));
     }
   }, [user]);
 

@@ -121,7 +121,7 @@ export default function HomePage() {
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
             >
-              Découvrir
+              Voir catalogue
               <ArrowRight size={18} strokeWidth={2} />
             </Link>
             <Link
@@ -469,7 +469,7 @@ export default function HomePage() {
       <section
         style={{
           padding: '100px 24px',
-          backgroundColor: '#1d1d1f',
+          backgroundColor: '#ebebed',
         }}
       >
         <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
@@ -478,14 +478,14 @@ export default function HomePage() {
               fontFamily: 'var(--font-playfair), Georgia, serif',
               fontSize: 'clamp(24px, 4vw, 32px)',
               fontWeight: 500,
-              color: '#fff',
+              color: '#1d1d1f',
               marginBottom: 16,
               letterSpacing: '-0.02em',
             }}
           >
             Vous êtes un professionnel du luxe ?
           </h2>
-          <p style={{ fontSize: 16, color: '#a1a1a6', marginBottom: 32, lineHeight: 1.5 }}>
+          <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link
@@ -497,8 +497,8 @@ export default function HomePage() {
               gap: 8,
               height: 50,
               padding: '0 28px',
-              backgroundColor: '#fff',
-              color: '#1d1d1f',
+              backgroundColor: '#1d1d1f',
+              color: '#fff',
               fontSize: 15,
               fontWeight: 500,
               borderRadius: 980,

@@ -241,7 +241,20 @@ export default function FavoritesPage() {
                           {listing.title}
                         </h3>
                         {(listing.category || listing.year != null || listing.condition || listing.color || listing.material) && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '11px 15px', marginBottom: 6, fontSize: 13, color: '#6e6e73', lineHeight: 1.35 }}>
+                          <div
+                            style={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: '11px 15px',
+                              marginBottom: 6,
+                              fontSize: 13,
+                              color: '#6e6e73',
+                              lineHeight: 1.35,
+                              maxHeight: '1.35em',
+                              overflow: 'hidden',
+                              minWidth: 0,
+                            }}
+                          >
                             {listing.category && (
                               <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                                 <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
@@ -271,8 +284,8 @@ export default function FavoritesPage() {
                                 <Layers size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
                                 {MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material}
                               </span>
-                    )}
-                  </div>
+                            )}
+                          </div>
                         )}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                           <p style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
@@ -329,7 +342,7 @@ export default function FavoritesPage() {
               Explorez le catalogue et sauvegardez vos articles préférés
             </p>
             <Link href="/catalogue" style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-              Découvrir le catalogue
+              Voir catalogue
             </Link>
           </div>
         )}
