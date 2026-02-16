@@ -120,6 +120,14 @@ export default function ProfilVendeurPage() {
       setError('Le prénom et le nom sont obligatoires.');
       return;
     }
+    if (!companyName.trim()) {
+      setError('Le nom de l\'entreprise est obligatoire.');
+      return;
+    }
+    if (!phone.trim()) {
+      setError('Le téléphone est obligatoire.');
+      return;
+    }
     if (!address.trim()) {
       setError('L\'adresse est obligatoire.');
       return;
@@ -262,35 +270,8 @@ export default function ProfilVendeurPage() {
           )}
 
           <div style={{ marginBottom: 28 }}>
-            <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Prénom <span style={{ color: '#dc2626' }}>*</span></label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  style={inputStyle}
-                  placeholder="Prénom"
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Nom <span style={{ color: '#dc2626' }}>*</span></label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  style={inputStyle}
-                  placeholder="Nom"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: 28 }}>
             <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Nom de l&apos;entreprise</label>
+              <label style={labelStyle}>Nom de l&apos;entreprise <span style={{ color: '#1d1d1f' }}>*</span></label>
               <input
                 type="text"
                 value={companyName}
@@ -298,38 +279,6 @@ export default function ProfilVendeurPage() {
                 required
                 style={inputStyle}
                 placeholder="Raison sociale"
-              />
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Email</label>
-              <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, color: '#86868b', backgroundColor: '#f5f5f7' }}>
-                <Mail size={16} />
-                <span>{seller.email}</span>
-              </div>
-              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>L&apos;email ne peut pas être modifié ici.</p>
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Téléphone</label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-                style={inputStyle}
-                placeholder="01 23 45 67 89"
-              />
-            </div>
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Adresse <span style={{ color: '#dc2626' }}>*</span></label>
-              <AddressAutocomplete
-                value={address}
-                onChange={setAddress}
-                onSuggestionSelect={(_addr, c, p) => { setCity(c); setPostcode(p); }}
-                required
-                placeholder="25 avenue des Champs-Élysées, 75008 Paris"
               />
             </div>
 
@@ -343,12 +292,68 @@ export default function ProfilVendeurPage() {
               </div>
             )}
 
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Adresse <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <AddressAutocomplete
+                value={address}
+                onChange={setAddress}
+                onSuggestionSelect={(_addr, c, p) => { setCity(c); setPostcode(p); }}
+                required
+                placeholder="25 avenue des Champs-Élysées, 75008 Paris"
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Prénom <span style={{ color: '#1d1d1f' }}>*</span></label>
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  style={inputStyle}
+                  placeholder="Prénom"
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Nom <span style={{ color: '#1d1d1f' }}>*</span></label>
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  style={inputStyle}
+                  placeholder="Nom"
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Email professionnel</label>
+              <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, color: '#86868b', backgroundColor: '#f5f5f7' }}>
+                <Mail size={16} />
+                <span>{seller.email}</span>
+              </div>
+              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>L&apos;email ne peut pas être modifié ici.</p>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Téléphone <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                style={inputStyle}
+                placeholder="01 23 45 67 89"
+              />
+            </div>
+
             <div style={{ marginBottom: 24 }}>
               <label style={labelStyle}>Description de l&apos;activité</label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                required
                 rows={4}
                 style={{
                   width: '100%',

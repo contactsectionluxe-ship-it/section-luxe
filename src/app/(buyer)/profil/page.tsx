@@ -147,7 +147,7 @@ export default function ProfilPage() {
           <div style={{ marginBottom: 28 }}>
             <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Prénom <span style={{ color: '#dc2626' }}>*</span></label>
+                <label style={labelStyle}>Prénom <span style={{ color: '#1d1d1f' }}>*</span></label>
                 <input
                   type="text"
                   value={firstName}
@@ -158,7 +158,7 @@ export default function ProfilPage() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Nom <span style={{ color: '#dc2626' }}>*</span></label>
+                <label style={labelStyle}>Nom <span style={{ color: '#1d1d1f' }}>*</span></label>
                 <input
                   type="text"
                   value={lastName}

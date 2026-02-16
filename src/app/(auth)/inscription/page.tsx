@@ -76,22 +76,22 @@ function RegisterForm() {
 
             <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Prénom</label>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Prénom <span style={{ color: '#1d1d1f' }}>*</span></label>
                 <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Prénom" required style={inputStyle} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Nom</label>
+                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Nom <span style={{ color: '#1d1d1f' }}>*</span></label>
                 <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Nom" required style={inputStyle} />
               </div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Email</label>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Email <span style={{ color: '#1d1d1f' }}>*</span></label>
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required style={inputStyle} />
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Mot de passe</label>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Mot de passe <span style={{ color: '#1d1d1f' }}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -131,7 +131,7 @@ function RegisterForm() {
             </div>
 
             <div style={{ marginBottom: 28 }}>
-              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Confirmer le mot de passe</label>
+              <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Confirmer le mot de passe <span style={{ color: '#1d1d1f' }}>*</span></label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
