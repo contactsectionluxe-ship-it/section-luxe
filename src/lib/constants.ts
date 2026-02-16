@@ -10,7 +10,7 @@ export function isAdminEmail(email: string | null | undefined): boolean {
 // ——— Catalogue / Filtres ———
 
 export const ARTICLE_TYPES = [
-  { value: 'bag', label: 'Sac' },
+  { value: 'bag', label: 'Sacs' },
   { value: 'watch', label: 'Montres' },
   { value: 'jewelry', label: 'Bijoux' },
   { value: 'accessory', label: 'Accessoires' },

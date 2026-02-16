@@ -7,12 +7,12 @@ import { getFeaturedListings } from '@/lib/supabase/listings';
 import { Listing } from '@/types';
 
 const categories = [
-  { name: 'Sac', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
-  { name: 'Montre', href: '/catalogue?category=montres', image: '/montres-categorie.png' },
-  { name: 'Bijou', href: '/catalogue?category=bijoux', image: '/bijoux-categorie.png' },
-  { name: 'Vêtement', href: '/catalogue?category=vetements', image: '/vetements-categorie.png' },
-  { name: 'Chaussure', href: '/catalogue?category=chaussures', image: '/chaussures-categorie.png' },
-  { name: 'Accessoire', href: '/catalogue?category=accessoires', image: '/accessoires-categorie.png' },
+  { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
+  { name: 'Montres', href: '/catalogue?category=montres', image: '/montres-categorie.png' },
+  { name: 'Bijoux', href: '/catalogue?category=bijoux', image: '/bijoux-categorie.png' },
+  { name: 'Vêtements', href: '/catalogue?category=vetements', image: '/vetements-categorie.png' },
+  { name: 'Chaussures', href: '/catalogue?category=chaussures', image: '/chaussures-categorie.png' },
+  { name: 'Accessoires', href: '/catalogue?category=accessoires', image: '/accessoires-categorie.png' },
 ];
 
 function formatPrice(price: number): string {
@@ -275,13 +275,13 @@ export default function HomePage() {
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: (cat.name === 'Sac' || cat.name === 'Bijou' || cat.name === 'Montre' || cat.name === 'Vêtement' || cat.name === 'Accessoire') ? 'contain' : 'cover',
-                            ...(cat.name === 'Sac' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Bijou' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Montre' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Vêtement' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Accessoire' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Sac' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                            objectFit: (cat.name === 'Sacs' || cat.name === 'Bijoux' || cat.name === 'Montres' || cat.name === 'Vêtements' || cat.name === 'Accessoires') ? 'contain' : 'cover',
+                            ...(cat.name === 'Sacs' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                            ...(cat.name === 'Bijoux' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
+                            ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                            ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
+                            ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                            ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
                           }}
                         />
                       ) : (

@@ -9,7 +9,6 @@ import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 const navigation = [
-  { name: 'À la une', href: '/' },
   { name: 'Catalogue', href: '/catalogue?reset=1' },
   { name: 'Occasion', href: '/catalogue?condition=occasion' },
   { name: 'Neuf', href: '/catalogue?condition=new' },
