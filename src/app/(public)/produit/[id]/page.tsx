@@ -581,79 +581,88 @@ export default function ProductPage() {
                   Informations
                 </h2>
                 <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Tag size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{categoryLabel || listing.category}</span>
+                        <span title={categoryLabel || listing.category} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoryLabel || listing.category}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Award size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.brand}</span>
+                        <span title={listing.brand} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.brand}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Modèle</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.model ?? ''}</span>
+                      <span title={listing.model ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.model ?? ''}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>{listing.year != null ? listing.year : ' '}</span>
+                      <span title={listing.year != null ? String(listing.year) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.year != null ? listing.year : ' '}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <CheckCircle size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                      <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Layers size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                      <span title={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Palette size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                      <span title={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {listing.size && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                          <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                          <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
+                        </div>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}>
+                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>
@@ -888,79 +897,88 @@ export default function ProductPage() {
                   Informations
                 </h2>
                   <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Tag size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{categoryLabel || listing.category}</span>
+                        <span title={categoryLabel || listing.category} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoryLabel || listing.category}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Award size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.brand}</span>
+                        <span title={listing.brand} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.brand}</span>
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Modèle</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.model || ' '}</span>
+                      <span title={listing.model ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.model || ' '}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Calendar size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Année</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>{listing.year != null ? listing.year : ' '}</span>
+                      <span title={listing.year != null ? String(listing.year) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.year != null ? listing.year : ' '}</span>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <CheckCircle size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                      <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Layers size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Matière</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                      <span title={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Palette size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Couleur</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                      <span title={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {listing.size && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                          <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
+                        </div>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimensions</span>
                       </div>
-                      <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}>
+                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>

@@ -188,13 +188,36 @@ function RegisterForm() {
               {loading ? 'Création...' : 'Créer mon compte'}
             </button>
           </form>
+
+          <Link
+            href={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: 50,
+              marginTop: 12,
+              backgroundColor: '#fff',
+              color: '#1d1d1f',
+              fontSize: 15,
+              fontWeight: 500,
+              border: '1.5px solid #d2d2d7',
+              borderRadius: 980,
+              transition: 'background-color 0.2s, color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f5f5f7';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#fff';
+            }}
+          >
+            Connexion
+          </Link>
         </div>
 
-        <div style={{ marginTop: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 12 }}>
-            Déjà inscrit ?{' '}
-            <Link href={redirect ? `/connexion?redirect=${encodeURIComponent(redirect)}` : '/connexion'} style={{ color: '#0066cc', fontWeight: 500 }}>Connexion</Link>
-          </p>
+        <div style={{ marginTop: 28, marginBottom: 40, textAlign: 'center' }}>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Vous êtes un professionnel ?{' '}
             <Link href="/inscription-vendeur" style={{ color: '#0066cc', fontWeight: 500 }}>Devenir vendeur</Link>

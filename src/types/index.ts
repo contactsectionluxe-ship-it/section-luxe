@@ -71,6 +71,8 @@ export interface Listing {
   widthCm?: number | null;
   year?: number | null;
   packaging?: string[] | null;
+  /** Taille (vêtements: XS, S, M, L, XL, XXL, XXXL) ou pointure (chaussures: 34-48) */
+  size?: string | null;
   /** Nombre de fois que le numéro de téléphone a été affiché (clic sur N° téléphone) */
   phoneRevealsCount?: number;
 }

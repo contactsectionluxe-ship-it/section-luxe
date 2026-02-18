@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
@@ -15,6 +15,7 @@ import { CATEGORIES, formatDate } from '@/lib/utils';
 import {
   BRANDS_BY_CATEGORY,
   CATEGORY_TO_BRAND_KEYS,
+  CLOTHING_SIZES,
   COLORS_BY_CATEGORY,
   MATIERES_BY_CATEGORY,
   MODELS_BY_CATEGORY_BRAND,
@@ -23,7 +24,9 @@ import {
   MATERIALS,
   REGIONS_FR,
   DEPARTEMENTS_FR,
+  SHOE_SIZES,
 } from '@/lib/constants';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
@@ -167,7 +170,9 @@ const OCCASION_CONDITIONS = ['very_good', 'good', 'correct'];
 
 function CatalogueContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''))}` : '';
 
   const [filters, setFilters] = useState<Filters>(() => {
     const initial: Filters = { ...defaultFilters };
@@ -186,18 +191,23 @@ function CatalogueContent() {
   });
 
   /** Un seul menu déroulant ouvert à la fois. */
-  type DropdownId = 'type' | 'marque' | 'modele' | 'color' | 'material';
+  type DropdownId = 'type' | 'marque' | 'modele' | 'color' | 'material' | 'taille' | 'pointure';
   const [openDropdown, setOpenDropdown] = useState<DropdownId | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
   const marqueDropdownRef = useRef<HTMLDivElement>(null);
   const [marqueSearchQuery, setMarqueSearchQuery] = useState('');
   const modeleDropdownRef = useRef<HTMLDivElement>(null);
   const [modeleSearchQuery, setModeleSearchQuery] = useState('');
+  const tailleDropdownRef = useRef<HTMLDivElement>(null);
+  const pointureDropdownRef = useRef<HTMLDivElement>(null);
+  const [pointureSearchQuery, setPointureSearchQuery] = useState('');
   const colorDropdownRef = useRef<HTMLDivElement>(null);
   const materialDropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownOpen = openDropdown === 'type';
   const marqueDropdownOpen = openDropdown === 'marque';
   const modeleDropdownOpen = openDropdown === 'modele';
+  const tailleDropdownOpen = openDropdown === 'taille';
+  const pointureDropdownOpen = openDropdown === 'pointure';
   const colorDropdownOpen = openDropdown === 'color';
   const materialDropdownOpen = openDropdown === 'material';
   const modelesAlphabetiques = useMemo(() => {
@@ -339,7 +349,10 @@ function CatalogueContent() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  /** Affichage des annonces : horizontal (défaut) ou grille 3 par ligne */
+  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
   const [showMapPopup, setShowMapPopup] = useState(false);
+  const [showAuthModalFavoris, setShowAuthModalFavoris] = useState(false);
   const [mapZoom, setMapZoom] = useState(15);
   /** Évite que l'effet "retirer condition" ne s'exécute juste après une synchro URL → filtres (clic Neuf/Occasion). */
   const justSyncedConditionFromUrlRef = useRef(false);
@@ -462,7 +475,8 @@ function CatalogueContent() {
       const colors = filters.colors?.length ? filters.colors : (filters.color ? [filters.color] : undefined);
       const materials = filters.materials?.length ? filters.materials : (filters.material ? [filters.material] : undefined);
       const conditions = filters.conditions?.length ? filters.conditions : (filters.condition ? [filters.condition] : undefined);
-      const data = await getListings({ categories, brands, models, colors, materials, conditions, sellerId: filters.sellerId, sortBy });
+      const sizes = filters.sizes?.length ? filters.sizes : undefined;
+      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, sellerId: filters.sellerId, sortBy });
 
       let filtered = data;
       if (filters.priceMin) filtered = filtered.filter((l) => l.price >= filters.priceMin!);
@@ -555,7 +569,11 @@ function CatalogueContent() {
     async (e: React.MouseEvent, listingId: string) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!user || loadingFavoriteId) return;
+      if (!user) {
+        setShowAuthModalFavoris(true);
+        return;
+      }
+      if (loadingFavoriteId) return;
       setLoadingFavoriteId(listingId);
       try {
         const isFav = favoritedListingIds[listingId];
@@ -583,6 +601,9 @@ function CatalogueContent() {
     if (!modeleDropdownOpen) setModeleSearchQuery('');
   }, [modeleDropdownOpen]);
 
+  useLayoutEffect(() => {
+    if (!pointureDropdownOpen) setPointureSearchQuery('');
+  }, [pointureDropdownOpen]);
 
   /** Fermer le menu au clic extérieur ou Escape (un seul menu ouvert à la fois). */
   useEffect(() => {
@@ -591,6 +612,8 @@ function CatalogueContent() {
       openDropdown === 'type' ? typeDropdownRef :
       openDropdown === 'marque' ? marqueDropdownRef :
       openDropdown === 'modele' ? modeleDropdownRef :
+      openDropdown === 'taille' ? tailleDropdownRef :
+      openDropdown === 'pointure' ? pointureDropdownRef :
       openDropdown === 'color' ? colorDropdownRef :
       materialDropdownRef;
     const onMouseDown = (e: MouseEvent) => {
@@ -787,6 +810,14 @@ function CatalogueContent() {
   }, [filters.locations, filters.postalCode, filters.region]);
 
   const selectedConditions = filters.conditions ?? (filters.condition ? [filters.condition] : []);
+  const selectedSizes = filters.sizes ?? [];
+  const toggleSize = (sizeValue: string) => {
+    setFilters((prev) => {
+      const current = prev.sizes ?? [];
+      const next = current.includes(sizeValue) ? current.filter((s) => s !== sizeValue) : [...current, sizeValue];
+      return { ...prev, sizes: next.length ? next : undefined };
+    });
+  };
   const toggleCondition = (conditionValue: string) => {
     setFilters((prev) => {
       const current = prev.conditions ?? (prev.condition ? [prev.condition] : []);
@@ -1413,6 +1444,301 @@ function CatalogueContent() {
         </div>
       </FilterSection>
 
+      {/* Taille (vêtements) — même sous-menu que Pointure, ligne en dessous, même espace titre/ligne que les autres */}
+      {selectedTypes.includes('vetements') && (
+        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
+          <FilterSection title="Taille" defaultOpen collapsible={false} noBorder>
+            <div ref={tailleDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setOpenDropdown((prev) => (prev === 'taille' ? null : 'taille'))}
+                style={{
+                  width: '100%',
+                  height: 44,
+                  padding: '0 14px',
+                  fontSize: 14,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  gap: 8,
+                }}
+              >
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Taille
+                </span>
+                {selectedSizes.some((s) => CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])) && (
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      minWidth: 22,
+                      height: 22,
+                      padding: '0 8px',
+                      borderRadius: 11,
+                      backgroundColor: '#f5f5f7',
+                      color: '#1d1d1f',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #d2d2d7',
+                    }}
+                  >
+                    {selectedSizes.filter((s) => CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])).length}
+                  </span>
+                )}
+                <ChevronRight
+                  size={16}
+                  style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
+                />
+              </button>
+              {tailleDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '100%',
+                    marginLeft: 20,
+                    minWidth: 415,
+                    maxHeight: 'calc(360px - 1mm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])) ?? undefined })); setOpenDropdown(null); }}
+                    style={{
+                      padding: '10px 12px',
+                      fontSize: 14,
+                      color: '#1d1d1f',
+                      background: '#fff',
+                      border: 'none',
+                      borderBottom: '1px solid #d2d2d7',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontWeight: !selectedSizes.some((s) => CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])) ? 600 : 400,
+                      flexShrink: 0,
+                    }}
+                  >
+                    Toutes les tailles
+                  </button>
+                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                      {CLOTHING_SIZES.map((s) => (
+                        <label
+                          key={s}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedSizes.includes(s)}
+                            onChange={() => toggleSize(s)}
+                            style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                          />
+                          <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {selectedSizes.some((s) => CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])) && (
+                      <button
+                        type="button"
+                        onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !CLOTHING_SIZES.includes(s as typeof CLOTHING_SIZES[number])) ?? undefined })); setOpenDropdown(null); }}
+                        style={{
+                          marginTop: 2,
+                          marginBottom: 0,
+                          fontSize: 12,
+                          color: '#6e6e73',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          padding: '2px 4px',
+                          width: '100%',
+                        }}
+                      >
+                        Réinitialiser les tailles
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </FilterSection>
+        </div>
+      )}
+
+      {/* Pointure (chaussures) — même espace au-dessus du titre que Prix et Année */}
+      {selectedTypes.includes('chaussures') && (
+        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
+          <FilterSection title="Pointure" defaultOpen collapsible={false} noBorder>
+            <div ref={pointureDropdownRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              onClick={() => setOpenDropdown((prev) => (prev === 'pointure' ? null : 'pointure'))}
+              style={{
+                width: '100%',
+                height: 44,
+                padding: '0 14px',
+                fontSize: 14,
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                backgroundColor: '#fff',
+                color: '#1d1d1f',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                cursor: 'pointer',
+                gap: 8,
+              }}
+            >
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                Pointure
+              </span>
+              {selectedSizes.some((s) => SHOE_SIZES.includes(s)) && (
+                <span
+                  style={{
+                    flexShrink: 0,
+                    minWidth: 22,
+                    height: 22,
+                    padding: '0 8px',
+                    borderRadius: 11,
+                    backgroundColor: '#f5f5f7',
+                    color: '#1d1d1f',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid #d2d2d7',
+                  }}
+                >
+                  {selectedSizes.filter((s) => SHOE_SIZES.includes(s)).length}
+                </span>
+              )}
+              <ChevronRight
+                size={16}
+                style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
+              />
+            </button>
+            {pointureDropdownOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: '100%',
+                  marginLeft: 20,
+                  minWidth: 415,
+                  maxHeight: 'calc(360px - 1.5mm - 0.3cm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundColor: '#fff',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                  zIndex: 9999,
+                  overflow: 'hidden',
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !SHOE_SIZES.includes(s)) ?? undefined })); setOpenDropdown(null); setPointureSearchQuery(''); }}
+                  style={{
+                    padding: '10px 12px',
+                    fontSize: 14,
+                    color: '#1d1d1f',
+                    background: '#fff',
+                    border: 'none',
+                    borderBottom: '1px solid #d2d2d7',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontWeight: !selectedSizes.some((s) => SHOE_SIZES.includes(s)) ? 600 : 400,
+                    flexShrink: 0,
+                  }}
+                >
+                  Toutes les pointures
+                </button>
+                <div style={{ padding: '8px 12px 0 12px', flexShrink: 0 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#86868b' }} />
+                    <input
+                      type="text"
+                      value={pointureSearchQuery}
+                      onChange={(e) => setPointureSearchQuery(e.target.value)}
+                      placeholder="Rechercher ou préciser la pointure…"
+                      style={{
+                        width: '100%',
+                        height: 36,
+                        paddingLeft: 32,
+                        paddingRight: 10,
+                        fontSize: 14,
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 8,
+                        backgroundColor: '#fff',
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+                <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 3.5mm - 0.3cm)', padding: 8, backgroundColor: '#fff' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                    {SHOE_SIZES.filter((p) => normalizeForSearch(p).includes(normalizeForSearch(pointureSearchQuery.trim()))).map((p) => (
+                      <label
+                        key={p}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedSizes.includes(p)}
+                          onChange={() => toggleSize(p)}
+                          style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                        />
+                        <span style={{ fontSize: 14, color: '#1d1d1f' }}>{p}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {selectedSizes.some((s) => SHOE_SIZES.includes(s)) && (
+                    <button
+                      type="button"
+                      onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !SHOE_SIZES.includes(s)) ?? undefined })); setOpenDropdown(null); setPointureSearchQuery(''); }}
+                      style={{
+                        marginTop: 2,
+                        marginBottom: 0,
+                        fontSize: 12,
+                        color: '#6e6e73',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        padding: '2px 4px',
+                        width: '100%',
+                      }}
+                    >
+                      Réinitialiser les pointures
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          </FilterSection>
+        </div>
+      )}
+
       {/* Année — même format que Prix (Min / Max sur une ligne) */}
       <FilterSection title="Année" defaultOpen collapsible={false}>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -1995,8 +2321,31 @@ function CatalogueContent() {
               <span className="catalogue-search-submit-text">Rechercher</span>
             </button>
           </form>
-                {/* Tri "Plus récents" à droite du bouton Rechercher (desktop) */}
-                <div ref={sortDropdownRef} className="hide-mobile" style={{ position: 'relative', flexShrink: 0 }}>
+                {/* Affichage grille/liste + Tri "Plus récents" (desktop) */}
+                <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => setViewMode((m) => (m === 'horizontal' ? 'grid' : 'horizontal'))}
+                    title={viewMode === 'horizontal' ? 'Afficher en grille (3 par ligne)' : 'Afficher en liste'}
+                    aria-label={viewMode === 'horizontal' ? 'Afficher en grille' : 'Afficher en liste'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 48,
+                      height: 48,
+                      border: '1px solid #d2d2d7',
+                      borderRadius: 12,
+                      backgroundColor: '#fff',
+                      color: '#6e6e73',
+                      cursor: 'pointer',
+                      outline: 'none',
+                      boxShadow: 'none',
+                    }}
+                  >
+                    {viewMode === 'horizontal' ? <LayoutGrid size={20} /> : <List size={20} />}
+                  </button>
+                  <div ref={sortDropdownRef} style={{ position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => setSortDropdownOpen((v) => !v)}
@@ -2066,6 +2415,7 @@ function CatalogueContent() {
                       ))}
                     </div>
                   )}
+                  </div>
                 </div>
         </div>
       </div>
@@ -2246,6 +2596,30 @@ function CatalogueContent() {
                   Filtres
                 </button>
 
+                {/* Affichage grille/liste (mobile) */}
+                <button
+                  type="button"
+                  onClick={() => setViewMode((m) => (m === 'horizontal' ? 'grid' : 'horizontal'))}
+                  title={viewMode === 'horizontal' ? 'Afficher en grille' : 'Afficher en liste'}
+                  aria-label={viewMode === 'horizontal' ? 'Afficher en grille' : 'Afficher en liste'}
+                  className="hide-desktop"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 40,
+                    height: 40,
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    backgroundColor: '#fff',
+                    color: '#6e6e73',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  {viewMode === 'horizontal' ? <LayoutGrid size={18} /> : <List size={18} />}
+                </button>
+
                 {/* Sort — menu déroulant à droite (mobile uniquement ; desktop : tri à côté de la barre de recherche) */}
                 <div ref={sortDropdownRefMobile} className="hide-desktop" style={{ position: 'relative' }}>
                   <button
@@ -2321,28 +2695,145 @@ function CatalogueContent() {
             </div>
 
             {/* Results — marginTop 24 pour même espace qu'entre "Plus récents" et la ligne au-dessus */}
-            {loading ? (
-              <div
-                className="catalogue-results"
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: 20,
-                }}
-              >
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i}>
-                    <div style={{ aspectRatio: '3/4', backgroundColor: '#f0f0f0', marginBottom: 12 }} />
-                    <div style={{ height: 12, backgroundColor: '#f0f0f0', width: '60%', marginBottom: 8 }} />
-                    <div style={{ height: 14, backgroundColor: '#f0f0f0', width: '80%', marginBottom: 6 }} />
-                    <div style={{ height: 14, backgroundColor: '#f0f0f0', width: '40%' }} />
+            {(() => {
+              if (loading) {
+                return (
+                  <div
+                    className="catalogue-results"
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                      gap: 20,
+                    }}
+                  >
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i}>
+                        <div style={{ aspectRatio: '3/4', backgroundColor: '#f0f0f0', marginBottom: 12 }} />
+                        <div style={{ height: 12, backgroundColor: '#f0f0f0', width: '60%', marginBottom: 8 }} />
+                        <div style={{ height: 14, backgroundColor: '#f0f0f0', width: '80%', marginBottom: 6 }} />
+                        <div style={{ height: 14, backgroundColor: '#f0f0f0', width: '40%' }} />
+                      </div>
+                    ))}
                   </div>
+                );
+              }
+              if (listings.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+                    <p style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Aucun résultat</p>
+                    <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 24 }}>
+                      Essayez de modifier vos critères ou réinitialisez les filtres.
+                    </p>
+                    <button
+                      onClick={handleReset}
+                      style={{
+                        padding: '14px 28px',
+                        backgroundColor: '#1d1d1f',
+                        color: '#fff',
+                        fontSize: 15,
+                        fontWeight: 500,
+                        border: 'none',
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  </div>
+                );
+              }
+              if (viewMode === 'grid') {
+                return (
+              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, minWidth: 0 }}>
+                {listings.map((listing) => (
+                  <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+                    <article
+                      style={{
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        backgroundColor: '#fff',
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        border: '1px solid #e8e6e3',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        minWidth: 0,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => handleFavoriteClick(e, listing.id)}
+                        disabled={!!loadingFavoriteId}
+                        aria-label={favoritedListingIds[listing.id] ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          zIndex: 1,
+                          width: 32,
+                          height: 32,
+                          borderRadius: '50%',
+                          backgroundColor: 'rgba(255,255,255,0.95)',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: user ? 'pointer' : 'default',
+                          padding: 0,
+                        }}
+                      >
+                        <Heart size={16} color={favoritedListingIds[listing.id] ? '#1d1d1f' : '#6e6e73'} fill={favoritedListingIds[listing.id] ? '#1d1d1f' : 'none'} strokeWidth={2} />
+                      </button>
+                      <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f7', overflow: 'hidden' }}>
+                        {listing.photos[0] ? (
+                          <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>Photo</div>
+                        )}
+                      </div>
+                      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                        <h3 title={listing.title} style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          {listing.title}
+                        </h3>
+                        <ListingCaracteristiques listing={listing} className="catalogue-listing-caracteristiques" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <p style={{ fontSize: 18, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.3 }}>
+                            {formatPrice(listing.price)}
+                          </p>
+                          {(() => {
+                            const deal = dealByListingId[listing.id] ?? getDealDefault();
+                            return (
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '2px 5px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 9, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
+                                <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Euro size={6} color="#fff" strokeWidth={2.5} />
+                                </span>
+                                {deal.label}
+                              </span>
+                            );
+                          })()}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                          <p title={listing.sellerName} style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
+                            {listing.sellerName}
+                          </p>
+                          {listing.sellerPostcode && (
+                            <span style={{ fontSize: 12, color: '#6e6e73', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
+                              <MapPin size={12} /> {listing.sellerPostcode}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
                 ))}
               </div>
-            ) : listings.length > 0 ? (
-              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                );
+              }
+              return (
+              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                 {listings.map((listing) => (
-                  <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                     <article
                 style={{
                         position: 'relative',
@@ -2354,6 +2845,7 @@ function CatalogueContent() {
                         border: '1px solid #e8e6e3',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                         minHeight: 56,
+                        minWidth: 0,
                       }}
                     >
                       <button
@@ -2415,18 +2907,21 @@ function CatalogueContent() {
                               display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
-                          padding: '10px 10px 10px 14px',
+                          padding: '10px 48px 10px 14px',
                           minWidth: 0,
+                          overflow: 'hidden',
                         }}
                       >
-                        <div style={{ paddingBottom: 6 }}>
+                        <div style={{ paddingBottom: 6, minWidth: 0, overflow: 'hidden' }}>
                           <h3
+                            title={listing.title}
                         style={{
                               fontSize: 22,
                           fontWeight: 600,
                               color: '#1d1d1f',
                               margin: 0,
                               marginBottom: 5,
+                              minWidth: 0,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -2435,40 +2930,7 @@ function CatalogueContent() {
                           >
                             {listing.title}
                           </h3>
-                          {(listing.category || listing.year != null || listing.condition || listing.color || listing.material) && (
-                            <div className="catalogue-listing-caracteristiques" style={{ display: 'flex', flexWrap: 'wrap', gap: '11px 15px', marginBottom: 6, fontSize: 13, color: '#6e6e73', lineHeight: 1.35 }}>
-                              {listing.category && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                  <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                  {CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category}
-                                </span>
-                              )}
-                              {listing.year != null && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                  <Calendar size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                  {listing.year}
-                                </span>
-                              )}
-                              {listing.condition && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                  <CircleCheck size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                  {CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition}
-                                </span>
-                              )}
-                              {listing.color && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                  <Palette size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                  {COLORS.find((c) => c.value === listing.color)?.label ?? listing.color}
-                                </span>
-                              )}
-                              {listing.material && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                  <Layers size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                  {MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material}
-                                </span>
-                              )}
-                            </div>
-                          )}
+                          <ListingCaracteristiques listing={listing} className="catalogue-listing-caracteristiques" />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                             <p className="catalogue-listing-prix" style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
                               {formatPrice(listing.price)}
@@ -2503,7 +2965,7 @@ function CatalogueContent() {
                           </div>
                         </div>
                         <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
-                          <p className="catalogue-listing-vendeur-nom" style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {listing.sellerName}
                           </p>
                           {listing.sellerPostcode && (
@@ -2517,29 +2979,8 @@ function CatalogueContent() {
                   </Link>
                 ))}
               </div>
-            ) : (
-              <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-                <p style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Aucun résultat</p>
-                <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 24 }}>
-                  Essayez de modifier vos critères ou réinitialisez les filtres.
-                </p>
-                <button
-                  onClick={handleReset}
-                  style={{
-                    padding: '14px 28px',
-                    backgroundColor: '#1d1d1f',
-                    color: '#fff',
-                    fontSize: 15,
-                    fontWeight: 500,
-                    border: 'none',
-                    borderRadius: 12,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Réinitialiser les filtres
-                </button>
-              </div>
-            )}
+              );
+            })()}
           </main>
         </div>
       </div>
@@ -2590,6 +3031,23 @@ function CatalogueContent() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal : connectez-vous pour ajouter aux favoris */}
+      {showAuthModalFavoris && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 205, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowAuthModalFavoris(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 380, backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 8, color: '#0a0a0a', textAlign: 'center' }}>Connectez-vous</h2>
+            <p style={{ fontSize: 14, color: '#666', marginBottom: 24, textAlign: 'center' }}>Connectez-vous pour ajouter des annonces à vos favoris.</p>
+            <Link href={`/connexion${redirectUrl}`} onClick={() => setShowAuthModalFavoris(false)} style={{ display: 'block', width: '100%', height: 50, border: '1.5px solid #d2d2d7', color: '#1d1d1f', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', marginBottom: 12, borderRadius: 980 }}>
+              J&apos;ai déjà un compte
+            </Link>
+            <Link href={`/inscription${redirectUrl}`} onClick={() => setShowAuthModalFavoris(false)} style={{ display: 'block', width: '100%', height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, textAlign: 'center', lineHeight: '50px', borderRadius: 980 }}>
+              Créer un compte
+            </Link>
           </div>
         </div>
       )}

@@ -36,6 +36,9 @@ export interface SearchFilters {
   material?: string; // déprécié, préférer materials
   materials?: string[];
 
+  /** Taille (vêtements: XS, S, M, …) / Pointure (chaussures: 34-48) */
+  sizes?: string[];
+
   // Historique
   firstHand?: boolean;
   hasCertificate?: boolean;

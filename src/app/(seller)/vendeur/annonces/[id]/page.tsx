@@ -13,7 +13,7 @@ import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, COLORS, COLORS_BY_CATEGORY, CONDITIONS, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -81,6 +81,7 @@ export default function EditListingPage() {
   const conditionListRef = useRef<HTMLDivElement>(null);
   const materialListRef = useRef<HTMLDivElement>(null);
   const colorListRef = useRef<HTMLDivElement>(null);
+  const sizeListRef = useRef<HTMLDivElement>(null);
   const [condition, setCondition] = useState('');
   const [material, setMaterial] = useState('');
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
@@ -90,6 +91,9 @@ export default function EditListingPage() {
   const [colorSearchQuery, setColorSearchQuery] = useState('');
   const [colorOpen, setColorOpen] = useState(false);
   const [customColor, setCustomColor] = useState('');
+  const [size, setSize] = useState('');
+  const [sizeSearchQuery, setSizeSearchQuery] = useState('');
+  const [sizeOpen, setSizeOpen] = useState(false);
   const [description, setDescription] = useState('');
   const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [heightCm, setHeightCm] = useState('');
@@ -137,12 +141,16 @@ export default function EditListingPage() {
     const set = new Set<string>();
     if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
     if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
+    if (category === 'sacs') {
+      set.add('Sac');
+      set.add('Pochette');
+    }
     const list = [...set].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
     if (model && !list.includes(model)) list.unshift(model);
     return list;
   })();
-  const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS) : [];
-  const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS) : [];
+  const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS).filter((o) => o.value !== 'other') : [];
+  const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS).filter((o) => o.value !== 'other') : [];
 
   const totalPhotosCount = existingPhotos.length + newPhotos.length;
   const maxPhotos = 9;
@@ -225,6 +233,8 @@ export default function EditListingPage() {
           setCustomModel(data.model || '');
         }
         setCondition(data.condition || '');
+        setSize(data.size || '');
+        setSizeSearchQuery(data.size || '');
         const matOpts = data.category ? (MATIERES_BY_CATEGORY[data.category] ?? MATERIALS) : [];
         const matValues = matOpts.map((o: { value: string }) => o.value);
         if (data.material && matValues.includes(data.material)) {
@@ -232,9 +242,9 @@ export default function EditListingPage() {
           setMaterialSearchQuery(matOpts.find((o: { value: string; label: string }) => o.value === data.material)?.label ?? data.material);
           setCustomMaterial('');
         } else if (data.material) {
-          setMaterial('other');
-          setMaterialSearchQuery('Autre');
-          setCustomMaterial(data.material);
+          setMaterial('');
+          setMaterialSearchQuery(data.material);
+          setCustomMaterial('');
         } else {
           setMaterial('');
           setMaterialSearchQuery('');
@@ -247,9 +257,9 @@ export default function EditListingPage() {
           setColorSearchQuery(colOpts.find((o: { value: string; label: string }) => o.value === data.color)?.label ?? data.color);
           setCustomColor('');
         } else if (data.color) {
-          setColor('other');
-          setColorSearchQuery('Autre');
-          setCustomColor(data.color);
+          setColor('');
+          setColorSearchQuery(data.color);
+          setCustomColor('');
         } else {
           setColor('');
           setColorSearchQuery('');
@@ -351,8 +361,9 @@ export default function EditListingPage() {
       return false;
     }
     if (modelOptions.length > 0) {
-      if (!model) {
-        setError('Sélectionner ou préciser le modèle');
+      const modelOrTyped = model || modeleSearchQuery.trim();
+      if (!modelOrTyped) {
+        setError('Sélectionner ou saisir le modèle');
         return false;
       }
     } else if (brandForModels && !customModel.trim()) {
@@ -412,8 +423,9 @@ export default function EditListingPage() {
       return;
     }
     if (modelOptions.length > 0) {
-      if (!model) {
-        setError('Sélectionner ou préciser le modèle');
+      const modelOrTyped = model || modeleSearchQuery.trim();
+      if (!modelOrTyped) {
+        setError('Sélectionner ou saisir le modèle');
         return;
       }
     } else if (brandForModels && !customModel.trim()) {
@@ -446,8 +458,10 @@ export default function EditListingPage() {
       }
 
       const categoryLabel = category === 'autre' ? customCategory.trim() : (CATEGORIES.find((c) => c.value === category)?.label || category);
-      const brandToSave = (brand.trim() || marqueSearchQuery.trim());
-      const modelToSave = modelOptions.length > 0 ? (model || null) : (customModel.trim() || null);
+      const brandToSave = (brand.trim() || marqueSearchQuery.trim()).trim();
+      const modelToSave = modelOptions.length > 0 ? (model || modeleSearchQuery.trim() || null) : (customModel.trim() || null);
+      const materialToSave = (material || materialSearchQuery.trim() || null) || null;
+      const colorToSave = (color || colorSearchQuery.trim() || null) || null;
       const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${categoryLabel}`;
 
       await updateListing(listingId, {
@@ -461,12 +475,13 @@ export default function EditListingPage() {
         brand: brandToSave || null,
         model: modelToSave || null,
         condition: condition || null,
-        material: material === 'other' ? customMaterial.trim() || null : material || null,
-        color: color === 'other' ? customColor.trim() || null : color || null,
+        material: materialToSave,
+        color: colorToSave,
         heightCm: heightCm ? parseFloat(heightCm.replace(',', '.')) : null,
         widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
+        size: (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
       });
 
       if (isActive) {
@@ -851,6 +866,75 @@ setMaterialSearchQuery('');
                 <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="Précisez le modèle" style={inputStyle} />
               )}
             </div>
+            {(category === 'chaussures' || category === 'vetements') && (
+              <div style={{ marginBottom: 18, position: 'relative' }}>
+                <label style={labelStyle}>{category === 'chaussures' ? 'Pointure' : 'Taille'}</label>
+                <input
+                  type="text"
+                  value={sizeSearchQuery}
+                  onChange={(e) => {
+                    setSizeSearchQuery(e.target.value);
+                    if (size && e.target.value !== size) setSize('');
+                    setSizeOpen(true);
+                  }}
+                  onFocus={() => setSizeOpen(true)}
+                  onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
+                  placeholder={category === 'chaussures' ? 'Rechercher ou préciser la pointure…' : 'Rechercher ou préciser la taille…'}
+                  style={inputStyle}
+                />
+                {sizeOpen && (() => {
+                  const options = category === 'chaussures' ? getShoeSizesForGenre(genre) : [...CLOTHING_SIZES];
+                  const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
+                  if (filtered.length === 0) return null;
+                  return (
+                    <div
+                      ref={sizeListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {filtered.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSize(opt);
+                            setSizeSearchQuery(opt);
+                            setSizeOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '6px 12px',
+                            textAlign: 'left',
+                            fontSize: 15,
+                            color: '#1d1d1f',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>État <span style={{ color: '#1d1d1f' }}>*</span></label>
               <button
@@ -930,7 +1014,7 @@ setMaterialSearchQuery('');
                     }}
                     onFocus={() => setMaterialOpen(true)}
                     onBlur={() => setTimeout(() => setMaterialOpen(false), 200)}
-                    placeholder="Indiquer ou rechercher une matière..."
+                    placeholder="Rechercher ou préciser la matière…"
                     style={inputStyle}
                   />
                   {materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
@@ -962,7 +1046,6 @@ setMaterialSearchQuery('');
                             onClick={() => {
                               setMaterial(opt.value);
                               setMaterialSearchQuery(opt.label);
-                              if (opt.value !== 'other') setCustomMaterial('');
                               setMaterialOpen(false);
                             }}
                             style={{
@@ -993,12 +1076,6 @@ setMaterialSearchQuery('');
                 />
               )}
             </div>
-            {material === 'other' && (
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Matière personnalisée</label>
-                <input type="text" value={customMaterial} onChange={(e) => setCustomMaterial(e.target.value)} placeholder="Indiquez la matière" style={inputStyle} />
-              </div>
-            )}
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Couleur</label>
               {category ? (
@@ -1013,7 +1090,7 @@ setMaterialSearchQuery('');
                     }}
                     onFocus={() => setColorOpen(true)}
                     onBlur={() => setTimeout(() => setColorOpen(false), 200)}
-                    placeholder="Indiquer ou rechercher une couleur..."
+                    placeholder="Rechercher ou préciser la couleur…"
                     style={inputStyle}
                   />
                   {colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
@@ -1045,7 +1122,6 @@ setMaterialSearchQuery('');
                             onClick={() => {
                               setColor(opt.value);
                               setColorSearchQuery(opt.label);
-                              if (opt.value !== 'other') setCustomColor('');
                               setColorOpen(false);
                             }}
                             style={{
@@ -1076,12 +1152,6 @@ setMaterialSearchQuery('');
                 />
               )}
             </div>
-            {color === 'other' && (
-              <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>Couleur personnalisée</label>
-                <input type="text" value={customColor} onChange={(e) => setCustomColor(e.target.value)} placeholder="Indiquez la couleur" style={inputStyle} />
-              </div>
-            )}
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button type="button" onClick={handleNext} style={{ width: '100%', height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 980, cursor: 'pointer' }}>
                     Continuer
@@ -1278,12 +1348,18 @@ setMaterialSearchQuery('');
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
               <div>
-                <label style={labelStyle}>Longueur (cm)</label>
-                <input type="text" inputMode="decimal" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} placeholder="Ex: 35" style={inputStyle} />
+                <label style={labelStyle}>Longueur</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" inputMode="decimal" value={widthCm} onChange={(e) => setWidthCm(e.target.value)} placeholder="Ex: 35" style={{ ...inputStyle, paddingRight: 44 }} />
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#86868b', fontSize: 15, lineHeight: 1 }}>cm</span>
+                </div>
               </div>
               <div>
-                <label style={labelStyle}>Hauteur (cm)</label>
-                <input type="text" inputMode="decimal" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} placeholder="Ex: 25" style={inputStyle} />
+                <label style={labelStyle}>Hauteur</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" inputMode="decimal" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} placeholder="Ex: 25" style={{ ...inputStyle, paddingRight: 44 }} />
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#86868b', fontSize: 15, lineHeight: 1 }}>cm</span>
+                </div>
               </div>
             </div>
             <div style={{ marginBottom: 18 }}>

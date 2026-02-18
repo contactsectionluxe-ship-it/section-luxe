@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Tag, Calendar, CircleCheck, Palette, Layers, MapPin, Euro, Search } from 'lucide-react';
+import { Heart, MapPin, Euro, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserFavorites } from '@/lib/supabase/favorites';
 import { removeFavorite } from '@/lib/supabase/favorites';
@@ -12,10 +12,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { getDealDefault } from '@/lib/deal';
 import { CATEGORIES } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
-
-const iconSize = 14;
-const iconColor = '#6e6e73';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(price);
@@ -143,11 +140,11 @@ export default function FavoritesPage() {
         )}
 
         {filteredListings.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, minWidth: 0 }}>
             {filteredListings.map((listing) => {
               const deal = getDealDefault();
               return (
-                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
                     style={{
                       position: 'relative',
@@ -159,6 +156,7 @@ export default function FavoritesPage() {
                       border: '1px solid #e8e6e3',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                       minHeight: 56,
+                      minWidth: 0,
                     }}
                   >
                     <button
@@ -220,18 +218,21 @@ export default function FavoritesPage() {
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
-                        padding: '10px 10px 10px 14px',
+                        padding: '10px 48px 10px 14px',
                         minWidth: 0,
+                        overflow: 'hidden',
                       }}
                     >
-                      <div style={{ paddingBottom: 6 }}>
+                      <div style={{ paddingBottom: 6, minWidth: 0, overflow: 'hidden' }}>
                         <h3
+                          title={listing.title}
                           style={{
                             fontSize: 22,
                             fontWeight: 600,
                             color: '#1d1d1f',
                             margin: 0,
                             marginBottom: 5,
+                            minWidth: 0,
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
@@ -240,53 +241,7 @@ export default function FavoritesPage() {
                         >
                           {listing.title}
                         </h3>
-                        {(listing.category || listing.year != null || listing.condition || listing.color || listing.material) && (
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: '11px 15px',
-                              marginBottom: 6,
-                              fontSize: 13,
-                              color: '#6e6e73',
-                              lineHeight: 1.35,
-                              maxHeight: '1.35em',
-                              overflow: 'hidden',
-                              minWidth: 0,
-                            }}
-                          >
-                            {listing.category && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                {CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category}
-                              </span>
-                            )}
-                            {listing.year != null && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <Calendar size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                {listing.year}
-                              </span>
-                            )}
-                            {listing.condition && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <CircleCheck size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                {CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition}
-                              </span>
-                            )}
-                            {listing.color && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <Palette size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                {COLORS.find((c) => c.value === listing.color)?.label ?? listing.color}
-                              </span>
-                            )}
-                            {listing.material && (
-                              <span style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                                <Layers size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-                                {MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material}
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        <ListingCaracteristiques listing={listing} />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                           <p style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
                             {formatPrice(listing.price)}
@@ -315,7 +270,7 @@ export default function FavoritesPage() {
                         </div>
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
-                        <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <p title={listing.sellerName} style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {listing.sellerName}
                   </p>
                         {listing.sellerPostcode && (

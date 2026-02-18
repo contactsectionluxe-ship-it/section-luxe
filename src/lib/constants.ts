@@ -117,6 +117,38 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
   ],
 };
 
+/** Tailles vêtements (dépôt annonce + filtre catalogue) */
+export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
+
+function shoeSizesInRange(min: number, max: number): string[] {
+  return Array.from(
+    { length: (max - min) * 2 + 1 },
+    (_, i) => {
+      const v = min + i * 0.5;
+      return Number.isInteger(v) ? String(v) : v.toFixed(1);
+    }
+  );
+}
+
+/** Pointures chaussures (dépôt annonce + filtre catalogue), 34 à 48 avec demi-pointures (.5) */
+export const SHOE_SIZES = shoeSizesInRange(34, 48);
+
+/** Pointures femme (dépôt annonce), 34 à 44 */
+export const SHOE_SIZES_FEMME = shoeSizesInRange(34, 44);
+
+/** Pointures homme (dépôt annonce), 38 à 48 */
+export const SHOE_SIZES_HOMME = shoeSizesInRange(38, 48);
+
+/** Pointures proposées selon genre sélectionné (dépôt annonce) : femme 34–44, homme 38–48, les deux 34–48 */
+export function getShoeSizesForGenre(genre: ('homme' | 'femme')[]): string[] {
+  const hasFemme = genre.includes('femme');
+  const hasHomme = genre.includes('homme');
+  if (hasFemme && hasHomme) return SHOE_SIZES;
+  if (hasFemme) return SHOE_SIZES_FEMME;
+  if (hasHomme) return SHOE_SIZES_HOMME;
+  return [];
+}
+
 /** Années pour filtre catalogue (année min/max), de l'année en cours à 1920 */
 const currentYear = new Date().getFullYear();
 export const YEARS = Array.from({ length: currentYear - 1920 + 1 }, (_, i) => currentYear - i);
@@ -388,23 +420,23 @@ const _MODELS_BY_CATEGORY_BRAND_BASE: Record<string, Record<string, string[]>> =
     'Balenciaga': ['Triple S', 'Track', 'Speed', 'Defender', 'Strike', 'Baskets', 'Bottes', 'Autre'],
   },
   accessoires: {
-    'Hermès': ['Ceinture', 'Écharpe', 'Carré', 'Cravate', 'Porte-clés', 'Gants', 'Lunettes', 'Autre'],
-    'Louis Vuitton': ['Ceinture', 'Écharpe', 'Porte-monnaie', 'Porte-clés', 'Lunettes', 'Foulard', 'Autre'],
-    'Chanel': ['Ceinture', 'Lunettes', 'Écharpe', 'Gants', 'Foulard', 'Porte-monnaie', 'Autre'],
-    'Gucci': ['Ceinture', 'Écharpe', 'Lunettes', 'Porte-monnaie', 'Foulard', 'Cravate', 'Autre'],
-    'Prada': ['Ceinture', 'Lunettes', 'Porte-monnaie', 'Écharpe', 'Foulard', 'Porte-clés', 'Autre'],
-    'Dior': ['Ceinture', 'Lunettes', 'Écharpe', 'Porte-monnaie', 'Foulard', 'Cravate', 'Autre'],
-    'Saint Laurent': ['Ceinture', 'Lunettes', 'Porte-monnaie', 'Foulard', 'Cravate', 'Autre'],
-    'Cartier': ['Lunettes', 'Porte-clés', 'Ceinture', 'Écharpe', 'Autre'],
-    'Fendi': ['Ceinture', 'Lunettes', 'Écharpe', 'Foulard', 'Porte-monnaie', 'Autre'],
-    'Loewe': ['Ceinture', 'Porte-monnaie', 'Écharpe', 'Foulard', 'Porte-clés', 'Autre'],
-    'Bottega Veneta': ['Ceinture', 'Porte-monnaie', 'Porte-clés', 'Écharpe', 'Autre'],
-    'Burberry': ['Écharpe', 'Ceinture', 'Foulard', 'Lunettes', 'Porte-monnaie', 'Autre'],
-    'Valentino': ['Ceinture', 'Porte-monnaie', 'Lunettes', 'Écharpe', 'Autre'],
-    'Longchamp': ['Le Pliage', 'Roseau', 'Box-Trot', 'Écharpe', 'Porte-monnaie', 'Autre'],
-    'Salvatore Ferragamo': ['Ceinture', 'Porte-monnaie', 'Écharpe', 'Lunettes', 'Autre'],
-    'Chloé': ['Écharpe', 'Ceinture', 'Porte-monnaie', 'Foulard', 'Autre'],
-    'Givenchy': ['Écharpe', 'Ceinture', 'Lunettes', 'Porte-monnaie', 'Autre'],
+    'Hermès': ['Ceinture', 'Écharpe', 'Carré', 'Cravate', 'Porte-clés', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Porte-monnaie', 'Pochette', 'Gants', 'Lunettes', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Éventail', 'Autre'],
+    'Louis Vuitton': ['Ceinture', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Porte-clés', 'Pochette', 'Lunettes', 'Foulard', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Chanel': ['Ceinture', 'Lunettes', 'Écharpe', 'Gants', 'Foulard', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Gucci': ['Ceinture', 'Écharpe', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Cravate', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Prada': ['Ceinture', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Écharpe', 'Foulard', 'Porte-clés', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Dior': ['Ceinture', 'Lunettes', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Cravate', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Saint Laurent': ['Ceinture', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Cravate', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Cartier': ['Lunettes', 'Porte-clés', 'Porte-carte', 'Portefeuille', 'Ceinture', 'Écharpe', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Fendi': ['Ceinture', 'Lunettes', 'Écharpe', 'Foulard', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Loewe': ['Ceinture', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Écharpe', 'Foulard', 'Porte-clés', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Bottega Veneta': ['Ceinture', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Porte-clés', 'Écharpe', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Burberry': ['Écharpe', 'Ceinture', 'Foulard', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Valentino': ['Ceinture', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Lunettes', 'Écharpe', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Longchamp': ['Le Pliage', 'Roseau', 'Box-Trot', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Salvatore Ferragamo': ['Ceinture', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Écharpe', 'Lunettes', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Chloé': ['Écharpe', 'Ceinture', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Givenchy': ['Écharpe', 'Ceinture', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
   },
   autre: {
     'Hermès': ['Birkin', 'Kelly', 'Sac', 'Montre', 'Bijou', 'Vêtement', 'Accessoire', 'Autre'],

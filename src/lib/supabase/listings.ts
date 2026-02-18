@@ -37,6 +37,7 @@ function rowToListing(row: any): Listing {
     widthCm: row.width_cm != null ? Number(row.width_cm) : null,
     year: row.year ?? null,
     packaging: row.packaging && Array.isArray(row.packaging) ? row.packaging : null,
+    size: row.size ?? null,
     phoneRevealsCount: row.phone_reveals_count != null ? Number(row.phone_reveals_count) : 0,
   };
 }
@@ -81,6 +82,7 @@ export async function createListing(
   if (data.widthCm != null) insertData.width_cm = data.widthCm;
   if (data.year != null) insertData.year = data.year;
   if (data.packaging != null && data.packaging.length) insertData.packaging = data.packaging;
+  if (data.size != null) insertData.size = data.size;
   if (data.genre != null && Array.isArray(data.genre) && data.genre.length > 0) insertData.genre = data.genre;
 
   const { data: listing, error } = await client
@@ -117,6 +119,7 @@ export async function updateListing(
   if (data.widthCm !== undefined) updateData.width_cm = data.widthCm;
   if (data.year !== undefined) updateData.year = data.year;
   if (data.packaging !== undefined) updateData.packaging = data.packaging;
+  if (data.size !== undefined) updateData.size = data.size;
   if (data.genre !== undefined) updateData.genre = (Array.isArray(data.genre) && data.genre.length > 0) ? data.genre : null;
 
   const { error } = await client
@@ -169,6 +172,7 @@ export async function getListings(options?: {
   conditions?: string[];
   sellerId?: string;
   year?: number | null;
+  sizes?: string[];
   limitCount?: number;
   sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
 }): Promise<Listing[]> {
@@ -189,6 +193,7 @@ export async function getListings(options?: {
     conditions,
     sellerId,
     year,
+    sizes,
     limitCount = 50,
     sortBy = 'newest',
   } = options || {};
@@ -235,6 +240,10 @@ export async function getListings(options?: {
 
   if (year != null) {
     query = query.eq('year', year);
+  }
+
+  if (sizes?.length) {
+    query = query.in('size', sizes);
   }
 
   // Apply sorting

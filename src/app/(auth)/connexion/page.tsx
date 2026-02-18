@@ -67,7 +67,7 @@ function LoginForm() {
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="votre@email.com" required style={inputStyle} />
             </div>
 
-            <div style={{ marginBottom: 28 }}>
+            <div style={{ marginBottom: 8 }}>
               <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Mot de passe</label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -105,6 +105,9 @@ function LoginForm() {
                 </button>
               </div>
             </div>
+            <div style={{ marginBottom: 28, textAlign: 'right' }}>
+              <Link href={redirect ? `/mot-de-passe-oublie?redirect=${encodeURIComponent(redirect)}` : '/mot-de-passe-oublie'} style={{ fontSize: 13, color: '#1d1d1f', fontWeight: 500 }}>Mot de passe oublié ?</Link>
+            </div>
 
             <button
               type="submit"
@@ -125,13 +128,36 @@ function LoginForm() {
               {loading ? 'Connexion...' : 'Connexion'}
             </button>
           </form>
+
+          <Link
+            href={redirect ? `/inscription?redirect=${encodeURIComponent(redirect)}` : '/inscription'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '100%',
+              height: 50,
+              marginTop: 12,
+              backgroundColor: '#fff',
+              color: '#1d1d1f',
+              fontSize: 15,
+              fontWeight: 500,
+              border: '1.5px solid #d2d2d7',
+              borderRadius: 980,
+              transition: 'background-color 0.2s, color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#f5f5f7';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#fff';
+            }}
+          >
+            Créer un compte
+          </Link>
         </div>
 
         <div style={{ marginTop: 28, textAlign: 'center' }}>
-          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 12 }}>
-            Pas encore de compte ?{' '}
-            <Link href={redirect ? `/inscription?redirect=${encodeURIComponent(redirect)}` : '/inscription'} style={{ color: '#0066cc', fontWeight: 500 }}>Créer un compte</Link>
-          </p>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Vous êtes un professionnel ?{' '}
             <Link href="/inscription-vendeur" style={{ color: '#0066cc', fontWeight: 500 }}>Devenir vendeur</Link>

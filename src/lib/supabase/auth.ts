@@ -167,6 +167,23 @@ export async function signOut(): Promise<void> {
   const client = checkSupabase();
   const { error } = await client.auth.signOut();
   if (error) throw error;
+  if (typeof window !== 'undefined') {
+    window.location.reload();
+  }
+}
+
+/** Envoie un email de réinitialisation de mot de passe. redirectTo doit être une URL autorisée dans Supabase (Auth → URL Configuration). */
+export async function requestPasswordReset(email: string, redirectTo: string): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+  if (error) throw error;
+}
+
+/** Met à jour le mot de passe de l'utilisateur (à appeler après un flux recovery, session en type recovery). */
+export async function updatePassword(newPassword: string): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client.auth.updateUser({ password: newPassword });
+  if (error) throw error;
 }
 
 // Get user data
