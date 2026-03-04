@@ -8,6 +8,11 @@ function checkSupabase() {
   return supabase;
 }
 
+/** Échappe % et _ pour usage dans un pattern ILIKE (ex. "Sandales" → matche "Sandales Mules"). */
+function escapeIlike(s: string): string {
+  return (s || '').replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
 function rowToListing(row: any): Listing {
   return {
     id: row.id,
@@ -216,7 +221,13 @@ export async function getListings(options?: {
 
   const modelList = models?.length ? models : (model ? [model] : undefined);
   if (modelList?.length) {
-    query = query.in('model', modelList);
+    // Match partiel : "Sandales" affiche aussi "Sandales Mules", "T-Shirt" aussi "Tshirt" (si variantes passées)
+    const orConditions = modelList
+      .filter((m) => m != null && String(m).trim() !== '')
+      .map((m) => `model.ilike.%${escapeIlike(String(m).trim())}%`);
+    if (orConditions.length > 0) {
+      query = query.or(orConditions.join(','));
+    }
   }
 
   const colorList = colors?.length ? colors : (color ? [color] : undefined);

@@ -1,22 +1,37 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MapPin, Euro, Search } from 'lucide-react';
+import { Heart, MapPin, Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserFavorites } from '@/lib/supabase/favorites';
 import { removeFavorite } from '@/lib/supabase/favorites';
 import { getListing } from '@/lib/supabase/listings';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
-import { getDealDefault } from '@/lib/deal';
 import { CATEGORIES } from '@/lib/utils';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 
 function formatPrice(price: number): string {
-  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(price);
+  return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
 }
+
+/** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
+function normalizeForSearch(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[-'\s]+/g, '');
+}
+
+const FAVORIS_SORT_OPTIONS = [
+  { value: 'recent' as const, label: 'Plus récents' },
+  { value: 'oldest' as const, label: 'Plus anciens' },
+  { value: 'price_asc' as const, label: 'Prix croissant' },
+  { value: 'price_desc' as const, label: 'Prix décroissant' },
+];
 
 export default function FavoritesPage() {
   const router = useRouter();
@@ -25,6 +40,10 @@ export default function FavoritesPage() {
   const [loading, setLoading] = useState(true);
   const [loadingFavoriteId, setLoadingFavoriteId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  type SortOption = 'recent' | 'oldest' | 'price_asc' | 'price_desc';
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -69,6 +88,17 @@ export default function FavoritesPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [sortDropdownOpen]);
+
   async function handleRemoveFavorite(e: React.MouseEvent, listingId: string) {
     e.preventDefault();
     e.stopPropagation();
@@ -94,21 +124,35 @@ export default function FavoritesPage() {
 
   if (!isAuthenticated) return null;
 
-  const q = searchQuery.trim().toLowerCase();
-  const filteredListings = q
+  const q = normalizeForSearch(searchQuery.trim());
+  const filteredBySearch = q
     ? listings.filter(
         (l) =>
-          l.title.toLowerCase().includes(q) ||
-          l.sellerName.toLowerCase().includes(q) ||
-          (l.brand && l.brand.toLowerCase().includes(q)) ||
-          (l.category && CATEGORIES.find((c) => c.value === l.category)?.label.toLowerCase().includes(q))
+          normalizeForSearch(l.title).includes(q) ||
+          normalizeForSearch(l.sellerName).includes(q) ||
+          (l.brand && normalizeForSearch(l.brand).includes(q)) ||
+          (l.category && normalizeForSearch(CATEGORIES.find((c) => c.value === l.category)?.label ?? '').includes(q))
       )
     : listings;
+
+  const filteredListings = [...filteredBySearch].sort((a, b) => {
+    switch (sortBy) {
+      case 'oldest':
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      case 'price_asc':
+        return a.price - b.price;
+      case 'price_desc':
+        return b.price - a.price;
+      case 'recent':
+      default:
+        return b.createdAt.getTime() - a.createdAt.getTime();
+    }
+  });
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
             Mes favoris
           </h1>
@@ -118,31 +162,105 @@ export default function FavoritesPage() {
         </div>
 
         {listings.length > 0 && (
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher dans mes favoris..."
-              autoComplete="off"
-              style={{
-                width: '100%',
-                padding: '12px 16px 12px 44px',
-                fontSize: 15,
-                border: '1px solid #d2d2d7',
-                borderRadius: 10,
-                backgroundColor: '#fff',
-                outline: 'none',
-              }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher dans mes favoris..."
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  height: 48,
+                  padding: '0 16px 0 44px',
+                  fontSize: 14,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setSortDropdownOpen((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 48,
+                  padding: '0 14px 0 16px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  minWidth: 160,
+                }}
+              >
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  {FAVORIS_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Trier'}
+                </span>
+                <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+              </button>
+              {sortDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {FAVORIS_SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(opt.value);
+                        setSortDropdownOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: sortBy === opt.value ? '#f5f5f7' : 'transparent',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        outline: 'none',
+                        boxShadow: 'none',
+                        fontWeight: sortBy === opt.value ? 600 : 400,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
         {filteredListings.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, minWidth: 0 }}>
             {filteredListings.map((listing) => {
-              const deal = getDealDefault();
               return (
                 <Link key={listing.id} href={`/produit/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
@@ -246,27 +364,6 @@ export default function FavoritesPage() {
                           <p style={{ fontSize: 24, fontWeight: 700, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
                             {formatPrice(listing.price)}
                           </p>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 3,
-                              padding: '3px 6px',
-                              marginLeft: 4,
-                              backgroundColor: '#fff',
-                              border: `1px solid ${deal.color}`,
-                              borderRadius: 4,
-                              fontSize: 10,
-                              fontWeight: 500,
-                              color: deal.color,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Euro size={8} color="#fff" strokeWidth={2.5} />
-                            </span>
-                            {deal.label}
-                          </span>
                         </div>
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
@@ -297,7 +394,7 @@ export default function FavoritesPage() {
               Explorez le catalogue et sauvegardez vos articles préférés
             </p>
             <Link href="/catalogue" style={{ display: 'inline-block', padding: '12px 24px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-              Voir catalogue
+              Accéder au catalogue
             </Link>
           </div>
         )}

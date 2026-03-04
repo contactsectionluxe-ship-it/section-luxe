@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useParams, usePathname, useRouter } from 'next/navigation';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,7 +12,7 @@ import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
-import { getDealLevel, getDealDefault, getBarPositionFromDeal } from '@/lib/deal';
+import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
 
 /** Affiche le téléphone au format 00 00 00 00 00 */
 function formatPhoneDisplay(phone: string): string {
@@ -24,7 +24,15 @@ export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const listingId = params.id as string;
+  /** URL de retour au catalogue avec filtres (si on vient du catalogue). */
+  const returnToCatalogue = (() => {
+    const returnTo = searchParams.get('returnTo');
+    if (!returnTo || typeof returnTo !== 'string') return '/catalogue';
+    const path = returnTo.startsWith('/') ? returnTo : `/${returnTo}`;
+    return path.startsWith('/catalogue') ? path : '/catalogue';
+  })();
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
   const { user, isAuthenticated } = useAuth();
 
@@ -55,6 +63,7 @@ export default function ProductPage() {
   const [sellerListingsCount, setSellerListingsCount] = useState(0);
   const [showMoreAbout, setShowMoreAbout] = useState(false);
   const [showPrixEnSavoirPlus, setShowPrixEnSavoirPlus] = useState(false);
+  const [showPrixPopup, setShowPrixPopup] = useState(false);
   const [descriptionExpanded, setDescriptionExpanded] = useState(false);
   const [descriptionOverflows, setDescriptionOverflows] = useState(false);
   const descriptionRefDesktop = useRef<HTMLDivElement>(null);
@@ -63,6 +72,17 @@ export default function ProductPage() {
   const sellerDescriptionRef = useRef<HTMLParagraphElement>(null);
   /** Comparaison de prix : moyenne / min / max des annonces même catégorie et même année (hors annonce actuelle) */
   const [priceStats, setPriceStats] = useState<{ average: number; min: number; max: number; count: number } | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showSecurityModal, setShowSecurityModal] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportName, setReportName] = useState('');
+  const [reportEmail, setReportEmail] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [reportCertify, setReportCertify] = useState(false);
+  const [reportError, setReportError] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportStep, setReportStep] = useState(1);
+  const [reportRgpdExpanded, setReportRgpdExpanded] = useState(false);
 
   /** Afficher « Voir plus » seulement si la description a strictement plus de 5 lignes. Plusieurs vérifications (dont délais) pour que ça marche sur toutes les annonces quel que soit le chargement (polices, viewport). */
   useLayoutEffect(() => {
@@ -98,6 +118,79 @@ export default function ProductPage() {
       document.removeEventListener('visibilitychange', onVisible);
     };
   }, [listing?.id, listing?.description, descriptionExpanded]);
+
+  // Préremplir le formulaire de signalement avec les infos utilisateur si connecté
+  useEffect(() => {
+    if (!user) return;
+    setReportName((prev) => prev || (user.displayName ?? '').trim());
+    setReportEmail((prev) => prev || (user.email ?? '').trim());
+  }, [user]);
+
+  const handleReportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setReportError('');
+
+    if (!reportReason) {
+      setReportError('Veuillez sélectionner un motif de signalement.');
+      return;
+    }
+    if (!reportName.trim() || !reportEmail.trim() || !reportDetails.trim()) {
+      setReportError('Veuillez renseigner votre nom, votre email et le détail du signalement.');
+      return;
+    }
+    if (!reportCertify) {
+      setReportError('Vous devez certifier que le signalement est effectué de bonne foi.');
+      return;
+    }
+
+    setReportSubmitting(true);
+    try {
+      const subject = `Signalement annonce ${listing?.id ?? ''} - ${reportReason}`;
+      const messageLines = [
+        `Signalement d'une annonce sur Section Luxe`,
+        '',
+        `Annonce ID : ${listing?.id ?? ''}`,
+        `Titre : ${listing?.title ?? ''}`,
+        '',
+        `Motif : ${reportReason}`,
+        '',
+        'Détails du signalement :',
+        reportDetails,
+        '',
+        `Déclarant : ${reportName.trim()} <${reportEmail.trim()}>`,
+        `Utilisateur connecté : ${user?.uid ?? 'non authentifié'}`,
+      ];
+      const message = messageLines.join('\n');
+
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: reportName.trim(),
+          email: reportEmail.trim(),
+          subject,
+          message,
+          report: true,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data.error as string) || 'Envoi impossible');
+      }
+
+      setShowReportModal(false);
+      setReportReason('');
+      setReportDetails('');
+      setReportCertify(false);
+      setReportError('');
+    } catch (err) {
+      console.error('Signalement annonce', err);
+      setReportError("L'envoi du signalement a échoué. Veuillez réessayer plus tard.");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
 
   /** Même règle pour la description vendeur (À propos) : « Voir plus » seulement si plus de 5 lignes. */
   useLayoutEffect(() => {
@@ -314,10 +407,6 @@ export default function ProductPage() {
       setContactFormSubmitting(false);
       setShowContactForm(false);
       setShowLegalMore(false);
-      const targetUrl = `/messages/${conversation.id}`;
-      requestAnimationFrame(() => {
-        router.push(targetUrl);
-      });
     } catch (err) {
       console.error('Error sending contact form:', err);
       setContactFormError('Une erreur est survenue. Réessayez.');
@@ -344,7 +433,7 @@ export default function ProductPage() {
       <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
-          href="/catalogue"
+          href={returnToCatalogue}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}
         >
           <ArrowLeft size={16} />
@@ -393,8 +482,8 @@ export default function ProductPage() {
                       </button>
                     </>
                   )}
-                </div>
-              </div>
+      </div>
+      </div>
 
               {/* Détails — reste de la ligne */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -419,38 +508,69 @@ export default function ProductPage() {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
-                  {(() => {
-                    const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                  {priceStats && (() => {
+                    const deal = getDealLevel(listing.price, priceStats.average);
                     return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowPrixPopup(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
                         <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Euro size={9} color="#fff" strokeWidth={2.5} />
                         </span>
                         {deal.label}
-                      </span>
+                      </button>
                     );
                   })()}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <button
-                    onClick={handleFavoriteClick}
-                    disabled={favoriteLoading}
-                    style={{
-                      width: 44,
-                      height: 44,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#fff',
-                      color: '#1d1d1f',
-                      border: '1.5px solid #d2d2d7',
-                      cursor: 'pointer',
-                    }}
-                    title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                  >
-                    <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
-                  </button>
+                  {likesCount > 0 ? (
+                    <button
+                      onClick={handleFavoriteClick}
+                      disabled={favoriteLoading}
+                      style={{
+                        height: 44,
+                        paddingLeft: 14,
+                        paddingRight: 14,
+                        borderRadius: 22,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 6,
+                        backgroundColor: '#fff',
+                        color: '#1d1d1f',
+                        border: '1.5px solid #d2d2d7',
+                        cursor: 'pointer',
+                        fontSize: 15,
+                        fontWeight: 500,
+                      }}
+                      title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      <span>{likesCount}</span>
+                      <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleFavoriteClick}
+                      disabled={favoriteLoading}
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#fff',
+                        color: '#1d1d1f',
+                        border: '1.5px solid #d2d2d7',
+                        cursor: 'pointer',
+                      }}
+                      title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
+                    </button>
+                  )}
                   <button
                     onClick={handleShare}
                     style={{
@@ -470,12 +590,6 @@ export default function ProductPage() {
                     <Share2 size={20} />
                   </button>
                 </div>
-              </div>
-              <div style={{ fontFamily: 'var(--font-inter), var(--font-sans)', display: 'flex', alignItems: 'center', gap: 16, fontSize: 15, color: '#888', marginBottom: 24 }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Heart size={16} /> {likesCount} likes
-                </span>
-                <span>Publié le {formatDate(listing.createdAt)}</span>
               </div>
 
               {seller && (
@@ -520,22 +634,15 @@ export default function ProductPage() {
                     </button>
                   </div>
                   {seller.address && (
-                    <div
-                      style={{ width: '100%', marginTop: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
+                    <button
+                      type="button"
+                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                      style={{ width: '100%', marginTop: 12, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                        style={{ padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
-                      >
-                        Voir la carte
-                      </button>
-                    </div>
+                      <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 16 }}>{seller.postcode}</span>
+                      <span style={{ fontSize: 16 }}>{seller.city}</span>
+                    </button>
                   )}
                 </div>
               )}
@@ -651,12 +758,13 @@ export default function ProductPage() {
                     {listing.size && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                          <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                          <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
@@ -666,6 +774,7 @@ export default function ProductPage() {
                         L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -703,20 +812,24 @@ export default function ProductPage() {
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
                 <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                   <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
-                  Prix
+                  Indicateur de marché
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
                   <span style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f' }}>{listing.price.toLocaleString('fr-FR')}</span>
                   <span style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', marginRight: 4 }}>€</span>
-                  {(() => {
-                    const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                  {priceStats && (() => {
+                    const deal = getDealLevel(listing.price, priceStats.average);
                     return (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
+                      <button
+                        type="button"
+                        onClick={() => setShowPrixPopup(true)}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
                         <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                           <Euro size={10} color="#fff" strokeWidth={2.5} />
                         </span>
                         {deal.label}
-                      </span>
+                      </button>
                     );
                   })()}
                 </div>
@@ -727,26 +840,28 @@ export default function ProductPage() {
                     <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
                     <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
                   </div>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: `${getBarPositionFromDeal(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()) * 100}%`,
-                      top: -4,
+                  {priceStats && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${getBarPositionFromDeal(getDealLevel(listing.price, priceStats.average)) * 100}%`,
+                        top: -4,
                         width: 0,
                         height: 0,
                         borderLeft: '5px solid transparent',
                         borderRight: '5px solid transparent',
                         borderTop: '6px solid #1d1d1f',
-                      transform: 'translateX(-50%)',
-                    }}
-                  />
+                        transform: 'translateX(-50%)',
+                      }}
+                    />
+                  )}
                 </div>
                 <p style={{ fontSize: 14, color: '#555', lineHeight: 1.5, margin: 0 }}>
-                  {(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()).description}
+                  {priceStats ? getDealLevel(listing.price, priceStats.average).description : 'Aucune comparaison disponible pour cette annonce.'}
                 </p>
                 {priceStats && (
                   <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
                   </p>
                 )}
                 <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -827,22 +942,15 @@ export default function ProductPage() {
                   Voir les annonces du vendeur ({sellerListingsCount})
                 </Link>
                 {(seller.address || seller.postcode || seller.city) && (
-                  <div
-                    style={{ width: '100%', marginTop: 0, padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
+                  <button
+                    type="button"
+                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                    style={{ width: '100%', marginTop: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <MapPin size={20} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                      style={{ padding: '8px 16px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      Voir la carte
-                    </button>
-                  </div>
+                    <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 16 }}>{seller.postcode}</span>
+                    <span style={{ fontSize: 16 }}>{seller.city}</span>
+                  </button>
                 )}
               </div>
             </div>
@@ -967,12 +1075,13 @@ export default function ProductPage() {
                     {listing.size && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                          <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
+                          <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
@@ -982,6 +1091,7 @@ export default function ProductPage() {
                         L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
                       </span>
                     </div>
+                    )}
                   </div>
                 </div>
                 </div>
@@ -1019,20 +1129,24 @@ export default function ProductPage() {
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
                   <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
                     <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
-                    Prix
+                    Indicateur de marché
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
                     <span style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f' }}>{listing.price.toLocaleString('fr-FR')}</span>
                     <span style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', marginRight: 2 }}>€</span>
-                    {(() => {
-                      const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                    {priceStats && (() => {
+                      const deal = getDealLevel(listing.price, priceStats.average);
                       return (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowPrixPopup(true)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
                           <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Euro size={9} color="#fff" strokeWidth={2.5} />
                           </span>
                           {deal.label}
-                        </span>
+                        </button>
                       );
                     })()}
                   </div>
@@ -1043,26 +1157,28 @@ export default function ProductPage() {
                       <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
                       <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
                     </div>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: `${getBarPositionFromDeal(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()) * 100}%`,
-                        top: -3,
-                        width: 0,
-                        height: 0,
-                        borderLeft: '4px solid transparent',
-                        borderRight: '4px solid transparent',
-                        borderTop: '5px solid #1d1d1f',
-                        transform: 'translateX(-50%)',
-                      }}
-                    />
+                    {priceStats && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `${getBarPositionFromDeal(getDealLevel(listing.price, priceStats.average)) * 100}%`,
+                          top: -3,
+                          width: 0,
+                          height: 0,
+                          borderLeft: '4px solid transparent',
+                          borderRight: '4px solid transparent',
+                          borderTop: '5px solid #1d1d1f',
+                          transform: 'translateX(-50%)',
+                        }}
+                      />
+                    )}
                   </div>
                   <p style={{ fontSize: 13, color: '#555', lineHeight: 1.5, margin: 0 }}>
-                    {(priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault()).description}
+                    {priceStats ? getDealLevel(listing.price, priceStats.average).description : 'Aucune comparaison disponible pour cette annonce.'}
                   </p>
                   {priceStats && (
                     <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaires (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
@@ -1099,37 +1215,68 @@ export default function ProductPage() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
-                {(() => {
-                  const deal = priceStats ? getDealLevel(listing.price, priceStats.average) : getDealDefault();
+                {priceStats && (() => {
+                  const deal = getDealLevel(listing.price, priceStats.average);
                   return (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowPrixPopup(true)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                    >
                       <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Euro size={8} color="#fff" strokeWidth={2.5} />
                       </span>
                       {deal.label}
-                    </span>
+                    </button>
                   );
                 })()}
               </div>
-              <button
-                onClick={handleFavoriteClick}
-                disabled={favoriteLoading}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fff',
-                  color: '#1d1d1f',
-                  border: '1.5px solid #d2d2d7',
-                  cursor: 'pointer',
-                }}
-                title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-              >
-                <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
-              </button>
+              {likesCount > 0 ? (
+                <button
+                  onClick={handleFavoriteClick}
+                  disabled={favoriteLoading}
+                  style={{
+                    height: 40,
+                    paddingLeft: 12,
+                    paddingRight: 12,
+                    borderRadius: 20,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 5,
+                    backgroundColor: '#fff',
+                    color: '#1d1d1f',
+                    border: '1.5px solid #d2d2d7',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                  title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  <span>{likesCount}</span>
+                  <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                </button>
+              ) : (
+                <button
+                  onClick={handleFavoriteClick}
+                  disabled={favoriteLoading}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fff',
+                    color: '#1d1d1f',
+                    border: '1.5px solid #d2d2d7',
+                    cursor: 'pointer',
+                  }}
+                  title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                >
+                  <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                </button>
+              )}
               <button
                 onClick={handleShare}
                 style={{
@@ -1148,10 +1295,6 @@ export default function ProductPage() {
               >
                 <Share2 size={18} />
               </button>
-            </div>
-            <div style={{ fontFamily: 'var(--font-inter), var(--font-sans)', display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: '#888', marginBottom: 20 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={14} /> {likesCount} likes</span>
-              <span>Publié le {formatDate(listing.createdAt)}</span>
             </div>
 
             {seller && (
@@ -1188,37 +1331,82 @@ export default function ProductPage() {
                   </button>
                 </div>
                 {seller.address && (
-                  <div
-                    style={{ width: '100%', marginTop: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')", backgroundSize: '115%', backgroundPosition: 'center', backgroundColor: '#f6f6f8', border: '1px solid #c8c8cc', borderRadius: 14 }}
+                  <button
+                    type="button"
+                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
+                    style={{ width: '100%', marginTop: 12, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.postcode}</span>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>{seller.city}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                      style={{ padding: '6px 12px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', flexShrink: 0 }}
-                    >
-                      Voir la carte
-                    </button>
-                  </div>
+                    <MapPin size={16} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 15 }}>{seller.postcode}</span>
+                    <span style={{ fontSize: 15 }}>{seller.city}</span>
+                  </button>
                 )}
               </div>
             )}
           </div>
 
+      </div>
+      </div>
+
+      {/* Boutons Signaler / Conseils de sécurité + infos annonce */}
+      <div style={{ maxWidth: 960, margin: 'calc(24px - 1cm) auto 40px', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => { setShowReportModal(true); setReportError(''); setReportStep(1); setReportRgpdExpanded(false); }}
+            style={{
+              padding: '10px 22px',
+              fontSize: 13,
+              fontWeight: 500,
+              borderRadius: 999,
+              border: '1px solid #d2d2d7',
+              backgroundColor: '#fff',
+              color: '#1d1d1f',
+              cursor: 'pointer',
+            }}
+          >
+            Signaler cette annonce
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSecurityModal(true)}
+            style={{
+              padding: '10px 22px',
+              fontSize: 13,
+              fontWeight: 500,
+              borderRadius: 999,
+              border: '1px solid #d2d2d7',
+              backgroundColor: '#fff',
+              color: '#1d1d1f',
+              cursor: 'pointer',
+            }}
+          >
+            Conseils de sécurité
+          </button>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: 12, color: '#86868b' }}>
+          <span>N° annonce {listing.listingNumber || listing.id}</span>
+          <span style={{ margin: '0 10px' }}>|</span>
+          <span>
+            Publiée il y a{' '}
+            {Math.max(1, Math.floor((Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24)))}{' '}
+            jour{Math.max(1, Math.floor((Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24))) > 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
-      {/* Popup Plan vendeur */}
+      {/* Popup Rendre visite au vendeur */}
       {showMapPopup && seller && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
           <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
             <div style={{ padding: 24 }}>
-              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, marginBottom: 16, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Plan vendeur</h2>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+                <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Rendre visite au vendeur</h2>
+                <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, top: -6, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+                  <X size={20} />
+                </button>
+              </div>
               <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
@@ -1265,10 +1453,11 @@ export default function ProductPage() {
       {showContactForm && listing && seller && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} />
-          <div style={{ position: 'relative', width: '100%', maxWidth: 640, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 28, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, paddingRight: 36 }}>
-              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Contacter le vendeur</h2>
-              <button type="button" onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: 24 }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+              <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Contacter le vendeur</h2>
+              <button type="button" onClick={() => { setShowContactForm(false); setContactFormError(''); setShowLegalMore(false); }} style={{ position: 'absolute', right: 0, top: -6, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
                 <X size={20} />
               </button>
             </div>
@@ -1325,9 +1514,518 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
                 {contactFormSubmitting ? 'Envoi...' : 'Envoyer'}
               </button>
             </form>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Popup Signalement d'annonce */}
+      {showReportModal && listing && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div
+            style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onClick={() => { setShowReportModal(false); setReportError(''); setReportStep(1); setReportRgpdExpanded(false); }}
+          />
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 560,
+              maxHeight: '90vh',
+              overflow: 'auto',
+              backgroundColor: '#fff',
+              borderRadius: 18,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: 24 }}>
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+              {reportStep === 2 && (
+                <button
+                  type="button"
+                  onClick={() => setReportStep(1)}
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    background: 'none',
+                    cursor: 'pointer',
+                    color: '#1d1d1f',
+                  }}
+                  aria-label="Revenir à l'étape 1"
+                >
+                  <ChevronLeft size={24} strokeWidth={2.5} />
+                </button>
+              )}
+              <h2
+                style={{
+                  flex: 1,
+                  minWidth: 0,
+                  fontFamily: 'var(--font-inter), var(--font-sans)',
+                  fontSize: 19,
+                  fontWeight: 600,
+                  margin: 0,
+                  color: '#0a0a0a',
+                  textAlign: 'center',
+                  paddingBottom: 16,
+                  borderBottom: '1px solid #e5e5e7',
+                }}
+              >
+                Signaler cette annonce
+              </h2>
+              <button
+                type="button"
+                onClick={() => { setShowReportModal(false); setReportError(''); setReportStep(1); setReportRgpdExpanded(false); }}
+                style={{
+                  position: 'absolute',
+                  right: 0,
+                  top: -6,
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: 'none',
+                  background: '#f5f5f7',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                }}
+                aria-label="Fermer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {reportError && (
+              <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{reportError}</p>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, padding: '0 36px' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: '#1d1d1f', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600 }}>1</div>
+              <div style={{ width: 56, height: 2, backgroundColor: reportStep >= 2 ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
+              <div style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: reportStep >= 2 ? '#1d1d1f' : '#d2d2d7', color: reportStep >= 2 ? '#fff' : '#86868b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600 }}>2</div>
+            </div>
+
+            <form onSubmit={handleReportSubmit}>
+              {reportStep === 1 ? (
+                <>
+                  {/* Motif du signalement */}
+                  <div style={{ marginBottom: 18 }}>
+                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>
+                      Pour quel motif souhaitez-vous signaler cette annonce ? *
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 14, color: '#1d1d1f' }}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="report-reason"
+                          value="Suspicion de fraude"
+                          checked={reportReason === 'Suspicion de fraude'}
+                          onChange={() => setReportReason('Suspicion de fraude')}
+                          style={{ marginTop: 3, width: 20, height: 20, flexShrink: 0, accentColor: '#1d1d1f' }}
+                        />
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <span style={{ fontSize: 14, fontWeight: 500 }}>Suspicion de fraude</span>
+                          <span style={{ fontSize: 13, color: '#86868b', fontWeight: 400 }}>L&apos;annonce semble présenter un risque ou un comportement trompeur.</span>
+                        </span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="report-reason"
+                          value="Informations inexactes"
+                          checked={reportReason === 'Informations inexactes'}
+                          onChange={() => setReportReason('Informations inexactes')}
+                          style={{ marginTop: 3, width: 20, height: 20, flexShrink: 0, accentColor: '#1d1d1f' }}
+                        />
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <span style={{ fontSize: 14, fontWeight: 500 }}>Informations inexactes</span>
+                          <span style={{ fontSize: 13, color: '#86868b', fontWeight: 400 }}>Des éléments du descriptif ou des caractéristiques semblent incorrects.</span>
+                        </span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                        <input
+                          type="radio"
+                          name="report-reason"
+                          value="Article indisponible"
+                          checked={reportReason === 'Article indisponible'}
+                          onChange={() => setReportReason('Article indisponible')}
+                          style={{ marginTop: 3, width: 20, height: 20, flexShrink: 0, accentColor: '#1d1d1f' }}
+                        />
+                        <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                          <span style={{ fontSize: 14, fontWeight: 500 }}>Article indisponible</span>
+                          <span style={{ fontSize: 13, color: '#86868b', fontWeight: 400 }}>Le produit semble vendu ou retiré mais reste affiché en ligne.</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!reportReason) {
+                        setReportError('Veuillez sélectionner un motif.');
+                        return;
+                      }
+                      setReportError('');
+                      setReportStep(2);
+                    }}
+                    style={{
+                      width: '100%',
+                      height: 48,
+                      backgroundColor: '#1d1d1f',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 10,
+                      fontSize: 15,
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Continuer
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Rappel du motif */}
+                  <div style={{ marginBottom: 18, padding: '10px 12px', backgroundColor: '#f5f5f7', borderRadius: 10, fontSize: 13, color: '#1d1d1f', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 600 }}>Motif : </span>{reportReason}
+                  </div>
+
+              {/* Informations du déclarant */}
+              <div style={{ marginBottom: 18 }}>
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>
+                  Informations du déclarant
+                </p>
+                <div style={{ display: 'flex', gap: 12, marginBottom: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 400, marginBottom: 4, color: '#1d1d1f' }}>
+                      Nom *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={reportName}
+                      onChange={(e) => setReportName(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: 42,
+                        padding: '0 12px',
+                        fontSize: 14,
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                      }}
+                      placeholder="Votre nom"
+                    />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 13, fontWeight: 400, marginBottom: 4, color: '#1d1d1f' }}>
+                      Email *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={reportEmail}
+                      onChange={(e) => setReportEmail(e.target.value)}
+                      style={{
+                        width: '100%',
+                        height: 42,
+                        padding: '0 12px',
+                        fontSize: 14,
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                      }}
+                      placeholder="email@exemple.fr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Détail du signalement */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 400, marginBottom: 6, color: '#1d1d1f' }}>
+                  Merci de préciser les éléments justifiant votre signalement *
+                </label>
+                <textarea
+                  required
+                  value={reportDetails}
+                  onChange={(e) => setReportDetails(e.target.value)}
+                  rows={4}
+                  style={{
+                    width: '100%',
+                    padding: 12,
+                    fontSize: 14,
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 10,
+                    resize: 'vertical',
+                  }}
+                  placeholder="Détaillez les éléments qui vous semblent problématiques..."
+                />
+              </div>
+
+              {/* Déclaration obligatoire */}
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 13, fontWeight: 400, color: '#1d1d1f', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={reportCertify}
+                    onChange={(e) => setReportCertify(e.target.checked)}
+                    style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0, accentColor: '#1d1d1f' }}
+                  />
+                  <span style={{ lineHeight: 1.5 }}>
+                    Je certifie que ce signalement est effectué de bonne foi et que les informations fournies sont exactes à ma connaissance.
+                  </span>
+                </label>
+              </div>
+
+              {/* Information RGPD */}
+              <div style={{ fontSize: 12, color: '#666', lineHeight: 1.6, marginBottom: 16, whiteSpace: 'pre-line' }}>
+                {reportRgpdExpanded ? (
+                  <>
+                    {`Les informations collectées via ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. Les champs obligatoires sont nécessaires pour permettre l'examen du signalement.
+
+Ces données sont utilisées pour :
+- analyser et traiter les signalements,
+- assurer la modération des contenus,
+- prévenir les fraudes,
+- améliorer la sécurité et la qualité des services.
+
+Conformément à la réglementation applicable, vous disposez de droits d'accès, de rectification, d'effacement, d'opposition, de limitation et de portabilité de vos données.
+Vous pouvez également introduire une réclamation auprès de l'autorité de contrôle compétente.`}
+                    {'\n\n'}
+                    Pour plus d&apos;informations, consultez notre{' '}
+                    <Link href="/politique-confidentialite" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>
+                      Politique de confidentialité
+                    </Link>
+                    .{' '}
+                    <button type="button" onClick={() => setReportRgpdExpanded(false)} style={{ background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>voir moins</button>
+                  </>
+                ) : (
+                  <>
+                    {`Les informations collectées via ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. Les champs obligatoires sont nécessaires pour permettre l'examen du signalement.
+
+Ces données sont utilisées pour :`}
+                    {' '}
+                    <button type="button" onClick={() => setReportRgpdExpanded(true)} style={{ background: 'none', border: 'none', fontSize: 12, color: '#1d1d1f', fontWeight: 600, cursor: 'pointer', padding: 0, textDecoration: 'underline' }}>voir plus</button>
+                  </>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={reportSubmitting}
+                style={{
+                  width: '100%',
+                  height: 48,
+                  backgroundColor: '#1d1d1f',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 10,
+                  fontSize: 15,
+                  fontWeight: 500,
+                  cursor: reportSubmitting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {reportSubmitting ? 'Envoi du signalement...' : 'Envoyer le signalement'}
+              </button>
+                </>
+              )}
+            </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Popup Section Prix */}
+      {showPrixPopup && listing && (
+        <>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowPrixPopup(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: 24 }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+                <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+                  Indicateur de marché
+                </h2>
+                <button type="button" onClick={() => setShowPrixPopup(false)} style={{ position: 'absolute', right: 0, top: -6, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+                  <X size={20} />
+                </button>
+              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+              <span style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f' }}>{listing.price.toLocaleString('fr-FR')}</span>
+              <span style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', marginRight: 4 }}>€</span>
+              {priceStats && (() => {
+                const deal = getDealLevel(listing.price, priceStats.average);
+                return (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
+                    <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Euro size={10} color="#fff" strokeWidth={2.5} />
+                    </span>
+                    {deal.label}
+                  </span>
+                );
+              })()}
+            </div>
+            <div style={{ position: 'relative', marginBottom: 12 }}>
+              <div style={{ height: 8, display: 'flex', gap: 2, borderRadius: 4, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
+                <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
+                <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
+                <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
+                <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+              </div>
+              {priceStats && (
+                <div style={{ position: 'absolute', left: `${getBarPositionFromDeal(getDealLevel(listing.price, priceStats.average)) * 100}%`, top: -4, width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '6px solid #1d1d1f', transform: 'translateX(-50%)' }} />
+              )}
+            </div>
+            <p style={{ fontSize: 14, color: '#555', lineHeight: 1.5, margin: 0 }}>
+              {priceStats ? getDealLevel(listing.price, priceStats.average).description : 'Aucune comparaison disponible pour cette annonce.'}
+            </p>
+            {priceStats && (
+              <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
+                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+              </p>
+            )}
+            <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
+              L&apos;estimation indiquée est donnée à titre informatif et peut différer de la valeur réelle du marché. Nous vous recommandons de réaliser votre propre analyse.
+            </p>
+            {!showPrixEnSavoirPlus ? (
+              <button type="button" onClick={() => setShowPrixEnSavoirPlus(true)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>Voir plus</button>
+            ) : (
+              <>
+                <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: 0 }}>Cette estimation ne constitue pas une valeur contractuelle et peut comporter des variations ou des erreurs. Nous vous recommandons d&apos;effectuer votre propre comparaison et vos vérifications avant toute décision d&apos;achat.</p>
+                <button type="button" onClick={() => setShowPrixEnSavoirPlus(false)} style={{ marginTop: 2, padding: 0, background: 'none', border: 'none', fontSize: 13, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}>Voir moins</button>
+              </>
+            )}
+          </div>
+        </div>
+        </div>
+        </>
+      )}
+
+      {/* Popup Conseils de sécurité */}
+      {(() => {
+        if (!showSecurityModal) return null;
+        return (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div
+            style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }}
+            onClick={() => setShowSecurityModal(false)}
+          />
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 560,
+              maxHeight: '90vh',
+              overflow: 'auto',
+              backgroundColor: '#fff',
+              borderRadius: 18,
+              boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: 24 }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+                <h2
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontFamily: 'var(--font-inter), var(--font-sans)',
+                    fontSize: 19,
+                    fontWeight: 600,
+                    margin: 0,
+                    color: '#0a0a0a',
+                    textAlign: 'center',
+                    paddingBottom: 16,
+                    borderBottom: '1px solid #e5e5e7',
+                  }}
+                >
+                  Conseils de sécurité
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setShowSecurityModal(false)}
+                  style={{
+                    position: 'absolute',
+                    right: 0,
+                    top: -6,
+                    width: 36,
+                    height: 36,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: 'none',
+                    background: '#f5f5f7',
+                    borderRadius: 10,
+                    cursor: 'pointer',
+                  }}
+                  aria-label="Fermer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: 14, color: '#555', lineHeight: 1.6, marginBottom: 16 }}>
+              Nos recommandations pour acheter en toute sérénité auprès des professionnels :
+            </p>
+            <ul style={{ fontSize: 14, color: '#555', lineHeight: 1.6, paddingLeft: 20, marginBottom: 4, listStyleType: 'disc' }}>
+              <li style={{ marginBottom: 8 }}>
+                Ne versez jamais d’acompte avant d’avoir vu le produit ou obtenu des éléments de vérification suffisants, même en cas d’urgence invoquée par le vendeur.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Privilégiez un échange direct avec le vendeur et assurez-vous de l’authenticité et de l’état réel de l’article avant toute transaction.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Ne communiquez jamais vos informations bancaires ou documents sensibles à une personne que vous ne connaissez pas.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Évitez les moyens de paiement anonymes ou difficilement traçables, tels que les coupons prépayés ou mandats cash.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Si un vendeur vous propose une plateforme de paiement externe, vérifiez toujours qu’il s’agit du site officiel (URL correcte, connexion sécurisée, réputation vérifiable). En cas de doute, abstenez-vous.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Un prix anormalement attractif peut cacher une fraude. Comparez toujours avec le marché.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Refusez toute demande de paiement destinée à couvrir des frais de transport, d’assurance, de douane ou autres frais annexes non justifiés.
+              </li>
+              <li style={{ marginBottom: 8 }}>
+                Soyez prudent si le vendeur insiste pour communiquer uniquement par email ou messagerie privée. N’acceptez pas qu’un tiers intermédiaire non vérifié gère votre paiement.
+              </li>
+            </ul>
+
+            <button
+              type="button"
+              onClick={() => setShowSecurityModal(false)}
+              style={{
+                marginTop: 8,
+                width: '100%',
+                height: 44,
+                backgroundColor: '#1d1d1f',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 10,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+        </div>
+        );
+      })()}
 
       {/* Lightbox photo agrandie */}
       {showPhotoLightbox && listing?.photos?.[currentPhotoIndex] && (

@@ -1,15 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MessageCircle, Trash2, Search } from 'lucide-react';
+import { MessageCircle, Trash2, Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { subscribeToConversations, deleteConversation } from '@/lib/supabase/messaging';
 import { Conversation } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 
 type FilterTab = 'all' | 'read' | 'unread';
+
+const MESSAGES_FILTER_OPTIONS: { value: FilterTab; label: string }[] = [
+  { value: 'all', label: 'Tous' },
+  { value: 'unread', label: 'Non lus' },
+  { value: 'read', label: 'Lus' },
+];
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -20,6 +26,8 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -38,6 +46,17 @@ export default function MessagesPage() {
 
     return () => unsubscribe();
   }, [user, isSeller]);
+
+  useEffect(() => {
+    if (!filterDropdownOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setFilterDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [filterDropdownOpen]);
 
   const getUnreadCount = (c: Conversation) => (isSeller ? c.unreadSeller : c.unreadBuyer);
   const hasUnread = (c: Conversation) => getUnreadCount(c) > 0;
@@ -81,7 +100,7 @@ export default function MessagesPage() {
 
   if (authLoading || loading) {
     return (
-      <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
       </main>
     );
@@ -90,77 +109,120 @@ export default function MessagesPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
-        {/* Titre à gauche, filtres Tous / Non lus / Lus à droite, alignés sur la même ligne */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
-          <div>
-            <h1
-              style={{
-                fontFamily: 'var(--font-playfair), Georgia, serif',
-                fontSize: 28,
-                fontWeight: 500,
-                marginBottom: 8,
-                color: '#1d1d1f',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Ma messagerie
-            </h1>
-            <p style={{ fontSize: 14, color: '#888' }}>
-              {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {(['all', 'unread', 'read'] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setFilter(tab)}
-              style={{
-                padding: '10px 18px',
-                fontSize: 14,
-                fontWeight: 500,
-                border: '1px solid ' + (filter === tab ? '#1d1d1f' : '#d2d2d7'),
-                borderRadius: 12,
-                backgroundColor: filter === tab ? '#1d1d1f' : '#fff',
-                color: filter === tab ? '#fff' : '#1d1d1f',
-                cursor: 'pointer',
-              }}
-            >
-              {tab === 'all' ? 'Tous' : tab === 'read' ? 'Lus' : 'Non lus'}
-            </button>
-          ))}
-          </div>
+        {/* Même structure que Mes favoris : bloc titre puis barre de recherche + filtre sur une ligne */}
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
+            Ma messagerie
+          </h1>
+          <p style={{ fontSize: 14, color: '#888' }}>
+            {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+          </p>
         </div>
 
         {conversations.length > 0 && (
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher dans ma messagerie..."
-              autoComplete="off"
-              style={{
-                width: '100%',
-                padding: '12px 16px 12px 44px',
-                fontSize: 15,
-                border: '1px solid #d2d2d7',
-                borderRadius: 10,
-                backgroundColor: '#fff',
-                outline: 'none',
-              }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher dans ma messagerie..."
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  height: 48,
+                  padding: '0 16px 0 44px',
+                  fontSize: 14,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div ref={filterDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setFilterDropdownOpen((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 48,
+                  padding: '0 14px 0 16px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  minWidth: 140,
+                }}
+              >
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  {MESSAGES_FILTER_OPTIONS.find((o) => o.value === filter)?.label ?? 'Tous'}
+                </span>
+                <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+              </button>
+              {filterDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {MESSAGES_FILTER_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setFilter(opt.value);
+                        setFilterDropdownOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: filter === opt.value ? '#f5f5f7' : 'transparent',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        outline: 'none',
+                        boxShadow: 'none',
+                        fontWeight: filter === opt.value ? 600 : 400,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Carte liste (style Devenir vendeur) */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          {filteredConversations.length > 0 ? (
+        {/* Liste des discussions : même arrondi que la barre de recherche (12), bloc unique non séparé */}
+        {filteredConversations.length > 0 ? (
+          <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {filteredConversations.map((conversation) => {
+              {filteredConversations.map((conversation, index) => {
                 const unreadCount = getUnreadCount(conversation);
                 const isUnread = unreadCount > 0;
                 return (
@@ -171,23 +233,29 @@ export default function MessagesPage() {
                       alignItems: 'center',
                       gap: 14,
                       padding: '18px 28px',
-                      borderBottom: '1px solid #e8e6e3',
+                      borderBottom: index < filteredConversations.length - 1 ? '1px solid #e8e6e3' : 'none',
                       backgroundColor: isUnread ? '#fafaf9' : '#fff',
                     }}
                   >
                     <Link
-                      href={`/messages/${conversation.id}`}
-                      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
+                      href={`/produit/${conversation.listingId}`}
+                      style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
+                      onClick={(e) => e.stopPropagation()}
                     >
-                      <div style={{ width: 52, height: 52, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', flexShrink: 0, border: '1px solid #e8e6e3' }}>
+                      <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
                         {conversation.listingPhoto ? (
                           <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <MessageCircle size={22} color="#86868b" />
+                            <MessageCircle size={28} color="#86868b" />
                           </div>
                         )}
                       </div>
+                    </Link>
+                    <Link
+                      href={`/messages/${conversation.id}`}
+                      style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 28, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
+                    >
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <span style={{ fontSize: 15, fontWeight: isUnread ? 600 : 500, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -212,7 +280,7 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     </Link>
-                    <div style={{ flexShrink: 0, borderLeft: '1px solid #e8e6e3', paddingLeft: 14, display: 'flex', alignItems: 'center', alignSelf: 'stretch', minHeight: 52 }}>
+                    <div style={{ flexShrink: 0, borderLeft: '1px solid #e8e6e3', paddingLeft: 14, display: 'flex', alignItems: 'center', alignSelf: 'stretch', minHeight: 80 }}>
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); setDeleteTargetId(conversation.id); }}
@@ -226,7 +294,8 @@ export default function MessagesPage() {
                 );
               })}
             </div>
-          ) : q ? (
+          </div>
+        ) : q ? (
             <div style={{ textAlign: 'center', padding: '60px 28px' }}>
               <p style={{ fontSize: 15, color: '#6e6e73' }}>Aucun résultat pour « {searchQuery.trim()} »</p>
             </div>
@@ -246,12 +315,11 @@ export default function MessagesPage() {
                   href="/catalogue"
                   style={{ display: 'inline-block', padding: '14px 28px', backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, borderRadius: 12 }}
                 >
-                  Voir catalogue
+                  Accéder au catalogue
                 </Link>
               )}
             </div>
           )}
-        </div>
       </div>
 
       {/* Popup confirmation suppression */}

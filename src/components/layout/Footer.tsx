@@ -6,7 +6,7 @@ export function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: '60px 24px 40px', backgroundColor: '#fbfbfb' }}>
+    <footer style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: '80px 24px 40px', backgroundColor: '#fbfbfb' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div
           style={{
@@ -29,7 +29,7 @@ export function Footer() {
               Section Luxe
             </Link>
             <p style={{ marginTop: 14, fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>
-              La marketplace de référence pour les articles de luxe d'exception.
+              La marketplace de référence pour les articles de luxe.
             </p>
           </div>
 
@@ -60,15 +60,20 @@ export function Footer() {
               Aide
             </h4>
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Link href="#" style={{ fontSize: 14, color: '#6e6e73' }}>Contact</Link>
+              <Link href="/contact" style={{ fontSize: 14, color: '#6e6e73' }}>Contact</Link>
               <Link href="#" style={{ fontSize: 14, color: '#6e6e73' }}>FAQ</Link>
-              <Link href="#" style={{ fontSize: 14, color: '#6e6e73' }}>CGV</Link>
             </nav>
           </div>
         </div>
 
-        <div style={{ paddingTop: 24, borderTop: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-          <p style={{ fontSize: 13, color: '#86868b' }}>© {year} Section Luxe. Tous droits réservés.</p>
+        <div style={{ paddingTop: 24, borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px' }}>
+            <Link href="/accessibilite" style={{ fontSize: 13, color: '#86868b' }}>Accessibilité</Link>
+            <Link href="/mentions-legales" style={{ fontSize: 13, color: '#86868b' }}>Mentions légales</Link>
+            <Link href="/cgu" style={{ fontSize: 13, color: '#86868b' }}>Conditions générales</Link>
+            <Link href="/politique-confidentialite" style={{ fontSize: 13, color: '#86868b' }}>Politique de confidentialité et cookies</Link>
+          </nav>
+          <p style={{ fontSize: 13, color: '#86868b', margin: 0 }}>© {year} Section Luxe. Tous droits réservés.</p>
         </div>
       </div>
     </footer>

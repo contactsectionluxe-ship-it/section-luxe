@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search } from 'lucide-react';
+import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerListings } from '@/lib/supabase/listings';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
@@ -12,6 +12,22 @@ import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { CATEGORIES } from '@/lib/utils';
 
+/** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
+function normalizeForSearch(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[-'\s]+/g, '');
+}
+
+const ANNONCES_SORT_OPTIONS = [
+  { value: 'recent' as const, label: 'Plus récents' },
+  { value: 'oldest' as const, label: 'Plus anciens' },
+  { value: 'price_asc' as const, label: 'Prix croissant' },
+  { value: 'price_desc' as const, label: 'Prix décroissant' },
+];
+
 export default function SellerDashboardPage() {
   const router = useRouter();
   const { user, seller, isSeller, isApprovedSeller, loading: authLoading, refreshUser } = useAuth();
@@ -19,6 +35,10 @@ export default function SellerDashboardPage() {
   const [totalMessages, setTotalMessages] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  type SortOption = 'recent' | 'oldest' | 'price_asc' | 'price_desc';
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -69,6 +89,17 @@ export default function SellerDashboardPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!sortDropdownOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
+        setSortDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [sortDropdownOpen]);
+
   if (authLoading || loading) {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -83,21 +114,35 @@ export default function SellerDashboardPage() {
   const activeListings = listings.filter((l) => l.isActive).length;
   const totalAppels = listings.reduce((sum, l) => sum + (l.phoneRevealsCount ?? 0), 0);
 
-  const q = searchQuery.trim().toLowerCase();
-  const filteredListings = q
+  const q = normalizeForSearch(searchQuery.trim());
+  const filteredBySearch = q
     ? listings.filter(
         (l) =>
-          l.title.toLowerCase().includes(q) ||
-          (l.brand && l.brand.toLowerCase().includes(q)) ||
-          (l.category && CATEGORIES.find((c) => c.value === l.category)?.label.toLowerCase().includes(q))
+          normalizeForSearch(l.title).includes(q) ||
+          (l.brand && normalizeForSearch(l.brand).includes(q)) ||
+          (l.category && normalizeForSearch(CATEGORIES.find((c) => c.value === l.category)?.label ?? '').includes(q))
       )
     : listings;
+
+  const filteredListings = [...filteredBySearch].sort((a, b) => {
+    switch (sortBy) {
+      case 'oldest':
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      case 'price_asc':
+        return a.price - b.price;
+      case 'price_desc':
+        return b.price - a.price;
+      case 'recent':
+      default:
+        return b.createdAt.getTime() - a.createdAt.getTime();
+    }
+  });
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
               Mes annonces
@@ -155,7 +200,7 @@ export default function SellerDashboardPage() {
 
         {/* Stats */}
         {isApprovedSeller && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 40 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
             <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
                 <Package size={22} color="#666" />
@@ -196,24 +241,99 @@ export default function SellerDashboardPage() {
         )}
 
         {listings.length > 0 && (
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher dans mes annonces..."
-              autoComplete="off"
-              style={{
-                width: '100%',
-                padding: '12px 16px 12px 44px',
-                fontSize: 15,
-                border: '1px solid #d2d2d7',
-                borderRadius: 10,
-                backgroundColor: '#fff',
-                outline: 'none',
-              }}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Rechercher dans mes annonces..."
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  height: 48,
+                  padding: '0 16px 0 44px',
+                  fontSize: 14,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+            <div ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setSortDropdownOpen((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 48,
+                  padding: '0 14px 0 16px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  boxShadow: 'none',
+                  minWidth: 160,
+                }}
+              >
+                <span style={{ flex: 1, textAlign: 'left' }}>
+                  {ANNONCES_SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Trier'}
+                </span>
+                <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+              </button>
+              {sortDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    marginTop: 4,
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {ANNONCES_SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        setSortBy(opt.value);
+                        setSortDropdownOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: sortBy === opt.value ? '#f5f5f7' : 'transparent',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        outline: 'none',
+                        boxShadow: 'none',
+                        fontWeight: sortBy === opt.value ? 600 : 400,
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

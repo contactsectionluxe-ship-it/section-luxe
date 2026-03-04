@@ -13,7 +13,7 @@ const navigation = [
   { name: 'Occasion', href: '/catalogue?condition=occasion' },
   { name: 'Neuf', href: '/catalogue?condition=new' },
   { name: 'À propos', href: '/a-propos' },
-  { name: 'Devenir vendeur', href: '/inscription-vendeur' },
+  { name: 'Contact', href: '/contact' },
 ];
 
 export function Header() {
@@ -180,7 +180,11 @@ export function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  style={{ ...linkStyle, color: active ? '#434346' : linkStyle.color }}
+                  style={{
+                    ...linkStyle,
+                    color: active ? '#434346' : linkStyle.color,
+                    padding: '8px 0',
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = active ? '#434346' : '#6e6e73')}
                 >

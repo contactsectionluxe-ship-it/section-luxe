@@ -8,6 +8,7 @@ import { useDropzone, type FileRejection } from 'react-dropzone';
 import { signUpSeller } from '@/lib/supabase/auth';
 import { fetchCompanyBySiret, type CompanyInfo } from '@/lib/siret';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
+import { CguCgvCheckbox } from '@/components/ui';
 
 function FileUploadField({
   label,
@@ -111,6 +112,8 @@ export default function SellerRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [acceptCguCgv, setAcceptCguCgv] = useState(false);
+  const [cguCgvError, setCguCgvError] = useState('');
 
   // Remonter le formulaire en haut à chaque changement d'étape
   useEffect(() => {
@@ -202,7 +205,11 @@ export default function SellerRegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
+    setCguCgvError('');
+    if (step === 2 && !acceptCguCgv) {
+      setCguCgvError('Veuillez accepter les CGU et les CGV pour soumettre votre demande.');
+      return;
+    }
     if (!idRectoType) {
       setError('Veuillez indiquer le type de justificatif d\'identité (Passeport ou CNI).');
       return;
@@ -264,7 +271,7 @@ export default function SellerRegisterPage() {
       }
       const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
 
-      await signUpSeller(email, password, {
+      const seller = await signUpSeller(email, password, {
         companyName,
         siret,
         address,
@@ -277,6 +284,11 @@ export default function SellerRegisterPage() {
         idRectoType,
         kbisUrl,
         displayName: `${firstName.trim()} ${lastName.trim()}`.trim(),
+      });
+      await fetch('/api/cgu-cgv-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: seller.uid, context: 'inscription_vendeur' }),
       });
 
       const formDataEmail = new FormData();
@@ -823,6 +835,13 @@ export default function SellerRegisterPage() {
                     required
                   />
                 )}
+
+                <CguCgvCheckbox
+                  id="inscription-vendeur-cgu-cgv"
+                  checked={acceptCguCgv}
+                  onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
+                  error={cguCgvError}
+                />
 
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button

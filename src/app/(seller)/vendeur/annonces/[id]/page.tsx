@@ -7,13 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLoader } from '@/components/ui';
+import { PageLoader, CguCgvCheckbox } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
 import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getJeanSizesForGenre, getPantSizesForGenre, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -107,6 +107,8 @@ export default function EditListingPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [acceptCguCgv, setAcceptCguCgv] = useState(false);
+  const [cguCgvError, setCguCgvError] = useState('');
   const [hoveredExistingIndex, setHoveredExistingIndex] = useState<number | null>(null);
   const [hoveredNewIndex, setHoveredNewIndex] = useState<number | null>(null);
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
@@ -135,12 +137,31 @@ export default function EditListingPage() {
   })();
   const brandForModels = brand || marqueSearchQuery.trim();
   const modelOptions = (() => {
-    if (!category || !brandForModels || genre.length === 0) return [];
-    const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
-    if (!byBrand) return [];
+    if (!category || genre.length === 0) return [];
     const set = new Set<string>();
-    if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
-    if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
+    if (category === 'vetements') {
+      VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
+        if (modelGenre === 'both') set.add(name);
+        else if (modelGenre === 'femme' && genre.includes('femme')) set.add(name);
+        else if (modelGenre === 'homme' && genre.includes('homme')) set.add(name);
+      });
+    }
+    if (brandForModels) {
+      const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
+      if (byBrand) {
+        const allowModel = (m: string) => {
+          if (category !== 'vetements') return true;
+          const femmeOnly = VETEMENTS_MODELES_FEMME_ONLY.includes(m);
+          const hommeOnly = VETEMENTS_MODELES_HOMME_ONLY.includes(m);
+          if (genre.includes('femme') && genre.includes('homme')) return true;
+          if (genre.includes('homme') && !genre.includes('femme') && femmeOnly) return false;
+          if (genre.includes('femme') && !genre.includes('homme') && hommeOnly) return false;
+          return true;
+        };
+        if (genre.includes('femme')) byBrand.femme.filter(allowModel).forEach((m) => set.add(m));
+        if (genre.includes('homme')) byBrand.homme.filter(allowModel).forEach((m) => set.add(m));
+      }
+    }
     if (category === 'sacs') {
       set.add('Sac');
       set.add('Pochette');
@@ -408,7 +429,11 @@ export default function EditListingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
+    setCguCgvError('');
+    if (!acceptCguCgv) {
+      setCguCgvError('Veuillez accepter les CGU et les CGV pour enregistrer les modifications.');
+      return;
+    }
     if (genre.length === 0) {
       setError('Sélectionner au moins un genre (Femme et/ou Homme)');
       return;
@@ -477,8 +502,8 @@ export default function EditListingPage() {
         condition: condition || null,
         material: materialToSave,
         color: colorToSave,
-        heightCm: heightCm ? parseFloat(heightCm.replace(',', '.')) : null,
-        widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
+        heightCm: (category === 'chaussures' || category === 'vetements') ? null : (heightCm ? parseFloat(heightCm.replace(',', '.')) : null),
+        widthCm: (category === 'chaussures' || category === 'vetements') ? null : (widthCm ? parseFloat(widthCm.replace(',', '.')) : null),
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
@@ -497,6 +522,11 @@ export default function EditListingPage() {
       } catch {
         // ignore
       }
+      await fetch('/api/cgu-cgv-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user!.uid, context: 'modification_annonce' }),
+      });
       router.push('/vendeur');
     } catch (err: unknown) {
       const message =
@@ -883,7 +913,14 @@ setMaterialSearchQuery('');
                   style={inputStyle}
                 />
                 {sizeOpen && (() => {
-                  const options = category === 'chaussures' ? getShoeSizesForGenre(genre) : [...CLOTHING_SIZES];
+                  const m = (model || modeleSearchQuery.trim()).toLowerCase();
+                  const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
+                  const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
+                  const options = category === 'chaussures'
+                    ? getShoeSizesForGenre(genre)
+                    : (isPantalon || isJean
+                      ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : [])]
+                      : [...CLOTHING_SIZES]);
                   const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
                   if (filtered.length === 0) return null;
                   return (
@@ -1346,6 +1383,7 @@ setMaterialSearchQuery('');
                 }}
               />
             </div>
+            {(category !== 'chaussures' && category !== 'vetements') && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
               <div>
                 <label style={labelStyle}>Longueur</label>
@@ -1362,6 +1400,7 @@ setMaterialSearchQuery('');
                 </div>
               </div>
             </div>
+            )}
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Année</label>
               <input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="Ex: 2020" min={1900} max={new Date().getFullYear() + 1} style={inputStyle} />
@@ -1436,6 +1475,12 @@ setMaterialSearchQuery('');
               <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#1d1d1f' }} />
               <label htmlFor="isActive" style={{ fontSize: 14, color: '#333' }}>Annonce active (visible dans le catalogue)</label>
             </div>
+            <CguCgvCheckbox
+              id="modifier-annonce-cgu-cgv"
+              checked={acceptCguCgv}
+              onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
+              error={cguCgvError}
+            />
             <div style={{ display: 'flex', gap: 12 }}>
               <button type="button" onClick={handleBack} style={{ flex: 1, height: 50, fontSize: 15, fontWeight: 500, border: '1px solid #d2d2d7', borderRadius: 980, cursor: 'pointer', backgroundColor: '#fff', color: '#1d1d1f' }}>
                 Retour

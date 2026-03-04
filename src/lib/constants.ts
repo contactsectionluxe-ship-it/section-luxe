@@ -120,6 +120,86 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
 /** Tailles vêtements (dépôt annonce + filtre catalogue) */
 export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
 
+/** Tailles pantalon (numériques). À ajouter en plus de XS/S/M... quand le modèle est un pantalon. */
+export const PANT_SIZES_HOMME = ['38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58'] as const;
+export const PANT_SIZES_FEMME = ['32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52'] as const;
+/** Mix (homme+femme) ou quand aucun genre n’est précisé : 32 à 58. */
+export const PANT_SIZES_MIX = ['32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58'] as const;
+
+export function getPantSizesForGenre(genre: ('homme' | 'femme')[] | null | undefined): string[] {
+  const g = genre ?? [];
+  const hasH = g.includes('homme');
+  const hasF = g.includes('femme');
+  if (hasH && hasF) return [...PANT_SIZES_MIX];
+  if (hasH) return [...PANT_SIZES_HOMME];
+  if (hasF) return [...PANT_SIZES_FEMME];
+  return [...PANT_SIZES_MIX];
+}
+
+/** Tailles jean (numériques). À ajouter quand le modèle est un jean. */
+export const JEAN_SIZES_FEMME = ['24', '25', '26', '27', '28', '29', '30', '31', '32'] as const;
+export const JEAN_SIZES_HOMME = ['28', '29', '30', '31', '32', '33', '34', '35', '36', '38', '40'] as const;
+/** Mix (homme+femme) ou quand aucun genre n’est précisé : 24 à 40. */
+export const JEAN_SIZES_MIX = ['24', '25', '26', '27', '28', '29', '30', '31', '32', '33', '34', '35', '36', '38', '40'] as const;
+
+export function getJeanSizesForGenre(genre: ('homme' | 'femme')[] | null | undefined): string[] {
+  const g = genre ?? [];
+  const hasH = g.includes('homme');
+  const hasF = g.includes('femme');
+  if (hasH && hasF) return [...JEAN_SIZES_MIX];
+  if (hasH) return [...JEAN_SIZES_HOMME];
+  if (hasF) return [...JEAN_SIZES_FEMME];
+  return [...JEAN_SIZES_MIX];
+}
+
+/** Modèles toujours proposés pour la catégorie vêtements (dépôt annonce), en plus des modèles par marque. Filtrés selon genre (Femme / Homme). */
+export const VETEMENTS_MODELES_TOUJOURS_PROPOSES: { name: string; genre: 'femme' | 'homme' | 'both' }[] = [
+  { name: 'Blazer', genre: 'both' },
+  { name: 'Caban', genre: 'both' },
+  { name: 'Camel Coat', genre: 'both' },
+  { name: 'Cardigan', genre: 'both' },
+  { name: 'Chemise', genre: 'both' },
+  { name: 'Jean', genre: 'both' },
+  { name: 'Jupe', genre: 'femme' },
+  { name: 'Manteau', genre: 'both' },
+  { name: 'Pantalon', genre: 'both' },
+  { name: 'Pull', genre: 'both' },
+  { name: 'Robe', genre: 'femme' },
+  { name: 'Short', genre: 'both' },
+  { name: 'Smoking', genre: 'homme' },
+  { name: 'Sweat', genre: 'both' },
+  { name: 'T-shirt', genre: 'both' },
+  { name: 'Trench', genre: 'both' },
+  { name: 'Tweed', genre: 'both' },
+  { name: 'Veste', genre: 'both' },
+];
+
+/** Modèles vêtements réservés Femme : à ne pas proposer quand seul Homme est sélectionné (filtre dépôt + marque). */
+export const VETEMENTS_MODELES_FEMME_ONLY = ['Jupe', 'Robe'];
+
+/** Modèles vêtements réservés Homme : à ne pas proposer quand seule Femme est sélectionnée (filtre dépôt + marque). */
+export const VETEMENTS_MODELES_HOMME_ONLY = ['Smoking'];
+
+/** Groupes de variantes d’orthographe pour le filtre catalogue : un filtre sur un modèle doit aussi matcher les autres écritures (ex. T-Shirt / Tshirt). */
+const MODEL_FILTER_EQUIVALENTS: string[][] = [
+  ['T-Shirt', 'Tshirt', 'T shirt', 't-shirt', 't shirt', 'T-shirt'],
+  ['Camel Coat', 'Camel coat', 'CamelCoat'],
+];
+
+function normalizeModelForFilter(s: string): string {
+  return (s || '').toLowerCase().replace(/-/g, '').replace(/\s+/g, '').trim();
+}
+
+/** Retourne toutes les variantes d’orthographe à envoyer à l’API pour un filtre modèle (ex. "T-Shirt" → ["T-Shirt", "Tshirt", "T shirt", ...]). */
+export function getModelFilterVariants(model: string): string[] {
+  if (!model?.trim()) return [];
+  const key = normalizeModelForFilter(model);
+  for (const group of MODEL_FILTER_EQUIVALENTS) {
+    if (group.some((m) => normalizeModelForFilter(m) === key)) return group;
+  }
+  return [model.trim()];
+}
+
 function shoeSizesInRange(min: number, max: number): string[] {
   return Array.from(
     { length: (max - min) * 2 + 1 },

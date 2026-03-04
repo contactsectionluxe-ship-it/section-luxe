@@ -293,7 +293,7 @@ export default function VoirAnnoncePage() {
                     <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
                   </div>
                 )}
-                {(listing.widthCm != null || listing.heightCm != null) && (
+                {(listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null)) && (
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                       <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />

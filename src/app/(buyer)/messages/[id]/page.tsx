@@ -184,7 +184,7 @@ export default function ConversationPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '16px 24px 80px' }}>
+      <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', padding: '16px 24px 80px', boxSizing: 'border-box' }}>
         {/* En-tête : titre + barre avec retour, miniature, interlocuteur (même style que Ma messagerie) */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <h1
@@ -208,7 +208,7 @@ export default function ConversationPage() {
         </div>
 
         {/* Carte principale (même design que Ma messagerie : fond blanc, carte blanche) */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e8e6e3', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 560 }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e8e6e3', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438 }}>
           {/* Barre supérieure : retour + annonce + interlocuteur */}
           <div
             style={{
@@ -218,7 +218,7 @@ export default function ConversationPage() {
               backgroundColor: '#fff',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
             <Link
               href="/messages"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, color: '#1d1d1f', backgroundColor: '#f5f5f7' }}
@@ -228,26 +228,39 @@ export default function ConversationPage() {
             </Link>
             <Link
               href={`/produit/${conversation.listingId}`}
-                style={{ width: 48, height: 48, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', flexShrink: 0, border: '1px solid #e8e6e3' }}
+              style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
             >
-              {conversation.listingPhoto ? (
+              <div
+                style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+              >
+                {conversation.listingPhoto ? (
                   <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Package size={22} color="#86868b" />
-                </div>
-              )}
+                    <Package size={26} color="#86868b" />
+                  </div>
+                )}
+              </div>
             </Link>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <button type="button" onClick={handleShowPartyInfo} style={{ background: 'none', border: 'none', padding: 0, fontSize: 15, fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, cursor: 'pointer', textAlign: 'left', width: '100%', textDecoration: 'underline' }}>
+                <h2
+                  style={{
+                    fontFamily: 'var(--font-playfair), Georgia, serif',
+                    fontSize: 18,
+                    fontWeight: 500,
+                    margin: 0,
+                    color: '#1d1d1f',
+                    letterSpacing: '-0.02em',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {conversation.listingTitle}
+                </h2>
+                <p style={{ fontSize: 13, color: '#6e6e73', margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {otherPartyName}
-                </button>
-              <Link
-                href={`/produit/${conversation.listingId}`}
-                  style={{ fontSize: 13, color: '#6e6e73', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block', marginTop: 2 }}
-              >
-                {conversation.listingTitle}
-              </Link>
+                </p>
           </div>
         </div>
       </div>
@@ -416,17 +429,11 @@ export default function ConversationPage() {
             ) : popupUser ? (
               <div style={{ fontSize: 14, color: '#1d1d1f' }}>
                 <p style={{ fontWeight: 600, marginBottom: 8 }}>{popupUser.displayName}</p>
-                <p style={{ color: '#6e6e73', margin: 0 }}>Membre depuis {formatDate(popupUser.createdAt)}</p>
+                <p style={{ color: '#6e6e73', margin: 0 }}>Membre depuis le {formatDate(popupUser.createdAt)}</p>
                 {popupUser.email && (
                   <p style={{ margin: '12px 0 0', color: '#1d1d1f' }}>
                     <strong>Email :</strong>{' '}
                     <a href={`mailto:${popupUser.email}`} style={{ color: '#1d1d1f', textDecoration: 'underline' }}>{popupUser.email}</a>
-                  </p>
-                )}
-                {popupUser.phone?.trim() && (
-                  <p style={{ margin: '8px 0 0', color: '#1d1d1f' }}>
-                    <strong>Téléphone :</strong>{' '}
-                    <a href={`tel:${popupUser.phone.trim()}`} style={{ color: '#1d1d1f', textDecoration: 'underline' }}>{popupUser.phone.trim()}</a>
                   </p>
                 )}
               </div>
@@ -445,25 +452,59 @@ export default function ConversationPage() {
                       <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{popupSeller.companyName}</h3>
                       {popupSeller.description && (
                         <>
-                          <p
-                            style={{
-                              fontSize: 14,
-                              color: '#666',
-                              margin: 0,
-                              lineHeight: 1.5,
-                              ...(sellerDescExpanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
-                            }}
-                          >
-                            {popupSeller.description}
-                          </p>
-                          {popupSeller.description.length > 100 && (
-                            <button
-                              type="button"
-                              onClick={() => setSellerDescExpanded((v) => !v)}
-                              style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
-                            >
-                              {sellerDescExpanded ? 'Voir moins' : 'Voir plus'}
-                            </button>
+                          {!sellerDescExpanded ? (
+                            popupSeller.description.length > 100 ? (
+                              <div style={{ position: 'relative', margin: 0, fontSize: 14, color: '#666', lineHeight: 1.5, minHeight: '3em' }}>
+                                <div
+                                  style={{
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical' as const,
+                                    overflow: 'hidden' as const,
+                                    paddingRight: 72,
+                                  }}
+                                >
+                                  {popupSeller.description}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setSellerDescExpanded(true)}
+                                  style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    bottom: 0,
+                                    padding: 0,
+                                    margin: 0,
+                                    background: 'none',
+                                    border: 'none',
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                    color: '#1d1d1f',
+                                    cursor: 'pointer',
+                                    textDecoration: 'underline',
+                                    fontFamily: 'inherit',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  Voir plus
+                                </button>
+                              </div>
+                            ) : (
+                              <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.5 }}>{popupSeller.description}</p>
+                            )
+                          ) : (
+                            <>
+                              <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.5 }}>{popupSeller.description}</p>
+                              {popupSeller.description.length > 100 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSellerDescExpanded(false)}
+                                  style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                  Voir moins
+                                </button>
+                              )}
+                            </>
                           )}
                         </>
                       )}
@@ -473,41 +514,20 @@ export default function ConversationPage() {
                 <Link
                   href={`/catalogue?sellerId=${popupSeller.uid}`}
                   onClick={() => setShowPartyPopup(false)}
-                  style={{ display: 'block', width: '100%', padding: '14px 20px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 500, textAlign: 'center', marginBottom: 12 }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 44, backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 16, fontWeight: 500, fontFamily: 'inherit', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}
                 >
                   Voir les annonces du vendeur
                 </Link>
                 {(popupSeller.address || popupSeller.city || popupSeller.postcode) && (
-                  <div
-                    style={{
-                      width: '100%',
-                      padding: '20px 16px 16px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 14,
-                      backgroundImage: "linear-gradient(rgba(255,255,255,0.6), rgba(255,255,255,0.6)), url('/map-plan.png')",
-                      backgroundSize: '115%',
-                      backgroundPosition: 'center',
-                      backgroundColor: '#f6f6f8',
-                      border: '1px solid #c8c8cc',
-                      borderRadius: 14,
-                    }}
+                  <button
+                    type="button"
+                    onClick={() => setShowMapPopup(true)}
+                    style={{ width: '100%', marginTop: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <MapPin size={24} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                      {popupSeller.postcode && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>{popupSeller.postcode}</span>}
-                      {popupSeller.city && <span style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', textDecoration: 'underline' }}>{popupSeller.city}</span>}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setShowMapPopup(true)}
-                      style={{ padding: '10px 20px', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
-                    >
-                      Voir la carte
-                    </button>
-                  </div>
+                    <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                    {popupSeller.postcode && <span style={{ fontSize: 16 }}>{popupSeller.postcode}</span>}
+                    {popupSeller.city && <span style={{ fontSize: 16 }}>{popupSeller.city}</span>}
+                  </button>
                 )}
               </div>
             ) : (
@@ -517,7 +537,7 @@ export default function ConversationPage() {
         </div>
       )}
 
-      {/* Popup Plan vendeur */}
+      {/* Popup Rendre visite au vendeur */}
       {showMapPopup && popupSeller && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
@@ -527,7 +547,7 @@ export default function ConversationPage() {
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', left: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Retour">
                   <ArrowLeft size={20} />
                 </button>
-                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Plan vendeur</h2>
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center' }}>Rendre visite au vendeur</h2>
                 <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
                   <X size={20} />
                 </button>

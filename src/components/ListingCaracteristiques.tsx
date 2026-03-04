@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Tag, Calendar, CircleCheck, Palette, Layers } from 'lucide-react';
+import { Tag, Calendar, CircleCheck, Palette, Layers, Ruler } from 'lucide-react';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
@@ -13,16 +13,21 @@ export function ListingCaracteristiques({
   listing,
   className,
   style,
+  variant = 'full',
 }: {
   listing: Listing;
   className?: string;
   style?: React.CSSProperties;
+  /** En mode "grid" (catalogue en cases) : uniquement taille/pointure (si présent), état, couleur, matière — pas catégorie ni année */
+  variant?: 'full' | 'grid';
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const items = useMemo(() => {
     const arr: { key: string; node: React.ReactNode }[] = [];
-    if (listing.category) {
+    const isGrid = variant === 'grid';
+
+    if (!isGrid && listing.category) {
       arr.push({
         key: 'category',
         node: (
@@ -33,7 +38,18 @@ export function ListingCaracteristiques({
         ),
       });
     }
-    if (listing.year != null) {
+    if ((listing.category === 'chaussures' || listing.category === 'vetements') && listing.size) {
+      arr.push({
+        key: 'size',
+        node: (
+          <>
+            <Ruler size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            {listing.category === 'vetements' ? <>Taille&nbsp;{listing.size}</> : <>{listing.size}&nbsp;EU</>}
+          </>
+        ),
+      });
+    }
+    if (!isGrid && listing.year != null) {
       arr.push({
         key: 'year',
         node: (
@@ -79,7 +95,9 @@ export function ListingCaracteristiques({
     }
     return arr;
   }, [
+    variant,
     listing.category,
+    listing.size,
     listing.year,
     listing.condition,
     listing.color,

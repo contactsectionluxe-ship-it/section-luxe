@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
@@ -19,20 +19,43 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price);
 }
 
 const CATEGORIES_VISIBLE = 4;
-// 3 copies pour faire 3 tours avant de revenir au début
-const extendedCategories = [...categories, ...categories, ...categories];
-const categoryMaxIndex = Math.max(0, extendedCategories.length - CATEGORIES_VISIBLE);
+const CATEGORY_GAP = 12;
 
 export default function HomePage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryIndex, setCategoryIndex] = useState(0);
-  const [noTransition, setNoTransition] = useState(false);
+  const categoriesScrollRef = useRef<HTMLDivElement>(null);
+  const isDraggingRef = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
+  const hasDragged = useRef(false);
+  const [scrollState, setScrollState] = useState<'start' | 'middle' | 'end'>('start');
+
+  const updateScrollState = useCallback(() => {
+    const el = categoriesScrollRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    const max = scrollWidth - clientWidth;
+    if (max <= 0) setScrollState('start');
+    else if (scrollLeft >= max - 2) setScrollState('end');
+    else if (scrollLeft <= 2) setScrollState('start');
+    else setScrollState('middle');
+  }, []);
+
+  useEffect(() => {
+    const el = categoriesScrollRef.current;
+    if (!el) return;
+    updateScrollState();
+    el.addEventListener('scroll', updateScrollState);
+    return () => el.removeEventListener('scroll', updateScrollState);
+  }, [updateScrollState]);
 
   useEffect(() => {
     async function load() {
@@ -92,14 +115,16 @@ export default function HomePage() {
           <p
             className="hero-sous-titre"
             style={{
-              fontSize: 17,
+              fontSize: 16,
               color: '#6e6e73',
               maxWidth: 400,
-              marginBottom: 40,
+              marginBottom: 24,
               lineHeight: 1.5,
             }}
           >
-            Découvrez une sélection exclusive d'articles de luxe proposés par des professionnels certifiés.
+            Une vision claire du marché professionnel.
+            <br />
+            Comparez, analysez, choisissez
           </p>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
             <Link
@@ -121,7 +146,7 @@ export default function HomePage() {
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
             >
-              Voir catalogue
+              Accéder au catalogue
               <ArrowRight size={18} strokeWidth={2} />
             </Link>
             <Link
@@ -186,13 +211,8 @@ export default function HomePage() {
               type="button"
               aria-label="Catégories précédentes"
               onClick={() => {
-                if (categoryIndex === 0) {
-                  setNoTransition(true);
-                  setCategoryIndex(categoryMaxIndex);
-                  requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
-                } else {
-                  setCategoryIndex((i) => i - 1);
-                }
+                const el = categoriesScrollRef.current;
+                if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
               }}
               style={{
                 position: 'absolute',
@@ -211,8 +231,8 @@ export default function HomePage() {
                 cursor: 'pointer',
                 transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.25s',
                 zIndex: 1,
-                opacity: categoryIndex === 0 ? 0 : 1,
-                pointerEvents: categoryIndex === 0 ? 'none' : 'auto',
+                opacity: scrollState === 'start' ? 0 : 1,
+                pointerEvents: scrollState === 'start' ? 'none' : 'auto',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = '#f5f5f7';
@@ -227,21 +247,68 @@ export default function HomePage() {
             >
               <ChevronLeft size={20} strokeWidth={2} />
             </button>
-            <div style={{ overflow: 'hidden', width: '100%' }}>
+            <div
+              ref={categoriesScrollRef}
+              role="region"
+              aria-label="Catégories"
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                hasDragged.current = false;
+                dragStartX.current = e.clientX;
+                dragStartScrollLeft.current = categoriesScrollRef.current?.scrollLeft ?? 0;
+                isDraggingRef.current = true;
+                setIsDragging(true);
+                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+              }}
+              onPointerMove={(e) => {
+                if (!isDraggingRef.current || !categoriesScrollRef.current) return;
+                const dx = e.clientX - dragStartX.current;
+                if (Math.abs(dx) > 5) hasDragged.current = true;
+                categoriesScrollRef.current.scrollLeft = dragStartScrollLeft.current - dx;
+              }}
+              onPointerUp={(e) => {
+                if (e.button !== 0) return;
+                isDraggingRef.current = false;
+                setIsDragging(false);
+                (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+              }}
+              onPointerLeave={(e) => {
+                if (isDraggingRef.current) {
+                  isDraggingRef.current = false;
+                  setIsDragging(false);
+                  (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+                }
+              }}
+              style={{
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                width: '100%',
+                cursor: isDragging ? 'grabbing' : 'grab',
+                userSelect: isDragging ? 'none' : 'auto',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch',
+                containerType: 'inline-size',
+              }}
+              className="categories-scroll categories-scroll-container"
+            >
               <div
                 style={{
                   display: 'flex',
-                  gap: 12,
-                  transition: noTransition ? 'none' : 'transform 0.3s ease',
-                  transform: `translateX(calc(-${categoryIndex} * ((100% - 36px) / ${CATEGORIES_VISIBLE} + 12px)))`,
+                  gap: CATEGORY_GAP,
+                  padding: '4px 0',
+                  width: 'calc(150cqw + 6px)',
                 }}
               >
-                {extendedCategories.map((cat, idx) => (
+                {categories.map((cat) => (
                   <Link
-                    key={`${cat.name}-${idx}`}
+                    key={cat.name}
                     href={cat.href}
+                    onClick={(e) => {
+                      if (hasDragged.current) e.preventDefault();
+                    }}
                     style={{
-                      flex: `0 0 calc((100% - ${12 * (CATEGORIES_VISIBLE - 1)}px) / ${CATEGORIES_VISIBLE})`,
+                      flex: `0 0 calc((100cqw - ${(CATEGORIES_VISIBLE - 1) * CATEGORY_GAP}px) / ${CATEGORIES_VISIBLE})`,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'stretch',
@@ -251,7 +318,7 @@ export default function HomePage() {
                       transition: 'transform 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.02)';
+                      if (!isDragging) e.currentTarget.style.transform = 'scale(1.02)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.transform = 'scale(1)';
@@ -316,13 +383,8 @@ export default function HomePage() {
               type="button"
               aria-label="Catégories suivantes"
               onClick={() => {
-                if (categoryIndex >= categoryMaxIndex) {
-                  setNoTransition(true);
-                  setCategoryIndex(0);
-                  requestAnimationFrame(() => requestAnimationFrame(() => setNoTransition(false)));
-                } else {
-                  setCategoryIndex((i) => i + 1);
-                }
+                const el = categoriesScrollRef.current;
+                if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
               }}
               style={{
                 position: 'absolute',
@@ -341,6 +403,8 @@ export default function HomePage() {
                 cursor: 'pointer',
                 transition: 'background 0.2s, color 0.2s, border-color 0.2s',
                 zIndex: 1,
+                opacity: scrollState === 'end' ? 0 : 1,
+                pointerEvents: scrollState === 'end' ? 'none' : 'auto',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = '#f5f5f7';
@@ -465,14 +529,35 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* CTA — fond marbre */}
       <section
         style={{
-          padding: '100px 24px',
-          backgroundColor: '#ebebed',
+          position: 'relative',
+          marginTop: -24,
+          padding: '120px 24px 88px',
+          backgroundImage: 'url(/section-vendeur-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 82%',
+          backgroundRepeat: 'no-repeat',
         }}
       >
-        <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.6) 45%, transparent 75%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(ellipse 72% 42% at 50% 50%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 55%, rgba(255,255,255,0.15) 85%, transparent 100%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
           <h2
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
@@ -483,7 +568,7 @@ export default function HomePage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Vous êtes un professionnel du luxe ?
+            Vous êtes un vendeur professionnel ?
           </h2>
           <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.

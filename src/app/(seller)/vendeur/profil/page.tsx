@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, FileText, Camera, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/utils';
@@ -288,7 +289,10 @@ export default function ProfilVendeurPage() {
                 <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', color: '#86868b', backgroundColor: '#f5f5f7' }}>
                   {seller.siret}
                 </div>
-                <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>Le SIRET ne peut pas être modifié.</p>
+                <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
+                  Le SIRET ne peut pas être modifié ici.{' '}
+                  <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}>Contact</Link>
+                </p>
               </div>
             )}
 
@@ -334,7 +338,10 @@ export default function ProfilVendeurPage() {
                 <Mail size={16} />
                 <span>{seller.email}</span>
               </div>
-              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>L&apos;email ne peut pas être modifié ici.</p>
+              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
+                L&apos;email ne peut pas être modifié ici.{' '}
+                <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}>Contact</Link>
+              </p>
             </div>
 
             <div style={{ marginBottom: 18 }}>

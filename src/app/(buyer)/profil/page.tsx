@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Mail, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { updateUserProfile, signOut } from '@/lib/supabase/auth';
@@ -178,7 +179,10 @@ export default function ProfilPage() {
                 <Mail size={16} />
                 <span>{user.email}</span>
               </div>
-              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>L&apos;email ne peut pas être modifié ici.</p>
+              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
+                L&apos;email ne peut pas être modifié ici.{' '}
+                <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}>Contact</Link>
+              </p>
             </div>
 
             <div style={{ marginBottom: 18 }}>

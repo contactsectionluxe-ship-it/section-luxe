@@ -2,126 +2,179 @@
 
 import Link from 'next/link';
 
+const LINE_HEIGHT = 1.75;
+const FONT_SIZE = 16;
+const SPACE_LINE = FONT_SIZE * LINE_HEIGHT;
+const SPACE_PARAGRAPH = SPACE_LINE;
+const SPACE_AFTER_TITLE = SPACE_LINE * 0.75;
+const SPACE_AROUND_LIST = SPACE_LINE * 0.5;
+
 const sectionTitleStyle: React.CSSProperties = {
   fontFamily: 'var(--font-playfair), Georgia, serif',
   fontSize: 22,
   fontWeight: 500,
   color: '#1d1d1f',
   letterSpacing: '-0.02em',
-  marginTop: 40,
-  marginBottom: 16,
+  lineHeight: LINE_HEIGHT,
+  marginTop: SPACE_LINE * 1.5,
+  marginBottom: SPACE_AFTER_TITLE,
 };
 
 const paragraphStyle: React.CSSProperties = {
-  fontSize: 16,
+  fontSize: FONT_SIZE,
   color: '#6e6e73',
-  lineHeight: 1.7,
-  marginBottom: 16,
+  lineHeight: LINE_HEIGHT,
+  marginTop: 0,
+  marginBottom: SPACE_PARAGRAPH,
+  textAlign: 'center',
 };
 
 const listStyle: React.CSSProperties = {
-  fontSize: 16,
+  fontSize: FONT_SIZE,
   color: '#6e6e73',
-  lineHeight: 1.7,
-  marginBottom: 16,
-  paddingLeft: 20,
+  lineHeight: LINE_HEIGHT,
+  margin: 0,
+  marginTop: SPACE_AROUND_LIST,
+  marginBottom: SPACE_AROUND_LIST,
+  padding: 0,
+  paddingLeft: 24,
+  textAlign: 'center',
 };
 
 const listItemStyle: React.CSSProperties = {
-  marginBottom: 8,
+  fontSize: FONT_SIZE,
+  color: '#6e6e73',
+  lineHeight: LINE_HEIGHT,
+  margin: 0,
+  padding: 0,
+  textAlign: 'center',
 };
+
+const sectionBlockWidth = 'calc(60% + 2cm)';
+
+function BulletItem({ children, centered }: { children: React.ReactNode; centered?: boolean }) {
+  if (centered) {
+    return (
+      <li style={{ ...listItemStyle, textAlign: 'center', paddingLeft: 0 }}>
+        <span style={{ color: '#1d1d1f' }}>• </span>
+        {children}
+      </li>
+    );
+  }
+  return (
+    <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
+      <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
+      {children}
+    </li>
+  );
+}
 
 export default function AProposPage() {
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 32,
-              fontWeight: 500,
-              marginBottom: 10,
-              color: '#1d1d1f',
-              letterSpacing: '-0.02em',
-              lineHeight: 1.2,
-            }}
-          >
-            À propos de Section Luxe
-          </h1>
-          <p style={{ fontSize: 18, color: '#888', letterSpacing: '-0.01em' }}>
-            La marketplace dédiée aux articles de luxe
-          </p>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div style={{ textAlign: 'center' }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              À propos de Section Luxe
+            </h1>
+            <p style={{ fontSize: 14, color: '#888' }}>
+              Le luxe, en un seul regard.
+            </p>
+          </div>
         </div>
 
-        <p style={paragraphStyle}>
-          Section Luxe est une plateforme spécialisée dans la mise en relation entre acheteurs et vendeurs professionnels du secteur du luxe. Notre marketplace réunit boutiques, dépôts-vente et maisons spécialisées afin d&apos;offrir une sélection rigoureuse d&apos;articles de luxe, neufs et d&apos;occasion.
-        </p>
-        <p style={{ ...paragraphStyle, marginBottom: 32 }}>
-          Notre objectif : simplifier l&apos;accès au marché du luxe en centralisant les offres et en permettant une comparaison claire, transparente et efficace.
-        </p>
+        {/* Section 1 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+          <p style={paragraphStyle}>
+            Section Luxe est la plateforme qui référence les articles des plus grands revendeurs professionnels du luxe.
+            Nous ne vendons pas les produits.
+            Nous rendons le marché visible.
+          </p>
+          <p style={paragraphStyle}>
+            Dans un univers souvent fragmenté, nous rassemblons les offres, les organisons et les rendons comparables.
+            En quelques clics, il devient possible de voir l&apos;ensemble des opportunités disponibles pour un même article.
+          </p>
+        </section>
 
-        <h2 style={sectionTitleStyle}>Une vision moderne du marché du luxe</h2>
-        <p style={paragraphStyle}>
-          Le marché des produits de luxe évolue. Les acheteurs recherchent aujourd&apos;hui :
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>Plus de transparence</li>
-          <li style={listItemStyle}>Une meilleure visibilité des offres</li>
-          <li style={listItemStyle}>Une comparaison simple des prix et des états</li>
-          <li style={listItemStyle}>Un accès facilité aux pièces rares ou recherchées</li>
-        </ul>
-        <p style={paragraphStyle}>
-          Section Luxe répond à ces attentes en proposant une vision globale du marché, permettant de comparer différentes offres pour un même produit et d&apos;identifier les meilleures opportunités.
-        </p>
+        {/* Section 2 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+          <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Comparez, analysez, choisissez</h2>
+          <p style={{ ...paragraphStyle, marginBottom: SPACE_AROUND_LIST }}>
+            Aujourd&apos;hui, acheter dans le luxe exige précision et visibilité.
+            Section Luxe permet de :
+          </p>
+          <ul style={{ ...listStyle, listStyleType: 'none', paddingLeft: 0 }}>
+            <BulletItem centered>comparer les prix</BulletItem>
+            <BulletItem centered>analyser l&apos;état et les caractéristiques</BulletItem>
+            <BulletItem centered>identifier la meilleure offre disponible</BulletItem>
+            <BulletItem centered>découvrir les pièces proches de chez vous</BulletItem>
+          </ul>
+          <p style={paragraphStyle}>
+            Clair. Rapide. Structuré.
+          </p>
+        </section>
 
-        <h2 style={sectionTitleStyle}>Une valeur ajoutée pour les vendeurs professionnels</h2>
-        <p style={paragraphStyle}>
-          Nous accompagnons les vendeurs dans :
-        </p>
-        <ul style={listStyle}>
-          <li style={listItemStyle}>L&apos;augmentation de leur visibilité en ligne</li>
-          <li style={listItemStyle}>La mise en avant qualitative de leurs produits</li>
-          <li style={listItemStyle}>L&apos;accès à une clientèle ciblée et qualifiée</li>
-          <li style={listItemStyle}>La valorisation de leur expertise</li>
-        </ul>
-        <p style={paragraphStyle}>
-          Section Luxe agit comme un levier de développement pour les acteurs professionnels du luxe.
-        </p>
+        {/* Section 3 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+          <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Une plateforme exclusivement professionnelle</h2>
+          <p style={paragraphStyle}>
+            Section Luxe réunit boutiques, dépôts-vente et maisons spécialisées légalement établies.
+            Chaque vendeur reste indépendant et responsable de ses articles.
+            Nous leur offrons une vitrine structurée, une visibilité élargie et un accès à une clientèle qualifiée.
+            <br />
+            <br />
+            Pour les professionnels, Section Luxe est un levier.
+            Pour les acheteurs, un outil de décision.
+          </p>
+        </section>
 
-        <h2 style={sectionTitleStyle}>Notre mission</h2>
-        <p style={paragraphStyle}>
-          Rendre le marché du luxe plus accessible, plus lisible et plus efficace, tout en préservant l&apos;exigence et l&apos;exclusivité qui caractérisent cet univers.
-        </p>
-        <p style={paragraphStyle}>
-          Que vous soyez passionné, collectionneur, investisseur ou acheteur occasionnel, notre plateforme vous permet de trouver la pièce qui correspond à vos attentes, en toute clarté.
-        </p>
+        {/* Section 4 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+          <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Une nouvelle référence du marché</h2>
+          <p style={paragraphStyle}>
+            Le luxe évolue.
+            La recherche devient digitale.
+            La comparaison devient essentielle.
+            <br />
+            <br />
+            Section Luxe accompagne cette transformation en apportant transparence, lisibilité et efficacité sans jamais compromettre l&apos;élégance et l&apos;exclusivité propres à cet univers.
+          </p>
+        </section>
 
-        <h2 style={sectionTitleStyle}>Section Luxe en quelques mots</h2>
-        <ul style={{ ...listStyle, listStyleType: 'none', paddingLeft: 0 }}>
-          <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
-            Marketplace spécialisée en produits de luxe
-          </li>
-          <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
-            Articles neufs et d&apos;occasion
-          </li>
-          <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
-            Mise en relation entre acheteurs et vendeurs professionnels
-          </li>
-          <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
-            Comparaison des offres du marché
-          </li>
-          <li style={{ ...listItemStyle, paddingLeft: 24, position: 'relative' }}>
-            <span style={{ position: 'absolute', left: 0, color: '#1d1d1f' }}>•</span>
-            Vision complète et structurée du secteur
-          </li>
-        </ul>
+        {/* Section 5 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+          <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Notre ambition</h2>
+          <p style={paragraphStyle}>
+            Devenir la plateforme de référence du marché du luxe professionnel.
+            Un espace clair dans un univers complexe.
+            Un accès direct aux meilleures offres.
+            Une vision moderne d&apos;un secteur intemporel.
+          </p>
+        </section>
 
-        <div style={{ marginTop: 48 }}>
+        {/* Section 6 */}
+        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: 0, textAlign: 'center' }}>
+          <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Section Luxe en quelques mots</h2>
+          <ul style={{ ...listStyle, listStyleType: 'none', paddingLeft: 0, marginTop: SPACE_AFTER_TITLE }}>
+            <BulletItem centered>Plateforme de référencement d&apos;articles de luxe</BulletItem>
+            <BulletItem centered>Réservée aux vendeurs professionnels</BulletItem>
+            <BulletItem centered>Comparaison claire des offres</BulletItem>
+            <BulletItem centered>Articles neufs et d&apos;occasion</BulletItem>
+            <BulletItem centered>Vision globale en quelques clics</BulletItem>
+          </ul>
+        </section>
+
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: SPACE_LINE * 2 }}>
           <Link
             href="/catalogue"
             style={{
@@ -134,9 +187,10 @@ export default function AProposPage() {
               fontSize: 15,
               fontWeight: 500,
               borderRadius: 980,
+              lineHeight: LINE_HEIGHT,
             }}
           >
-            Voir catalogue
+            Accéder au catalogue
           </Link>
         </div>
       </div>

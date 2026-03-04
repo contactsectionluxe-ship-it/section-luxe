@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signUpBuyer } from '@/lib/supabase/auth';
+import { CguCgvCheckbox } from '@/components/ui';
 
 const inputStyle = {
   width: '100%',
@@ -31,10 +32,17 @@ function RegisterForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptCguCgv, setAcceptCguCgv] = useState(false);
+  const [cguCgvError, setCguCgvError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setCguCgvError('');
+    if (!acceptCguCgv) {
+      setCguCgvError('Veuillez accepter les CGU et les CGV pour créer un compte.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Les mots de passe ne correspondent pas');
       return;
@@ -45,7 +53,12 @@ function RegisterForm() {
     }
     setLoading(true);
     try {
-      await signUpBuyer(email, password, `${firstName.trim()} ${lastName.trim()}`.trim());
+      const user = await signUpBuyer(email, password, `${firstName.trim()} ${lastName.trim()}`.trim());
+      await fetch('/api/cgu-cgv-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, context: 'inscription' }),
+      });
       router.push(safeRedirect);
     } catch (err: any) {
       console.error('Registration error:', err);
@@ -168,6 +181,13 @@ function RegisterForm() {
                 </button>
               </div>
             </div>
+
+            <CguCgvCheckbox
+              id="inscription-cgu-cgv"
+              checked={acceptCguCgv}
+              onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
+              error={cguCgvError}
+            />
 
             <button
               type="submit"

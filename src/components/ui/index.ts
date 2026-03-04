@@ -31,3 +31,6 @@ export type { SpinnerProps } from './Spinner';
 
 export { AddressAutocomplete } from './AddressAutocomplete';
 export type { AddressAutocompleteProps } from './AddressAutocomplete';
+
+export { CguCgvCheckbox } from './CguCgvCheckbox';
+export type { CguCgvCheckboxProps } from './CguCgvCheckbox';

@@ -10,9 +10,10 @@ import { PageLoader } from '@/components/ui';
 import { createListing, updateListing } from '@/lib/supabase/listings';
 import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
+import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND_AND_GENRE } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getJeanSizesForGenre, getPantSizesForGenre, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -39,6 +40,8 @@ export default function NewListingPage() {
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [acceptCguCgv, setAcceptCguCgv] = useState(false);
+  const [cguCgvError, setCguCgvError] = useState('');
 
   // Remonter le formulaire en haut à chaque changement d'étape
   useEffect(() => {
@@ -171,12 +174,31 @@ export default function NewListingPage() {
   // Modèles selon catégorie, marque et genre (Homme / Femme) — marque = sélection ou texte saisi
   const brandForModels = brand || marqueSearchQuery.trim();
   const modelOptions = (() => {
-    if (!category || category === 'autre' || !brandForModels || genre.length === 0) return [];
-    const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
-    if (!byBrand) return []; // Marque sans modèles prédéfinis → champ libre
+    if (!category || category === 'autre' || genre.length === 0) return [];
     const set = new Set<string>();
-    if (genre.includes('femme')) byBrand.femme.forEach((m) => set.add(m));
-    if (genre.includes('homme')) byBrand.homme.forEach((m) => set.add(m));
+    if (category === 'vetements') {
+      VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
+        if (modelGenre === 'both') set.add(name);
+        else if (modelGenre === 'femme' && genre.includes('femme')) set.add(name);
+        else if (modelGenre === 'homme' && genre.includes('homme')) set.add(name);
+      });
+    }
+    if (brandForModels) {
+      const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
+      if (byBrand) {
+        const allowModel = (m: string) => {
+          if (category !== 'vetements') return true;
+          const femmeOnly = VETEMENTS_MODELES_FEMME_ONLY.includes(m);
+          const hommeOnly = VETEMENTS_MODELES_HOMME_ONLY.includes(m);
+          if (genre.includes('femme') && genre.includes('homme')) return true;
+          if (genre.includes('homme') && !genre.includes('femme') && femmeOnly) return false;
+          if (genre.includes('femme') && !genre.includes('homme') && hommeOnly) return false;
+          return true;
+        };
+        if (genre.includes('femme')) byBrand.femme.filter(allowModel).forEach((m) => set.add(m));
+        if (genre.includes('homme')) byBrand.homme.filter(allowModel).forEach((m) => set.add(m));
+      }
+    }
     if (category === 'sacs') {
       set.add('Sac');
       set.add('Pochette');
@@ -274,6 +296,11 @@ if (modelOptions.length > 0) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCguCgvError('');
+    if (!acceptCguCgv) {
+      setCguCgvError('Veuillez accepter les CGU et les CGV pour publier l\'annonce.');
+      return;
+    }
     if (!validateStep4()) return;
 
     setLoading(true);
@@ -303,8 +330,8 @@ if (modelOptions.length > 0) {
         condition: condition || null,
         material: materialToSave,
         color: colorToSave,
-        heightCm: heightCm ? parseFloat(heightCm.replace(',', '.')) : null,
-        widthCm: widthCm ? parseFloat(widthCm.replace(',', '.')) : null,
+        heightCm: (category === 'chaussures' || category === 'vetements') ? null : (heightCm ? parseFloat(heightCm.replace(',', '.')) : null),
+        widthCm: (category === 'chaussures' || category === 'vetements') ? null : (widthCm ? parseFloat(widthCm.replace(',', '.')) : null),
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
@@ -332,6 +359,11 @@ if (modelOptions.length > 0) {
       } catch {
         // ignore
       }
+      await fetch('/api/cgu-cgv-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user!.uid, context: 'publication_annonce' }),
+      });
       router.push('/vendeur');
     } catch (err: unknown) {
       const message =
@@ -757,7 +789,14 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       style={inputStyle}
                     />
                     {sizeOpen && (() => {
-                      const options = category === 'chaussures' ? getShoeSizesForGenre(genre) : [...CLOTHING_SIZES];
+                      const m = (model || modeleSearchQuery.trim()).toLowerCase();
+                      const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
+                      const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
+                      const options = category === 'chaussures'
+                        ? getShoeSizesForGenre(genre)
+                        : (isPantalon || isJean
+                          ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : [])]
+                          : [...CLOTHING_SIZES]);
                       const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
                       if (filtered.length === 0) return null;
                       return (
@@ -1202,7 +1241,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Décrivez votre produit en précisant : état, caractéristiques, éventuelles imperfections, taille et dimensions."
+                    placeholder={category === 'chaussures' || category === 'vetements' ? "Décrivez votre produit en précisant : état, caractéristiques, éventuelles imperfections, taille." : "Décrivez votre produit en précisant : état, caractéristiques, éventuelles imperfections, taille et dimensions."}
                     style={{
                       width: '100%',
                       minHeight: 100,
@@ -1216,6 +1255,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     }}
                   />
                 </div>
+                {(category !== 'chaussures' && category !== 'vetements') && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
                   <div>
                     <label style={labelStyle}>Longueur</label>
@@ -1246,6 +1286,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     </div>
                   </div>
                 </div>
+                )}
                 <div style={{ marginBottom: 18 }}>
                   <label style={labelStyle}>Année</label>
                   <input
@@ -1389,6 +1430,12 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     Annonce active (visible dans le catalogue)
                   </label>
                 </div>
+                <CguCgvCheckbox
+                  id="nouvelle-annonce-cgu-cgv"
+                  checked={acceptCguCgv}
+                  onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
+                  error={cguCgvError}
+                />
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
                     type="button"
