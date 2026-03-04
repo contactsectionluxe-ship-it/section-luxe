@@ -883,9 +883,9 @@ function CatalogueContent() {
   const selectedModels = filters.models ?? (filters.model ? [filters.model] : []);
   const hasPantalon = selectedModels.some((m) => normalizeForSearch(m).includes('pantalon'));
   const hasJean = selectedModels.some((m) => normalizeForSearch(m).includes('jean'));
-  const clothingSizeOptions = selectedTypes.includes('vetements') && (hasPantalon || hasJean)
+  const clothingSizeOptions = (selectedTypes.includes('vetements') && (hasPantalon || hasJean)
     ? [...new Set([...CLOTHING_SIZES, ...(hasPantalon ? PANT_SIZES_MIX : []), ...(hasJean ? JEAN_SIZES_MIX : [])])]
-    : [...CLOTHING_SIZES];
+    : [...CLOTHING_SIZES]) as string[];
   const toggleModele = (model: string) => {
     setFilters((prev) => {
       const current = prev.models ?? (prev.model ? [prev.model] : []);
