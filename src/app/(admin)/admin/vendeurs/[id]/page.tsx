@@ -82,7 +82,7 @@ export default function AdminSellerDetailPage() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 14, color: '#6e6e73' }}>Chargement...</p>
       </div>
     );
@@ -91,7 +91,7 @@ export default function AdminSellerDetailPage() {
   if (!canAccessAdmin) return null;
   if (!seller) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <p style={{ fontSize: 14, color: '#6e6e73' }}>Vendeur introuvable</p>
         <Link href="/admin" style={{ fontSize: 14, color: '#1d1d1f', textDecoration: 'underline' }}>Retour à l’admin</Link>
       </div>
@@ -99,7 +99,7 @@ export default function AdminSellerDetailPage() {
   }
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <Link
           href="/admin"

@@ -6,12 +6,21 @@ import Link from 'next/link';
 import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, deleteListing } from '@/lib/supabase/listings';
+import { recordListingDeletion } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
 
 const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
+
+const SUPPRESSION_RAISONS = [
+  { value: 'vendu', label: 'Article vendu' },
+  { value: 'reserve', label: 'Article réservé' },
+  { value: 'erreur', label: 'Erreur dans l\'annonce' },
+  { value: 'retire', label: 'Article retiré de la vente' },
+  { value: 'autre', label: 'Autre' },
+] as const;
 
 export default function VoirAnnoncePage() {
   const router = useRouter();
@@ -24,6 +33,8 @@ export default function VoirAnnoncePage() {
   const [loading, setLoading] = useState(true);
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalStep, setDeleteModalStep] = useState<1 | 2>(1);
+  const [deleteReason, setDeleteReason] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
@@ -66,8 +77,12 @@ export default function VoirAnnoncePage() {
   }
 
   const handleDelete = async () => {
+    if (!user?.uid) return;
     setDeleting(true);
     try {
+      const amountCents = (deleteReason === 'vendu' || deleteReason === 'reserve') && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
+      const listingTitle = listing?.title;
+      await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
       await deleteListing(listingId);
       router.push('/vendeur');
     } catch (error) {
@@ -75,7 +90,15 @@ export default function VoirAnnoncePage() {
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
+      setDeleteModalStep(1);
+      setDeleteReason('');
     }
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteModalStep(1);
+    setDeleteReason('');
   };
 
   if (!user || !seller || !listing) {
@@ -370,7 +393,7 @@ export default function VoirAnnoncePage() {
               </Link>
               <button
                 type="button"
-                onClick={() => setShowDeleteModal(true)}
+                onClick={() => { setShowDeleteModal(true); setDeleteModalStep(1); setDeleteReason(''); }}
                 style={{
                   flex: 1,
                   minWidth: 160,
@@ -396,41 +419,97 @@ export default function VoirAnnoncePage() {
 
           {showDeleteModal && (
             <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowDeleteModal(false)} aria-hidden />
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={closeDeleteModal} aria-hidden />
               <div
                 style={{
                   position: 'relative',
                   width: '100%',
-                  maxWidth: 340,
+                  maxWidth: 410,
                   backgroundColor: '#fff',
                   padding: '24px 20px',
                   borderRadius: 16,
                   boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
                 }}
               >
-                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 10, color: '#0a0a0a', textAlign: 'center' }}>
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 16, color: '#0a0a0a', textAlign: 'center' }}>
                   Supprimer l&apos;annonce
                 </h2>
-                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
-                  Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
-                </p>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteModal(false)}
-                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    style={{ flex: 1, height: 44, backgroundColor: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
-                  >
-                    {deleting ? 'Suppression...' : 'Supprimer'}
-                  </button>
-                </div>
+                {deleteModalStep === 1 ? (
+                  <>
+                    <p style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500, marginBottom: 10 }}>
+                      Pour quelle raison souhaitez-vous retirer cette annonce ?
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                      {SUPPRESSION_RAISONS.map((r) => (
+                        <label
+                          key={r.value}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: '10px 12px',
+                            borderRadius: 10,
+                            border: `1.5px solid ${deleteReason === r.value ? '#1d1d1f' : '#e5e5e7'}`,
+                            backgroundColor: deleteReason === r.value ? '#f5f5f7' : '#fff',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            color: '#1d1d1f',
+                          }}
+                        >
+                          <input
+                            type="radio"
+                            name="deleteReason"
+                            value={r.value}
+                            checked={deleteReason === r.value}
+                            onChange={() => setDeleteReason(r.value)}
+                            style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
+                          />
+                          {r.label}
+                        </label>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={closeDeleteModal}
+                        style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModalStep(2)}
+                        disabled={!deleteReason}
+                        style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: !deleteReason ? 'not-allowed' : 'pointer', opacity: !deleteReason ? 0.7 : 1 }}
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
+                      Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
+                    </p>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteModalStep(1)}
+                        style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={deleting}
+                        style={{ flex: 1, height: 44, backgroundColor: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
+                      >
+                        {deleting ? 'Suppression...' : 'Supprimer'}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

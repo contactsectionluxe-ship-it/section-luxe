@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle, BarChart2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
@@ -274,6 +274,7 @@ export function Header() {
                           <>
                             <Link href="/vendeur/annonces/nouvelle" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><PlusCircle size={18} /> Déposer une annonce</Link>
                             <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><Package size={18} /> Mes annonces</Link>
+                            <Link href="/vendeur/ventes" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><BarChart2 size={18} /> Mes ventes</Link>
                             <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><MessageCircle size={18} /> Ma messagerie {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                             <Link href="/vendeur/factures" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><FileText size={18} /> Mes factures</Link>
                             <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10 }}><User size={18} /> Mon profil</Link>
@@ -362,6 +363,7 @@ export function Header() {
                     <>
                       <Link href="/vendeur/annonces/nouvelle" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Déposer une annonce</Link>
                       <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes annonces</Link>
+                      <Link href="/vendeur/ventes" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes ventes</Link>
                       <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
                       <Link href="/vendeur/factures" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes factures</Link>
                       <Link href="/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>

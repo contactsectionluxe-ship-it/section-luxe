@@ -28,7 +28,7 @@ const EMETTEUR = {
   rcs: 'Paris B 123 456 789',
   tva: 'FR 12 345678901',
   siege: '123 avenue des Champs-Élysées, 75008 Paris',
-  email: 'contact@sectionluxe.fr',
+  email: 'contact.sectionluxe@gmail.com',
 };
 
 export default function FactureViewPage() {
@@ -77,7 +77,7 @@ export default function FactureViewPage() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbfbfb' }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
       </div>
     );
@@ -87,7 +87,7 @@ export default function FactureViewPage() {
 
   if (!invoice) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
         <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 24 }}>Facture introuvable.</p>
           <Link href="/vendeur/factures" style={{ fontSize: 15, color: '#1d1d1f', textDecoration: 'underline' }}>
@@ -101,7 +101,7 @@ export default function FactureViewPage() {
   const clientAddress = [seller.address, seller.postcode, seller.city].filter(Boolean).join(', ') || '—';
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#f5f5f7' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 800, margin: '0 auto', paddingTop: 32, paddingRight: 24, paddingBottom: 60, paddingLeft: 24 }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <Link

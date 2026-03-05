@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 
 const LINE_HEIGHT = 1.75;
 const FONT_SIZE = 16;
@@ -71,7 +72,7 @@ function BulletItem({ children, centered }: { children: React.ReactNode; centere
 
 export default function AProposPage() {
   return (
-    <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
@@ -122,6 +123,25 @@ export default function AProposPage() {
           <p style={paragraphStyle}>
             Clair. Rapide. Structuré.
           </p>
+          <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: SPACE_LINE * 2 }}>
+            <Link
+              href="/catalogue"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '14px 28px',
+                backgroundColor: '#1d1d1f',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 500,
+                borderRadius: 980,
+                lineHeight: LINE_HEIGHT,
+              }}
+            >
+              Accéder au catalogue
+            </Link>
+          </div>
         </section>
 
         {/* Section 3 */}
@@ -173,27 +193,76 @@ export default function AProposPage() {
             <BulletItem centered>Vision globale en quelques clics</BulletItem>
           </ul>
         </section>
+      </div>
 
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: SPACE_LINE * 2 }}>
+      {/* CTA vendeur — même section, même taille et même dégradé que la page d'accueil (pleine largeur) */}
+      <section
+        style={{
+          position: 'relative',
+          marginTop: -40,
+          padding: '120px 24px 88px',
+          backgroundImage: 'url(/section-vendeur-bg.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 82%',
+          backgroundRepeat: 'no-repeat',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.6) 45%, transparent 75%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(ellipse 72% 42% at 50% 50%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 55%, rgba(255,255,255,0.15) 85%, transparent 100%)',
+            pointerEvents: 'none',
+          }}
+        />
+        <div style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+          <h2
+            style={{
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              fontSize: 'clamp(24px, 4vw, 32px)',
+              fontWeight: 500,
+              color: '#1d1d1f',
+              marginBottom: 16,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Vous êtes un vendeur professionnel ?
+          </h2>
+          <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
+            Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
+          </p>
           <Link
-            href="/catalogue"
+            href="/inscription-vendeur"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: 8,
-              padding: '14px 28px',
+              height: 50,
+              padding: '0 28px',
               backgroundColor: '#1d1d1f',
               color: '#fff',
               fontSize: 15,
               fontWeight: 500,
               borderRadius: 980,
-              lineHeight: LINE_HEIGHT,
+              transition: 'opacity 0.2s',
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
           >
-            Accéder au catalogue
+            Devenir partenaire
+            <ArrowRight size={18} strokeWidth={2} />
           </Link>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

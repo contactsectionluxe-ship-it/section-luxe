@@ -110,7 +110,7 @@ export default function CGVPage() {
               RCS Paris : [à compléter]<br />
               SIRET : [à compléter]<br />
               TVA intracommunautaire : [à compléter]<br />
-              Email : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600 }}>contact@sectionluxe.fr</a><br />
+              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a><br />
               Ci-après « la Société »
             </p>
             <p style={paragraphStyle}>

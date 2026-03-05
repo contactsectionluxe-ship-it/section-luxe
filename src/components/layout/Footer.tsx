@@ -52,6 +52,7 @@ export function Footer() {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <Link href="/inscription-vendeur" style={{ fontSize: 14, color: '#6e6e73' }}>Devenir vendeur</Link>
               <Link href="/vendeur" style={{ fontSize: 14, color: '#6e6e73' }}>Mes annonces</Link>
+              <Link href="/vendeur/ventes" style={{ fontSize: 14, color: '#6e6e73' }}>Mes ventes</Link>
             </nav>
           </div>
 

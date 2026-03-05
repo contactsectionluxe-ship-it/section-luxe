@@ -100,15 +100,7 @@ export default function SellerDashboardPage() {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [sortDropdownOpen]);
 
-  if (authLoading || loading) {
-    return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#888' }}>Chargement...</p>
-      </div>
-    );
-  }
-
-  if (!user || !seller) return null;
+  if (!authLoading && (!user || !seller)) return null;
 
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
   const activeListings = listings.filter((l) => l.isActive).length;
@@ -138,6 +130,8 @@ export default function SellerDashboardPage() {
     }
   });
 
+  const showSkeletons = authLoading || loading;
+
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
@@ -148,25 +142,29 @@ export default function SellerDashboardPage() {
               Mes annonces
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 14, color: '#666' }}>{seller?.companyName}</span>
-              {seller?.status === 'approved' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500 }}>
+              {showSkeletons ? (
+                <div className="catalogue-skeleton" style={{ width: 140, height: 18, borderRadius: 4 }} />
+              ) : (
+                <span style={{ fontSize: 14, color: '#666' }}>{seller?.companyName}</span>
+              )}
+              {!showSkeletons && seller?.status === 'approved' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
                   <CheckCircle size={12} /> Validé
                 </span>
               )}
-              {seller?.status === 'pending' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500 }}>
+              {!showSkeletons && seller?.status === 'pending' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
                   <Clock size={12} /> En attente
                 </span>
               )}
-              {seller?.status === 'rejected' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500 }}>
+              {!showSkeletons && seller?.status === 'rejected' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
                   <XCircle size={12} /> Refusé
                 </span>
               )}
             </div>
           </div>
-          {isApprovedSeller && (
+          {!showSkeletons && isApprovedSeller && (
             <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
               <Plus size={18} /> Déposer une annonce
             </Link>
@@ -174,7 +172,7 @@ export default function SellerDashboardPage() {
         </div>
 
         {/* Status alerts */}
-        {seller?.status === 'pending' && (
+        {!showSkeletons && seller?.status === 'pending' && (
           <div style={{ padding: 20, backgroundColor: '#fef3c7', marginBottom: 32, display: 'flex', gap: 16 }}>
             <AlertCircle size={24} color="#92400e" style={{ flexShrink: 0 }} />
             <div>
@@ -186,7 +184,7 @@ export default function SellerDashboardPage() {
           </div>
         )}
 
-        {seller?.status === 'rejected' && (
+        {!showSkeletons && seller?.status === 'rejected' && (
           <div style={{ padding: 20, backgroundColor: '#fee2e2', marginBottom: 32, display: 'flex', gap: 16 }}>
             <XCircle size={24} color="#991b1b" style={{ flexShrink: 0 }} />
             <div>
@@ -199,49 +197,48 @@ export default function SellerDashboardPage() {
         )}
 
         {/* Stats */}
-        {isApprovedSeller && (
+        {(showSkeletons || isApprovedSeller) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-            <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <Package size={22} color="#666" />
+            <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#666" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}>Annonces actives</p>
-                <p style={{ fontSize: 22, fontWeight: 600 }}>{activeListings}</p>
+                <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 32, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : activeListings}</p>
               </div>
             </div>
-            <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <Heart size={22} color="#666" />
+            <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#666" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}>Total likes</p>
-                <p style={{ fontSize: 22, fontWeight: 600 }}>{totalLikes}</p>
+                <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 28, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalLikes}</p>
               </div>
             </div>
-            <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <MessageCircle size={22} color="#666" />
+            <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#666" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}>Total messages</p>
-                <p style={{ fontSize: 22, fontWeight: 600 }}>{totalMessages}</p>
+                <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 24, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalMessages}</p>
               </div>
             </div>
-            <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <Phone size={22} color="#666" />
+            <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#666" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}>Total appels</p>
-                <p style={{ fontSize: 22, fontWeight: 600 }}>{totalAppels}</p>
+                <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 20, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalAppels}</p>
               </div>
             </div>
           </div>
         )}
 
-        {listings.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
               <input
@@ -335,11 +332,35 @@ export default function SellerDashboardPage() {
               )}
             </div>
           </div>
-        )}
 
         {/* Listings */}
         <div>
-          {listings.length === 0 ? (
+          {showSkeletons ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={i} style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                  <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
+                  <div style={{ padding: '16px 16px 12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="catalogue-skeleton" style={{ height: 15, width: '85%', marginBottom: 6, borderRadius: 4 }} />
+                        <div className="catalogue-skeleton" style={{ height: 18, width: '50%', borderRadius: 4 }} />
+                      </div>
+                      <div className="catalogue-skeleton" style={{ width: 52, height: 22, borderRadius: 4, flexShrink: 0 }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div className="catalogue-skeleton" style={{ height: 12, width: 40, borderRadius: 4 }} />
+                      <div className="catalogue-skeleton" style={{ height: 12, width: 70, borderRadius: 4 }} />
+                    </div>
+                  </div>
+                  <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
+                    <div className="catalogue-skeleton" style={{ flex: 1, height: 36, borderRadius: 6 }} />
+                    <div className="catalogue-skeleton" style={{ flex: 1, height: 36, borderRadius: 6 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : listings.length === 0 ? (
             <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
               <Package size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
               <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Aucune annonce</h3>

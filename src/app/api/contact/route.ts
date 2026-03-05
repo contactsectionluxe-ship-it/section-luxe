@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'contact@sectionluxe.fr';
+const TO_EMAIL = process.env.CONTACT_TO_EMAIL || 'contact.sectionluxe@gmail.com';
 const REPORT_TO_EMAIL = process.env.REPORT_TO_EMAIL || 'contact.sectionluxe@gmail.com';
 
 function getTransporter() {

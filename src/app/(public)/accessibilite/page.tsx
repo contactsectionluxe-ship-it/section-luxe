@@ -137,7 +137,7 @@ export default function AccessibilitePage() {
             Si vous rencontrez une difficulté d&apos;accès à un contenu ou à une fonctionnalité du site, vous pouvez nous contacter :
           </p>
           <p style={paragraphStyle}>
-            <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600, textDecoration: 'none' }}>contact@sectionluxe.fr</a>
+            <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
             <br />
             ou via le <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 600 }}>formulaire de contact</Link> disponible sur le site.
           </p>

@@ -220,7 +220,7 @@ export default function MessagesPage() {
 
         {/* Liste des discussions : même arrondi que la barre de recherche (12), bloc unique non séparé */}
         {filteredConversations.length > 0 ? (
-          <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {filteredConversations.map((conversation, index) => {
                 const unreadCount = getUnreadCount(conversation);

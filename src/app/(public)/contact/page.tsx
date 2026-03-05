@@ -40,6 +40,12 @@ export default function ContactPage() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (success) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [success]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -100,10 +106,10 @@ export default function ContactPage() {
           <p style={{ fontSize: 15, color: '#6e6e73', lineHeight: 1.6, marginBottom: 24 }}>
             Pour toute demande, utilisez le formulaire ci-dessous ou écrivez-nous à{' '}
             <a
-              href="mailto:contact@sectionluxe.fr"
+              href="mailto:contact.sectionluxe@gmail.com"
               style={{ color: '#6e6e73', textDecoration: 'none' }}
             >
-              contact@sectionluxe.fr
+              contact.sectionluxe@gmail.com
             </a>
             .
           </p>
@@ -211,9 +217,6 @@ export default function ContactPage() {
             </form>
           )}
 
-          <p style={{ fontSize: 14, color: '#6e6e73', marginTop: 24, marginBottom: 0, lineHeight: 1.5 }}>
-            Nous répondons à votre demande dans les meilleurs délais.
-          </p>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>

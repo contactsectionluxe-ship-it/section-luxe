@@ -207,8 +207,8 @@ export default function ConversationPage() {
           </p>
         </div>
 
-        {/* Carte principale (même design que Ma messagerie : fond blanc, carte blanche) */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e8e6e3', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438 }}>
+        {/* Carte principale (même contour et ombre que Annonces mises en ligne / Mes ventes) */}
+        <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438 }}>
           {/* Barre supérieure : retour + annonce + interlocuteur */}
           <div
             style={{

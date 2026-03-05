@@ -71,7 +71,7 @@ export default function AdminDashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 14, color: '#6e6e73' }}>Chargement...</p>
       </div>
     );
@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
   } as const;
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Header — même style que Mes annonces */}
         <div style={{ marginBottom: 24 }}>

@@ -132,7 +132,7 @@ export default function SignalementPage() {
             <p style={{ ...paragraphStyle, fontWeight: 600, color: '#1d1d1f' }}>Par email</p>
             <p style={paragraphStyle}>
               Vous pouvez également effectuer un signalement à l&apos;adresse suivante :{' '}
-              <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>contact.sectionluxe@gmail.com</a>
+              <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
             </p>
             <p style={paragraphStyle}>
               Le signalement doit comporter :

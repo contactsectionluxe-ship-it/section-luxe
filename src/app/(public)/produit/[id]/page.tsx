@@ -70,6 +70,8 @@ export default function ProductPage() {
   const descriptionRefMobile = useRef<HTMLDivElement>(null);
   const [sellerDescriptionOverflows, setSellerDescriptionOverflows] = useState(false);
   const sellerDescriptionRef = useRef<HTMLParagraphElement>(null);
+  const pubVideoRef = useRef<HTMLVideoElement>(null);
+  const pubVideoWrapRef = useRef<HTMLDivElement>(null);
   /** Comparaison de prix : moyenne / min / max des annonces même catégorie et même année (hors annonce actuelle) */
   const [priceStats, setPriceStats] = useState<{ average: number; min: number; max: number; count: number } | null>(null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -125,6 +127,68 @@ export default function ProductPage() {
     setReportName((prev) => prev || (user.displayName ?? '').trim());
     setReportEmail((prev) => prev || (user.email ?? '').trim());
   }, [user]);
+
+  // Vidéo publicité : démarre quand le bloc est visible à l'écran, en boucle ; preload léger
+  useEffect(() => {
+    if (loading || !listing?.id) return;
+    const wrap = pubVideoWrapRef.current;
+    const video = pubVideoRef.current;
+    if (!wrap || !video) return;
+
+    const playIfVisible = () => {
+      const w = pubVideoWrapRef.current;
+      const v = pubVideoRef.current;
+      if (!w || !v) return;
+      const rect = w.getBoundingClientRect();
+      const winH = window.innerHeight;
+      const visibleTop = Math.max(rect.top, 0);
+      const visibleBottom = Math.min(rect.bottom, winH);
+      const visibleHeight = Math.max(0, visibleBottom - visibleTop);
+      const halfVisible = visibleHeight >= rect.height * 0.5;
+      if (halfVisible) {
+        v.muted = true;
+        v.play().catch(() => {});
+      } else {
+        v.pause();
+      }
+    };
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const v = pubVideoRef.current;
+          if (v && entry.isIntersecting) {
+            v.muted = true;
+            v.play().catch(() => {});
+          } else if (v) {
+            v.pause();
+          }
+        }
+      },
+      { threshold: 0.5, root: null, rootMargin: '0px' }
+    );
+
+    io.observe(wrap);
+    playIfVisible();
+    const t1 = setTimeout(playIfVisible, 50);
+    const t2 = setTimeout(playIfVisible, 200);
+    const t3 = setTimeout(playIfVisible, 500);
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(playIfVisible);
+    });
+    const scrollHandler = () => playIfVisible();
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    window.addEventListener('resize', scrollHandler);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      window.removeEventListener('scroll', scrollHandler);
+      window.removeEventListener('resize', scrollHandler);
+    };
+  }, [listing?.id, loading]);
 
   const handleReportSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,8 +481,96 @@ export default function ProductPage() {
 
   if (loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#888' }}>Chargement...</p>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+        <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
+          <Link href={returnToCatalogue} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
+            <ArrowLeft size={16} />
+            Retour au catalogue
+          </Link>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
+            {/* Desktop skeleton — même structure que la page produit */}
+            <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
+              <div style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
+                <div className="catalogue-skeleton" style={{ flex: '0 0 auto', width: 'min(100%, 520px)', aspectRatio: '1/1', borderRadius: 18 }} />
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div className="catalogue-skeleton" style={{ width: 72, height: 28, borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ width: 56, height: 28, borderRadius: 4 }} />
+                  </div>
+                  <div className="catalogue-skeleton" style={{ height: 32, width: '85%', borderRadius: 4 }} />
+                  <div className="catalogue-skeleton" style={{ height: 20, width: 120, borderRadius: 4 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="catalogue-skeleton" style={{ height: 32, width: 100, borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: '50%' }} />
+                    <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: '50%' }} />
+                  </div>
+                  <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                      <div className="catalogue-skeleton" style={{ width: 80, height: 80, borderRadius: '50%', flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div className="catalogue-skeleton" style={{ height: 24, width: '70%', marginBottom: 8, borderRadius: 4 }} />
+                        <div className="catalogue-skeleton" style={{ height: 14, width: 140, borderRadius: 4 }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <div className="catalogue-skeleton" style={{ flex: 1, height: 44, borderRadius: 10 }} />
+                      <div className="catalogue-skeleton" style={{ flex: 1, height: 44, borderRadius: 10 }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="catalogue-skeleton" style={{ width: 60, height: 60, borderRadius: 4 }} />
+                ))}
+              </div>
+            </div>
+            {/* Bas de page desktop — 2 colonnes */}
+            <div className="hide-mobile" style={{ display: 'grid', gridTemplateColumns: '1.15fr 0.85fr', gap: 40, width: '100%', marginTop: 0, alignItems: 'start' }}>
+              <div style={{ minWidth: 0, paddingRight: 32 }}>
+                <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
+                  <div className="catalogue-skeleton" style={{ height: 19, width: 140, marginBottom: 16, borderRadius: 4 }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                        <div className="catalogue-skeleton" style={{ height: 14, width: 60, borderRadius: 4 }} />
+                        <div className="catalogue-skeleton" style={{ height: 14, width: 80, borderRadius: 4 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
+                  <div className="catalogue-skeleton" style={{ height: 19, width: 100, marginBottom: 12, borderRadius: 4 }} />
+                  <div className="catalogue-skeleton" style={{ height: 60, width: '100%', borderRadius: 4 }} />
+                </div>
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div className="catalogue-skeleton" style={{ width: '100%', minHeight: 300, borderRadius: 18 }} />
+              </div>
+            </div>
+            {/* Mobile skeleton */}
+            <div className="hide-desktop" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div className="catalogue-skeleton" style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto', borderRadius: 18 }} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="catalogue-skeleton" style={{ width: 50, height: 50, borderRadius: 12 }} />
+                ))}
+              </div>
+              <div className="catalogue-skeleton" style={{ height: 28, width: '90%', borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 24, width: 100, borderRadius: 4 }} />
+              <div style={{ padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+                  <div className="catalogue-skeleton" style={{ width: 80, height: 80, borderRadius: '50%' }} />
+                  <div>
+                    <div className="catalogue-skeleton" style={{ height: 22, width: 140, marginBottom: 6, borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ height: 14, width: 120, borderRadius: 4 }} />
+                  </div>
+                </div>
+                <div className="catalogue-skeleton" style={{ width: '100%', height: 44, borderRadius: 10 }} />
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -960,8 +1112,25 @@ export default function ProductPage() {
           </div>
           {/* Section publicité — même largeur que cadre vendeur, uniquement sur PC (pas sur téléphone) */}
           <div className="hide-mobile" style={{ minWidth: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', paddingLeft: 32 }}>
-            <div style={{ width: '100%', flex: 1, minHeight: 300, padding: 20, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e5e5e7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: '#888' }}>
-              Publicité
+            <div ref={pubVideoWrapRef} style={{ width: '100%', flex: 1, minHeight: 300, padding: '20px 0', backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e5e5e7', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#888' }}>Publicité</p>
+              </div>
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <video
+                  ref={pubVideoRef}
+                  src="/pub-section-luxe.mp4"
+                  preload="metadata"
+                  loop
+                  muted
+                  playsInline
+                  style={{ width: '84%', maxWidth: '100%', height: 'auto', display: 'block', borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
+                  title="Publicité Section Luxe"
+                />
+              </div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
+                <p style={{ margin: 0, fontSize: 14, color: '#888' }}>Publicité</p>
+              </div>
             </div>
           </div>
           </div>
@@ -1388,9 +1557,12 @@ export default function ProductPage() {
           <span>N° annonce {listing.listingNumber || listing.id}</span>
           <span style={{ margin: '0 10px' }}>|</span>
           <span>
-            Publiée il y a{' '}
-            {Math.max(1, Math.floor((Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24)))}{' '}
-            jour{Math.max(1, Math.floor((Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24))) > 1 ? 's' : ''}
+            {(() => {
+              const days = Math.floor((Date.now() - new Date(listing.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+              if (days > 30) return 'Publiée il y a plus de 30 jours';
+              const n = Math.max(1, days);
+              return `Publiée il y a ${n} jour${n > 1 ? 's' : ''}`;
+            })()}
           </span>
         </div>
       </div>

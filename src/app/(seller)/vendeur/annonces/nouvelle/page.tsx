@@ -413,7 +413,7 @@ if (modelOptions.length > 0) {
   };
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '0.5cm 24px 80px' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1

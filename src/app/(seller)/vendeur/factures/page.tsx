@@ -15,12 +15,22 @@ function formatDate(d: Date): string {
   return new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(d);
 }
 
+/** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "tshirt" et "t-shirt" matchent). */
+function normalizeForSearch(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[-'\s]+/g, '');
+}
+
 type SortOrder = 'newest' | 'oldest';
 
 export default function FacturesPage() {
   const router = useRouter();
   const { user, seller, isSeller, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [invoicesLoading, setInvoicesLoading] = useState(true);
   const [invoices, setInvoices] = useState<SellerInvoice[]>([]);
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
   const [dateFrom, setDateFrom] = useState('');
@@ -37,8 +47,12 @@ export default function FacturesPage() {
   }, [authLoading, user, seller, router]);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid) {
+      setInvoicesLoading(false);
+      return;
+    }
     let cancelled = false;
+    setInvoicesLoading(true);
     (async () => {
       try {
         await ensureInvoicesForActiveListings(user.uid);
@@ -48,6 +62,8 @@ export default function FacturesPage() {
         setInvoices(list);
       } catch (e) {
         console.error('Chargement factures', e);
+      } finally {
+        if (!cancelled) setInvoicesLoading(false);
       }
     })();
     return () => { cancelled = true; };
@@ -65,14 +81,14 @@ export default function FacturesPage() {
       to.setHours(23, 59, 59, 999);
       list = list.filter((inv) => inv.issuedAt <= to);
     }
-    const q = searchQuery.trim().toLowerCase();
+    const q = normalizeForSearch(searchQuery.trim());
     if (q) {
       list = list.filter(
         (inv) =>
-          (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(q)) ||
-          (inv.listingTitle && inv.listingTitle.toLowerCase().includes(q)) ||
-          (inv.issuer && inv.issuer.toLowerCase().includes(q)) ||
-          formatDate(inv.issuedAt).toLowerCase().includes(q)
+          (inv.invoiceNumber && normalizeForSearch(inv.invoiceNumber).includes(q)) ||
+          (inv.listingTitle && normalizeForSearch(inv.listingTitle).includes(q)) ||
+          (inv.issuer && normalizeForSearch(inv.issuer).includes(q)) ||
+          normalizeForSearch(formatDate(inv.issuedAt)).includes(q)
       );
     }
     list.sort((a, b) =>
@@ -85,7 +101,7 @@ export default function FacturesPage() {
 
   if (authLoading || loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbfbfb' }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
       </div>
     );
@@ -94,43 +110,42 @@ export default function FacturesPage() {
   if (!user || !seller) return null;
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
             Mes factures
           </h1>
           <p style={{ fontSize: 14, color: '#888' }}>
-            {invoices.length === 0
-              ? 'Consulter et télécharger les factures liées à la publication de vos annonces'
-              : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'} (émetteur : Section luxe)`}
+            {invoicesLoading
+              ? 'Chargement des factures...'
+              : invoices.length === 0
+                ? 'Consulter et télécharger les factures liées à la publication de vos annonces'
+                : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'} (émetteur : Section luxe)`}
           </p>
         </div>
 
-        {invoices.length > 0 && (
-          <div style={{ marginBottom: 20, position: 'relative' }}>
-            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher dans mes factures..."
-              autoComplete="off"
-              style={{
-                width: '100%',
-                padding: '12px 16px 12px 44px',
-                fontSize: 15,
-                border: '1px solid #d2d2d7',
-                borderRadius: 10,
-                backgroundColor: '#fff',
-                outline: 'none',
-              }}
-            />
-          </div>
-        )}
+        <div style={{ marginBottom: 20, position: 'relative' }}>
+          <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher dans mes factures..."
+            autoComplete="off"
+            style={{
+              width: '100%',
+              padding: '12px 16px 12px 44px',
+              fontSize: 15,
+              border: '1px solid #d2d2d7',
+              borderRadius: 10,
+              backgroundColor: '#fff',
+              outline: 'none',
+            }}
+          />
+        </div>
 
-        {invoices.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -256,10 +271,31 @@ export default function FacturesPage() {
               </span>
             </div>
           </div>
-        )}
 
         <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', border: '1px solid #e8e6e3', overflow: 'hidden' }}>
-          {filteredAndSortedInvoices.length > 0 ? (
+          {invoicesLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {Array.from({ length: 6 }, (_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 16,
+                    padding: '18px 24px',
+                    borderBottom: i < 5 ? '1px solid #e8e6e3' : 'none',
+                  }}
+                >
+                  <div className="catalogue-skeleton" style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="catalogue-skeleton" style={{ height: 15, width: '70%', borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ height: 13, width: '90%', borderRadius: 4 }} />
+                  </div>
+                  <div className="catalogue-skeleton" style={{ width: 72, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                </div>
+              ))}
+            </div>
+          ) : filteredAndSortedInvoices.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {filteredAndSortedInvoices.map((inv) => (
                 <Link

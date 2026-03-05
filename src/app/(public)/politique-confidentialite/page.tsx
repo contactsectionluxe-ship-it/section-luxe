@@ -72,7 +72,7 @@ export default function PolitiqueConfidentialitePage() {
               Siège social : Boulevard Murat, 75016 Paris, France<br />
               RCS Paris : 912 345 678<br />
               TVA intracommunautaire : FR 12 912345678<br />
-              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>contact.sectionluxe@gmail.com</a>
+              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
             </p>
             <p style={paragraphStyle}>
               SL INVEST agit en qualité de Responsable du traitement au sens du Règlement (UE) 2016/679 du 27 avril 2016 (RGPD).
@@ -292,7 +292,7 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>droit d&apos;introduire une réclamation auprès de la CNIL.</li>
             </ul>
             <p style={paragraphStyle}>
-              Pour exercer vos droits : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>contact.sectionluxe@gmail.com</a><br />
+              Pour exercer vos droits : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a><br />
               Une réponse sera apportée dans un délai maximal d&apos;un (1) mois.
             </p>
 
@@ -300,7 +300,7 @@ export default function PolitiqueConfidentialitePage() {
             <p style={paragraphStyle}>
               En cas de difficulté non résolue, vous pouvez saisir :<br />
               Commission Nationale de l&apos;Informatique et des Libertés (CNIL)<br />
-              <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>www.cnil.fr</a>
+              <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer" style={{ color: '#6e6e73', textDecoration: 'none' }}>www.cnil.fr</a>
             </p>
 
             <h2 style={sectionTitleStyle}>15. Modification de la politique</h2>

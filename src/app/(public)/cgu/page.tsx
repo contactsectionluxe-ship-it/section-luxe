@@ -130,7 +130,7 @@ export default function CGUPage() {
             SIRET : [à compléter]<br />
             TVA intracommunautaire : [à compléter]<br />
             Président : Monsieur Michael Labrador<br />
-            Email : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600 }}>contact@sectionluxe.fr</a>
+            Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>
 
           <h3 style={articleTitleStyle}>Article 2 – Acceptation et opposabilité</h3>
@@ -210,7 +210,7 @@ export default function CGUPage() {
             Sa responsabilité ne peut être engagée qu&apos;en cas de connaissance effective d&apos;un contenu manifestement illicite et d&apos;absence de retrait prompt.
           </p>
           <p style={paragraphStyle}>
-            Point de contact DSA : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600 }}>contact@sectionluxe.fr</a>
+            Point de contact DSA : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>
 
           <h3 style={articleTitleStyle}>Article 6 – Classement des annonces</h3>
@@ -450,7 +450,7 @@ export default function CGUPage() {
             <li style={listItemStyle}>justificatif de lien avec la société.</li>
           </ul>
           <p style={paragraphStyle}>
-            Les données sont conservées conformément à la réglementation applicable et à la <Link href="/politique-confidentialite" style={{ color: '#1d1d1f', fontWeight: 600 }}>Politique de confidentialité</Link>.
+            Les données sont conservées conformément à la réglementation applicable et à la <Link href="/politique-confidentialite" style={{ color: '#6e6e73', textDecoration: 'none' }}>Politique de confidentialité</Link>.
           </p>
 
           <h3 style={articleTitleStyle}>Article 2 – Obligations du vendeur</h3>

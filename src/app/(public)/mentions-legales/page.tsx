@@ -67,7 +67,7 @@ export default function MentionsLegalesPage() {
             Numéro SIRET : 912 345 678 00012<br />
             Numéro de TVA intracommunautaire : FR 12 912345678<br />
             Directeur de la publication : Michael Labrador, Président<br />
-            Adresse de contact : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600 }}>contact@sectionluxe.fr</a>
+            Adresse de contact : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>
 
           <h2 style={sectionTitleStyle}>2. Hébergement</h2>
@@ -79,7 +79,7 @@ export default function MentionsLegalesPage() {
             340 S Lemon Ave #4133<br />
             Walnut, CA 91789<br />
             États-Unis<br />
-            Site internet : <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" style={{ color: '#1d1d1f', fontWeight: 600 }}>https://vercel.com</a>
+            Site internet : <a href="https://vercel.com" target="_blank" rel="noopener noreferrer" style={{ color: '#6e6e73', textDecoration: 'none' }}>https://vercel.com</a>
           </p>
 
           <h2 style={sectionTitleStyle}>3. Statut de la plateforme</h2>
@@ -116,7 +116,7 @@ export default function MentionsLegalesPage() {
           <h2 style={sectionTitleStyle}>5. Signalement de contenu illicite</h2>
           <p style={paragraphStyle}>
             Toute personne peut signaler un contenu manifestement illicite à l&apos;adresse suivante :{' '}
-            <a href="mailto:contact@sectionluxe.fr" style={{ color: '#1d1d1f', fontWeight: 600 }}>contact@sectionluxe.fr</a>
+            <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>
           <p style={paragraphStyle}>
             Le signalement doit comporter :
@@ -157,7 +157,7 @@ export default function MentionsLegalesPage() {
           <h2 style={sectionTitleStyle}>8. Données personnelles</h2>
           <p style={paragraphStyle}>
             Les modalités de collecte et de traitement des données personnelles sont détaillées dans la{' '}
-            <Link href="/politique-confidentialite" style={{ color: '#1d1d1f', fontWeight: 600 }}>Politique de confidentialité</Link> accessible sur le site.
+            <Link href="/politique-confidentialite" style={{ color: '#6e6e73', textDecoration: 'none' }}>Politique de confidentialité</Link> accessible sur le site.
           </p>
 
           <h2 style={sectionTitleStyle}>9. Cookies</h2>
