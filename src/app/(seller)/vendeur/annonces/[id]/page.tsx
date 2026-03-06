@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Check, Info, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader, CguCgvCheckbox } from '@/components/ui';
@@ -13,7 +13,7 @@ import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getJeanSizesForGenre, getPantSizesForGenre, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getJeanSizesForGenre, getModelDisplayName, getPantSizesForGenre, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -21,6 +21,13 @@ const CONTENU_INCLUS_OPTIONS = [
   { value: 'box', label: 'Boîte' },
   { value: 'certificat', label: 'Certificat' },
   { value: 'facture', label: 'Facture' },
+];
+
+const ETAT_DEFINITIONS: { title: string; text: string }[] = [
+  { title: 'Neuf', text: 'Article jamais porté en parfait état. Aucun signe d\'utilisation.' },
+  { title: 'Très bon état', text: 'Article peu porté et soigneusement conservé. Peut présenter de très légers signes d\'usage à peine perceptibles.' },
+  { title: 'Bon état', text: 'Article porté et bien entretenu. Peut présenter des traces d\'usage visibles liées à une utilisation normale.' },
+  { title: 'État correct', text: 'Article régulièrement porté. Présente des signes d\'usure visibles liés à l\'usage, sans défaut majeur ni détérioration importante.' },
 ];
 
 const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix'];
@@ -75,10 +82,13 @@ export default function EditListingPage() {
   const [marqueOpen, setMarqueOpen] = useState(false);
   const [modeleOpen, setModeleOpen] = useState(false);
   const [conditionOpen, setConditionOpen] = useState(false);
+  const [etatInfoClicked, setEtatInfoClicked] = useState(false);
+  const [etatInfoHover, setEtatInfoHover] = useState(false);
   const categoryListRef = useRef<HTMLDivElement>(null);
   const marqueListRef = useRef<HTMLDivElement>(null);
   const modeleListRef = useRef<HTMLDivElement>(null);
   const conditionListRef = useRef<HTMLDivElement>(null);
+  const etatInfoRef = useRef<HTMLDivElement>(null);
   const materialListRef = useRef<HTMLDivElement>(null);
   const colorListRef = useRef<HTMLDivElement>(null);
   const sizeListRef = useRef<HTMLDivElement>(null);
@@ -137,7 +147,7 @@ export default function EditListingPage() {
   })();
   const brandForModels = brand || marqueSearchQuery.trim();
   const modelOptions = (() => {
-    if (!category || genre.length === 0) return [];
+    if (!category || category === 'autre' || genre.length === 0) return [];
     const set = new Set<string>();
     if (category === 'vetements') {
       VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
@@ -150,12 +160,34 @@ export default function EditListingPage() {
       const byBrand = MODELS_BY_CATEGORY_BRAND_AND_GENRE[category]?.[brandForModels];
       if (byBrand) {
         const allowModel = (m: string) => {
-          if (category !== 'vetements') return true;
-          const femmeOnly = VETEMENTS_MODELES_FEMME_ONLY.includes(m);
-          const hommeOnly = VETEMENTS_MODELES_HOMME_ONLY.includes(m);
           if (genre.includes('femme') && genre.includes('homme')) return true;
-          if (genre.includes('homme') && !genre.includes('femme') && femmeOnly) return false;
-          if (genre.includes('femme') && !genre.includes('homme') && hommeOnly) return false;
+          const onlyFemme = genre.includes('femme') && !genre.includes('homme');
+          const onlyHomme = genre.includes('homme') && !genre.includes('femme');
+          if (category === 'vetements') {
+            if (onlyHomme && VETEMENTS_MODELES_FEMME_ONLY.includes(m)) return false;
+            if (onlyFemme && VETEMENTS_MODELES_HOMME_ONLY.includes(m)) return false;
+            return true;
+          }
+          if (category === 'chaussures') {
+            if (onlyHomme && CHAUSSURES_MODELES_FEMME_ONLY.includes(m)) return false;
+            if (onlyFemme && CHAUSSURES_MODELES_HOMME_ONLY.includes(m)) return false;
+            return true;
+          }
+          if (category === 'sacs') {
+            if (onlyHomme && SACS_MODELES_FEMME_ONLY.includes(m)) return false;
+            if (onlyFemme && SACS_MODELES_HOMME_ONLY.includes(m)) return false;
+            return true;
+          }
+          if (category === 'bijoux') {
+            if (onlyHomme && BIJOUX_MODELES_FEMME_ONLY.includes(m)) return false;
+            if (onlyFemme && BIJOUX_MODELES_HOMME_ONLY.includes(m)) return false;
+            return true;
+          }
+          if (category === 'montres') {
+            if (onlyHomme && MONTRES_MODELES_FEMME_ONLY.includes(m)) return false;
+            if (onlyFemme && MONTRES_MODELES_HOMME_ONLY.includes(m)) return false;
+            return true;
+          }
           return true;
         };
         if (genre.includes('femme')) byBrand.femme.filter(allowModel).forEach((m) => set.add(m));
@@ -163,12 +195,15 @@ export default function EditListingPage() {
       }
     }
     if (category === 'sacs') {
-      set.add('Sac');
       set.add('Pochette');
     }
-    const list = [...set].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
-    if (model && !list.includes(model)) list.unshift(model);
-    return list;
+    const excludedAsCategory = category ? (MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[category] ?? []) : [];
+    const raw = [...set]
+      .filter((m) => m !== 'Autre' && !excludedAsCategory.includes(m))
+      .sort((a, b) => a.localeCompare(b, 'fr'));
+    const displayList = raw.map((m) => getModelDisplayName(category, brandForModels, m));
+    if (model && !displayList.includes(model)) return [model, ...displayList];
+    return displayList;
   })();
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS).filter((o) => o.value !== 'other') : [];
   const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS).filter((o) => o.value !== 'other') : [];
@@ -347,6 +382,20 @@ export default function EditListingPage() {
     };
   }, [listingId, description]);
 
+  // Fermer le tooltip État au clic en dehors
+  useEffect(() => {
+    if (!etatInfoClicked && !etatInfoHover) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const el = etatInfoRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setEtatInfoClicked(false);
+        setEtatInfoHover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [etatInfoClicked, etatInfoHover]);
+
   if (authLoading || loading) {
     return <PageLoader />;
   }
@@ -509,6 +558,7 @@ export default function EditListingPage() {
         size: (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
       });
 
+      setError('');
       if (isActive) {
         try {
           await ensureInvoiceForListing(listingId);
@@ -522,11 +572,15 @@ export default function EditListingPage() {
       } catch {
         // ignore
       }
-      await fetch('/api/cgu-cgv-acceptance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user!.uid, context: 'modification_annonce' }),
-      });
+      try {
+        await fetch('/api/cgu-cgv-acceptance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user!.uid, context: 'modification_annonce' }),
+        });
+      } catch (e) {
+        console.error('Enregistrement acceptation CGU/CGV', e);
+      }
       router.push('/vendeur');
     } catch (err: unknown) {
       const message =
@@ -827,170 +881,277 @@ setMaterialSearchQuery('');
               )}
             </div>
             <div style={{ marginBottom: 18, position: 'relative' }}>
-              <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
-              {modelOptions.length > 0 ? (
-                <>
+              <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span> <span style={{ fontSize: 13, color: '#6e6e73', fontWeight: 400, marginLeft: 8 }}>Type + Modèle (ex : Bracelet Clic H)</span></label>
+              {(() => {
+                const hasMarque = !!(brand || marqueSearchQuery.trim());
+                const modeleDisabled = !category || !hasMarque;
+                const modelePlaceholder = !category ? 'Sélectionner d\'abord une catégorie' : !hasMarque ? 'Sélectionner d\'abord une marque' : 'Rechercher ou préciser le modèle...';
+                const modelePlaceholderCustom = !category ? 'Sélectionner d\'abord une catégorie' : !hasMarque ? 'Sélectionner d\'abord une marque' : 'Précisez le modèle';
+                return modelOptions.length > 0 ? (
+                  <>
+                    <input
+                      type="text"
+                      value={modeleSearchQuery}
+                      onChange={(e) => {
+                        if (modeleDisabled) return;
+                        setModeleSearchQuery(e.target.value);
+                        if (model && e.target.value !== model) setModel('');
+                        setModeleOpen(true);
+                      }}
+                      onFocus={() => { if (!modeleDisabled) setModeleOpen(true); }}
+                      onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
+                      placeholder={modelePlaceholder}
+                      disabled={modeleDisabled}
+                      style={{
+                        ...inputStyle,
+                        cursor: modeleDisabled ? 'not-allowed' : 'text',
+                        opacity: modeleDisabled ? 0.7 : 1,
+                      }}
+                    />
+                    {!modeleDisabled && modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
+                      <div
+                        ref={modeleListRef}
+                        className="listing-dropdown-list"
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          marginTop: 4,
+                          maxHeight: 'calc(228px - 5mm)',
+                          overflowY: 'auto',
+                          backgroundColor: '#fff',
+                          border: '1px solid #d2d2d7',
+                          borderRadius: 10,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          zIndex: 10,
+                        }}
+                      >
+                        {modelOptions
+                          .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
+                          .map((name) => (
+                            <button
+                              key={name}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setModel(name);
+                                setModeleSearchQuery(name);
+                                setModeleOpen(false);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '6px 12px',
+                                textAlign: 'left',
+                                fontSize: 15,
+                                color: '#1d1d1f',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {name}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
                   <input
                     type="text"
-                    value={modeleSearchQuery}
-                    onChange={(e) => {
-                      setModeleSearchQuery(e.target.value);
-                      if (model && e.target.value !== model) setModel('');
-                      setModeleOpen(true);
+                    value={customModel}
+                    onChange={(e) => { if (!modeleDisabled) setCustomModel(e.target.value); }}
+                    placeholder={modelePlaceholderCustom}
+                    disabled={modeleDisabled}
+                    style={{
+                      ...inputStyle,
+                      cursor: modeleDisabled ? 'not-allowed' : 'text',
+                      opacity: modeleDisabled ? 0.7 : 1,
                     }}
-                    onFocus={() => setModeleOpen(true)}
-                    onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
-                    placeholder="Rechercher ou préciser le modèle..."
-                    style={inputStyle}
                   />
-                  {modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
-                    <div
-                      ref={modeleListRef}
-                      className="listing-dropdown-list"
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        marginTop: 4,
-                        maxHeight: 'calc(228px - 5mm)',
-                        overflowY: 'auto',
-                        backgroundColor: '#fff',
-                        border: '1px solid #d2d2d7',
-                        borderRadius: 10,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        zIndex: 10,
-                      }}
-                    >
-                      {modelOptions
-                        .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
-                        .map((name) => (
-                          <button
-                            key={name}
-                            type="button"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setModel(name);
-                              setModeleSearchQuery(name);
-                              setModeleOpen(false);
-                            }}
-                            style={{
-                              display: 'block',
-                              width: '100%',
-                              padding: '6px 12px',
-                              textAlign: 'left',
-                              fontSize: 15,
-                              color: '#1d1d1f',
-                              background: 'none',
-                              border: 'none',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            {name}
-                          </button>
-                        ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <input type="text" value={customModel} onChange={(e) => setCustomModel(e.target.value)} placeholder="Précisez le modèle" style={inputStyle} />
-              )}
+                );
+              })()}
             </div>
             {(category === 'chaussures' || category === 'vetements') && (
               <div style={{ marginBottom: 18, position: 'relative' }}>
                 <label style={labelStyle}>{category === 'chaussures' ? 'Pointure' : 'Taille'}</label>
-                <input
-                  type="text"
-                  value={sizeSearchQuery}
-                  onChange={(e) => {
-                    setSizeSearchQuery(e.target.value);
-                    if (size && e.target.value !== size) setSize('');
-                    setSizeOpen(true);
-                  }}
-                  onFocus={() => setSizeOpen(true)}
-                  onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
-                  placeholder={category === 'chaussures' ? 'Rechercher ou préciser la pointure…' : 'Rechercher ou préciser la taille…'}
-                  style={inputStyle}
-                />
-                {sizeOpen && (() => {
-                  const m = (model || modeleSearchQuery.trim()).toLowerCase();
-                  const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
-                  const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
-                  const options = category === 'chaussures'
-                    ? getShoeSizesForGenre(genre)
-                    : (isPantalon || isJean
-                      ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : [])]
-                      : [...CLOTHING_SIZES]);
-                  const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
-                  if (filtered.length === 0) return null;
+                {(() => {
+                  const hasModele = !!(model || modeleSearchQuery.trim() || customModel.trim());
+                  const sizeDisabled = !hasModele;
+                  const sizePlaceholder = sizeDisabled ? 'Renseigner d\'abord le modèle' : (category === 'chaussures' ? 'Rechercher ou préciser la pointure…' : 'Rechercher ou préciser la taille…');
                   return (
-                    <div
-                      ref={sizeListRef}
-                      className="listing-dropdown-list"
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        marginTop: 4,
-                        maxHeight: 'calc(228px - 5mm)',
-                        overflowY: 'auto',
-                        backgroundColor: '#fff',
-                        border: '1px solid #d2d2d7',
-                        borderRadius: 10,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        zIndex: 10,
-                      }}
-                    >
-                      {filtered.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setSize(opt);
-                            setSizeSearchQuery(opt);
-                            setSizeOpen(false);
-                          }}
-                          style={{
-                            display: 'block',
-                            width: '100%',
-                            padding: '6px 12px',
-                            textAlign: 'left',
-                            fontSize: 15,
-                            color: '#1d1d1f',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <input
+                        type="text"
+                        value={sizeSearchQuery}
+                        onChange={(e) => {
+                          if (sizeDisabled) return;
+                          setSizeSearchQuery(e.target.value);
+                          if (size && e.target.value !== size) setSize('');
+                          setSizeOpen(true);
+                        }}
+                        onFocus={() => { if (!sizeDisabled) setSizeOpen(true); }}
+                        onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
+                        placeholder={sizePlaceholder}
+                        disabled={sizeDisabled}
+                        style={{
+                          ...inputStyle,
+                          cursor: sizeDisabled ? 'not-allowed' : 'text',
+                          opacity: sizeDisabled ? 0.7 : 1,
+                        }}
+                      />
+                      {!sizeDisabled && sizeOpen && (() => {
+                        const m = (model || modeleSearchQuery.trim()).toLowerCase();
+                        const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
+                        const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
+                        const options = category === 'chaussures'
+                          ? getShoeSizesForGenre(genre)
+                          : (isPantalon || isJean
+                            ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : [])]
+                            : [...CLOTHING_SIZES]);
+                        const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
+                        if (filtered.length === 0) return null;
+                        return (
+                          <div
+                            ref={sizeListRef}
+                            className="listing-dropdown-list"
+                            style={{
+                              position: 'absolute',
+                              top: '100%',
+                              left: 0,
+                              right: 0,
+                              marginTop: 4,
+                              maxHeight: 'calc(228px - 5mm)',
+                              overflowY: 'auto',
+                              backgroundColor: '#fff',
+                              border: '1px solid #d2d2d7',
+                              borderRadius: 10,
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                              zIndex: 10,
+                            }}
+                          >
+                            {filtered.map((opt) => (
+                              <button
+                                key={opt}
+                                type="button"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  setSize(opt);
+                                  setSizeSearchQuery(opt);
+                                  setSizeOpen(false);
+                                }}
+                                style={{
+                                  display: 'block',
+                                  width: '100%',
+                                  padding: '6px 12px',
+                                  textAlign: 'left',
+                                  fontSize: 15,
+                                  color: '#1d1d1f',
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </>
                   );
                 })()}
               </div>
             )}
-            <div style={{ marginBottom: 18, position: 'relative' }}>
-              <label style={labelStyle}>État <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <button
-                type="button"
-                onClick={() => setConditionOpen((o) => !o)}
-                onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
-                style={{
-                  ...inputStyle,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                  color: condition ? '#1d1d1f' : '#86868b',
-                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'right 14px center',
-                  paddingRight: 40,
-                }}
-              >
-                {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
-              </button>
+            <div ref={etatInfoRef} style={{ marginBottom: 18, position: 'relative' }}>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 6 }}>
+                État <span style={{ color: '#1d1d1f' }}>*</span>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const visible = etatInfoClicked || etatInfoHover;
+                    if (visible) {
+                      setEtatInfoClicked(false);
+                      setEtatInfoHover(false);
+                    } else {
+                      setEtatInfoClicked(true);
+                      setEtatInfoHover(false);
+                    }
+                  }}
+                  onMouseEnter={() => setEtatInfoHover(true)}
+                  onMouseLeave={() => setEtatInfoHover(false)}
+                  aria-label="Informations sur les états"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 22,
+                    height: 22,
+                    padding: 0,
+                    border: '1px solid #d2d2d7',
+                    borderRadius: '50%',
+                    backgroundColor: etatInfoClicked ? '#1d1d1f' : (etatInfoHover ? '#1d1d1f' : '#fff'),
+                    color: etatInfoClicked ? '#fff' : (etatInfoHover ? '#fff' : '#6e6e73'),
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s, color 0.2s, border-color 0.2s',
+                    boxShadow: etatInfoClicked ? '0 1px 3px rgba(0,0,0,0.12)' : (etatInfoHover ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)'),
+                  }}
+                >
+                  <Info size={13} strokeWidth={2.2} />
+                </button>
+              </label>
+              <div style={{ position: 'relative' }}>
+                {(etatInfoClicked || etatInfoHover) && (
+                  <div
+                    role="tooltip"
+                    onMouseEnter={() => setEtatInfoHover(true)}
+                    onMouseLeave={() => setEtatInfoHover(false)}
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      zIndex: 20,
+                      boxSizing: 'border-box',
+                      padding: 16,
+                      backgroundColor: '#fff',
+                      border: '1px solid #e8e6e3',
+                      borderRadius: 12,
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                      fontSize: 13,
+                      lineHeight: 1.5,
+                      color: '#1d1d1f',
+                      minHeight: '100%',
+                    }}
+                  >
+                    {ETAT_DEFINITIONS.map((item) => (
+                      <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 12 }}>
+                        <strong style={{ display: 'block', marginBottom: 4 }}>{item.title}</strong>
+                        <span style={{ color: '#6e6e73' }}>{item.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setConditionOpen((o) => !o)}
+                  onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
+                  style={{
+                    ...inputStyle,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    color: condition ? '#1d1d1f' : '#86868b',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 14px center',
+                    paddingRight: 40,
+                  }}
+                >
+                  {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
+                </button>
+              </div>
               {conditionOpen && (
                 <div
                   ref={conditionListRef}
@@ -1384,6 +1545,27 @@ setMaterialSearchQuery('');
               />
             </div>
             {(category !== 'chaussures' && category !== 'vetements') && (
+            category === 'montres' ? (
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Dimension</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={widthCm ? String(Math.round(parseFloat(widthCm.replace(',', '.')) * 10)) : ''}
+                    onChange={(e) => {
+                      const v = e.target.value.replace(',', '.');
+                      if (v === '') { setWidthCm(''); setHeightCm(''); return; }
+                      const num = parseFloat(v);
+                      if (!Number.isNaN(num)) { setWidthCm(String(num / 10)); setHeightCm(''); }
+                    }}
+                    placeholder="Ex: 41"
+                    style={{ ...inputStyle, paddingRight: 44 }}
+                  />
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#86868b', fontSize: 15, lineHeight: 1 }}>mm</span>
+                </div>
+              </div>
+            ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 18 }}>
               <div>
                 <label style={labelStyle}>Longueur</label>
@@ -1400,6 +1582,7 @@ setMaterialSearchQuery('');
                 </div>
               </div>
             </div>
+            )
             )}
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Année</label>

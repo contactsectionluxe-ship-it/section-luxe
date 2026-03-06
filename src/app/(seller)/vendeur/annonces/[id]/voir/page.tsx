@@ -36,6 +36,7 @@ export default function VoirAnnoncePage() {
   const [deleteModalStep, setDeleteModalStep] = useState<1 | 2>(1);
   const [deleteReason, setDeleteReason] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -80,18 +81,26 @@ export default function VoirAnnoncePage() {
     if (!user?.uid) return;
     setDeleting(true);
     try {
+      // Enregistrer pour Mes ventes (vendu, réservé, etc.) — ne pas bloquer la suppression si erreur
       const amountCents = (deleteReason === 'vendu' || deleteReason === 'reserve') && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
       const listingTitle = listing?.title;
-      await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
+      try {
+        await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
+      } catch (recordErr) {
+        console.warn('Enregistrement Mes ventes (listing_deletions) ignoré:', recordErr);
+      }
+      // Toujours supprimer l'annonce du catalogue
       await deleteListing(listingId);
       router.push('/vendeur');
     } catch (error) {
-      console.error('Error deleting listing:', error);
+      console.error('Erreur lors de la suppression de l\'annonce:', error);
+      setDeleteError('Impossible de supprimer l\'annonce. Réessayez ou contactez le support.');
     } finally {
       setDeleting(false);
       setShowDeleteModal(false);
       setDeleteModalStep(1);
       setDeleteReason('');
+      setDeleteError(null);
     }
   };
 
@@ -99,6 +108,7 @@ export default function VoirAnnoncePage() {
     setShowDeleteModal(false);
     setDeleteModalStep(1);
     setDeleteReason('');
+    setDeleteError(null);
   };
 
   if (!user || !seller || !listing) {
@@ -316,14 +326,16 @@ export default function VoirAnnoncePage() {
                     <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
                   </div>
                 )}
-                {(listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null)) && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                      <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
-                    </div>
-                    <span title={`L. ${listing.widthCm ?? '—'} × H. ${listing.heightCm ?? '—'} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      L. {listing.widthCm ?? '—'} × H. {listing.heightCm ?? '—'} cm
+{(listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null)) && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'montres' ? 'Dimension' : 'Dimensions'}</span>
+                      </div>
+                    <span title={listing.category === 'montres' ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : `L. ${listing.widthCm ?? '—'} × H. ${listing.heightCm ?? '—'} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {listing.category === 'montres'
+                        ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm`
+                        : `L. ${listing.widthCm ?? '—'} × H. ${listing.heightCm ?? '—'} cm`}
                     </span>
                   </div>
                 )}
@@ -393,7 +405,7 @@ export default function VoirAnnoncePage() {
               </Link>
               <button
                 type="button"
-                onClick={() => { setShowDeleteModal(true); setDeleteModalStep(1); setDeleteReason(''); }}
+                onClick={() => { setShowDeleteModal(true); setDeleteModalStep(1); setDeleteReason(''); setDeleteError(null); }}
                 style={{
                   flex: 1,
                   minWidth: 160,
@@ -491,6 +503,9 @@ export default function VoirAnnoncePage() {
                     <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
                       Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                     </p>
+                    {deleteError && (
+                      <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteError}</p>
+                    )}
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button
                         type="button"

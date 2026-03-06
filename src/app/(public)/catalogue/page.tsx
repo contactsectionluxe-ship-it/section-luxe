@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
@@ -97,6 +97,47 @@ function normalizeForSearch(s: string): string {
     .replace(/[-'\s]+/g, '');
 }
 
+/** Mots-clés de recherche ajoutés par catégorie (ex. "bracelet" pour bijoux). */
+const CATEGORY_SEARCH_KEYWORDS: Record<string, string[]> = {
+  bijoux: ['bracelet', 'collier', 'bague', 'bijou', 'pendentif', 'boucle', 'oreille', 'creole', 'sautoir'],
+};
+
+/** Corrections de fautes de frappe courantes pour la recherche. */
+const SEARCH_TYPO_MAP: Record<string, string> = {
+  borce: 'force',
+  focre: 'force',
+  froce: 'force',
+};
+
+/** Met en évidence les mots de la recherche dans un texte (surlignage). */
+function highlightSearchTerms(text: string, searchQuery: string | undefined): React.ReactNode {
+  if (!searchQuery || !text) return text;
+  const words = searchQuery.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return text;
+  const pattern = new RegExp(
+    '(' + words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')',
+    'gi'
+  );
+  const parts = text.split(pattern);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <mark
+        key={i}
+        style={{
+          backgroundColor: 'rgba(255, 204, 0, 0.25)',
+          padding: '0 1px',
+          borderRadius: 2,
+          fontWeight: 600,
+        }}
+      >
+        {part}
+      </mark>
+    ) : (
+      part
+    )
+  );
+}
+
 /** Ordinal pour arrondissement : "01" → "1er", "02" → "2e", … "20" → "20e" */
 function arrondissementOrdinal(lastTwo: string): string {
   const n = parseInt(lastTwo, 10);
@@ -108,6 +149,64 @@ function parsePositiveInt(value: string | null, fallback: number): number {
   if (!value) return fallback;
   const n = Number.parseInt(value, 10);
   return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+/** Distance en km entre deux points (formule de Haversine). */
+function haversineKm(
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number }
+): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLon = ((b.lon - a.lon) * Math.PI) / 180;
+  const x =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+/** Rayons proposés (km) pour le filtre "autour de ma position" — 5 à 200 km, sélecteur glissant. */
+const RADIUS_KM_OPTIONS = [5, 10, 20, 50, 100, 200];
+
+/** Récupère les coordonnées du centre d'une commune par code postal (API geo.api.gouv.fr). */
+async function fetchCoordsForPostcode(
+  codePostal: string
+): Promise<{ lat: number; lon: number } | null> {
+  const q = codePostal.replace(/\s/g, '').slice(0, 5);
+  if (!q) return null;
+  try {
+    const res = await fetch(
+      `https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(q)}&fields=centre&limit=1`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const centre = Array.isArray(data) && data[0]?.centre?.coordinates;
+    if (!centre || !Array.isArray(centre) || centre.length < 2) return null;
+    const [lon, lat] = centre;
+    return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Récupère le code postal à partir de coordonnées (reverse geocoding, API adresse.data.gouv.fr). */
+async function fetchPostcodeFromCoords(
+  lat: number,
+  lon: number
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://api-adresse.data.gouv.fr/reverse/?lat=${lat}&lon=${lon}&limit=1`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    const postcode = data?.features?.[0]?.properties?.postcode;
+    return typeof postcode === 'string' ? postcode.replace(/\s/g, '').trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 // Filter Section Component
@@ -183,6 +282,13 @@ function FilterSection({
 
 const OCCASION_CONDITIONS = ['very_good', 'good', 'correct'];
 
+const ETAT_DEFINITIONS: { title: string; text: string }[] = [
+  { title: 'Neuf', text: 'Article jamais porté en parfait état. Aucun signe d\'utilisation.' },
+  { title: 'Très bon état', text: 'Article peu porté et soigneusement conservé. Peut présenter de très légers signes d\'usage à peine perceptibles.' },
+  { title: 'Bon état', text: 'Article porté et bien entretenu. Peut présenter des traces d\'usage visibles liées à une utilisation normale.' },
+  { title: 'État correct', text: 'Article régulièrement porté. Présente des signes d\'usure visibles liés à l\'usage, sans défaut majeur ni détérioration importante.' },
+];
+
 /** Normalise la chaîne de requête pour comparaison (ordre des clés). */
 function normalizeQueryString(params: URLSearchParams): string {
   return [...params.entries()].sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1])).map(([k, v]) => `${k}=${v}`).join('&');
@@ -191,6 +297,7 @@ function normalizeQueryString(params: URLSearchParams): string {
 /** Construit les paramètres URL à partir des filtres (pour conserver les filtres au retour depuis la page produit). */
 function filtersToParams(filters: Filters, page: number): URLSearchParams {
   const params = new URLSearchParams();
+  (filters.genre ?? []).forEach((g) => params.append('genre', g));
   const categories = filters.categories ?? (filters.category ? [filters.category] : []);
   categories.forEach((c) => params.append('categories', c));
   const brands = filters.brands ?? (filters.brand ? [filters.brand] : []);
@@ -220,6 +327,8 @@ function filtersToParams(filters: Filters, page: number): URLSearchParams {
 /** Reconstruit les filtres à partir des paramètres URL (retour arrière, lien partagé). */
 function paramsToFilters(params: URLSearchParams): Filters {
   const initial: Filters = { ...defaultFilters };
+  const genre = params.getAll('genre').filter((g) => g === 'femme' || g === 'homme') as ('femme' | 'homme')[];
+  if (genre.length) initial.genre = genre;
   const categories = params.getAll('categories');
   if (categories.length) initial.categories = categories;
   else {
@@ -444,6 +553,7 @@ function CatalogueContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false);
   const searchBarRef = useRef<HTMLDivElement>(null);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Titres d'annonces pour les suggestions de recherche (sans appliquer les filtres) */
   const [allListingTitlesForSearch, setAllListingTitlesForSearch] = useState<string[]>([]);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
@@ -470,6 +580,17 @@ function CatalogueContent() {
   const [locationQuery, setLocationQuery] = useState('');
   const [locationSuggestionsOpen, setLocationSuggestionsOpen] = useState(false);
   const locationInputRef = useRef<HTMLDivElement>(null);
+
+  /** Rayon en km (0 = désactivé) et position utilisateur pour filtre "autour de ma position". */
+  const [radiusKm, setRadiusKm] = useState(0);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const postcodeCoordsCacheRef = useRef<Map<string, { lat: number; lon: number }>>(new Map());
+
+  const [etatInfoClicked, setEtatInfoClicked] = useState(false);
+  const [etatInfoHover, setEtatInfoHover] = useState(false);
+  const etatInfoRef = useRef<HTMLDivElement>(null);
 
   const resultsTopRef = useRef<HTMLDivElement>(null);
 
@@ -684,7 +805,8 @@ function CatalogueContent() {
       const materials = filters.materials?.length ? filters.materials : (filters.material ? [filters.material] : undefined);
       const conditions = filters.conditions?.length ? filters.conditions : (filters.condition ? [filters.condition] : undefined);
       const sizes = filters.sizes?.length ? filters.sizes : undefined;
-      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, sellerId: filters.sellerId, sortBy });
+      const genres = filters.genre?.length ? filters.genre : undefined;
+      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, sellerId: filters.sellerId, sortBy });
 
       if (loadId !== loadListingsIdRef.current) return;
 
@@ -694,10 +816,30 @@ function CatalogueContent() {
       if (filters.yearMin != null) filtered = filtered.filter((l) => (l.year ?? 0) >= filters.yearMin!);
       if (filters.yearMax != null) filtered = filtered.filter((l) => (l.year ?? 0) <= filters.yearMax!);
       if (filters.query) {
-        const q = filters.query.toLowerCase();
-        filtered = filtered.filter(
-          (l) => l.title.toLowerCase().includes(q) || l.description.toLowerCase().includes(q)
-        );
+        const words = filters.query
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((w) => normalizeForSearch(w));
+        if (words.length > 0) {
+          filtered = filtered.filter((l) => {
+            const titleNorm = normalizeForSearch(l.title);
+            const descNorm = normalizeForSearch(l.description ?? '');
+            const sellerNorm = l.sellerName ? normalizeForSearch(l.sellerName) : '';
+            const brandNorm = l.brand ? normalizeForSearch(l.brand) : '';
+            const categoryNorm = l.category ? normalizeForSearch(CATEGORIES.find((c) => c.value === l.category)?.label ?? '') : '';
+            const modelNorm = l.model ? normalizeForSearch(l.model) : '';
+            let searchable = `${titleNorm} ${descNorm} ${sellerNorm} ${brandNorm} ${categoryNorm} ${modelNorm}`;
+            if (l.category && CATEGORY_SEARCH_KEYWORDS[l.category]) {
+              searchable += ' ' + CATEGORY_SEARCH_KEYWORDS[l.category].map(normalizeForSearch).join(' ');
+            }
+            const termGroups = words.map((word) => {
+              const correction = SEARCH_TYPO_MAP[word];
+              return correction ? [word, normalizeForSearch(correction)] : [word];
+            });
+            return termGroups.every((group) => group.some((term) => searchable.includes(term)));
+          });
+        }
       }
       /** Filtre localisation (multi : villes, codes postaux, régions) */
       const locList = filters.locations?.length
@@ -721,6 +863,39 @@ function CatalogueContent() {
             const dept = pc.startsWith('20') ? '20' : pc.slice(0, 2);
             return dept === prefix || pc.startsWith(prefix);
           });
+        });
+      }
+
+      /** Filtre rayon (km) autour de la position utilisateur — bonne alternative aux filtres localisation */
+      if (radiusKm > 0 && userCoords) {
+        const cache = postcodeCoordsCacheRef.current;
+        const uniquePostcodes = [
+          ...new Set(
+            filtered
+              .map((l) => l.sellerPostcode?.replace(/\s/g, '').trim())
+              .filter((pc): pc is string => Boolean(pc))
+          ),
+        ];
+        const coordsMap = new Map<string, { lat: number; lon: number }>();
+        for (const pc of uniquePostcodes) {
+          let c = cache.get(pc);
+          if (!c) {
+            c = await fetchCoordsForPostcode(pc);
+            if (c) cache.set(pc, c);
+          }
+          if (c) coordsMap.set(pc, c);
+        }
+        const userPostcode = await fetchPostcodeFromCoords(userCoords.lat, userCoords.lon);
+        const userPostcodeNorm = userPostcode?.replace(/\s/g, '').trim() ?? '';
+        const epsilonKm = 0.5;
+        filtered = filtered.filter((l) => {
+          const pc = l.sellerPostcode?.replace(/\s/g, '').trim();
+          if (!pc) return false;
+          if (userPostcodeNorm && pc === userPostcodeNorm) return true;
+          const c = coordsMap.get(pc);
+          if (!c) return false;
+          const d = haversineKm(userCoords, c);
+          return d <= radiusKm + epsilonKm;
         });
       }
 
@@ -769,11 +944,53 @@ function CatalogueContent() {
     } finally {
       if (loadId === loadListingsIdRef.current) setLoading(false);
     }
-  }, [filters]);
+  }, [filters, radiusKm, userCoords]);
 
   useEffect(() => {
     loadListings();
   }, [loadListings]);
+
+  /** Demander la position (appelée automatiquement quand l’utilisateur sélectionne un rayon > 0). */
+  const requestPosition = useCallback(() => {
+    setGeoError(null);
+    setGeoLoading(true);
+    if (!navigator.geolocation) {
+      setGeoError('La géolocalisation n’est pas supportée par votre navigateur.');
+      setGeoLoading(false);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setGeoError(null);
+        setGeoLoading(false);
+      },
+      () => {
+        setGeoError('Impossible d’obtenir votre position. Vérifiez les autorisations du navigateur.');
+        setGeoLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    );
+  }, []);
+
+  /** Dès qu’un rayon > 0 est choisi, demander la position pour filtrer par distance. */
+  useEffect(() => {
+    if (radiusKm > 0 && !userCoords && !geoLoading && !geoError) requestPosition();
+  }, [radiusKm, userCoords, geoLoading, geoError, requestPosition]);
+
+  /** Fermer le tooltip État (i) au clic ailleurs sur la page */
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(etatInfoClicked || etatInfoHover)) return;
+      const el = etatInfoRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setEtatInfoClicked(false);
+        setEtatInfoHover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [etatInfoClicked, etatInfoHover]);
 
   /** Charger les favoris de l'utilisateur pour les annonces affichées */
   useEffect(() => {
@@ -930,11 +1147,17 @@ function CatalogueContent() {
     return [...set];
   }, []);
 
-  /** Suggestions localisation : régions + départements (statiques) + villes (API geo.api.gouv.fr), sans accents ni tirets */
+  /** Tous les codes département (pour "France") */
+  const allDeptCodes = useMemo(() => DEPARTEMENTS_FR.map((d) => d.code), []);
+
+  /** Suggestions localisation : France + régions + départements (statiques) + villes (API geo.api.gouv.fr), sans accents ni tirets */
   const locationSuggestionsStatic = useMemo(() => {
     const q = normalizeForSearch(locationQuery.trim());
     if (q.length < 1) return [];
     const out: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    if (normalizeForSearch('France').includes(q)) {
+      out.push({ type: 'region', label: 'France', prefixes: allDeptCodes });
+    }
     for (const r of REGIONS_FR) {
       if (normalizeForSearch(r.name).includes(q)) out.push({ type: 'region', label: r.name, prefixes: r.depts });
     }
@@ -947,23 +1170,43 @@ function CatalogueContent() {
       }
     }
     return out;
-  }, [locationQuery]);
+  }, [locationQuery, allDeptCodes]);
 
-  /** Appel API communes (villes de France) avec debounce */
+  /** Appel API communes : par nom et par code postal (recherche intelligente, ex. 75016 ou 75 016 → Paris 16e (75016)) */
   useEffect(() => {
     const q = locationQuery.trim();
     if (q.length < 2) {
       setLocationCitySuggestions([]);
       return;
     }
+    const qNorm = q.replace(/\s/g, '');
+    const isPostalCode = /^\d{2,5}$/.test(qNorm);
     const t = setTimeout(async () => {
       setLocationCityLoading(true);
       try {
-        const res = await fetch(
-          `https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&limit=15&boost=population`
-        );
-        const data = (await res.json()) as Array<{ nom: string; codesPostaux: string[] }>;
-        setLocationCitySuggestions(Array.isArray(data) ? data : []);
+        const [byNom, byPostal] = await Promise.all([
+          fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&limit=15&boost=population`).then((r) => r.json() as Promise<Array<{ nom: string; codesPostaux: string[] }>>),
+          isPostalCode ? fetch(`https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(qNorm)}&fields=nom,codesPostaux&limit=15`).then((r) => r.json() as Promise<Array<{ nom: string; codesPostaux: string[] }>>) : Promise.resolve([]),
+        ]);
+        const listNom = Array.isArray(byNom) ? byNom : [];
+        const listPostal = Array.isArray(byPostal) ? byPostal : [];
+        const seen = new Set<string>();
+        const merged: Array<{ nom: string; codesPostaux: string[] }> = [];
+        for (const c of listPostal) {
+          const key = `${c.nom}|${(c.codesPostaux ?? []).join(',')}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            merged.push(c);
+          }
+        }
+        for (const c of listNom) {
+          const key = `${c.nom}|${(c.codesPostaux ?? []).join(',')}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            merged.push(c);
+          }
+        }
+        setLocationCitySuggestions(merged);
       } catch {
         setLocationCitySuggestions([]);
       } finally {
@@ -978,23 +1221,36 @@ function CatalogueContent() {
   const locationSuggestions = useMemo(() => {
     const fromCities: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
     for (const c of locationCitySuggestions) {
-      const codes = c.codesPostaux?.length ? c.codesPostaux : [];
+      const codes = c.codesPostaux?.length ? c.codesPostaux.map((x) => x.replace(/\s/g, '')) : [];
       const deptPrefixes = codesToPrefixes(codes);
       const deptLabel = codes[0]
         ? (codes[0].startsWith('20') ? codes[0].slice(0, 2) : codes[0].slice(0, 2))
         : '';
-      fromCities.push({ type: 'city', label: `${c.nom} (${deptLabel})`, prefixes: deptPrefixes });
+      const mainLabel = codes.length === 1 ? `${c.nom} (${codes[0]})` : `${c.nom} (${deptLabel})`;
+      const mainPrefixes = codes.length === 1 ? [codes[0]] : deptPrefixes;
+      fromCities.push({ type: 'city', label: mainLabel, prefixes: mainPrefixes });
       if (codes.length > 1) {
         for (const code of codes) {
-          const lastTwo = code.replace(/\s/g, '').slice(-2);
+          const lastTwo = code.slice(-2);
           const ord = arrondissementOrdinal(lastTwo);
-          fromCities.push({ type: 'city', label: `${c.nom} ${ord} (${code})`, prefixes: [code.replace(/\s/g, '')] });
+          fromCities.push({ type: 'city', label: `${c.nom} ${ord} (${code})`, prefixes: [code] });
         }
       }
     }
     const cityLabelSet = new Set(fromCities.map((s) => s.label));
     const seen = new Set<string>();
+    const qNorm = locationQuery.trim().replace(/\s/g, '');
+    const isPostalQuery = /^\d{2,5}$/.test(qNorm);
+    const postalFirst = isPostalQuery ? fromCities.filter((s) => s.prefixes.some((p) => p === qNorm || qNorm.startsWith(p))) : [];
     const out: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    if (isPostalQuery && postalFirst.length > 0) {
+      for (const s of postalFirst) {
+        if (!seen.has(s.label)) {
+          seen.add(s.label);
+          out.push(s);
+        }
+      }
+    }
     for (const s of locationSuggestionsStatic) {
       if (s.type === 'postal') {
         const matchDept = s.label.match(/^(\d{2}|2A|2B)\s*-\s*(.+)$/);
@@ -1018,7 +1274,7 @@ function CatalogueContent() {
       }
     }
     return out;
-  }, [locationSuggestionsStatic, locationCitySuggestions, codesToPrefixes]);
+  }, [locationSuggestionsStatic, locationCitySuggestions, locationQuery, codesToPrefixes]);
 
   /** Liste des localisations sélectionnées (multi) : depuis locations ou anciens champs postalCode/region */
   const selectedLocations = useMemo(() => {
@@ -1055,7 +1311,18 @@ function CatalogueContent() {
   };
 
   const handleReset = () => {
-    setFilters(defaultFilters);
+    const urlCondition = searchParams.get('condition');
+    const baseFilters = { ...defaultFilters };
+    if (urlCondition === 'new') {
+      baseFilters.conditions = ['new'];
+      const sid = searchParams.get('sellerId');
+      if (sid) baseFilters.sellerId = sid;
+    } else if (urlCondition === 'occasion') {
+      baseFilters.conditions = [...OCCASION_CONDITIONS];
+      const sid = searchParams.get('sellerId');
+      if (sid) baseFilters.sellerId = sid;
+    }
+    setFilters(baseFilters);
     setSearchQuery('');
     setLocalPriceMin('');
     setLocalPriceMax('');
@@ -1067,21 +1334,28 @@ function CatalogueContent() {
     setModeleSearchQuery('');
     setLocationQuery('');
     setLocationSuggestionsOpen(false);
-    setFilters((p) => ({ ...p, locations: undefined, postalCode: undefined, region: undefined }));
-    router.replace('/catalogue', { scroll: false });
+    setRadiusKm(0);
+    setUserCoords(null);
+    setGeoError(null);
+    const params = new URLSearchParams();
+    if (urlCondition) params.set('condition', urlCondition);
+    const sid = searchParams.get('sellerId');
+    if (sid) params.set('sellerId', sid);
+    const q = params.toString();
+    router.replace(q ? `/catalogue?${q}` : '/catalogue', { scroll: false });
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchSuggestionsOpen(false);
-    const categoryMatch = CATEGORIES.find((c) => c.label === searchQuery.trim());
-    const baseFromSearch = { ...defaultFilters, sellerId: filters.sellerId };
-    if (categoryMatch) {
-      setFilters({ ...baseFromSearch, categories: [categoryMatch.value] });
-    } else {
-      setFilters({ ...baseFromSearch, query: searchQuery.trim() || undefined });
-    }
-  };
+  /** Recherche automatique à la frappe (comme Mes favoris) : appliquer le filtre query après debounce 300 ms */
+  useEffect(() => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setFilters((prev) => ({ ...prev, query: searchQuery.trim() || undefined }));
+      searchDebounceRef.current = null;
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, [searchQuery]);
 
   /** Suggestions pour la barre de recherche (types + marques + titres), sans tenir compte des accents */
   const searchSuggestions = useMemo(() => {
@@ -1171,6 +1445,54 @@ function CatalogueContent() {
         }}
       >
         Recherche
+      </div>
+      {/* Femme / Homme — même couleur et contour que Type d'article */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' }}>
+          <button
+            type="button"
+            onClick={() => {
+              const current = filters.genre ?? [];
+              const next = current.includes('femme') ? current.filter((g) => g !== 'femme') : [...current, 'femme'];
+              setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
+            }}
+            style={{
+              flex: 1,
+              height: 44,
+              padding: '0 14px',
+              fontSize: 14,
+              fontWeight: 500,
+              border: 'none',
+              cursor: 'pointer',
+              backgroundColor: (filters.genre ?? []).includes('femme') ? '#1d1d1f' : '#fff',
+              color: (filters.genre ?? []).includes('femme') ? '#fff' : '#1d1d1f',
+            }}
+          >
+            Femme
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const current = filters.genre ?? [];
+              const next = current.includes('homme') ? current.filter((g) => g !== 'homme') : [...current, 'homme'];
+              setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
+            }}
+            style={{
+              flex: 1,
+              height: 44,
+              padding: '0 14px',
+              fontSize: 14,
+              fontWeight: 500,
+              border: 'none',
+              borderLeft: '1px solid #d2d2d7',
+              cursor: 'pointer',
+              backgroundColor: (filters.genre ?? []).includes('homme') ? '#1d1d1f' : '#fff',
+              color: (filters.genre ?? []).includes('homme') ? '#fff' : '#1d1d1f',
+            }}
+          >
+            Homme
+          </button>
+        </div>
       </div>
       {/* Type d'article — libellé dans la case + pastille nombre si sélection */}
       <div>
@@ -2329,6 +2651,7 @@ function CatalogueContent() {
                         postalCode: undefined,
                         region: undefined,
                       }));
+                      setRadiusKm(0);
                       setLocationQuery('');
                       setLocationSuggestionsOpen(false);
                     }}
@@ -2389,11 +2712,118 @@ function CatalogueContent() {
             </div>
           )}
         </div>
+        {/* Barre rayon km — curseur 5 à 200 km (même marge qu’entre Localisation et le champ) */}
+        <div style={{ marginTop: 15, marginBottom: 0 }}>
+          <style dangerouslySetInnerHTML={{ __html: `
+            input.radius-slider { -webkit-appearance: none; appearance: none; background: transparent; }
+            input.radius-slider::-webkit-slider-runnable-track {
+              height: 8px; border-radius: 4px; background: linear-gradient(to right, #1d1d1f 0%, #1d1d1f var(--fill, 0%), #f5f5f5 var(--fill, 0%), #f5f5f5 100%);
+              border: 1px solid #e0e0e0;
+            }
+            input.radius-slider::-webkit-slider-thumb {
+              -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+              background: #1d1d1f; cursor: pointer; margin-top: -5px; border: none;
+            }
+            input.radius-slider::-moz-range-track {
+              height: 8px; border-radius: 4px; background: linear-gradient(to right, #1d1d1f 0%, #1d1d1f var(--fill, 0%), #f5f5f5 var(--fill, 0%), #f5f5f5 100%);
+              border: 1px solid #e0e0e0;
+            }
+            input.radius-slider::-moz-range-thumb {
+              width: 18px; height: 18px; border-radius: 50%; background: #1d1d1f; cursor: pointer; border: none;
+            }
+          `}} />
+          <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>Dans un rayon de (km)</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <input
+              className="radius-slider"
+              type="range"
+              min={0}
+              max={RADIUS_KM_OPTIONS.length}
+              step={1}
+              value={
+                radiusKm === 0
+                  ? 0
+                  : RADIUS_KM_OPTIONS.indexOf(radiusKm) >= 0
+                    ? RADIUS_KM_OPTIONS.indexOf(radiusKm) + 1
+                    : 1
+              }
+              onChange={(e) => {
+                const idx = Number(e.target.value);
+                const nextKm = idx === 0 ? 0 : RADIUS_KM_OPTIONS[idx - 1] ?? 5;
+                setRadiusKm(nextKm);
+                if (nextKm > 0) {
+                  setFilters((p) => ({ ...p, locations: undefined, postalCode: undefined, region: undefined }));
+                  setLocationQuery('');
+                  setLocationSuggestionsOpen(false);
+                }
+              }}
+              style={{
+                flex: '1 1 120px',
+                minWidth: 120,
+                height: 8,
+                ['--fill' as string]: `${radiusKm === 0 ? 0 : ((RADIUS_KM_OPTIONS.indexOf(radiusKm) >= 0 ? RADIUS_KM_OPTIONS.indexOf(radiusKm) + 1 : 1) / RADIUS_KM_OPTIONS.length) * 100}%`,
+              }}
+            />
+            <span style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', minWidth: 48 }}>
+              {radiusKm === 0 ? '— —' : `${radiusKm} km`}
+            </span>
+          </div>
+          {geoError && (
+            <p style={{ fontSize: 12, color: '#c00', marginTop: 6 }}>{geoError}</p>
+          )}
+        </div>
       </FilterSection>
       </div>
 
-      {/* État — sélection multiple, même style que Type / Marque / Modèle (carré bords ronds) */}
-      <FilterSection title="État" defaultOpen collapsible={false} noBorder>
+      {/* État — sélection multiple + (i) comme page produit */}
+      <FilterSection title="" defaultOpen collapsible={false} noBorder>
+        <div style={{ padding: '14px 0 0', marginBottom: 12 }}>
+          <div ref={etatInfoRef} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f' }}>État</span>
+            <button
+              type="button"
+              onClick={() => {
+                const visible = etatInfoClicked || etatInfoHover;
+                if (visible) { setEtatInfoClicked(false); setEtatInfoHover(false); } else { setEtatInfoClicked(true); setEtatInfoHover(false); }
+              }}
+              onMouseEnter={() => setEtatInfoHover(true)}
+              onMouseLeave={() => setEtatInfoHover(false)}
+              aria-label="Informations sur les états"
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0,
+                border: '1px solid #d2d2d7', borderRadius: '50%',
+                backgroundColor: etatInfoClicked ? '#1d1d1f' : (etatInfoHover ? '#1d1d1f' : '#fff'),
+                color: etatInfoClicked ? '#fff' : (etatInfoHover ? '#fff' : '#6e6e73'),
+                cursor: 'pointer', transition: 'background-color 0.2s, color 0.2s',
+                boxShadow: etatInfoClicked ? '0 1px 3px rgba(0,0,0,0.12)' : (etatInfoHover ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)'),
+              }}
+            >
+              <Info size={13} strokeWidth={2.2} />
+            </button>
+            {(etatInfoClicked || etatInfoHover) && (
+              <div
+                role="tooltip"
+                onMouseEnter={() => setEtatInfoHover(true)}
+                onMouseLeave={() => setEtatInfoHover(false)}
+                style={{
+                  position: 'absolute', left: '-1mm', top: '100%', marginTop: 6, zIndex: 20, minWidth: 320, maxWidth: 360,
+                  padding: 16, backgroundColor: '#fff', border: '1px solid #e8e6e3', borderRadius: 12,
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 13, lineHeight: 1.5, color: '#1d1d1f',
+                }}
+              >
+                {ETAT_DEFINITIONS.map((item) => (
+                  <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 10 }}>
+                    <strong style={{ display: 'block', marginBottom: 2 }}>{item.title}</strong>
+                    <span style={{ color: '#6e6e73' }}>{item.text}</span>
+                  </div>
+                ))}
+                <p style={{ margin: 0, marginTop: 12, paddingTop: 10, borderTop: '1px solid #eee', fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                  L&apos;article est montré tel qu&apos;il est sur les photos. La description sert uniquement de repère.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {CONDITIONS.map((c) => (
             <label
@@ -2453,7 +2883,7 @@ function CatalogueContent() {
           {/* Barre de recherche — même espace au-dessus (header) et en dessous (ligne) */}
           <div className="catalogue-page-search" style={{ padding: '24px calc(24px - 0.5mm) 24px 20px', flexShrink: 0 }}>
           <div style={{ borderBottom: '1px solid #e8e6e3', paddingBottom: 24, marginBottom: -24, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <form onSubmit={handleSearch} style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>
               <div ref={searchBarRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
                 <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
               <input
@@ -2461,6 +2891,9 @@ function CatalogueContent() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchSuggestionsOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') e.preventDefault();
+                  }}
                   placeholder="Rechercher un article..."
                   autoComplete="off"
                 style={{
@@ -2528,29 +2961,7 @@ function CatalogueContent() {
                   </div>
                 )}
             </div>
-            <button
-              type="submit"
-              className="catalogue-search-submit"
-              style={{
-                height: 48,
-                padding: '0 24px',
-                backgroundColor: '#1d1d1f',
-                color: '#fff',
-                fontSize: 14,
-                fontWeight: 500,
-                border: 'none',
-                borderRadius: 12,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              }}
-            >
-              <Search size={20} strokeWidth={2} />
-              <span className="catalogue-search-submit-text">Rechercher</span>
-            </button>
-          </form>
+          </div>
                 {/* Affichage grille/liste + Tri "Plus récents" (desktop) */}
                 <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                   <button
@@ -2973,7 +3384,18 @@ function CatalogueContent() {
               }
               if (listings.length === 0) {
                 return (
-                  <div style={{ textAlign: 'center', padding: '60px 24px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      padding: 24,
+                      minHeight: 'calc(100vh - var(--header-height, 80px) - 24px)',
+                      transform: 'translateY(-6vh)',
+                    }}
+                  >
                     <p style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Aucun résultat</p>
                     <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 24 }}>
                       Essayez de modifier vos critères ou réinitialisez les filtres.
@@ -3048,7 +3470,7 @@ function CatalogueContent() {
                       </div>
                       <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <h3 title={listing.title} style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                          {listing.title}
+                          {highlightSearchTerms(listing.title, filters.query)}
                         </h3>
                         <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
@@ -3182,7 +3604,7 @@ function CatalogueContent() {
                               lineHeight: 1.4,
                             }}
                           >
-                            {listing.title}
+                            {highlightSearchTerms(listing.title, filters.query)}
                           </h3>
                           <ListingCaracteristiques listing={listing} className="catalogue-listing-caracteristiques" />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

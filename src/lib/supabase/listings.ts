@@ -127,12 +127,15 @@ export async function updateListing(
   if (data.size !== undefined) updateData.size = data.size;
   if (data.genre !== undefined) updateData.genre = (Array.isArray(data.genre) && data.genre.length > 0) ? data.genre : null;
 
-  const { error } = await client
+  const { data: updated, error } = await client
     .from('listings')
     .update(updateData)
-    .eq('id', listingId);
+    .eq('id', listingId)
+    .select('id')
+    .single();
 
   if (error) throw new Error(error.message || JSON.stringify(error));
+  if (!updated) throw new Error('Aucune annonce mise à jour. Vérifiez que l\'annonce existe et que vous en êtes le vendeur.');
 }
 
 // Delete a listing
@@ -178,6 +181,7 @@ export async function getListings(options?: {
   sellerId?: string;
   year?: number | null;
   sizes?: string[];
+  genres?: ('femme' | 'homme')[];
   limitCount?: number;
   sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
 }): Promise<Listing[]> {
@@ -199,6 +203,7 @@ export async function getListings(options?: {
     sellerId,
     year,
     sizes,
+    genres,
     limitCount = 50,
     sortBy = 'newest',
   } = options || {};
@@ -247,6 +252,10 @@ export async function getListings(options?: {
 
   if (sellerId) {
     query = query.eq('seller_id', sellerId);
+  }
+
+  if (genres?.length) {
+    query = query.overlaps('genre', genres);
   }
 
   if (year != null) {

@@ -60,7 +60,7 @@ export default function HomePage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await getFeaturedListings(8);
+        const data = await getFeaturedListings(12);
         setListings(data);
       } catch (error) {
         console.error(error);
@@ -444,7 +444,7 @@ export default function HomePage() {
               <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>Notre sélection du moment</p>
             </div>
             <Link
-              href="/catalogue"
+              href="/catalogue?sortBy=likes"
               className="hide-mobile"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#1d1d1f', fontWeight: 500, flexShrink: 0 }}
             >
@@ -454,26 +454,43 @@ export default function HomePage() {
 
           {loading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i}>
-                  <div style={{ aspectRatio: '1', backgroundColor: '#f1f1ea', marginBottom: 16, borderRadius: 18 }} />
-                  <div style={{ height: 16, backgroundColor: '#f1f1ea', width: '70%', marginBottom: 10, borderRadius: 8 }} />
-                  <div style={{ height: 14, backgroundColor: '#f1f1ea', width: '40%', borderRadius: 8 }} />
+              {Array.from({ length: 12 }, (_, i) => i + 1).map((i) => (
+                <div
+                  key={i}
+                  style={{
+                    backgroundColor: '#fff',
+                    borderRadius: 12,
+                    border: '1px solid #e8e6e3',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ aspectRatio: '1', backgroundColor: '#f1f1ea' }} />
+                  <div style={{ padding: '14px 14px 16px' }}>
+                    <div style={{ height: 16, backgroundColor: '#f1f1ea', width: '70%', marginBottom: 10, borderRadius: 8 }} />
+                    <div style={{ height: 14, backgroundColor: '#f1f1ea', width: '40%', borderRadius: 8 }} />
+                  </div>
                 </div>
               ))}
             </div>
           ) : listings.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {listings.map((listing) => (
-                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block' }}>
-                  <article>
+                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+                  <article
+                    style={{
+                      backgroundColor: '#fff',
+                      borderRadius: 12,
+                      border: '1px solid #e8e6e3',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      overflow: 'hidden',
+                    }}
+                  >
                     <div
                       style={{
                         aspectRatio: '1',
                         background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
-                        marginBottom: 16,
                         overflow: 'hidden',
-                        borderRadius: 18,
                       }}
                     >
                       {listing.photos[0] && (
@@ -484,21 +501,23 @@ export default function HomePage() {
                         />
                       )}
                     </div>
-                    <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span>{listing.sellerName}</span>
-                      {listing.sellerPostcode && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
-                          <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
-                          {listing.sellerPostcode}
-                        </span>
-                      )}
-                    </p>
-                    <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1d1d1f' }}>
-                      {listing.title}
-                    </h3>
-                    <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f' }}>
-                      {formatPrice(listing.price)}
-                    </p>
+                    <div style={{ padding: '14px 14px 16px' }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                        <span>{listing.sellerName}</span>
+                        {listing.sellerPostcode && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                            <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                            {listing.sellerPostcode}
+                          </span>
+                        )}
+                      </p>
+                      <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1d1d1f' }}>
+                        {listing.title}
+                      </h3>
+                      <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>
+                        {formatPrice(listing.price)}
+                      </p>
+                    </div>
                   </article>
                 </Link>
               ))}

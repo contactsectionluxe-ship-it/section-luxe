@@ -346,7 +346,7 @@ export default function MesVentesPage() {
         {/* Graphique évolution des ventes — 12 derniers mois */}
         <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 16, fontWeight: 500, margin: 0, color: '#888' }}>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 16, fontWeight: 400, margin: 0, color: '#888' }}>
               Évolution des ventes des 12 derniers mois
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

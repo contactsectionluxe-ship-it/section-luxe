@@ -20,6 +20,13 @@ function formatPhoneDisplay(phone: string): string {
   return digits.replace(/(.{2})/g, '$1 ').trim();
 }
 
+const ETAT_DEFINITIONS: { title: string; text: string }[] = [
+  { title: 'Neuf', text: 'Article jamais porté en parfait état. Aucun signe d\'utilisation.' },
+  { title: 'Très bon état', text: 'Article peu porté et soigneusement conservé. Peut présenter de très légers signes d\'usage à peine perceptibles.' },
+  { title: 'Bon état', text: 'Article porté et bien entretenu. Peut présenter des traces d\'usage visibles liées à une utilisation normale.' },
+  { title: 'État correct', text: 'Article régulièrement porté. Présente des signes d\'usure visibles liés à l\'usage, sans défaut majeur ni détérioration importante.' },
+];
+
 export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
@@ -85,6 +92,10 @@ export default function ProductPage() {
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportStep, setReportStep] = useState(1);
   const [reportRgpdExpanded, setReportRgpdExpanded] = useState(false);
+  const [etatInfoClicked, setEtatInfoClicked] = useState(false);
+  const [etatInfoHover, setEtatInfoHover] = useState(false);
+  const etatInfoRefDesktop = useRef<HTMLDivElement>(null);
+  const etatInfoRefMobile = useRef<HTMLDivElement>(null);
 
   /** Afficher « Voir plus » seulement si la description a strictement plus de 5 lignes. Plusieurs vérifications (dont délais) pour que ça marche sur toutes les annonces quel que soit le chargement (polices, viewport). */
   useLayoutEffect(() => {
@@ -127,6 +138,22 @@ export default function ProductPage() {
     setReportName((prev) => prev || (user.displayName ?? '').trim());
     setReportEmail((prev) => prev || (user.email ?? '').trim());
   }, [user]);
+
+  // Fermer le tooltip État (i) au clic ailleurs sur la page
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (!(etatInfoClicked || etatInfoHover)) return;
+      const d = etatInfoRefDesktop.current;
+      const m = etatInfoRefMobile.current;
+      const target = e.target as Node;
+      if ((!d || !d.contains(target)) && (!m || !m.contains(target))) {
+        setEtatInfoClicked(false);
+        setEtatInfoHover(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [etatInfoClicked, etatInfoHover]);
 
   // Vidéo publicité : démarre quand le bloc est visible à l'écran, en boucle ; preload léger
   useEffect(() => {
@@ -881,9 +908,52 @@ export default function ProductPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                      <div ref={etatInfoRefDesktop} style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, position: 'relative' }}>
                         <CheckCircle size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const visible = etatInfoClicked || etatInfoHover;
+                            if (visible) { setEtatInfoClicked(false); setEtatInfoHover(false); } else { setEtatInfoClicked(true); setEtatInfoHover(false); }
+                          }}
+                          onMouseEnter={() => setEtatInfoHover(true)}
+                          onMouseLeave={() => setEtatInfoHover(false)}
+                          aria-label="Informations sur les états"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0,
+                            border: '1px solid #d2d2d7', borderRadius: '50%',
+                            backgroundColor: etatInfoClicked ? '#1d1d1f' : (etatInfoHover ? '#1d1d1f' : '#fff'),
+                            color: etatInfoClicked ? '#fff' : (etatInfoHover ? '#fff' : '#6e6e73'),
+                            cursor: 'pointer', transition: 'background-color 0.2s, color 0.2s',
+                            boxShadow: etatInfoClicked ? '0 1px 3px rgba(0,0,0,0.12)' : (etatInfoHover ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)'),
+                          }}
+                        >
+                          <Info size={13} strokeWidth={2.2} />
+                        </button>
+                        {(etatInfoClicked || etatInfoHover) && (
+                          <div
+                            role="tooltip"
+                            onMouseEnter={() => setEtatInfoHover(true)}
+                            onMouseLeave={() => setEtatInfoHover(false)}
+                            style={{
+                              position: 'absolute', left: 0, top: '100%', marginTop: 6, zIndex: 20, minWidth: 320, maxWidth: 360,
+                              padding: 16, backgroundColor: '#fff', border: '1px solid #e8e6e3', borderRadius: 12,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 13, lineHeight: 1.5, color: '#1d1d1f',
+                            }}
+                          >
+                            {ETAT_DEFINITIONS.map((item) => (
+                              <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 12 }}>
+                                <strong style={{ display: 'block', marginBottom: 4 }}>{item.title}</strong>
+                                <span style={{ color: '#6e6e73' }}>{item.text}</span>
+                              </div>
+                            ))}
+                            <p style={{ margin: 0, marginTop: 12, paddingTop: 10, borderTop: '1px solid #eee', fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                              L&apos;article est montré tel qu&apos;il est sur les photos. La description sert uniquement de repère.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
@@ -916,14 +986,18 @@ export default function ProductPage() {
                         <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>
+                          {listing.category === 'montres' ? 'Dimension' : 'Dimensions'}
+                        </span>
                       </div>
-                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
+                      <span title={listing.category === 'montres' ? `${(listing.widthCm != null || listing.heightCm != null) ? Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10) : ''} mm` : `L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {listing.category === 'montres'
+                          ? (listing.widthCm != null || listing.heightCm != null) ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : ' '
+                          : `L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
                       </span>
                     </div>
                     )}
@@ -1215,9 +1289,52 @@ export default function ProductPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      <div ref={etatInfoRefMobile} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, position: 'relative' }}>
                         <CheckCircle size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            const visible = etatInfoClicked || etatInfoHover;
+                            if (visible) { setEtatInfoClicked(false); setEtatInfoHover(false); } else { setEtatInfoClicked(true); setEtatInfoHover(false); }
+                          }}
+                          onMouseEnter={() => setEtatInfoHover(true)}
+                          onMouseLeave={() => setEtatInfoHover(false)}
+                          aria-label="Informations sur les états"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, padding: 0,
+                            border: '1px solid #d2d2d7', borderRadius: '50%',
+                            backgroundColor: etatInfoClicked ? '#1d1d1f' : (etatInfoHover ? '#1d1d1f' : '#fff'),
+                            color: etatInfoClicked ? '#fff' : (etatInfoHover ? '#fff' : '#6e6e73'),
+                            cursor: 'pointer', transition: 'background-color 0.2s, color 0.2s',
+                            boxShadow: etatInfoClicked ? '0 1px 3px rgba(0,0,0,0.12)' : (etatInfoHover ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)'),
+                          }}
+                        >
+                          <Info size={12} strokeWidth={2.2} />
+                        </button>
+                        {(etatInfoClicked || etatInfoHover) && (
+                          <div
+                            role="tooltip"
+                            onMouseEnter={() => setEtatInfoHover(true)}
+                            onMouseLeave={() => setEtatInfoHover(false)}
+                            style={{
+                              position: 'absolute', left: 0, top: '100%', marginTop: 6, zIndex: 20, minWidth: 280, maxWidth: 340,
+                              padding: 14, backgroundColor: '#fff', border: '1px solid #e8e6e3', borderRadius: 12,
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 12, lineHeight: 1.5, color: '#1d1d1f',
+                            }}
+                          >
+                            {ETAT_DEFINITIONS.map((item) => (
+                              <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 10 }}>
+                                <strong style={{ display: 'block', marginBottom: 2 }}>{item.title}</strong>
+                                <span style={{ color: '#6e6e73' }}>{item.text}</span>
+                              </div>
+                            ))}
+                            <p style={{ margin: 0, marginTop: 10, paddingTop: 8, borderTop: '1px solid #eee', fontSize: 11, color: '#6e6e73', lineHeight: 1.5 }}>
+                              L&apos;article est montré tel qu&apos;il est sur les photos. La description sert uniquement de repère.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
@@ -1250,14 +1367,18 @@ export default function ProductPage() {
                         <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimensions</span>
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>
+                          {listing.category === 'montres' ? 'Dimension' : 'Dimensions'}
+                        </span>
                       </div>
-                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        L {listing.widthCm != null ? listing.widthCm : '   '} × H {listing.heightCm != null ? listing.heightCm : '   '} cm
+                      <span title={listing.category === 'montres' ? `${(listing.widthCm != null || listing.heightCm != null) ? Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10) : ''} mm` : `L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {listing.category === 'montres'
+                          ? (listing.widthCm != null || listing.heightCm != null) ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : ' '
+                          : `L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
                       </span>
                     </div>
                     )}
