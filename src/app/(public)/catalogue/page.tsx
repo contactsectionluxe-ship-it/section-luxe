@@ -878,10 +878,13 @@ function CatalogueContent() {
         ];
         const coordsMap = new Map<string, { lat: number; lon: number }>();
         for (const pc of uniquePostcodes) {
-          let c = cache.get(pc);
+          let c: { lat: number; lon: number } | undefined = cache.get(pc);
           if (!c) {
-            c = await fetchCoordsForPostcode(pc);
-            if (c) cache.set(pc, c);
+            const fetched = await fetchCoordsForPostcode(pc);
+            if (fetched) {
+              cache.set(pc, fetched);
+              c = fetched;
+            }
           }
           if (c) coordsMap.set(pc, c);
         }
