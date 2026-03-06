@@ -1,4 +1,7 @@
 export interface SearchFilters {
+  /** Genre(s) : Femme et/ou Homme (filtre catalogue). */
+  genre?: ('femme' | 'homme')[];
+
   // Type d'article (sélection multiple)
   category?: string; // déprécié, préférer categories
   categories?: string[];
