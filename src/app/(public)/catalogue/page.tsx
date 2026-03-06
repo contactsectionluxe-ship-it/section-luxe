@@ -1446,53 +1446,77 @@ function CatalogueContent() {
       >
         Recherche
       </div>
-      {/* Femme / Homme — même couleur et contour que Type d'article */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' }}>
-          <button
-            type="button"
-            onClick={() => {
-              const current = filters.genre ?? [];
-              const next = current.includes('femme') ? current.filter((g) => g !== 'femme') : [...current, 'femme'];
-              setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
-            }}
-            style={{
-              flex: 1,
-              height: 44,
-              padding: '0 14px',
-              fontSize: 14,
-              fontWeight: 500,
-              border: 'none',
-              cursor: 'pointer',
-              backgroundColor: (filters.genre ?? []).includes('femme') ? '#1d1d1f' : '#fff',
-              color: (filters.genre ?? []).includes('femme') ? '#fff' : '#1d1d1f',
-            }}
-          >
-            Femme
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const current = filters.genre ?? [];
-              const next = current.includes('homme') ? current.filter((g) => g !== 'homme') : [...current, 'homme'];
-              setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
-            }}
-            style={{
-              flex: 1,
-              height: 44,
-              padding: '0 14px',
-              fontSize: 14,
-              fontWeight: 500,
-              border: 'none',
-              borderLeft: '1px solid #d2d2d7',
-              cursor: 'pointer',
-              backgroundColor: (filters.genre ?? []).includes('homme') ? '#1d1d1f' : '#fff',
-              color: (filters.genre ?? []).includes('homme') ? '#fff' : '#1d1d1f',
-            }}
-          >
-            Homme
-          </button>
-        </div>
+      {/* Femme / Homme — même largeur et hauteur que la case Type d'article (même wrapper) */}
+      <div>
+        <FilterSection title="" defaultOpen collapsible={false} noBorder>
+          <div style={{ position: 'relative' }}>
+            <div
+              style={{
+                display: 'flex',
+                width: 'calc(100% - 0.5mm)',
+                height: 'calc(44px - 0.5mm)',
+                gap: 0,
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                backgroundColor: '#fff',
+                overflow: 'hidden',
+                boxSizing: 'border-box',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  const current = filters.genre ?? [];
+                  const next = current.includes('femme') ? current.filter((g) => g !== 'femme') : [...current, 'femme'];
+                  setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
+                }}
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  padding: '0 14px',
+                  fontSize: 14,
+                  fontWeight: 400,
+                  fontFamily: 'inherit',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: (filters.genre ?? []).includes('femme') ? '#1d1d1f' : '#fff',
+                  color: (filters.genre ?? []).includes('femme') ? '#fff' : '#1d1d1f',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                Femme
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = filters.genre ?? [];
+                  const next = current.includes('homme') ? current.filter((g) => g !== 'homme') : [...current, 'homme'];
+                  setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
+                }}
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  padding: '0 14px',
+                  fontSize: 14,
+                  fontWeight: 400,
+                  fontFamily: 'inherit',
+                  border: 'none',
+                  borderLeft: '1px solid #d2d2d7',
+                  cursor: 'pointer',
+                  backgroundColor: (filters.genre ?? []).includes('homme') ? '#1d1d1f' : '#fff',
+                  color: (filters.genre ?? []).includes('homme') ? '#fff' : '#1d1d1f',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                Homme
+              </button>
+            </div>
+          </div>
+        </FilterSection>
       </div>
       {/* Type d'article — libellé dans la case + pastille nombre si sélection */}
       <div>
