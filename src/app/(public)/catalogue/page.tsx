@@ -1470,7 +1470,7 @@ function CatalogueContent() {
                 type="button"
                 onClick={() => {
                   const current = filters.genre ?? [];
-                  const next = current.includes('femme') ? current.filter((g) => g !== 'femme') : [...current, 'femme'];
+                  const next: ('femme' | 'homme')[] = current.includes('femme') ? current.filter((g) => g !== 'femme') : [...current, 'femme'];
                   setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
                 }}
                 style={{
@@ -1495,7 +1495,7 @@ function CatalogueContent() {
                 type="button"
                 onClick={() => {
                   const current = filters.genre ?? [];
-                  const next = current.includes('homme') ? current.filter((g) => g !== 'homme') : [...current, 'homme'];
+                  const next: ('femme' | 'homme')[] = current.includes('homme') ? current.filter((g) => g !== 'homme') : [...current, 'homme'];
                   setFilters((p) => ({ ...p, genre: next.length ? next : undefined }));
                 }}
                 style={{
