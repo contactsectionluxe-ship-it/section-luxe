@@ -809,7 +809,7 @@ export default function EditListingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const nextGenre = genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme'];
+                    const nextGenre: ('homme' | 'femme')[] = genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme'];
                     setGenre(nextGenre);
                     if (nextGenre.length === 0) {
                       setCategory('');
@@ -834,7 +834,7 @@ export default function EditListingPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const nextGenre = genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme'];
+                    const nextGenre: ('homme' | 'femme')[] = genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme'];
                     setGenre(nextGenre);
                     if (nextGenre.length === 0) {
                       setCategory('');
