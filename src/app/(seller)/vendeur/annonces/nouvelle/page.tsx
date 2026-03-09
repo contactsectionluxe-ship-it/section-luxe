@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -73,7 +73,7 @@ type NewListingDraft = {
   acceptCguCgv?: boolean;
 };
 
-export default function NewListingPage() {
+function NewListingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromVentes = searchParams.get('from') === 'ventes';
@@ -1897,5 +1897,13 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
         </div>
       </div>
     </div>
+  );
+}
+
+export default function NewListingPage() {
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <NewListingContent />
+    </Suspense>
   );
 }
