@@ -44,6 +44,7 @@ function rowToListing(row: any): Listing {
     packaging: row.packaging && Array.isArray(row.packaging) ? row.packaging : null,
     size: row.size ?? null,
     phoneRevealsCount: row.phone_reveals_count != null ? Number(row.phone_reveals_count) : 0,
+    articleType: row.article_type ?? null,
   };
 }
 
@@ -89,6 +90,7 @@ export async function createListing(
   if (data.packaging != null && data.packaging.length) insertData.packaging = data.packaging;
   if (data.size != null) insertData.size = data.size;
   if (data.genre != null && Array.isArray(data.genre) && data.genre.length > 0) insertData.genre = data.genre;
+  if (data.articleType != null && String(data.articleType).trim() !== '') insertData.article_type = data.articleType;
 
   const { data: listing, error } = await client
     .from('listings')
@@ -126,6 +128,7 @@ export async function updateListing(
   if (data.packaging !== undefined) updateData.packaging = data.packaging;
   if (data.size !== undefined) updateData.size = data.size;
   if (data.genre !== undefined) updateData.genre = (Array.isArray(data.genre) && data.genre.length > 0) ? data.genre : null;
+  if (data.articleType !== undefined) updateData.article_type = data.articleType && String(data.articleType).trim() !== '' ? data.articleType : null;
 
   const { data: updated, error } = await client
     .from('listings')
@@ -182,6 +185,7 @@ export async function getListings(options?: {
   year?: number | null;
   sizes?: string[];
   genres?: ('femme' | 'homme')[];
+  articleTypes?: string[];
   limitCount?: number;
   sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
 }): Promise<Listing[]> {
@@ -204,6 +208,7 @@ export async function getListings(options?: {
     year,
     sizes,
     genres,
+    articleTypes,
     limitCount = 50,
     sortBy = 'newest',
   } = options || {};
@@ -256,6 +261,10 @@ export async function getListings(options?: {
 
   if (genres?.length) {
     query = query.overlaps('genre', genres);
+  }
+
+  if (articleTypes?.length) {
+    query = query.in('article_type', articleTypes);
   }
 
   if (year != null) {
@@ -314,6 +323,27 @@ export async function getDistinctBrands(): Promise<string[]> {
   if (error) return [];
   const brands = [...new Set((data || []).map((r) => (r.brand as string).trim()).filter(Boolean))];
   return brands.sort((a, b) => a.localeCompare(b, 'fr'));
+}
+
+/** Tailles distinctes présentes dans les annonces actives pour une catégorie (ex. montres). */
+export async function getDistinctSizesForCategory(category: string): Promise<string[]> {
+  if (!isSupabaseConfigured || !supabase || !category) return [];
+  const cat = (category || '').toLowerCase();
+  const { data, error } = await supabase
+    .from('listings')
+    .select('size')
+    .eq('is_active', true)
+    .eq('category', cat)
+    .not('size', 'is', null);
+  if (error) return [];
+  const raw = (data || []).map((r) => (r.size as string)?.trim()).filter(Boolean);
+  const unique = [...new Set(raw)];
+  return unique.sort((a, b) => {
+    const na = Number(a.replace(/\s*mm?\s*$/i, ''));
+    const nb = Number(b.replace(/\s*mm?\s*$/i, ''));
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b), 'fr');
+  });
 }
 
 // Get listings by seller

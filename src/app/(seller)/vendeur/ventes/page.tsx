@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X } from 'lucide-react';
+import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, type DeletionItem } from '@/lib/supabase/sales';
 
@@ -105,12 +105,27 @@ export default function MesVentesPage() {
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
               Mes ventes
             </h1>
-            <p style={{ fontSize: 14, color: '#888', margin: 0 }}>
-              Suivi des ventes
-            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
+              {seller.status === 'approved' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <CheckCircle size={12} /> Validé
+                </span>
+              )}
+              {seller.status === 'pending' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <Clock size={12} /> En attente
+                </span>
+              )}
+              {seller.status === 'rejected' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <XCircle size={12} /> Refusé
+                </span>
+              )}
+            </div>
           </div>
           {isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+            <Link href="/vendeur/annonces/nouvelle?from=ventes" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
               <Plus size={18} /> Déposer une annonce
             </Link>
           )}

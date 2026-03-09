@@ -11,8 +11,18 @@ import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
+import { CONDITIONS, COLORS, MATERIALS, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
+
+/** Titre d’annonce comme dans le catalogue : marque - type modèle (pour vêtements avec " & " dans le type : seulement modèle). */
+function getListingDisplayTitle(listing: Listing): string {
+  const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
+  const marque = listing.brand || listing.title;
+  const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
+    ? (listing.model ?? '')
+    : [typeLabel, listing.model].filter(Boolean).join(' ');
+  return typeModel ? `${marque} - ${typeModel}` : marque;
+}
 
 /** Affiche le téléphone au format 00 00 00 00 00 */
 function formatPhoneDisplay(phone: string): string {
@@ -241,7 +251,7 @@ export default function ProductPage() {
         `Signalement d'une annonce sur Section Luxe`,
         '',
         `Annonce ID : ${listing?.id ?? ''}`,
-        `Titre : ${listing?.title ?? ''}`,
+        `Titre : ${listing ? getListingDisplayTitle(listing) : ''}`,
         '',
         `Motif : ${reportReason}`,
         '',
@@ -395,7 +405,7 @@ export default function ProductPage() {
 
   const handleShare = async () => {
     const url = typeof window !== 'undefined' ? `${window.location.origin}/produit/${listingId}` : '';
-    const title = listing ? `${listing.title} - Section Luxe` : 'Section Luxe';
+    const title = listing ? `${getListingDisplayTitle(listing)} - Section Luxe` : 'Section Luxe';
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({ title, url });
@@ -440,7 +450,7 @@ export default function ProductPage() {
     try {
       const conversation = await getOrCreateConversation({
         listingId: listing.id,
-        listingTitle: listing.title,
+        listingTitle: getListingDisplayTitle(listing),
         listingPhoto: listing.photos[0] || '',
         buyerId: user!.uid,
         buyerName: user!.displayName || 'Acheteur',
@@ -473,7 +483,7 @@ export default function ProductPage() {
       const buyerName = `${firstName.trim()} ${lastName.trim()}`;
       const conversation = await getOrCreateConversation({
         listingId: listing.id,
-        listingTitle: listing.title,
+        listingTitle: getListingDisplayTitle(listing),
         listingPhoto: listing.photos[0] || '',
         buyerId: user.uid,
         buyerName,
@@ -635,7 +645,7 @@ export default function ProductPage() {
                   {listing.photos[currentPhotoIndex] ? (
                     <img
                       src={listing.photos[currentPhotoIndex]}
-                      alt={listing.title}
+                      alt={getListingDisplayTitle(listing)}
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
@@ -679,7 +689,7 @@ export default function ProductPage() {
                 )}
               </div>
               <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#0a0a0a' }}>
-                {listing.title}
+                {getListingDisplayTitle(listing)}
               </h1>
               {listing.listingNumber && (
                 <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 15, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
@@ -866,7 +876,7 @@ export default function ProductPage() {
                   <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
-                <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
+                <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{getListingDisplayTitle(listing)}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px', minWidth: 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
@@ -1221,7 +1231,7 @@ export default function ProductPage() {
                 style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
               >
                 {listing.photos[currentPhotoIndex] ? (
-                  <img src={listing.photos[currentPhotoIndex]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={listing.photos[currentPhotoIndex]} alt={getListingDisplayTitle(listing)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>Photo</div>
                 )}
@@ -1247,7 +1257,7 @@ export default function ProductPage() {
                   <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
-                  <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{listing.title}</p>
+                  <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{getListingDisplayTitle(listing)}</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', minWidth: 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
@@ -1501,7 +1511,7 @@ export default function ProductPage() {
                 <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
               )}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{listing.title}</h1>
+            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
@@ -2360,7 +2370,7 @@ Ces données sont utilisées pour :`}
           <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
             <img
               src={listing.photos[currentPhotoIndex]}
-              alt={listing.title}
+              alt={getListingDisplayTitle(listing)}
               style={{ maxWidth: '90vw', maxHeight: '90vh', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: 8 }}
             />
           </div>

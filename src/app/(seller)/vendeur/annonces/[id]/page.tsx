@@ -13,7 +13,7 @@ import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getJeanSizesForGenre, getModelDisplayName, getPantSizesForGenre, getShoeSizesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -31,6 +31,40 @@ const ETAT_DEFINITIONS: { title: string; text: string }[] = [
 ];
 
 const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix'];
+
+const DRAFT_KEY_EDIT_PREFIX = 'luxe-annonce-edit-draft-';
+
+type EditListingDraft = {
+  step?: number;
+  category?: string;
+  genre?: ('homme' | 'femme')[];
+  articleType?: string;
+  customCategory?: string;
+  brand?: string;
+  customBrand?: string;
+  marqueSearchQuery?: string;
+  model?: string;
+  customModel?: string;
+  modeleSearchQuery?: string;
+  condition?: string;
+  material?: string;
+  materialSearchQuery?: string;
+  customMaterial?: string;
+  color?: string;
+  colorSearchQuery?: string;
+  customColor?: string;
+  size?: string;
+  sizeSearchQuery?: string;
+  description?: string;
+  heightCm?: string;
+  widthCm?: string;
+  year?: string;
+  contenuInclus?: Record<string, true | false | null>;
+  price?: string;
+  isActive?: boolean;
+  acceptCguCgv?: boolean;
+  existingPhotos?: string[];
+};
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -71,6 +105,7 @@ export default function EditListingPage() {
   const [listing, setListing] = useState<Listing | null>(null);
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
+  const [articleType, setArticleType] = useState('');
   const [customCategory, setCustomCategory] = useState('');
   const [brand, setBrand] = useState('');
   const [customBrand, setCustomBrand] = useState('');
@@ -79,12 +114,14 @@ export default function EditListingPage() {
   const [customModel, setCustomModel] = useState('');
   const [modeleSearchQuery, setModeleSearchQuery] = useState('');
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [typeOpen, setTypeOpen] = useState(false);
   const [marqueOpen, setMarqueOpen] = useState(false);
   const [modeleOpen, setModeleOpen] = useState(false);
   const [conditionOpen, setConditionOpen] = useState(false);
   const [etatInfoClicked, setEtatInfoClicked] = useState(false);
   const [etatInfoHover, setEtatInfoHover] = useState(false);
   const categoryListRef = useRef<HTMLDivElement>(null);
+  const typeListRef = useRef<HTMLDivElement>(null);
   const marqueListRef = useRef<HTMLDivElement>(null);
   const modeleListRef = useRef<HTMLDivElement>(null);
   const conditionListRef = useRef<HTMLDivElement>(null);
@@ -146,10 +183,12 @@ export default function EditListingPage() {
     return list.map((b) => ({ value: b, label: b }));
   })();
   const brandForModels = brand || marqueSearchQuery.trim();
+  const hasTypeCategory = category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires';
   const modelOptions = (() => {
     if (!category || category === 'autre' || genre.length === 0) return [];
+    if (hasTypeCategory && (!articleType || !brandForModels)) return [];
     const set = new Set<string>();
-    if (category === 'vetements') {
+    if (category === 'vetements' && !VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE.has(brandForModels || '')) {
       VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
         if (modelGenre === 'both') set.add(name);
         else if (modelGenre === 'femme' && genre.includes('femme')) set.add(name);
@@ -198,12 +237,15 @@ export default function EditListingPage() {
       set.add('Pochette');
     }
     const excludedAsCategory = category ? (MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[category] ?? []) : [];
+    const articleTypeLabels = hasTypeCategory ? getArticleTypeLabelsForCategory(category, genre) : [];
     const raw = [...set]
       .filter((m) => m !== 'Autre' && !excludedAsCategory.includes(m))
+      .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
+      .filter((m) => modelMatchesArticleType(m, articleType, category, brandForModels))
+      .filter((m) => !articleTypeLabels.includes(m))
       .sort((a, b) => a.localeCompare(b, 'fr'));
-    const displayList = raw.map((m) => getModelDisplayName(category, brandForModels, m));
-    if (model && !displayList.includes(model)) return [model, ...displayList];
-    return displayList;
+    if (model && !raw.includes(model)) return [model, ...raw];
+    return raw;
   })();
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS).filter((o) => o.value !== 'other') : [];
   const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS).filter((o) => o.value !== 'other') : [];
@@ -257,6 +299,7 @@ export default function EditListingPage() {
         setListing(data);
         setCategory(data.category);
         setGenre(Array.isArray(data.genre) && data.genre.length > 0 ? data.genre : []);
+        setArticleType(data.articleType || '');
         setCustomCategory('');
         const brandsForCat = data.category && BRANDS_BY_CATEGORY[data.category] ? BRANDS_BY_CATEGORY[data.category] : [];
         if (data.brand && brandsForCat.includes(data.brand)) {
@@ -322,17 +365,12 @@ export default function EditListingPage() {
           setCustomColor('');
         }
         setDescription(data.description || '');
-        try {
-          const draft = typeof window !== 'undefined' ? localStorage.getItem(`luxe-annonce-draft-${listingId}`) : null;
-          if (draft) {
-            const o = JSON.parse(draft) as { description?: string };
-            if (o?.description != null && typeof o.description === 'string') setDescription(o.description);
-          }
-        } catch {
-          // ignore
-        }
         setHeightCm(data.heightCm != null ? String(data.heightCm) : '');
-        setWidthCm(data.widthCm != null ? String(data.widthCm) : '');
+        setWidthCm(
+          data.widthCm != null ? String(data.widthCm)
+          : (data.category === 'montres' && data.size) ? String(parseInt(String(data.size), 10) / 10)
+          : ''
+        );
         setYear(data.year != null ? String(data.year) : '');
         const pkg = Array.isArray(data.packaging) ? data.packaging : [];
         setContenuInclusState({
@@ -343,6 +381,46 @@ export default function EditListingPage() {
         setPrice(data.price.toString());
         setIsActive(data.isActive);
         setExistingPhotos(data.photos || []);
+        // Restaurer le brouillon sessionStorage si présent (après changement d'onglet/retour)
+        try {
+          if (typeof window !== 'undefined') {
+            const raw = sessionStorage.getItem(`${DRAFT_KEY_EDIT_PREFIX}${listingId}`);
+            if (raw) {
+              const d = JSON.parse(raw) as EditListingDraft;
+              if (d.step != null && d.step >= 1 && d.step <= 4) setStep(d.step);
+              if (d.category != null) setCategory(d.category as ListingCategory | '' | 'autre');
+              if (Array.isArray(d.genre)) setGenre(d.genre);
+              if (d.articleType != null) setArticleType(d.articleType);
+              if (d.customCategory != null) setCustomCategory(d.customCategory);
+              if (d.brand != null) setBrand(d.brand);
+              if (d.customBrand != null) setCustomBrand(d.customBrand);
+              if (d.marqueSearchQuery != null) setMarqueSearchQuery(d.marqueSearchQuery);
+              if (d.model != null) setModel(d.model);
+              if (d.customModel != null) setCustomModel(d.customModel);
+              if (d.modeleSearchQuery != null) setModeleSearchQuery(d.modeleSearchQuery);
+              if (d.condition != null) setCondition(d.condition);
+              if (d.material != null) setMaterial(d.material);
+              if (d.materialSearchQuery != null) setMaterialSearchQuery(d.materialSearchQuery);
+              if (d.customMaterial != null) setCustomMaterial(d.customMaterial);
+              if (d.color != null) setColor(d.color);
+              if (d.colorSearchQuery != null) setColorSearchQuery(d.colorSearchQuery);
+              if (d.customColor != null) setCustomColor(d.customColor);
+              if (d.size != null) setSize(d.size);
+              if (d.sizeSearchQuery != null) setSizeSearchQuery(d.sizeSearchQuery);
+              if (d.description != null) setDescription(d.description);
+              if (d.heightCm != null) setHeightCm(d.heightCm);
+              if (d.widthCm != null) setWidthCm(d.widthCm);
+              if (d.year != null) setYear(d.year);
+              if (d.contenuInclus != null && typeof d.contenuInclus === 'object') setContenuInclusState(d.contenuInclus);
+              if (d.price != null) setPrice(d.price);
+              if (d.isActive != null) setIsActive(d.isActive);
+              if (d.acceptCguCgv != null) setAcceptCguCgv(d.acceptCguCgv);
+              if (Array.isArray(d.existingPhotos)) setExistingPhotos(d.existingPhotos);
+            }
+          }
+        } catch {
+          // ignore
+        }
       } catch (error) {
         console.error('Error loading listing:', error);
         router.push('/vendeur');
@@ -358,29 +436,65 @@ export default function EditListingPage() {
     }
   }, [listingId, user, isApprovedSeller, authLoading, router]);
 
-  // Sauvegarder la description en brouillon (localStorage) quand elle change (modifier annonce)
+  // Sauvegarder le brouillon complet (sessionStorage) à chaque modification + quand on quitte l'onglet
+  const draftPayloadRef = useRef<EditListingDraft>({});
+  draftPayloadRef.current = {
+    step, category, genre, articleType, customCategory, brand, customBrand, marqueSearchQuery,
+    model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
+    color, colorSearchQuery, customColor, size, sizeSearchQuery, description, heightCm, widthCm, year,
+    contenuInclus, price, isActive, acceptCguCgv, existingPhotos,
+  };
   useEffect(() => {
-    if (!listingId) return;
+    if (!listingId || !listing) return;
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
-    draftTimeoutRef.current = setTimeout(() => {
+    const save = () => {
       try {
         if (typeof window !== 'undefined') {
-          const key = `luxe-annonce-draft-${listingId}`;
-          if (description.trim()) {
-            localStorage.setItem(key, JSON.stringify({ description }));
-          } else {
-            localStorage.removeItem(key);
-          }
+          sessionStorage.setItem(`${DRAFT_KEY_EDIT_PREFIX}${listingId}`, JSON.stringify(draftPayloadRef.current));
         }
       } catch {
         // ignore
       }
-      draftTimeoutRef.current = null;
-    }, 400);
+    };
+    draftTimeoutRef.current = setTimeout(save, 800);
     return () => {
       if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
     };
-  }, [listingId, description]);
+  }, [
+    listingId,
+    listing,
+    step, category, genre?.join(','), articleType, customCategory, brand, customBrand, marqueSearchQuery,
+    model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
+    color, colorSearchQuery, customColor, size, sizeSearchQuery, description, heightCm, widthCm, year,
+    JSON.stringify(contenuInclus), price, isActive, acceptCguCgv, existingPhotos.length, existingPhotos.join(','),
+  ]);
+  useEffect(() => {
+    if (!listingId || !listing) return;
+    const onHide = () => {
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem(`${DRAFT_KEY_EDIT_PREFIX}${listingId}`, JSON.stringify(draftPayloadRef.current));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    document.addEventListener('visibilitychange', onHide);
+    return () => document.removeEventListener('visibilitychange', onHide);
+  }, [listingId, listing]);
+
+  // À la sortie du formulaire (navigation, fermeture) : ne pas garder le brouillon pour la prochaine visite
+  useEffect(() => {
+    if (!listingId) return;
+    const key = `${DRAFT_KEY_EDIT_PREFIX}${listingId}`;
+    return () => {
+      try {
+        if (typeof window !== 'undefined') sessionStorage.removeItem(key);
+      } catch {
+        // ignore
+      }
+    };
+  }, [listingId]);
 
   // Fermer le tooltip État au clic en dehors
   useEffect(() => {
@@ -423,6 +537,10 @@ export default function EditListingPage() {
     }
     if (!category) {
       setError('Sélectionner une catégorie');
+      return false;
+    }
+    if (hasTypeCategory && !articleType) {
+      setError('Sélectionner un type de produit');
       return false;
     }
     const hasBrand = !!(brand || marqueSearchQuery.trim());
@@ -555,7 +673,8 @@ export default function EditListingPage() {
         widthCm: (category === 'chaussures' || category === 'vetements') ? null : (widthCm ? parseFloat(widthCm.replace(',', '.')) : null),
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
-        size: (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
+        size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
+        articleType: hasTypeCategory && articleType ? articleType : null,
       });
 
       setError('');
@@ -568,7 +687,10 @@ export default function EditListingPage() {
       }
 
       try {
-        if (typeof window !== 'undefined') localStorage.removeItem(`luxe-annonce-draft-${listingId}`);
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(`luxe-annonce-draft-${listingId}`);
+          sessionStorage.removeItem(`${DRAFT_KEY_EDIT_PREFIX}${listingId}`);
+        }
       } catch {
         // ignore
       }
@@ -600,17 +722,17 @@ export default function EditListingPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '0.5cm 24px 80px' }}>
+      {/* Ligne titre : Retour à gauche (même position que Ma messagerie), Modifier l'annonce au centre */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.5cm 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href="/vendeur"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', marginBottom: 20, textDecoration: 'none' }}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
           className="hover:opacity-80"
         >
           <ArrowLeft size={18} />
-          Retour au tableau de bord
+          Retour à mes annonces
         </Link>
-
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div style={{ flex: 1, textAlign: 'center', minWidth: 0, padding: '0 16px' }}>
           <h1
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
@@ -627,6 +749,36 @@ export default function EditListingPage() {
             Modifiez les informations de votre annonce
           </p>
         </div>
+        <div style={{ width: 220, flexShrink: 0 }} aria-hidden />
+      </div>
+
+      <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+          {[1, 2, 3, 4].map((s, i) => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
+              <div
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 980,
+                  backgroundColor: step >= s ? '#1d1d1f' : '#d2d2d7',
+                  color: step >= s ? '#fff' : '#86868b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 15,
+                  fontWeight: 600,
+                }}
+              >
+                {step > s ? <Check size={18} /> : s}
+              </div>
+              {i < 3 && (
+                <div style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
+              )}
+            </div>
+          ))}
+        </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -641,32 +793,6 @@ export default function EditListingPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-            {[1, 2, 3, 4].map((s, i) => (
-              <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 980,
-                    backgroundColor: step >= s ? '#1d1d1f' : '#d2d2d7',
-                    color: step >= s ? '#fff' : '#86868b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 15,
-                    fontWeight: 600,
-                  }}
-                >
-                  {step > s ? <Check size={18} /> : s}
-                </div>
-                {i < 3 && (
-                  <div style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
-                )}
-              </div>
-            ))}
-          </div>
-
           <form onSubmit={handleSubmit}>
             <AnimatePresence mode="wait">
               {step === 1 && (
@@ -677,22 +803,80 @@ export default function EditListingPage() {
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.25 }}
                 >
+            <div style={{ marginBottom: 18 }}>
+              <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 10, overflow: 'hidden' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextGenre = genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme'];
+                    setGenre(nextGenre);
+                    if (nextGenre.length === 0) {
+                      setCategory('');
+                      setArticleType('');
+                      setCategoryOpen(false);
+                    } else if (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') setArticleType('');
+                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: 'none',
+                    cursor: 'pointer',
+                    backgroundColor: genre.includes('femme') ? '#1d1d1f' : '#fff',
+                    color: genre.includes('femme') ? '#fff' : '#6e6e73',
+                  }}
+                >
+                  Femme
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextGenre = genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme'];
+                    setGenre(nextGenre);
+                    if (nextGenre.length === 0) {
+                      setCategory('');
+                      setArticleType('');
+                      setCategoryOpen(false);
+                    } else if (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') setArticleType('');
+                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 20px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    border: 'none',
+                    borderLeft: '1px solid #d2d2d7',
+                    cursor: 'pointer',
+                    backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
+                    color: genre.includes('homme') ? '#fff' : '#6e6e73',
+                  }}
+                >
+                  Homme
+                </button>
+              </div>
+            </div>
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
               <button
                 type="button"
-                onClick={() => setCategoryOpen((o) => !o)}
+                onClick={() => genre.length > 0 && setCategoryOpen((o) => !o)}
                 onBlur={() => setTimeout(() => setCategoryOpen(false), 200)}
+                disabled={genre.length === 0}
                 style={{
-                  ...selectStyle(),
+                  ...selectStyle(genre.length === 0),
                   textAlign: 'left',
-                  cursor: 'pointer',
+                  cursor: genre.length > 0 ? 'pointer' : 'not-allowed',
                   color: category ? '#1d1d1f' : '#86868b',
+                  opacity: genre.length > 0 ? 1 : 0.7,
                 }}
               >
-                {category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
+                {genre.length === 0 ? 'Sélectionner d\'abord un ou des Genre(s)' : category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
               </button>
-              {categoryOpen && (
+              {categoryOpen && genre.length > 0 && (
                 <div
                   ref={categoryListRef}
                   className="listing-dropdown-list"
@@ -720,6 +904,7 @@ export default function EditListingPage() {
                         const v = opt.value as ListingCategory | 'autre';
                         setCategory(v);
                         if (v !== 'autre') setCustomCategory('');
+                        setArticleType('');
                         setBrand('');
                         setCustomBrand('');
                         setMarqueSearchQuery('');
@@ -727,12 +912,12 @@ export default function EditListingPage() {
                         setCustomModel('');
                         setModeleSearchQuery('');
                         setMaterial('');
-setMaterialSearchQuery('');
-                          setCustomMaterial('');
-                          setColor('');
-                          setColorSearchQuery('');
-                          setCustomColor('');
-                          setCategoryOpen(false);
+                        setMaterialSearchQuery('');
+                        setCustomMaterial('');
+                        setColor('');
+                        setColorSearchQuery('');
+                        setCustomColor('');
+                        setCategoryOpen(false);
                       }}
                       style={{
                         display: 'block',
@@ -752,50 +937,87 @@ setMaterialSearchQuery('');
                 </div>
               )}
             </div>
-            <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Genre <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <div style={{ display: 'flex', width: '100%', gap: 0, border: '1px solid #d2d2d7', borderRadius: 10, overflow: 'hidden' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGenre(genre.includes('femme') ? genre.filter((g) => g !== 'femme') : [...genre, 'femme']);
-                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px 20px',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    border: 'none',
-                    cursor: 'pointer',
-                    backgroundColor: genre.includes('femme') ? '#1d1d1f' : '#fff',
-                    color: genre.includes('femme') ? '#fff' : '#6e6e73',
-                  }}
-                >
-                  Femme
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGenre(genre.includes('homme') ? genre.filter((g) => g !== 'homme') : [...genre, 'homme']);
-                    setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px 20px',
-                    fontSize: 14,
-                    fontWeight: 500,
-                    border: 'none',
-                    borderLeft: '1px solid #d2d2d7',
-                    cursor: 'pointer',
-                    backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
-                    color: genre.includes('homme') ? '#fff' : '#6e6e73',
-                  }}
-                >
-                  Homme
-                </button>
+            {(category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && (
+              <div style={{ marginBottom: 18, position: 'relative' }}>
+                <label style={labelStyle}>Type de produit <span style={{ color: '#1d1d1f' }}>*</span></label>
+                {(() => {
+                  const articleTypeOptions = category === 'vetements' ? getVetementsTypesForGenre(genre) : category === 'sacs' ? getSacsTypesForGenre(genre) : category === 'bijoux' ? getBijouxTypesForGenre(genre) : category === 'chaussures' ? getChaussuresTypesForGenre(genre) : getAccessoiresTypesForGenre(genre);
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => genre.length > 0 && setTypeOpen((o) => !o)}
+                        onBlur={() => setTimeout(() => setTypeOpen(false), 200)}
+                        disabled={genre.length === 0}
+                        style={{
+                          ...inputStyle,
+                          textAlign: 'left',
+                          cursor: genre.length > 0 ? 'pointer' : 'not-allowed',
+                          color: articleType ? '#1d1d1f' : '#86868b',
+                          opacity: genre.length > 0 ? 1 : 0.7,
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 14px center',
+                          paddingRight: 40,
+                        }}
+                      >
+                        {genre.length === 0
+                          ? 'Sélectionner Femme et/ou Homme'
+                          : articleType
+                            ? (articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
+                            : 'Sélectionner un type de produit'}
+                      </button>
+                      {typeOpen && genre.length > 0 && (
+                        <div
+                          ref={typeListRef}
+                          className="listing-dropdown-list"
+                          style={{
+                            position: 'absolute',
+                            top: '100%',
+                            left: 0,
+                            right: 0,
+                            marginTop: 4,
+                            maxHeight: 'calc(228px - 3mm)',
+                            overflowY: 'auto',
+                            backgroundColor: '#fff',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: 10,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            zIndex: 10,
+                          }}
+                        >
+                          {articleTypeOptions.map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => {
+                                setArticleType(opt.value);
+                                setTypeOpen(false);
+                              }}
+                              style={{
+                                display: 'block',
+                                width: '100%',
+                                padding: '6px 12px',
+                                textAlign: 'left',
+                                fontSize: 15,
+                                color: '#1d1d1f',
+                                background: articleType === opt.value ? '#f5f5f7' : 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                fontWeight: articleType === opt.value ? 600 : 400,
+                              }}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
-            </div>
+            )}
             {category === 'autre' && (
               <div style={{ marginBottom: 18 }}>
                 <label style={labelStyle}>Catégorie personnalisée <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -804,6 +1026,11 @@ setMaterialSearchQuery('');
             )}
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Marque <span style={{ color: '#1d1d1f' }}>*</span></label>
+              {(() => {
+                const marqueDisabled = !category || genre.length === 0 || (hasTypeCategory && !articleType);
+                const marquePlaceholder = !category ? 'Sélectionner d\'abord une catégorie' : genre.length === 0 ? 'Sélectionner d\'abord Femme et/ou Homme' : hasTypeCategory && !articleType ? 'Sélectionner d\'abord un type de produit' : 'Rechercher ou préciser la marque...';
+                return (
+                  <>
               <input
                 type="text"
                 value={marqueSearchQuery}
@@ -812,17 +1039,17 @@ setMaterialSearchQuery('');
                   if (brand && e.target.value !== brand) setBrand('');
                   setMarqueOpen(true);
                 }}
-                onFocus={() => { if (category && genre.length > 0) setMarqueOpen(true); }}
+                onFocus={() => { if (!marqueDisabled) setMarqueOpen(true); }}
                 onBlur={() => setTimeout(() => setMarqueOpen(false), 200)}
-                placeholder={!category || genre.length === 0 ? (genre.length === 0 ? "Sélectionner d'abord Femme et/ou Homme" : "Sélectionner une catégorie") : 'Rechercher ou préciser la marque...'}
-                disabled={!category || genre.length === 0}
+                placeholder={marquePlaceholder}
+                disabled={marqueDisabled}
                 style={{
                   ...inputStyle,
-                  cursor: category && genre.length > 0 ? 'text' : 'not-allowed',
-                  opacity: category && genre.length > 0 ? 1 : 0.7,
+                  cursor: marqueDisabled ? 'not-allowed' : 'text',
+                  opacity: marqueDisabled ? 0.7 : 1,
                 }}
               />
-              {category && genre.length > 0 && marqueOpen && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
+              {!marqueDisabled && marqueOpen && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
                 <div
                   ref={marqueListRef}
                   className="listing-dropdown-list"
@@ -879,14 +1106,17 @@ setMaterialSearchQuery('');
                     ))}
                 </div>
               )}
+                  </>
+                );
+              })()}
             </div>
             <div style={{ marginBottom: 18, position: 'relative' }}>
-              <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span> <span style={{ fontSize: 13, color: '#6e6e73', fontWeight: 400, marginLeft: 8 }}>Type + Modèle (ex : Bracelet Clic H)</span></label>
+              <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
               {(() => {
                 const hasMarque = !!(brand || marqueSearchQuery.trim());
                 const modeleDisabled = !category || !hasMarque;
-                const modelePlaceholder = !category ? 'Sélectionner d\'abord une catégorie' : !hasMarque ? 'Sélectionner d\'abord une marque' : 'Rechercher ou préciser le modèle...';
-                const modelePlaceholderCustom = !category ? 'Sélectionner d\'abord une catégorie' : !hasMarque ? 'Sélectionner d\'abord une marque' : 'Précisez le modèle';
+                const modelePlaceholder = modeleDisabled ? 'Sélectionner d\'abord une marque' : 'Rechercher ou préciser le modèle...';
+                const modelePlaceholderCustom = modeleDisabled ? 'Sélectionner d\'abord une marque' : 'Précisez le modèle';
                 return modelOptions.length > 0 ? (
                   <>
                     <input
@@ -1200,22 +1430,31 @@ setMaterialSearchQuery('');
             </div>
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Matière</label>
-              {category ? (
+              {(() => {
+                const hasModel = modelOptions.length > 0 ? !!(model || modeleSearchQuery.trim()) : !!customModel.trim();
+                const matiereDisabled = !category || !hasModel;
+                return category ? (
                 <>
                   <input
                     type="text"
                     value={materialSearchQuery}
                     onChange={(e) => {
+                      if (matiereDisabled) return;
                       setMaterialSearchQuery(e.target.value);
                       if (material && e.target.value !== (materialOptions.find((o) => o.value === material)?.label ?? '')) setMaterial('');
                       setMaterialOpen(true);
                     }}
-                    onFocus={() => setMaterialOpen(true)}
+                    onFocus={() => { if (!matiereDisabled) setMaterialOpen(true); }}
                     onBlur={() => setTimeout(() => setMaterialOpen(false), 200)}
-                    placeholder="Rechercher ou préciser la matière…"
-                    style={inputStyle}
+                    placeholder={matiereDisabled ? 'Sélectionner d\'abord un modèle' : 'Rechercher ou préciser la matière…'}
+                    disabled={matiereDisabled}
+                    style={{
+                      ...inputStyle,
+                      cursor: matiereDisabled ? 'not-allowed' : 'text',
+                      opacity: matiereDisabled ? 0.7 : 1,
+                    }}
                   />
-                  {materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
+                  {!matiereDisabled && materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
                     <div
                       ref={materialListRef}
                       className="listing-dropdown-list"
@@ -1269,29 +1508,39 @@ setMaterialSearchQuery('');
                   type="text"
                   readOnly
                   value=""
-                  placeholder="Sélectionner d'abord une catégorie"
+                  placeholder="Sélectionner d'abord un modèle"
                   style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
                 />
-              )}
+              );
+              })()}
             </div>
             <div style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Couleur</label>
-              {category ? (
+              {(() => {
+                const hasModel = modelOptions.length > 0 ? !!(model || modeleSearchQuery.trim()) : !!customModel.trim();
+                const couleurDisabled = !category || !hasModel;
+                return category ? (
                 <>
                   <input
                     type="text"
                     value={colorSearchQuery}
                     onChange={(e) => {
+                      if (couleurDisabled) return;
                       setColorSearchQuery(e.target.value);
                       if (color && e.target.value !== (colorOptions.find((o) => o.value === color)?.label ?? '')) setColor('');
                       setColorOpen(true);
                     }}
-                    onFocus={() => setColorOpen(true)}
+                    onFocus={() => { if (!couleurDisabled) setColorOpen(true); }}
                     onBlur={() => setTimeout(() => setColorOpen(false), 200)}
-                    placeholder="Rechercher ou préciser la couleur…"
-                    style={inputStyle}
+                    placeholder={couleurDisabled ? 'Sélectionner d\'abord un modèle' : 'Rechercher ou préciser la couleur…'}
+                    disabled={couleurDisabled}
+                    style={{
+                      ...inputStyle,
+                      cursor: couleurDisabled ? 'not-allowed' : 'text',
+                      opacity: couleurDisabled ? 0.7 : 1,
+                    }}
                   />
-                  {colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
+                  {!couleurDisabled && colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
                     <div
                       ref={colorListRef}
                       className="listing-dropdown-list"
@@ -1345,10 +1594,11 @@ setMaterialSearchQuery('');
                   type="text"
                   readOnly
                   value=""
-                  placeholder="Sélectionner d'abord une catégorie"
+                  placeholder="Sélectionner d'abord un modèle"
                   style={{ ...inputStyle, cursor: 'not-allowed', opacity: 0.7 }}
                 />
-              )}
+              );
+              })()}
             </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button type="button" onClick={handleNext} style={{ width: '100%', height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 980, cursor: 'pointer' }}>

@@ -11,6 +11,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { CATEGORIES } from '@/lib/utils';
+import { getArticleTypeLabel } from '@/lib/constants';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
 function normalizeForSearch(s: string): string {
@@ -376,7 +377,7 @@ export default function SellerDashboardPage() {
               {filteredListings.map((listing) => (
                 <div key={listing.id} style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
                   <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                    <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
                       {listing.photos[0] ? (
                         <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
@@ -384,16 +385,26 @@ export default function SellerDashboardPage() {
                           <Package size={48} color="#ccc" />
                         </div>
                       )}
+                      <span style={{ position: 'absolute', top: 8, right: 8, padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500, borderRadius: 4 }}>
+                        {listing.isActive ? 'Active' : 'Inactive'}
+                      </span>
                     </div>
                     <div style={{ padding: '16px 16px 12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                      <div style={{ marginBottom: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <h3 style={{ fontSize: 15, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.title}</h3>
+                          {(() => {
+                            const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                            const marque = listing.brand || listing.title;
+                            const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
+                              ? (listing.model ?? '')
+                              : [typeLabel, listing.model].filter(Boolean).join(' ');
+                            const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                            return (
+                              <h3 title={lineText} style={{ fontSize: 15, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lineText}</h3>
+                            );
+                          })()}
                           <p style={{ fontSize: 18, fontWeight: 600, color: '#000' }}>{formatPrice(listing.price)}</p>
                         </div>
-                        <span style={{ padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500, borderRadius: 4, flexShrink: 0 }}>
-                          {listing.isActive ? 'Active' : 'Inactive'}
-                        </span>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: '#888' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><Heart size={12} /> {listing.likesCount}</span>

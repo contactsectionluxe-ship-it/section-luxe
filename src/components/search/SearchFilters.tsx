@@ -101,8 +101,8 @@ export function SearchFilters({ filters, onChange, onReset, resultsCount }: Sear
         )}
       </div>
 
-      {/* Type d'article */}
-      <FilterSection title="Type d'article" defaultOpen={true}>
+      {/* Catégorie */}
+      <FilterSection title="Catégorie" defaultOpen={true}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {ARTICLE_TYPES.map((type) => (
             <label

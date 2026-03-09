@@ -2,10 +2,13 @@ export interface SearchFilters {
   /** Genre(s) : Femme et/ou Homme (filtre catalogue). */
   genre?: ('femme' | 'homme')[];
 
-  // Type d'article (sélection multiple)
+  // Catégorie (sélection multiple)
   category?: string; // déprécié, préférer categories
   categories?: string[];
   
+  /** Type de produit (ex. sneakers, sac_main, tshirt_polo) — sélection multiple, même valeurs que Déposer une annonce */
+  articleTypes?: string[];
+
   // Marque (sélection multiple)
   brand?: string; // déprécié, préférer brands
   brands?: string[];

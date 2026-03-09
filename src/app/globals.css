@@ -252,13 +252,13 @@ a:focus-visible {
     #e8e6e3 100%
   );
   background-size: 200% 100%;
-  animation: catalogue-skeleton-shimmer 2.5s linear infinite;
+  animation: catalogue-skeleton-shimmer 2.2s linear infinite;
   border-radius: 4px;
-  will-change: background-position;
 }
 .catalogue-skeleton-card {
   border-radius: 12px;
   overflow: hidden;
+  contain: layout;
 }
 
 /* Barre de chargement catalogue (indéterminée) */

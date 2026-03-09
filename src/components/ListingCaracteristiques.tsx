@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Tag, Calendar, CircleCheck, Palette, Layers, Ruler } from 'lucide-react';
+import { Tag, Calendar, CheckCircle, Palette, Layers, Ruler } from 'lucide-react';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
@@ -18,16 +18,18 @@ export function ListingCaracteristiques({
   listing: Listing;
   className?: string;
   style?: React.CSSProperties;
-  /** En mode "grid" (catalogue en cases) : uniquement taille/pointure (si présent), état, couleur, matière — pas catégorie ni année */
-  variant?: 'full' | 'grid';
+  /** En mode "grid" (catalogue en cases) : état, taille, couleur, matière — pas catégorie ni année */
+  /** En mode "line" (catalogue en ligne) : état, taille (si présent), date, couleur, matière */
+  variant?: 'full' | 'grid' | 'line';
 }) {
   const ref = useRef<HTMLDivElement>(null);
 
   const items = useMemo(() => {
     const arr: { key: string; node: React.ReactNode }[] = [];
     const isGrid = variant === 'grid';
+    const isLine = variant === 'line';
 
-    if (!isGrid && listing.category) {
+    if (!isGrid && !isLine && listing.category) {
       arr.push({
         key: 'category',
         node: (
@@ -38,7 +40,21 @@ export function ListingCaracteristiques({
         ),
       });
     }
-    if ((listing.category === 'chaussures' || listing.category === 'vetements') && listing.size) {
+    if (listing.category === 'montres') {
+      const dimVal = listing.size?.trim();
+      const dimFromWidth = listing.widthCm != null ? String(Math.round(Number(listing.widthCm) * 10)) : null;
+      const dimRaw = dimVal || dimFromWidth || null;
+      const dimText = dimRaw ? `${dimRaw}${String(dimRaw).match(/^\d+$/) ? ' mm' : ''}` : '—';
+      arr.push({
+        key: 'size',
+        node: (
+          <>
+            <Ruler size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            {dimText}
+          </>
+        ),
+      });
+    } else if ((listing.category === 'chaussures' || listing.category === 'vetements') && listing.size) {
       arr.push({
         key: 'size',
         node: (
@@ -65,7 +81,7 @@ export function ListingCaracteristiques({
         key: 'condition',
         node: (
           <>
-            <CircleCheck size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <CheckCircle size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
             {CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition}
           </>
         ),
@@ -93,11 +109,22 @@ export function ListingCaracteristiques({
         ),
       });
     }
+    // En mode grille : ordre état → taille → couleur → matière
+    if (isGrid) {
+      const order = ['condition', 'size', 'color', 'material'];
+      return order.map((key) => arr.find((x) => x.key === key)).filter(Boolean) as { key: string; node: React.ReactNode }[];
+    }
+    // En mode ligne : ordre état → taille → date → couleur → matière
+    if (isLine) {
+      const order = ['condition', 'size', 'year', 'color', 'material'];
+      return order.map((key) => arr.find((x) => x.key === key)).filter(Boolean) as { key: string; node: React.ReactNode }[];
+    }
     return arr;
   }, [
     variant,
     listing.category,
     listing.size,
+    listing.widthCm,
     listing.year,
     listing.condition,
     listing.color,

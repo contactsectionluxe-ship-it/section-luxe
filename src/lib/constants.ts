@@ -117,6 +117,295 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
   ],
 };
 
+/** Types d'article vêtements Homme (dépôt annonce — Type en dessous de Genre). */
+export const VETEMENTS_TYPES_HOMME: { value: string; label: string }[] = [
+  { value: 'tshirt_polo', label: 'T-shirt & Polo' },
+  { value: 'chemise', label: 'Chemise' },
+  { value: 'maille_sweatshirt', label: 'Maille & Sweatshirt' },
+  { value: 'jean', label: 'Jean' },
+  { value: 'pantalon_short', label: 'Pantalon & Short' },
+  { value: 'veste', label: 'Veste' },
+  { value: 'costume', label: 'Costume' },
+  { value: 'manteau_blouson', label: 'Manteau & Blouson' },
+];
+
+/** Types d'article vêtements Femme (dépôt annonce — Type en dessous de Genre). */
+export const VETEMENTS_TYPES_FEMME: { value: string; label: string }[] = [
+  { value: 'chemise_blouse', label: 'Chemise & Blouse' },
+  { value: 'maille_sweatshirt', label: 'Maille & Sweatshirt' },
+  { value: 'top_tshirt', label: 'Top & T-shirt' },
+  { value: 'robe', label: 'Robe' },
+  { value: 'jean', label: 'Jean' },
+  { value: 'pantalon', label: 'Pantalon' },
+  { value: 'jupe_short', label: 'Jupe & Short' },
+  { value: 'veste', label: 'Veste' },
+  { value: 'manteau_blouson', label: 'Manteau & Blouson' },
+  { value: 'tailleur_costume', label: 'Tailleur & Costume' },
+];
+
+/** Retourne les types d'article vêtements selon le(s) genre(s) sélectionné(s). */
+export function getVetementsTypesForGenre(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  const hasH = genre.includes('homme');
+  const hasF = genre.includes('femme');
+  if (hasH && hasF) {
+    const seen = new Set<string>();
+    return [...VETEMENTS_TYPES_HOMME, ...VETEMENTS_TYPES_FEMME].filter((t) => {
+      if (seen.has(t.value)) return false;
+      seen.add(t.value);
+      return true;
+    });
+  }
+  if (hasH) return [...VETEMENTS_TYPES_HOMME];
+  if (hasF) return [...VETEMENTS_TYPES_FEMME];
+  return [];
+}
+
+/** Types d'article sacs Femme (dépôt annonce — Type en dessous de Genre). */
+export const SACS_TYPES_FEMME: { value: string; label: string }[] = [
+  { value: 'sac_main', label: 'Sac à main' },
+  { value: 'sac_epaule', label: 'Sac porté épaule' },
+  { value: 'sac_bandouliere', label: 'Sac bandoulière' },
+  { value: 'cabas_tote', label: 'Cabas & Tote bag' },
+  { value: 'sac_seau', label: 'Sac seau' },
+  { value: 'pochette_clutch', label: 'Pochette & Clutch' },
+  { value: 'porte_documents', label: 'Porte-documents' },
+  { value: 'sac_dos', label: 'Sac à dos' },
+  { value: 'sac_voyage', label: 'Sac de voyage' },
+  { value: 'bagage', label: 'Bagage' },
+];
+
+/** Types d'article sacs Homme (dépôt annonce — Type en dessous de Genre). */
+export const SACS_TYPES_HOMME: { value: string; label: string }[] = [
+  { value: 'pochette', label: 'Pochette' },
+  { value: 'sac_bandouliere_messenger', label: 'Sac bandoulière & Messenger' },
+  { value: 'sac_dos', label: 'Sac à dos' },
+  { value: 'porte_documents', label: 'Porte-documents' },
+  { value: 'sac_voyage', label: 'Sac de voyage' },
+  { value: 'bagage', label: 'Bagage' },
+  { value: 'sac_cabas_tote', label: 'Sac cabas & Tote bag' },
+  { value: 'sac_ceinture', label: 'Sac Ceinture' },
+];
+
+/** Retourne les types d'article sacs selon le(s) genre(s) sélectionné(s). */
+export function getSacsTypesForGenre(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  const hasH = genre.includes('homme');
+  const hasF = genre.includes('femme');
+  if (hasH && hasF) {
+    const seen = new Set<string>();
+    return [...SACS_TYPES_HOMME, ...SACS_TYPES_FEMME].filter((t) => {
+      if (seen.has(t.value)) return false;
+      seen.add(t.value);
+      return true;
+    });
+  }
+  if (hasH) return [...SACS_TYPES_HOMME];
+  if (hasF) return [...SACS_TYPES_FEMME];
+  return [];
+}
+
+/** Types d'article bijoux (Femme et Homme — même liste, dépôt annonce). */
+export const BIJOUX_TYPES: { value: string; label: string }[] = [
+  { value: 'colliers', label: 'Colliers' },
+  { value: 'bracelets', label: 'Bracelets' },
+  { value: 'bagues', label: 'Bagues' },
+  { value: 'boucles_oreilles', label: 'Boucles d\'oreilles' },
+  { value: 'broche_pins', label: 'Broche / pin\'s' },
+];
+
+/** Retourne les types d'article bijoux (identiques pour femme et homme). */
+export function getBijouxTypesForGenre(_genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  return [...BIJOUX_TYPES];
+}
+
+/** Types d'article chaussures Femme (dépôt annonce). */
+export const CHAUSSURES_TYPES_FEMME: { value: string; label: string }[] = [
+  { value: 'ballerines', label: 'Ballerines' },
+  { value: 'mocassins', label: 'Mocassins' },
+  { value: 'derbies_richelieu', label: 'Derbies & Richelieu' },
+  { value: 'sneakers', label: 'Sneakers' },
+  { value: 'mules_plates', label: 'Mules plates' },
+  { value: 'sandales_plates', label: 'Sandales plates' },
+  { value: 'escarpins', label: 'Escarpins' },
+  { value: 'sandales_talons', label: 'Sandales à talons' },
+  { value: 'mules_talons', label: 'Mules à talons' },
+  { value: 'bottines_talons', label: 'Bottines à talons' },
+  { value: 'bottes', label: 'Bottes' },
+];
+
+/** Types d'article chaussures Homme (dépôt annonce). */
+export const CHAUSSURES_TYPES_HOMME: { value: string; label: string }[] = [
+  { value: 'sneakers', label: 'Sneakers' },
+  { value: 'mocassins', label: 'Mocassins' },
+  { value: 'derbies_richelieu', label: 'Derbies & Richelieu' },
+  { value: 'boots_bottines', label: 'Boots & Bottines' },
+  { value: 'sandales', label: 'Sandales' },
+  { value: 'chaussures_sport', label: 'Chaussures de sport' },
+  { value: 'chaussures_ville', label: 'Chaussures de ville' },
+];
+
+/** Retourne les types d'article chaussures selon le(s) genre(s) sélectionné(s). */
+export function getChaussuresTypesForGenre(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  const hasH = genre.includes('homme');
+  const hasF = genre.includes('femme');
+  if (hasH && hasF) {
+    const seen = new Set<string>();
+    return [...CHAUSSURES_TYPES_HOMME, ...CHAUSSURES_TYPES_FEMME].filter((t) => {
+      if (seen.has(t.value)) return false;
+      seen.add(t.value);
+      return true;
+    });
+  }
+  if (hasH) return [...CHAUSSURES_TYPES_HOMME];
+  if (hasF) return [...CHAUSSURES_TYPES_FEMME];
+  return [];
+}
+
+/** Types d'article accessoires (Femme et Homme — même liste, dépôt annonce). */
+export const ACCESSOIRES_TYPES: { value: string; label: string }[] = [
+  { value: 'porte_monnaie_portefeuille', label: 'Porte-monnaie & portefeuille' },
+  { value: 'porte_cartes', label: 'Porte-cartes' },
+  { value: 'cravate', label: 'Cravate' },
+  { value: 'lunettes_soleil', label: 'Lunettes de soleil' },
+  { value: 'gants', label: 'Gants' },
+  { value: 'echarpe', label: 'Écharpe' },
+  { value: 'foulard_carre_soie', label: 'Foulard & Carré de soie' },
+  { value: 'chale', label: 'Châle' },
+  { value: 'casquette', label: 'Casquette' },
+  { value: 'chapeau', label: 'Chapeau' },
+  { value: 'bob', label: 'Bob' },
+];
+
+/** Retourne les types d'article accessoires (identiques pour femme et homme). */
+export function getAccessoiresTypesForGenre(_genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  return [...ACCESSOIRES_TYPES];
+}
+
+/** Retourne tous les libellés de types d'article pour une catégorie (pour exclure ces noms des propositions de modèles). */
+export function getArticleTypeLabelsForCategory(category: string, genre: ('homme' | 'femme')[]): string[] {
+  const types =
+    category === 'vetements' ? getVetementsTypesForGenre(genre)
+    : category === 'sacs' ? getSacsTypesForGenre(genre)
+    : category === 'bijoux' ? getBijouxTypesForGenre(genre)
+    : category === 'chaussures' ? getChaussuresTypesForGenre(genre)
+    : category === 'accessoires' ? getAccessoiresTypesForGenre(genre)
+    : [];
+  return types.map((t) => t.label);
+}
+
+/** Retourne le libellé d'un type d'article pour une catégorie et un genre (pour affichage catalogue). */
+export function getArticleTypeLabel(category: string, genre: ('homme' | 'femme')[], articleTypeValue: string | null | undefined): string {
+  if (!articleTypeValue?.trim()) return '';
+  const types =
+    category === 'vetements' ? getVetementsTypesForGenre(genre)
+    : category === 'sacs' ? getSacsTypesForGenre(genre)
+    : category === 'bijoux' ? getBijouxTypesForGenre(genre)
+    : category === 'chaussures' ? getChaussuresTypesForGenre(genre)
+    : category === 'accessoires' ? getAccessoiresTypesForGenre(genre)
+    : [];
+  return types.find((t) => t.value === articleTypeValue)?.label ?? articleTypeValue;
+}
+
+/** Mots-clés pour filtrer les modèles vêtements selon le type de produit (dépôt annonce). */
+export const VETEMENTS_ARTICLE_TYPE_MODEL_KEYWORDS: Record<string, string[]> = {
+  tshirt_polo: ['T-shirt', 'Polo', 'Sweat'],
+  chemise: ['Chemise'],
+  maille_sweatshirt: ['Maille', 'Sweat', 'Pull', 'Cardigan'],
+  jean: ['Jean'],
+  pantalon_short: ['Pantalon', 'Short'],
+  veste: ['Veste'],
+  costume: ['Costume', 'Smoking', 'Tailleur'],
+  manteau_blouson: ['Manteau', 'Blouson', 'Caban', 'Trench', 'Parka'],
+  chemise_blouse: ['Chemise', 'Blouse'],
+  top_tshirt: ['Top', 'T-shirt'],
+  robe: ['Robe'],
+  pantalon: ['Pantalon'],
+  jupe_short: ['Jupe', 'Short'],
+  tailleur_costume: ['Tailleur', 'Costume', 'Smoking', 'Bar Jacket'],
+};
+
+/** Pour ces marques (vêtements), ne proposer que les modèles de la marque : aucune proposition générique (VETEMENTS_MODELES_TOUJOURS_PROPOSES). */
+export const VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE = new Set<string>(['Dior']);
+
+/** Noms de modèles vêtements trop génériques : ne jamais les proposer seuls (proposer uniquement des modèles précis, ex. T-shirt CD Icon, Polo abeille). */
+export const MODELE_VETEMENTS_GENERIQUES_EXCLUS = new Set([
+  'T-shirt', 'Polo', 'Robe', 'Sweat', 'Pantalon', 'Manteau', 'Jupe', 'Veste', 'Short', 'Cardigan', 'Pull',
+  'Blouson', 'Blazer', 'Chemise', 'Jean', 'Trench', 'Caban', 'Camel Coat', 'Smoking', 'Tweed',
+]);
+
+/** Retourne true si le nom du modèle correspond au type d'article (pour filtre dépôt annonce). brand optionnel pour bijoux/sacs. */
+export function modelMatchesArticleType(modelName: string, articleType: string, category: string, brand?: string): boolean {
+  if (!articleType || !modelName) return true;
+  if (category === 'vetements') {
+    const keywords = VETEMENTS_ARTICLE_TYPE_MODEL_KEYWORDS[articleType];
+    if (!keywords) return true;
+    const m = modelName.toLowerCase();
+    return keywords.some((k) => m.includes(k.toLowerCase()));
+  }
+  if (category === 'bijoux' && brand) {
+    const typeLabels: Record<string, string> = {
+      colliers: 'Collier',
+      bracelets: 'Bracelet',
+      bagues: 'Bague',
+      boucles_oreilles: 'Boucles d\'oreilles',
+      broche_pins: 'Broche',
+    };
+    const expected = typeLabels[articleType];
+    if (!expected) return true;
+    const typeInData = MODEL_TYPE_BIJOUX[brand]?.[modelName];
+    return typeInData === expected;
+  }
+  if (category === 'sacs' && brand) {
+    const typeByArticleType: Record<string, string> = {
+      sac_main: 'Sac à main',
+      sac_epaule: 'Sac à main',
+      sac_bandouliere: 'Sac bandoulière',
+      cabas_tote: 'Sac à main',
+      sac_seau: 'Sac à main',
+      pochette_clutch: 'Pochette',
+      porte_documents: 'Porte-documents',
+      sac_dos: 'Sac à dos',
+      sac_voyage: 'Sac de voyage',
+      bagage: 'Sac de voyage',
+      pochette: 'Pochette',
+      sac_bandouliere_messenger: 'Sac bandoulière',
+      sac_cabas_tote: 'Sac à main',
+      sac_ceinture: 'Sac à main',
+    };
+    const expected = typeByArticleType[articleType];
+    if (!expected) return true;
+    const typeInData = MODEL_TYPE_SACS[brand]?.[modelName];
+    if (!typeInData) return false;
+    return typeInData === expected;
+  }
+  if (category === 'chaussures' && brand) {
+    // Types d'article (formulaire) -> type(s) dans MODEL_TYPE_CHAUSSURES (Basket = sneakers, Escarpin = escarpins, etc.)
+    const allowedTypesByArticleType: Record<string, string | string[]> = {
+      sneakers: 'Basket',
+      escarpins: 'Escarpin',
+      ballerines: 'Ballerine',
+      bottes: 'Botte',
+      boots_bottines: ['Botte', 'Bottine'],
+      sandales: 'Sandale',
+      sandales_plates: 'Sandale',
+      sandales_talons: 'Sandale',
+      mocassins: 'Mocassin',
+      derbies_richelieu: 'Derby',
+      chaussures_sport: 'Basket',
+      chaussures_ville: ['Loafer', 'Mocassin', 'Derby'],
+      bottines_talons: 'Bottine',
+      mules_plates: 'Escarpin', // mules souvent côté escarpin
+      mules_talons: 'Escarpin',
+    };
+    const allowed = allowedTypesByArticleType[articleType];
+    if (!allowed) return true; // type non mappé : on affiche les modèles
+    const allowedList = Array.isArray(allowed) ? allowed : [allowed];
+    const typeInData = MODEL_TYPE_CHAUSSURES[brand]?.[modelName];
+    if (!typeInData) return true; // modèle non typé en base : on l’affiche pour ne rien cacher
+    return allowedList.includes(typeInData);
+  }
+  return true;
+}
+
 /** Tailles vêtements (dépôt annonce + filtre catalogue) */
 export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
 
@@ -152,26 +441,24 @@ export function getJeanSizesForGenre(genre: ('homme' | 'femme')[] | null | undef
   return [...JEAN_SIZES_MIX];
 }
 
-/** Modèles toujours proposés pour la catégorie vêtements (dépôt annonce), en plus des modèles par marque. Filtrés selon genre (Femme / Homme). */
+/** Modèles toujours proposés pour la catégorie vêtements (dépôt annonce), en plus des modèles par marque. Filtrés selon genre (Femme / Homme). Noms spécifiques uniquement (pas de type seul). */
 export const VETEMENTS_MODELES_TOUJOURS_PROPOSES: { name: string; genre: 'femme' | 'homme' | 'both' }[] = [
-  { name: 'Blazer', genre: 'both' },
-  { name: 'Caban', genre: 'both' },
+  { name: 'Blazer classique', genre: 'both' },
+  { name: 'Caban marine', genre: 'both' },
   { name: 'Camel Coat', genre: 'both' },
-  { name: 'Cardigan', genre: 'both' },
-  { name: 'Chemise', genre: 'both' },
-  { name: 'Jean', genre: 'both' },
-  { name: 'Jupe', genre: 'femme' },
-  { name: 'Manteau', genre: 'both' },
-  { name: 'Pantalon', genre: 'both' },
-  { name: 'Pull', genre: 'both' },
-  { name: 'Robe', genre: 'femme' },
-  { name: 'Short', genre: 'both' },
-  { name: 'Smoking', genre: 'homme' },
-  { name: 'Sweat', genre: 'both' },
-  { name: 'T-shirt', genre: 'both' },
-  { name: 'Trench', genre: 'both' },
-  { name: 'Tweed', genre: 'both' },
-  { name: 'Veste', genre: 'both' },
+  { name: 'Cardigan col V', genre: 'both' },
+  { name: 'Chemise à carreaux', genre: 'both' },
+  { name: 'Jupe midi', genre: 'femme' },
+  { name: 'Manteau long', genre: 'both' },
+  { name: 'Pantalon droit', genre: 'both' },
+  { name: 'Pull col roulé', genre: 'both' },
+  { name: 'Robe midi', genre: 'femme' },
+  { name: 'Short chino', genre: 'both' },
+  { name: 'Le Smoking', genre: 'homme' },
+  { name: 'Sweat à capuche', genre: 'both' },
+  { name: 'T-shirt col rond', genre: 'both' },
+  { name: 'Trench classique', genre: 'both' },
+  { name: 'Veste croisée', genre: 'both' },
 ];
 
 /** Modèles vêtements orientés Femme : à ne pas proposer quand seul Homme est sélectionné. */
@@ -413,12 +700,12 @@ export const CATEGORY_TO_BRAND_KEYS: Record<string, string[]> = {
 /** Modèles par catégorie et marque (base : marques avec modèles détaillés). */
 const _MODELS_BY_CATEGORY_BRAND_BASE: Record<string, Record<string, string[]>> = {
   sacs: {
-    'Hermès': ['Birkin 25', 'Birkin 30', 'Birkin 35', 'Birkin 40', 'Kelly 25', 'Kelly 28', 'Kelly 32', 'Kelly 35', 'Constance', 'Lindy', 'Évelyne', 'Bolide', 'Picotin', 'Garden Party', 'Herbag', 'Roulis', '24/24', 'Verrou', 'Jypsière', 'In-The-Loop', 'Steeple', 'Mini Lindy', 'Autre'],
-    'Louis Vuitton': ['Neverfull', 'Speedy 25', 'Speedy 30', 'Speedy 35', 'Speedy Bandoulière', 'Keepall', 'Alma', 'Capucines', 'Pochette Métis', 'Noé', 'Petite Malle', 'Twist', 'Dauphine', 'OnTheGo', 'Cannes', 'Boulogne', 'Bella', 'Soft Trunk', 'Carryall', 'Loop', 'Autre'],
-    'Chanel': ['Classic Flap', '2.55', 'Boy', 'Gabrielle', 'Coco Handle', '19', 'Wallet on Chain', 'Grand Shopping', 'Trendy', 'Reissue', 'Vanity', '22', '31', 'Autre'],
-    'Gucci': ['Dionysus', 'Marmont', 'Jackie', 'Horsebit', 'Ophidia', 'Bamboo', 'Jackie 1961', 'Horsebit 1955', 'Gucci Blondie', 'Web', 'Autre'],
-    'Prada': ['Galleria', 'Saffiano', 'Re-Edition', 'Cleo', 'Nylon', 'Sidonie', 'Arqué', 'Brique', 'Moon', 'Autre'],
-    'Dior': ['Lady Dior', 'Saddle', 'Book Tote', 'Bobby', 'Carousel', 'Diorama', 'Caro', 'Dior Camp', 'Autre'],
+    'Hermès': ['Birkin 20', 'Birkin 25', 'Birkin 30', 'Birkin 35', 'Birkin 40', 'Kelly 20', 'Kelly 25', 'Kelly 28', 'Kelly 32', 'Kelly 35', 'Kelly 40', 'Micro Kelly', 'Kelly To Go', 'Kelly Pochette', 'Kelly Danse', 'Constance', 'Lindy', 'Mini Lindy', 'Évelyne', 'Bolide', 'Picotin', 'Garden Party', 'Herbag', 'Roulis', '24/24', 'Verrou', 'Jypsière', 'In-The-Loop', 'Steeple', 'Hac à dos', 'Autre'],
+    'Louis Vuitton': ['Neverfull', 'Speedy 20', 'Speedy 25', 'Speedy 30', 'Speedy 35', 'Speedy 40', 'Speedy Bandoulière', 'Keepall', 'Alma', 'Capucines', 'Pochette Métis', 'Noé', 'Petite Malle', 'Twist', 'Dauphine', 'OnTheGo', 'Cannes', 'Boulogne', 'Bella', 'Soft Trunk', 'Carryall', 'Loop', 'Discovery', 'Coussin', 'Side Trunk', 'Autre'],
+    'Chanel': ['Classic Flap', '2.55', 'Reissue', 'Boy', 'Gabrielle', 'Coco Handle', '19', '22', '31', 'Wallet on Chain', 'Vanity', 'Grand Shopping', 'Trendy', 'Autre'],
+    'Gucci': ['Dionysus', 'Marmont', 'Jackie', 'Jackie 1961', 'Horsebit', 'Horsebit 1955', 'Ophidia', 'Bamboo', 'Gucci Blondie', 'Web', 'Bamboo 1947', 'Autre'],
+    'Prada': ['Galleria', 'Saffiano', 'Re-Edition', 'Cleo', 'Nylon', 'Sidonie', 'Arqué', 'Brique', 'Moon', 'Symbole', 'Autre'],
+    'Dior': ['Lady Dior', 'Saddle', 'Book Tote', 'Bobby', 'Carousel', 'Diorama', 'Caro', 'Dior Camp', 'Dior Addict', 'Autre'],
     'Saint Laurent': ['Sac de Jour', 'LouLou', 'Kate', 'Niki', 'Le 5 à 7', 'Solferino', 'Icare', 'Uptown', 'Léopard', 'Autre'],
     'Bottega Veneta': ['Pouch', 'Cassette', 'Jodie', 'Arco', 'Kalimero', 'Andiamo', 'Brick', 'Sardine', 'Autre'],
     'Fendi': ['Baguette', 'Peekaboo', 'By The Way', 'Sunshine', 'First', 'Fendigraphy', 'Baguette Soft', 'Autre'],
@@ -475,16 +762,16 @@ const _MODELS_BY_CATEGORY_BRAND_BASE: Record<string, Record<string, string[]>> =
     'Strathberry': ['Mosaic', 'East/West', 'Multrees', 'Charlotte', 'Portefeuille', 'Porte-cartes', 'Pochette', 'Autre'],
   },
   montres: {
-    'Rolex': ['Submariner', 'Submariner Date', 'Daytona', 'Datejust', 'Day-Date', 'GMT-Master II', 'Explorer', 'Explorer II', 'Yacht-Master', 'Oyster Perpetual', 'Sky-Dweller', 'Sea-Dweller', 'Deepsea', 'Milgauss', 'Air-King', 'Cellini', 'Lady-Datejust', '1908', 'Autre'],
-    'Audemars Piguet': ['Royal Oak', 'Royal Oak Offshore', 'Royal Oak Concept', 'Code 11.59', 'Millenary', 'Jules Audemars', 'Edward Piguet', 'Autre'],
-    'Patek Philippe': ['Nautilus', 'Aquanaut', 'Calatrava', 'Complications', 'Perpetual Calendar', 'Twenty~4', 'Golden Ellipse', 'World Time', 'Autre'],
-    'Cartier': ['Tank', 'Tank Louis', 'Tank Française', 'Santos', 'Ballon Bleu', 'Panthère', 'Clé', 'Ronde', 'Baignoire', 'Drive', 'Pasha', 'Baignoire Allongée', 'Autre'],
-    'Omega': ['Speedmaster', 'Seamaster', 'Constellation', 'Aqua Terra', 'De Ville', 'Planet Ocean', 'Moonwatch', 'Seamaster Diver', 'Globemaster', 'Railmaster', 'Diver 300M', 'Autre'],
+    'Rolex': ['Submariner', 'Submariner Date', 'Daytona', 'Datejust', 'Day-Date', 'GMT-Master II', 'Explorer', 'Explorer II', 'Yacht-Master', 'Oyster Perpetual', 'Sky-Dweller', 'Sea-Dweller', 'Deepsea', 'Milgauss', 'Air-King', 'Cellini', 'Lady-Datejust', '1908', 'Cosmograph', 'Pearlmaster', 'Autre'],
+    'Audemars Piguet': ['Royal Oak', 'Royal Oak Offshore', 'Royal Oak Concept', 'Code 11.59', 'Millenary', 'Jules Audemars', 'Edward Piguet', 'Royal Oak Selfwinding', 'Autre'],
+    'Patek Philippe': ['Nautilus', 'Aquanaut', 'Calatrava', 'Complications', 'Perpetual Calendar', 'Twenty~4', 'Golden Ellipse', 'World Time', 'Nautilus Travel Time', 'Autre'],
+    'Cartier': ['Tank', 'Tank Louis', 'Tank Française', 'Santos', 'Ballon Bleu', 'Panthère', 'Clé', 'Ronde', 'Baignoire', 'Drive', 'Pasha', 'Baignoire Allongée', 'Tank Américaine', 'Autre'],
+    'Omega': ['Speedmaster', 'Seamaster', 'Constellation', 'Aqua Terra', 'De Ville', 'Planet Ocean', 'Moonwatch', 'Seamaster Diver', 'Globemaster', 'Railmaster', 'Diver 300M', 'Trésor', 'Ladymatic', 'Autre'],
     'Chanel': ['J12', 'Boy.Friend', 'Première', 'Mademoiselle', 'Code Coco', 'J12 X-Ray', 'Autre'],
-    'Hermès': ['Cape Cod', 'H08', 'Arceau', 'Slim', 'Heure H', 'Galop', 'Arceau Le Temps Voyageur', 'Autre'],
-    'Louis Vuitton': ['Tambour', 'Tambour Curve', 'Spirit', 'Escale', 'Escale Time Zone', 'Tambour Moon', 'Autre'],
-    'Bulgari': ['Octo', 'Octo Finissimo', 'Serpenti', 'Bvlgari Bvlgari', 'Diagono', 'Aluminium', 'Octo Roma', 'Autre'],
-    'IWC': ['Portugieser', 'Pilot', 'Portofino', 'Ingenieur', 'Aquatimer', 'Da Vinci', 'Big Pilot', 'Autre'],
+    'Hermès': ['Cape Cod', 'H08', 'Arceau', 'Slim', 'Heure H', 'Galop', 'Arceau Le Temps Voyageur', 'Nantucket', 'Autre'],
+    'Louis Vuitton': ['Tambour', 'Tambour Curve', 'Spirit', 'Escale', 'Escale Time Zone', 'Tambour Moon', 'Tambour Slim', 'Autre'],
+    'Bulgari': ['Octo', 'Octo Finissimo', 'Serpenti', 'Bvlgari Bvlgari', 'Diagono', 'Aluminium', 'Octo Roma', 'Serpenti Tubogas', 'Autre'],
+    'IWC': ['Portugieser', 'Pilot', 'Portofino', 'Ingenieur', 'Aquatimer', 'Da Vinci', 'Big Pilot', 'Pilot\'s Watch', 'Autre'],
     'Jaeger-LeCoultre': ['Reverso', 'Master', 'Polaris', 'Rendez-Vous', 'Atmos', 'Duomètre', 'Master Ultra Thin', 'Autre'],
     'Vacheron Constantin': ['Overseas', 'Patrimony', 'Fiftysix', 'Historiques', 'Traditionnelle', 'Quai de l\'Île', 'Autre'],
     'Breitling': ['Navitimer', 'Chronomat', 'Superocean', 'Premier', 'Avenger', 'Top Time', 'Autre'],
@@ -512,78 +799,78 @@ const _MODELS_BY_CATEGORY_BRAND_BASE: Record<string, Record<string, string[]>> =
     'Mido': ['Multifort', 'Baroncelli', 'Autre'],
   },
   bijoux: {
-    'Cartier': ['Love', 'Juste un Clou', 'Panthère', 'Trinity', 'Écrou', 'Clash', 'Maillon Panthère', 'Baignoire', 'Amulette', 'Destinée', 'Autre'],
-    'Van Cleef & Arpels': ['Alhambra', 'Perlée', 'Frivole', 'Between the Finger', 'Sweet', 'Lotus', 'Cœur', 'Magic', 'Zip', 'Autre'],
-    'Bulgari': ['B.zero1', 'Serpenti', 'Divas\' Dream', 'Bvlgari Bvlgari', 'Fiorever', 'Octo', 'Parentesi', 'Autre'],
-    'Tiffany': ['Atlas', 'T True', 'Return to Tiffany', 'Keys', 'HardWear', 'T1', 'Lock', 'Tiffany T', 'Autre'],
-    'Chanel': ['Coco Crush', 'Camélia', 'Ultra', 'Comète', 'Ruban', 'Sous le Soleil', 'Coco Crush Mat', 'Autre'],
-    'Hermès': ['Chaîne d’ancre', 'Kelly', 'Collier de chien', 'Clic H', 'Autre'],
-    'Dior': ['Rose des Vents', 'Tribales', 'Diorama', 'Gem Dior', 'Oui', 'Diorette', 'Autre'],
-    'Louis Vuitton': ['LV Volt', 'Idylle', 'Blossom', 'B Blossom', 'Spell On', 'Stellar Times', 'Autre'],
-    'Gucci': ['Interlocking', 'Horsebit', 'Blind for Love', 'Link to Love', 'Hortus Deliciarum', 'Autre'],
-    'Prada': ['Symphony', 'Eternal Gold', 'Linea Rossa', 'Autre'],
-    'Chopard': ['Happy Hearts', 'Ice Cube', 'Happy Spirit', 'Imperiale', 'Happy Diamonds', 'Autre'],
-    'Piaget': ['Possession', 'Limelight', 'Rose', 'Sunlight', 'Piaget Rose', 'Autre'],
-    'Boucheron': ['Quatre', 'Serpent Bohème', 'Jack', 'Reflet', 'Plume', 'Autre'],
-    'Chaumet': ['Liens', 'Joséphine', 'Bee My Love', 'Jeux de Liens', 'Class One', 'Autre'],
-    'Harry Winston': ['Winston Cluster', 'Classic Winston', 'Logo', 'Premier', 'Autre'],
-    'David Yurman': ['Cable', 'Renaissance', 'Infinity', 'Petals', 'Autre'],
-    'De Beers': ['DB Classic', 'Enchanted Lotus', 'Aura', 'Autre'],
-    'Graff': ['Butterfly', 'Graff Diamond', 'Spiral', 'Autre'],
-    'Messika': ['Move', 'My Way', 'Glam\'azon', 'Autre'],
-    'Pomellato': ['Nudo', 'Ritorno', 'Mango', 'Autre'],
-    'Fred': ['Force 10', 'Bracelet', 'Bague', 'Collier', 'Boucles d\'oreilles', 'Autre'],
-    'Repossi': ['Antifer', 'Serti sur vide', 'Berbère', 'Blast', 'Serti inversé', 'Autre'],
-    'Mauboussin': ['1827', 'Étoile divine', 'Belle comme le vent', 'Trop smart', 'Union chance', 'Autre'],
-    'Courbet': ['Tennis', 'Les solitaires', 'Origine', 'Pont des arts', 'Autre'],
-    'Swarovski': ['Mesmera', 'Symbolica', 'Vienna', 'Octagon', 'Autre'],
+    'Cartier': ['Love', 'Juste un Clou', 'Panthère', 'Trinity', 'Écrou', 'Clash', 'Maillon Panthère', 'Baignoire', 'Amulette', 'Destinée', 'Santos', 'Pave', 'Cactus', 'Autre'],
+    'Van Cleef & Arpels': ['Alhambra', 'Vintage Alhambra', 'Perlée', 'Frivole', 'Between the Finger', 'Sweet', 'Lotus', 'Cœur', 'Magic', 'Zip', 'Fauna', 'Autre'],
+    'Bulgari': ['B.zero1', 'Serpenti', 'Divas\' Dream', 'Bvlgari Bvlgari', 'Fiorever', 'Octo', 'Parentesi', 'Save the Children', 'Autre'],
+    'Tiffany': ['Atlas', 'T True', 'Return to Tiffany', 'Keys', 'HardWear', 'T1', 'Lock', 'Tiffany T', 'Atlas X', 'Autre'],
+    'Chanel': ['Coco Crush', 'Camélia', 'Ultra', 'Comète', 'Ruban', 'Sous le Soleil', 'Coco Crush Mat', 'Mademoiselle', 'Autre'],
+    'Hermès': ['Chaîne d’ancre', 'Kelly', 'Collier de chien', 'Clic H', 'Chaîne d\'ancre Sport', 'Galop', 'Autre'],
+    'Dior': ['Rose des Vents', 'Tribales', 'Diorama', 'Gem Dior', 'Oui', 'Diorette', 'Mitzah', 'Autre'],
+    'Louis Vuitton': ['LV Volt', 'Idylle', 'Blossom', 'B Blossom', 'Spell On', 'Stellar Times', 'Bravery', 'Autre'],
+    'Gucci': ['Interlocking', 'Horsebit', 'Blind for Love', 'Link to Love', 'Hortus Deliciarum', 'Flora', 'Autre'],
+    'Prada': ['Symphony', 'Eternal Gold', 'Linea Rossa', 'Galleria', 'Autre'],
+    'Chopard': ['Happy Hearts', 'Ice Cube', 'Happy Spirit', 'Imperiale', 'Happy Diamonds', 'Happy Sport', 'Autre'],
+    'Piaget': ['Possession', 'Limelight', 'Rose', 'Sunlight', 'Piaget Rose', 'Extremely Piaget', 'Autre'],
+    'Boucheron': ['Quatre', 'Serpent Bohème', 'Jack', 'Reflet', 'Plume', 'Quatre Radiant', 'Autre'],
+    'Chaumet': ['Liens', 'Joséphine', 'Bee My Love', 'Jeux de Liens', 'Class One', 'Torsade', 'Autre'],
+    'Harry Winston': ['Winston Cluster', 'Classic Winston', 'Logo', 'Premier', 'Emerald', 'Autre'],
+    'David Yurman': ['Cable', 'Renaissance', 'Infinity', 'Petals', 'Classic', 'Autre'],
+    'De Beers': ['DB Classic', 'Enchanted Lotus', 'Aura', 'Talisman', 'Autre'],
+    'Graff': ['Butterfly', 'Graff Diamond', 'Spiral', 'Laurence Graff', 'Autre'],
+    'Messika': ['Move', 'My Way', 'Glam\'azon', 'Move Uno', 'Autre'],
+    'Pomellato': ['Nudo', 'Ritorno', 'Mango', 'Sabbia', 'Autre'],
+    'Fred': ['Force 10', 'Bracelet', 'Bague', 'Collier', 'Boucles d\'oreilles', 'Pretty Woman', 'Autre'],
+    'Repossi': ['Antifer', 'Serti sur vide', 'Berbère', 'Blast', 'Serti inversé', 'Lune', 'Autre'],
+    'Mauboussin': ['1827', 'Étoile divine', 'Belle comme le vent', 'Trop smart', 'Union chance', 'M', 'Autre'],
+    'Courbet': ['Tennis', 'Les solitaires', 'Origine', 'Pont des arts', 'Courbet', 'Autre'],
+    'Swarovski': ['Mesmera', 'Symbolica', 'Vienna', 'Octagon', 'Dulcis', 'Autre'],
   },
   vetements: {
-    'Chanel': ['Veste Tweed', 'Cardigan signature', 'Veste classique', 'Robe', 'Jupe plissée', 'Pantalon', 'Manteau', 'Tailleur tweed', 'Cardigan boutonné', 'Autre'],
-    'Louis Vuitton': ['Veste Monogram', 'Pantalon', 'Robe', 'Sweat', 'T-shirt', 'Manteau', 'Short', 'Blouson', 'Parka', 'Autre'],
-    'Gucci': ['Blazer GG', 'Robe', 'Veste Horsebit', 'Sweat', 'Pantalon', 'Manteau', 'Jupe', 'Blazer laine', 'Veste GG Canvas', 'Autre'],
-    'Prada': ['Veste Nylon', 'Robe', 'Manteau Saffiano', 'Pantalon', 'Sweat', 'Jupe', 'Veste cuir', 'Blouson Linea Rossa', 'Autre'],
-    'Dior': ['Bar Jacket', 'Tailleur Bar', 'Robe Miss Dior', 'Veste', 'Manteau', 'Jupe plissée', 'Pantalon', 'Robe Soir', 'Sweat Oblique', 'Autre'],
-    'Saint Laurent': ['Le Smoking', 'Blazer', 'Veste Loulou', 'Robe', 'Manteau', 'Pantalon cigarette', 'Blouson cuir', 'Trench', 'Autre'],
-    'Hermès': ['Caban Chaîne d\'ancre', 'Veste', 'Robe', 'Pantalon', 'Manteau', 'Cardigan', 'Trench', 'Blouson Bombers', 'Cardigan cachemire', 'Autre'],
-    'Fendi': ['Veste', 'Robe', 'Manteau', 'Pantalon', 'Jupe', 'Sweat', 'Blouson Baguette', 'Cardigan', 'Autre'],
-    'Bottega Veneta': ['Veste', 'Robe', 'Pantalon', 'Sweat', 'Manteau', 'Cardigan', 'Blouson intrecciato', 'Trench', 'Autre'],
-    'Loewe': ['Veste', 'Robe', 'Manteau', 'Pantalon', 'Sweat', 'Jupe', 'Blouson Puzzle', 'Cardigan', 'Autre'],
-    'Balenciaga': ['Sweat 3B', 'Hoodie Round', 'Veste', 'Robe', 'Pantalon', 'Sweat', 'Manteau', 'T-shirt', 'Blouson Tape', 'Hoodie Ski', 'Autre'],
-    'Givenchy': ['Veste', 'Robe', 'Pantalon', 'Manteau', 'Sweat', 'Blouson 4G', 'Trench', 'Cardigan', 'Autre'],
-    'Valentino': ['Robe Rockstud', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Robe Garavani', 'Blazer', 'Trench', 'Autre'],
-    'Versace': ['Robe', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Blouson Medusa', 'Cardigan', 'Autre'],
-    'Alexander McQueen': ['Robe', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Blazer tailleur', 'Trench', 'Autre'],
+    'Chanel': ['Veste Tweed', 'Cardigan signature', 'Veste classique', 'Robe tweed', 'Jupe plissée', 'Pantalon tailleur', 'Manteau tweed', 'Tailleur tweed', 'Cardigan boutonné', 'T-shirt Coco', 'Sweat Coco', 'Blazer tweed', 'Robe cape', 'Autre'],
+    'Louis Vuitton': ['Veste Monogram', 'T-shirt Monogram', 'T-shirt Damier', 'Sweat Monogram', 'Pantalon Damier', 'Robe Monogram', 'Manteau', 'Short Monogram', 'Blouson Monogram', 'Parka', 'Hoodie Monogram', 'Blouson Taiga', 'Autre'],
+    'Gucci': ['Blazer GG', 'Robe GG', 'Veste Horsebit', 'Sweat Interlocking G', 'Sweat GG Marmont', 'Pantalon', 'Manteau', 'Jupe', 'Blazer laine', 'Veste GG Canvas', 'T-shirt Interlocking', 'Polo Web', 'Cardigan Web', 'Hoodie GG', 'T-shirt GG Supreme', 'Autre'],
+    'Prada': ['Veste Nylon', 'Robe Saffiano', 'Manteau Saffiano', 'Pantalon Linea Rossa', 'Sweat Linea Rossa', 'Jupe', 'Veste cuir', 'Blouson Linea Rossa', 'T-shirt Prada', 'Cardigan Prada', 'Hoodie Prada', 'Autre'],
+    'Dior': ['T-shirt CD Icon', 'T-shirt abeille', 'Polo CD Icon', 'Polo abeille', 'T-shirt Dior Ribbon', 'Sweat Oblique', 'Bar Jacket', 'Tailleur Bar', 'Robe Miss Dior', 'Robe Soir', 'Veste Dior', 'Manteau Dior', 'Jupe plissée', 'Pantalon Dior', 'T-shirt Oblique', 'Autre'],
+    'Saint Laurent': ['Le Smoking', 'Blazer Saint Laurent', 'Veste Loulou', 'Robe Saint Laurent', 'Manteau', 'Pantalon cigarette', 'Blouson cuir', 'Trench', 'Sweat Rive Gauche', 'T-shirt Saint Laurent', 'Hoodie Saint Laurent', 'Veste Le 5 à 7', 'Autre'],
+    'Hermès': ['Caban Chaîne d\'ancre', 'Veste Chaîne d\'ancre', 'Robe Hermès', 'Pantalon', 'Manteau', 'Cardigan', 'Trench', 'Blouson Bombers', 'Cardigan cachemire', 'T-shirt Hermès', 'Sweat Hermès', 'Pull Hermès', 'Autre'],
+    'Fendi': ['Veste Fendi', 'Robe Fendi', 'Manteau', 'Pantalon', 'Jupe', 'Sweat Fendi', 'Blouson Baguette', 'Cardigan', 'T-shirt Fendi', 'Veste Fendigraphy', 'Autre'],
+    'Bottega Veneta': ['Veste intrecciato', 'Robe Bottega', 'Pantalon', 'Sweat Bottega', 'Manteau', 'Cardigan', 'Blouson intrecciato', 'Trench', 'T-shirt Bottega', 'Pull Bottega', 'Autre'],
+    'Loewe': ['Veste Loewe', 'Robe Loewe', 'Manteau', 'Pantalon', 'Sweat Puzzle', 'Jupe', 'Blouson Puzzle', 'Cardigan', 'T-shirt Loewe', 'Hoodie Loewe', 'Autre'],
+    'Balenciaga': ['Sweat 3B', 'Hoodie Round', 'Veste Balenciaga', 'Robe', 'Pantalon', 'Sweat Balenciaga', 'Manteau', 'T-shirt Logo', 'Blouson Tape', 'Hoodie Ski', 'Hoodie Defender', 'Autre'],
+    'Givenchy': ['Veste Givenchy', 'Robe', 'Pantalon', 'Manteau', 'Sweat Givenchy', 'Blouson 4G', 'Trench', 'Cardigan', 'T-shirt 4G', 'Hoodie 4G', 'Autre'],
+    'Valentino': ['Robe Rockstud', 'Veste Valentino', 'Pantalon', 'Manteau', 'Jupe', 'Robe Garavani', 'Blazer', 'Trench', 'T-shirt Rockstud', 'Sweat Valentino', 'Autre'],
+    'Versace': ['Robe Versace', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Blouson Medusa', 'Cardigan', 'T-shirt Medusa', 'Autre'],
+    'Alexander McQueen': ['Robe McQueen', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Blazer tailleur', 'Trench', 'T-shirt McQueen', 'Autre'],
     'Brunello Cucinelli': ['Pull cachemire', 'Cardigan zippé', 'Veste', 'Manteau', 'Pantalon', 'Cardigan style sweat', 'Pull col V', 'Pull col montant', 'Autre'],
     'Max Mara': ['Manuela', 'Teddy', 'Caban', 'Camel Coat', 'Robe', 'Veste', 'Manteau', 'Pantalon', 'Egeo', 'Icon', 'Autre'],
-    'Salvatore Ferragamo': ['Veste', 'Robe', 'Pantalon', 'Manteau', 'Jupe', 'Blazer Gancini', 'Cardigan', 'Autre'],
-    'Chloé': ['Robe volant', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Cardigan', 'Robe cape', 'Trench', 'Blouson', 'Autre'],
-    'Marni': ['Robe', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Cardigan', 'Blouson', 'Autre'],
+    'Salvatore Ferragamo': ['Veste Ferragamo', 'Robe', 'Pantalon', 'Manteau', 'Jupe', 'Blazer Gancini', 'Cardigan', 'T-shirt Gancini', 'Autre'],
+    'Chloé': ['Robe volant', 'Veste Chloé', 'Pantalon', 'Manteau', 'Jupe', 'Cardigan Chloé', 'Robe cape', 'Trench', 'Blouson', 'Autre'],
+    'Marni': ['Robe Marni', 'Veste', 'Pantalon', 'Manteau', 'Jupe', 'Cardigan', 'Blouson', 'T-shirt Marni', 'Autre'],
   },
   chaussures: {
-    'Louis Vuitton': ['Archlight', 'Run Away', 'Frontrow', 'Trainer', 'LV Trainer', 'Aerogram', 'Soft Trunk', 'Charlie', 'Skate', 'Autre'],
-    'Chanel': ['Ballerines', 'Bottes', 'Escarpins', 'Baskets', 'Bottines', 'Sandales', 'Slingback', 'Cap-Toe', 'Autre'],
-    'Gucci': ['Ace', 'Princetown', 'Brixton', 'Rhyton', 'Gazelle', 'Jackie', 'Horsebit', 'Screener', 'Luna', 'Rhyton 2.0', 'Autre'],
-    'Prada': ['Monolith', 'America\'s Cup', 'Cloudbust', 'Derby', 'Loafer', 'Linea Rossa', 'Symbole', 'Autre'],
-    'Dior': ['B30', 'B22', 'Walk\'n\'Dior', 'Escarpins', 'Bottes', 'J\'adior', 'D-Fusion', 'B27', 'Autre'],
-    'Saint Laurent': ['Wyatt', 'Tributes', 'Bottes', 'Escarpins', 'Loafer', 'Slides', 'Court', 'Niki', 'Lou', 'Autre'],
-    'Hermès': ['Oran', 'Sandales', 'Bottes', 'Mocassins', 'Quick', 'Chypre', 'Avalon', 'Ezcape', 'Autre'],
-    'Bottega Veneta': ['Puddle', 'Tire', 'Lido', 'Sandals', 'Stretch', 'Drop', 'Platform', 'Autre'],
-    'Fendi': ['Fendigraphy', 'Baskets', 'Escarpins', 'Bottes', 'Slides', 'Rolling', 'First', 'Autre'],
-    'Loewe': ['Balloon', 'Puzzle', 'Baskets', 'Gate', 'Flamenco', 'Flow', 'Croc', 'Autre'],
-    'Jimmy Choo': ['Bing', 'Memento', 'Romy', 'Anouk', 'Bottes', 'Bing 85', 'Mulan', 'Autre'],
-    'Manolo Blahnik': ['Hangisi', 'BB', 'Maysale', 'Lurum', 'Campari', 'Suede', 'Autre'],
-    'Roger Vivier': ['Belle Vivier', 'Très Vivier', 'Belle de Nuit', 'Ballerine', 'Viv\' Run', 'Combat', 'Autre'],
-    'Valentino': ['Rockstud', 'Garavani', 'One Stud', 'Bottes', 'Escarpins', 'Open', 'VLogo', 'Autre'],
-    'Christian Louboutin': ['Pigalle', 'So Kate', 'Bianca', 'Décolleté', 'Bottes', 'Simple Pump', 'Louboutin', 'Spike', 'Autre'],
-    'Aquazzura': ['Wild Thing', 'Belgravia', 'Christy', 'Sandales', 'Escarpins', 'Sexy Thing', 'Autre'],
-    'Givenchy': ['Bottes', 'Escarpins', 'Baskets', 'Sandales', 'Voyou', 'Gum', 'Autre'],
-    'Balenciaga': ['Triple S', 'Track', 'Speed', 'Defender', 'Strike', 'Baskets', 'Bottes', '3XL', 'Runner', 'Autre'],
+    'Louis Vuitton': ['Archlight', 'Run Away', 'Frontrow', 'Trainer', 'LV Trainer', 'Aerogram', 'Soft Trunk', 'Charlie', 'Skate', 'Discovery', 'Autre'],
+    'Chanel': ['Ballerines', 'Bottes', 'Escarpins', 'Baskets', 'Bottines', 'Sandales', 'Slingback', 'Cap-Toe', 'Derby', 'Autre'],
+    'Gucci': ['Ace', 'Princetown', 'Brixton', 'Rhyton', 'Rhyton 2.0', 'Gazelle', 'Jackie', 'Horsebit', 'Screener', 'Luna', 'Marmont', 'Autre'],
+    'Prada': ['Monolith', 'America\'s Cup', 'Cloudbust', 'Derby', 'Loafer', 'Linea Rossa', 'Symbole', 'Platform', 'Autre'],
+    'Dior': ['B30', 'B22', 'B27', 'Walk\'n\'Dior', 'Escarpins', 'Bottes', 'J\'adior', 'D-Fusion', 'Autre'],
+    'Saint Laurent': ['Wyatt', 'Tributes', 'Bottes', 'Escarpins', 'Loafer', 'Slides', 'Court', 'Niki', 'Lou', 'Camden', 'Autre'],
+    'Hermès': ['Oran', 'Sandales', 'Bottes', 'Mocassins', 'Quick', 'Chypre', 'Avalon', 'Ezcape', 'Egerie', 'Enfilade', 'Autre'],
+    'Bottega Veneta': ['Puddle', 'Tire', 'Lido', 'Sandals', 'Stretch', 'Drop', 'Platform', 'Lug', 'Autre'],
+    'Fendi': ['Fendigraphy', 'Baskets', 'Escarpins', 'Bottes', 'Slides', 'Rolling', 'First', 'Match', 'Autre'],
+    'Loewe': ['Balloon', 'Puzzle', 'Baskets', 'Gate', 'Flamenco', 'Flow', 'Croc', 'Runner', 'Autre'],
+    'Jimmy Choo': ['Bing', 'Bing 85', 'Memento', 'Romy', 'Anouk', 'Bottes', 'Mulan', 'Devere', 'Bon Bon', 'Autre'],
+    'Manolo Blahnik': ['Hangisi', 'BB', 'Maysale', 'Lurum', 'Campari', 'Suede', 'Chaos', 'Autre'],
+    'Roger Vivier': ['Belle Vivier', 'Très Vivier', 'Belle de Nuit', 'Ballerine', 'Viv\' Run', 'Combat', 'Gommette', 'Autre'],
+    'Valentino': ['Rockstud', 'Garavani', 'One Stud', 'Bottes', 'Escarpins', 'Open', 'VLogo', 'Locò', 'Autre'],
+    'Christian Louboutin': ['Pigalle', 'So Kate', 'Bianca', 'Décolleté', 'Bottes', 'Simple Pump', 'Louboutin', 'Spike', 'Iriza', 'Very Prive', 'Autre'],
+    'Aquazzura': ['Wild Thing', 'Belgravia', 'Christy', 'Sandales', 'Escarpins', 'Sexy Thing', 'Deneuve', 'Autre'],
+    'Givenchy': ['Bottes', 'Escarpins', 'Baskets', 'Sandales', 'Voyou', 'Gum', 'TK-360', 'Autre'],
+    'Balenciaga': ['Triple S', 'Track', 'Speed', 'Defender', 'Strike', 'Baskets', 'Bottes', '3XL', 'Runner', 'X-Cross', 'Autre'],
   },
   accessoires: {
-    'Hermès': ['Ceinture', 'Ceinture H', 'Ceinture Collier de chien', 'Écharpe', 'Carré', 'Carré 90', 'Carré 140', 'Cravate', 'Porte-clés', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Porte-monnaie', 'Pochette', 'Gants', 'Lunettes', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Éventail', 'Autre'],
-    'Louis Vuitton': ['Ceinture', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Victorine', 'Zippy', 'Porte-clés', 'Pochette', 'Lunettes', 'Foulard', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
-    'Chanel': ['Ceinture', 'Lunettes', 'Écharpe', 'Gants', 'Foulard', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Hermès': ['Ceinture H', 'Ceinture Collier de chien', 'Ceinture Chaîne d\'ancre', 'Écharpe', 'Carré 90', 'Carré 140', 'Cravate', 'Porte-clés', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Porte-monnaie', 'Pochette', 'Gants', 'Lunettes', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Éventail', 'Autre'],
+    'Louis Vuitton': ['Ceinture LV', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Victorine', 'Zippy', 'Sarah', 'Clemence', 'Porte-clés', 'Pochette', 'Lunettes', 'Foulard', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
+    'Chanel': ['Ceinture Chanel', 'Lunettes', 'Écharpe', 'Gants', 'Foulard', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
     'Gucci': ['Ceinture', 'Écharpe', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Cravate', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
     'Prada': ['Ceinture', 'Lunettes', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Écharpe', 'Foulard', 'Porte-clés', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
     'Dior': ['Ceinture', 'Lunettes', 'Écharpe', 'Porte-monnaie', 'Porte-carte', 'Portefeuille long', 'Portefeuille', 'Foulard', 'Cravate', 'Pochette', 'Casquette', 'Bonnet', 'Chapeau', 'Bob', 'Autre'],
@@ -666,6 +953,26 @@ export const MODELS_BY_CATEGORY_BRAND: Record<string, Record<string, string[]>> 
   return result;
 })();
 
+/** Retourne la catégorie filtre (sacs, montres, …) et la marque pour un nom de modèle, ou null si non trouvé. Utilisé pour présélectionner catégorie/marque quand l’utilisateur choisit un modèle en premier. */
+export function getCategoryAndBrandForModel(modelName: string): { filterCategory: string; brand: string } | null {
+  if (!modelName || typeof modelName !== 'string') return null;
+  const trimmed = modelName.trim();
+  if (!trimmed) return null;
+  for (const dataCat of Object.keys(MODELS_BY_CATEGORY_BRAND)) {
+    const byBrand = MODELS_BY_CATEGORY_BRAND[dataCat];
+    if (!byBrand) continue;
+    for (const brand of Object.keys(byBrand)) {
+      const models = byBrand[brand];
+      if (models && models.some((m) => m === trimmed)) {
+        const filterCategory =
+          Object.entries(CATEGORY_TO_BRAND_KEYS).find(([, keys]) => keys.includes(dataCat))?.[0] ?? dataCat;
+        return { filterCategory, brand };
+      }
+    }
+  }
+  return null;
+}
+
 /** Modèles supplémentaires par catégorie, marque et genre (affichés uniquement pour Femme ou uniquement pour Homme). */
 export const EXTRA_MODELS_BY_CATEGORY_BRAND_GENRE: Record<string, Record<string, { femme?: string[]; homme?: string[] }>> = {
   chaussures: {
@@ -685,11 +992,11 @@ export const EXTRA_MODELS_BY_CATEGORY_BRAND_GENRE: Record<string, Record<string,
     'Hermès': { femme: ['Clic H', 'Chaîne d\'ancre', 'Kelly'], homme: ['Chaîne d\'ancre', 'Collier de chien'] },
   },
   vetements: {
-    'Chanel': { femme: ['Veste Tweed', 'Cardigan signature', 'Robe', 'Jupe plissée', 'Tailleur tweed'], homme: ['Veste classique', 'Pantalon', 'Manteau'] },
-    'Dior': { femme: ['Bar Jacket', 'Tailleur Bar', 'Robe Miss Dior', 'Robe Soir', 'Jupe plissée'], homme: ['Pantalon', 'Sweat Oblique', 'Veste'] },
-    'Saint Laurent': { femme: ['Le Smoking', 'Robe', 'Pantalon cigarette', 'Blouson cuir'], homme: ['Le Smoking', 'Blazer', 'Trench', 'Pantalon'] },
-    'Max Mara': { femme: ['Manuela', 'Teddy', 'Caban', 'Camel Coat', 'Robe', 'Egeo', 'Icon'], homme: ['Caban', 'Manteau', 'Pantalon'] },
-    'Hermès': { femme: ['Caban Chaîne d\'ancre', 'Robe', 'Cardigan cachemire'], homme: ['Veste', 'Pantalon', 'Trench', 'Blouson Bombers'] },
+    'Chanel': { femme: ['Veste Tweed', 'Cardigan signature', 'Robe tweed', 'Jupe plissée', 'Tailleur tweed'], homme: ['Veste classique', 'Pantalon tailleur', 'Manteau tweed'] },
+    'Dior': { femme: ['Bar Jacket', 'Tailleur Bar', 'Robe Miss Dior', 'Robe Soir', 'Jupe plissée'], homme: ['Pantalon Dior', 'Sweat Oblique', 'T-shirt CD Icon', 'Polo abeille'] },
+    'Saint Laurent': { femme: ['Le Smoking', 'Robe Saint Laurent', 'Pantalon cigarette', 'Blouson cuir'], homme: ['Le Smoking', 'Blazer Saint Laurent', 'Trench', 'Sweat Rive Gauche'] },
+    'Max Mara': { femme: ['Manuela', 'Teddy', 'Caban', 'Camel Coat', 'Egeo', 'Icon'], homme: ['Caban', 'Manteau', 'Pantalon droit'] },
+    'Hermès': { femme: ['Caban Chaîne d\'ancre', 'Robe Hermès', 'Cardigan cachemire'], homme: ['Veste Chaîne d\'ancre', 'Pantalon', 'Trench', 'Blouson Bombers'] },
     'Balenciaga': { homme: ['Sweat 3B', 'Hoodie Round', 'Hoodie Ski', 'Blouson Tape', 'T-shirt'], femme: ['Robe', 'Veste', 'Manteau', 'Jupe'] },
     'Brunello Cucinelli': { homme: ['Pull cachemire', 'Cardigan zippé', 'Veste', 'Pull col V', 'Pull col montant'], femme: ['Cardigan style sweat', 'Robe', 'Manteau'] },
     'Chloé': { femme: ['Robe volant', 'Robe cape', 'Jupe', 'Cardigan', 'Trench'], homme: ['Veste', 'Pantalon', 'Manteau'] },

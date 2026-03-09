@@ -75,6 +75,8 @@ export interface Listing {
   size?: string | null;
   /** Nombre de fois que le numéro de téléphone a été affiché (clic sur N° téléphone) */
   phoneRevealsCount?: number;
+  /** Type de produit (ex. sneakers, sac_main, tshirt_polo) — même valeur que dans le formulaire Déposer une annonce */
+  articleType?: string | null;
 }
 
 export interface Favorite {

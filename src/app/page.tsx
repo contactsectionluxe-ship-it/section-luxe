@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
 import { Listing } from '@/types';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { getArticleTypeLabel } from '@/lib/constants';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -458,17 +460,36 @@ export default function HomePage() {
                 <div
                   key={i}
                   style={{
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
                     backgroundColor: '#fff',
                     borderRadius: 12,
                     border: '1px solid #e8e6e3',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                     overflow: 'hidden',
+                    minWidth: 0,
                   }}
                 >
-                  <div style={{ aspectRatio: '1', backgroundColor: '#f1f1ea' }} />
-                  <div style={{ padding: '14px 14px 16px' }}>
-                    <div style={{ height: 16, backgroundColor: '#f1f1ea', width: '70%', marginBottom: 10, borderRadius: 8 }} />
-                    <div style={{ height: 14, backgroundColor: '#f1f1ea', width: '40%', borderRadius: 8 }} />
+                  <div
+                    style={{
+                      width: '100%',
+                      aspectRatio: '1',
+                      background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                    }}
+                  />
+                  <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                      <div style={{ height: 12, backgroundColor: '#f1f1ea', width: '50%', borderRadius: 6 }} />
+                      <div style={{ height: 12, backgroundColor: '#f1f1ea', width: 60, borderRadius: 6 }} />
+                    </div>
+                    <div style={{ height: 16, backgroundColor: '#f1f1ea', width: '90%', borderRadius: 6 }} />
+                    <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap' }}>
+                      <div style={{ height: 13, backgroundColor: '#f1f1ea', width: 60, borderRadius: 6 }} />
+                      <div style={{ height: 13, backgroundColor: '#f1f1ea', width: 70, borderRadius: 6 }} />
+                      <div style={{ height: 13, backgroundColor: '#f1f1ea', width: 55, borderRadius: 6 }} />
+                    </div>
+                    <div style={{ height: 17, backgroundColor: '#f1f1ea', width: '40%', borderRadius: 6 }} />
                   </div>
                 </div>
               ))}
@@ -476,47 +497,65 @@ export default function HomePage() {
           ) : listings.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {listings.map((listing) => (
-                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
                     style={{
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
                       backgroundColor: '#fff',
                       borderRadius: 12,
                       border: '1px solid #e8e6e3',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                       overflow: 'hidden',
+                      minWidth: 0,
                     }}
                   >
                     <div
                       style={{
+                        width: '100%',
                         aspectRatio: '1',
                         background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
                         overflow: 'hidden',
                       }}
                     >
-                      {listing.photos[0] && (
+                      {listing.photos[0] ? (
                         <img
                           src={listing.photos[0]}
                           alt={listing.title}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>Photo</div>
                       )}
                     </div>
-                    <div style={{ padding: '14px 14px 16px' }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                      <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
                         <span>{listing.sellerName}</span>
                         {listing.sellerPostcode && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
                             <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
                             {listing.sellerPostcode}
                           </span>
                         )}
                       </p>
-                      <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#1d1d1f' }}>
-                        {listing.title}
-                      </h3>
-                      <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>
-                        {formatPrice(listing.price)}
-                      </p>
+                      {(() => {
+                        const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                        const marque = listing.brand || listing.title;
+                        const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
+                          ? (listing.model ?? '')
+                          : [typeLabel, listing.model].filter(Boolean).join(' ');
+                        const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                        return (
+                          <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                            {lineText}
+                          </h3>
+                        );
+                      })()}
+                      <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
+                        <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
+                      </div>
                     </div>
                   </article>
                 </Link>

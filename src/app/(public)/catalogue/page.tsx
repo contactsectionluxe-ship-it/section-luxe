@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
-import { getListings } from '@/lib/supabase/listings';
+import { getListings, getDistinctSizesForCategory } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
 import { getDealLevel } from '@/lib/deal';
@@ -18,6 +18,17 @@ import {
   CLOTHING_SIZES,
   COLORS_BY_CATEGORY,
   getModelFilterVariants,
+  getVetementsTypesForGenre,
+  getSacsTypesForGenre,
+  getBijouxTypesForGenre,
+  getChaussuresTypesForGenre,
+  getAccessoiresTypesForGenre,
+  getCategoryAndBrandForModel,
+  getArticleTypeLabelsForCategory,
+  getArticleTypeLabel,
+  modelMatchesArticleType,
+  MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE,
+  MODELE_VETEMENTS_GENERIQUES_EXCLUS,
   MATIERES_BY_CATEGORY,
   MODELS_BY_CATEGORY_BRAND,
   CONDITIONS,
@@ -29,6 +40,7 @@ import {
   DEPARTEMENTS_FR,
   SHOE_SIZES,
   VETEMENTS_MODELES_TOUJOURS_PROPOSES,
+  VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE,
 } from '@/lib/constants';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 
@@ -300,6 +312,7 @@ function filtersToParams(filters: Filters, page: number): URLSearchParams {
   (filters.genre ?? []).forEach((g) => params.append('genre', g));
   const categories = filters.categories ?? (filters.category ? [filters.category] : []);
   categories.forEach((c) => params.append('categories', c));
+  (filters.articleTypes ?? []).forEach((t) => params.append('articleTypes', t));
   const brands = filters.brands ?? (filters.brand ? [filters.brand] : []);
   brands.forEach((b) => params.append('brands', b));
   const models = filters.models ?? (filters.model ? [filters.model] : []);
@@ -335,6 +348,8 @@ function paramsToFilters(params: URLSearchParams): Filters {
     const cat = params.get('category');
     if (cat) initial.categories = [cat];
   }
+  const articleTypes = params.getAll('articleTypes');
+  if (articleTypes.length) initial.articleTypes = articleTypes;
   const brands = params.getAll('brands');
   if (brands.length) initial.brands = brands.map((b) => decodeURIComponent(b));
   else {
@@ -393,50 +408,172 @@ function CatalogueContent() {
   });
 
   /** Un seul menu déroulant ouvert à la fois. */
-  type DropdownId = 'type' | 'marque' | 'modele' | 'color' | 'material' | 'taille' | 'pointure';
+  type DropdownId = 'type' | 'articleType' | 'marque' | 'modele' | 'color' | 'material' | 'taille' | 'tailleMontres' | 'pointure';
   const [openDropdown, setOpenDropdown] = useState<DropdownId | null>(null);
   const typeDropdownRef = useRef<HTMLDivElement>(null);
+  const articleTypeDropdownRef = useRef<HTMLDivElement>(null);
   const marqueDropdownRef = useRef<HTMLDivElement>(null);
   const [marqueSearchQuery, setMarqueSearchQuery] = useState('');
   const modeleDropdownRef = useRef<HTMLDivElement>(null);
   const [modeleSearchQuery, setModeleSearchQuery] = useState('');
   const tailleDropdownRef = useRef<HTMLDivElement>(null);
+  const tailleMontresDropdownRef = useRef<HTMLDivElement>(null);
   const pointureDropdownRef = useRef<HTMLDivElement>(null);
   const [pointureSearchQuery, setPointureSearchQuery] = useState('');
   const colorDropdownRef = useRef<HTMLDivElement>(null);
   const materialDropdownRef = useRef<HTMLDivElement>(null);
   const typeDropdownOpen = openDropdown === 'type';
+  const articleTypeDropdownOpen = openDropdown === 'articleType';
   const marqueDropdownOpen = openDropdown === 'marque';
   const modeleDropdownOpen = openDropdown === 'modele';
   const tailleDropdownOpen = openDropdown === 'taille';
+  const tailleMontresDropdownOpen = openDropdown === 'tailleMontres';
   const pointureDropdownOpen = openDropdown === 'pointure';
   const colorDropdownOpen = openDropdown === 'color';
   const materialDropdownOpen = openDropdown === 'material';
   const modelesAlphabetiques = useMemo(() => {
     const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
     const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
+    const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
+    const selectedArticleTypes = filters.articleTypes ?? [];
     const categoryKeys =
       selectedTypes.length > 0
         ? [...new Set(selectedTypes.flatMap((t) => CATEGORY_TO_BRAND_KEYS[t] ?? [t]))]
         : Object.keys(MODELS_BY_CATEGORY_BRAND);
+    const dataKeyToFilterCategory = (dataKey: string) =>
+      Object.entries(CATEGORY_TO_BRAND_KEYS).find(([, keys]) => keys.includes(dataKey))?.[0] ?? dataKey;
+    const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+    const getOptionValuesForCategory = (filterCat: string) => {
+      if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'sacs') return getSacsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'bijoux') return getBijouxTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'chaussures') return getChaussuresTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'accessoires') return getAccessoiresTypesForGenre(genre).map((o) => o.value);
+      return [];
+    };
+    const applicableByFilterCategory: Record<string, string[]> = {};
+    for (const filterCat of selectedTypes) {
+      if (!CATEGORIES_WITH_ARTICLE_TYPE.includes(filterCat)) continue;
+      const optionValues = getOptionValuesForCategory(filterCat);
+      applicableByFilterCategory[filterCat] = selectedArticleTypes.filter((t) => optionValues.includes(t));
+    }
     const modelSet = new Set<string>();
-    for (const cat of categoryKeys) {
-      const byBrand = MODELS_BY_CATEGORY_BRAND[cat];
+    for (const categoryKey of categoryKeys) {
+      const filterCategory = dataKeyToFilterCategory(categoryKey);
+      const articleTypeLabels = getArticleTypeLabelsForCategory(filterCategory, genre);
+      const excludedAsCategory = MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[filterCategory] ?? [];
+      const applicableTypes = applicableByFilterCategory[filterCategory];
+      const byBrand = MODELS_BY_CATEGORY_BRAND[categoryKey];
       if (!byBrand) continue;
       const brandsToConsider = selectedBrands.length > 0 ? selectedBrands : Object.keys(byBrand);
       for (const brand of brandsToConsider) {
         const models = byBrand[brand];
-        if (models) models.forEach((m) => modelSet.add(m));
+        if (!models) continue;
+        for (const m of models) {
+          if (m === 'Autre') continue;
+          if (articleTypeLabels.includes(m)) continue;
+          if (excludedAsCategory.includes(m)) continue;
+          if (filterCategory === 'vetements' && MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)) continue;
+          if (applicableTypes?.length) {
+            if (!applicableTypes.some((at) => modelMatchesArticleType(m, at, filterCategory, brand))) continue;
+          }
+          modelSet.add(m);
+        }
       }
     }
     if (categoryKeys.includes('vetements')) {
-      VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name }) => modelSet.add(name));
+      const articleTypeLabels = getArticleTypeLabelsForCategory('vetements', genre);
+      const applicableTypes = applicableByFilterCategory['vetements'];
+      const vetementsByBrand = MODELS_BY_CATEGORY_BRAND['vetements'];
+      const brandsForVetements = selectedBrands.length > 0 ? selectedBrands : (vetementsByBrand ? Object.keys(vetementsByBrand) : []);
+      const skipGeneric = selectedBrands.length > 0 && brandsForVetements.some((b) => VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE.has(b));
+      if (!skipGeneric) {
+        VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
+          if (articleTypeLabels.includes(name)) return;
+          if (MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(name)) return;
+          const genreOk = modelGenre === 'both' || (modelGenre === 'femme' && genre.includes('femme')) || (modelGenre === 'homme' && genre.includes('homme'));
+          if (!genreOk) return;
+          if (applicableTypes?.length && !applicableTypes.some((at) => modelMatchesArticleType(name, at, 'vetements'))) return;
+          modelSet.add(name);
+        });
+      }
     }
     return [
       ...[...modelSet].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr')),
       'Autre',
     ];
-  }, [filters.categories, filters.category, filters.brands, filters.brand]);
+  }, [filters.categories, filters.category, filters.brands, filters.brand, filters.articleTypes, filters.genre]);
+
+  /** Modèles groupés par marque (pour afficher des sections quand plusieurs marques sont choisies). Filtrage par type de produit comme dans Déposer une annonce. */
+  const modelesByBrand = useMemo(() => {
+    const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
+    const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
+    if (selectedBrands.length <= 1) return [];
+    const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
+    const selectedArticleTypes = filters.articleTypes ?? [];
+    const categoryKeys =
+      selectedTypes.length > 0
+        ? [...new Set(selectedTypes.flatMap((t) => CATEGORY_TO_BRAND_KEYS[t] ?? [t]))]
+        : Object.keys(MODELS_BY_CATEGORY_BRAND);
+    const dataKeyToFilterCategory = (dataKey: string) =>
+      Object.entries(CATEGORY_TO_BRAND_KEYS).find(([, keys]) => keys.includes(dataKey))?.[0] ?? dataKey;
+    const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+    const getOptionValuesForCategory = (filterCat: string) => {
+      if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'sacs') return getSacsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'bijoux') return getBijouxTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'chaussures') return getChaussuresTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'accessoires') return getAccessoiresTypesForGenre(genre).map((o) => o.value);
+      return [];
+    };
+    const applicableByFilterCategory: Record<string, string[]> = {};
+    for (const filterCat of selectedTypes) {
+      if (!CATEGORIES_WITH_ARTICLE_TYPE.includes(filterCat)) continue;
+      const optionValues = getOptionValuesForCategory(filterCat);
+      applicableByFilterCategory[filterCat] = selectedArticleTypes.filter((t) => optionValues.includes(t));
+    }
+    const out: { brandLabel: string; models: string[]; favoris: string[] }[] = [];
+    for (const brand of selectedBrands) {
+      const modelSet = new Set<string>();
+      for (const categoryKey of categoryKeys) {
+        const filterCategory = dataKeyToFilterCategory(categoryKey);
+        const articleTypeLabels = getArticleTypeLabelsForCategory(filterCategory, genre);
+        const excludedAsCategory = MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[filterCategory] ?? [];
+        const applicableTypes = applicableByFilterCategory[filterCategory];
+        const models = MODELS_BY_CATEGORY_BRAND[categoryKey]?.[brand];
+        if (!models) continue;
+        for (const m of models) {
+          if (m === 'Autre') continue;
+          if (articleTypeLabels.includes(m)) continue;
+          if (excludedAsCategory.includes(m)) continue;
+          if (filterCategory === 'vetements' && MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)) continue;
+          if (applicableTypes?.length) {
+            if (!applicableTypes.some((at) => modelMatchesArticleType(m, at, filterCategory, brand))) continue;
+          }
+          modelSet.add(m);
+        }
+      }
+      if (categoryKeys.includes('vetements') && !VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE.has(brand)) {
+        const articleTypeLabels = getArticleTypeLabelsForCategory('vetements', genre);
+        const applicableTypes = applicableByFilterCategory['vetements'];
+        VETEMENTS_MODELES_TOUJOURS_PROPOSES.forEach(({ name, genre: modelGenre }) => {
+          if (articleTypeLabels.includes(name)) return;
+          if (MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(name)) return;
+          const genreOk = modelGenre === 'both' || (modelGenre === 'femme' && genre.includes('femme')) || (modelGenre === 'homme' && genre.includes('homme'));
+          if (!genreOk) return;
+          if (applicableTypes?.length && !applicableTypes.some((at) => modelMatchesArticleType(name, at, 'vetements'))) return;
+          modelSet.add(name);
+        });
+      }
+      const list = [...modelSet].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
+      const allModels = [...list, 'Autre'];
+      const favorisRaw = MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? [];
+      const favoris = favorisRaw.filter((m) => modelSet.has(m) || m === 'Autre').slice(0, 6);
+      out.push({ brandLabel: brand, models: allModels, favoris });
+    }
+    return out;
+  }, [filters.categories, filters.category, filters.brands, filters.brand, filters.articleTypes, filters.genre]);
+  const hasMultipleBrandsForModeles = modelesByBrand.length > 1;
 
   const marquesAlphabetiques = useMemo(() => {
     const selected = filters.categories ?? (filters.category ? [filters.category] : []);
@@ -450,6 +587,37 @@ function CatalogueContent() {
       'Autre',
     ];
   }, [filters.categories, filters.category]);
+
+  /** Catégories qui ont un type de produit (comme dans Déposer une annonce). */
+  const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+  /** Options "Type de produit" groupées par catégorie (pour afficher des sections quand plusieurs catégories choisies). */
+  const articleTypeOptionsByCategory = useMemo(() => {
+    const selected = filters.categories ?? (filters.category ? [filters.category] : []);
+    const withType = selected.filter((c) => CATEGORIES_WITH_ARTICLE_TYPE.includes(c));
+    if (withType.length === 0) return [];
+    const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
+    return withType.map((cat) => {
+      const list =
+        cat === 'vetements' ? getVetementsTypesForGenre(genre)
+        : cat === 'sacs' ? getSacsTypesForGenre(genre)
+        : cat === 'bijoux' ? getBijouxTypesForGenre(genre)
+        : cat === 'chaussures' ? getChaussuresTypesForGenre(genre)
+        : cat === 'accessoires' ? getAccessoiresTypesForGenre(genre)
+        : [];
+      const categoryLabel = CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
+      return { categoryKey: cat, categoryLabel, options: [...list].sort((a, b) => a.label.localeCompare(b.label, 'fr')) };
+    }).filter((g) => g.options.length > 0);
+  }, [filters.categories, filters.category, filters.genre]);
+  const articleTypeOptions = useMemo(() => articleTypeOptionsByCategory.flatMap((g) => g.options), [articleTypeOptionsByCategory]);
+  const hasArticleTypeFilter = articleTypeOptions.length > 0;
+  const selectedArticleTypes = filters.articleTypes ?? [];
+  const toggleArticleType = (value: string) => {
+    setFilters((prev) => {
+      const current = prev.articleTypes ?? [];
+      const next = current.includes(value) ? current.filter((t) => t !== value) : [...current, value];
+      return { ...prev, articleTypes: next.length ? next : undefined };
+    });
+  };
 
   /** 6 marques les plus connues selon le type (toujours nombre pair : 6, 4, 2 ou 0) */
   const marquesSuggestion = useMemo(() => {
@@ -560,13 +728,19 @@ function CatalogueContent() {
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   /** Affichage des annonces : horizontal (défaut) ou grille 3 par ligne — stocké en localStorage, pas dans l'URL */
-  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
+  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>(() => {
+    if (typeof window === 'undefined') return 'horizontal';
+    const saved = localStorage.getItem('catalogue-view-mode');
+    return saved === 'grid' || saved === 'horizontal' ? saved : 'horizontal';
+  });
   useEffect(() => {
     const saved = localStorage.getItem('catalogue-view-mode');
     if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
   }, []);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [showAuthModalFavoris, setShowAuthModalFavoris] = useState(false);
+  /** Tailles de montres présentes dans les annonces (rempli quand catégorie montres est sélectionnée). */
+  const [montresSizeOptions, setMontresSizeOptions] = useState<string[]>([]);
   const [mapZoom, setMapZoom] = useState(15);
   /** Évite que l'effet "retirer condition" ne s'exécute juste après une synchro URL → filtres (clic Neuf/Occasion). */
   const justSyncedConditionFromUrlRef = useRef(false);
@@ -806,7 +980,8 @@ function CatalogueContent() {
       const conditions = filters.conditions?.length ? filters.conditions : (filters.condition ? [filters.condition] : undefined);
       const sizes = filters.sizes?.length ? filters.sizes : undefined;
       const genres = filters.genre?.length ? filters.genre : undefined;
-      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, sellerId: filters.sellerId, sortBy });
+      const articleTypes = filters.articleTypes?.length ? filters.articleTypes : undefined;
+      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, articleTypes, sellerId: filters.sellerId, sortBy });
 
       if (loadId !== loadListingsIdRef.current) return;
 
@@ -1048,19 +1223,34 @@ function CatalogueContent() {
     if (!pointureDropdownOpen) setPointureSearchQuery('');
   }, [pointureDropdownOpen]);
 
-  /** Fermer le menu au clic extérieur ou Escape (un seul menu ouvert à la fois). */
+  /** Charger les tailles de montres existantes en annonces quand la catégorie montres est sélectionnée. */
   useEffect(() => {
-    if (openDropdown === null) return;
+    const types = filters.categories ?? (filters.category ? [filters.category] : []);
+    if (!types.includes('montres')) {
+      setMontresSizeOptions([]);
+      return;
+    }
+    let cancelled = false;
+    getDistinctSizesForCategory('montres').then((sizes) => {
+      if (!cancelled) setMontresSizeOptions(sizes);
+    });
+    return () => { cancelled = true; };
+  }, [filters.categories, filters.category]);
+
+  /** Fermer le menu au clic extérieur ou Escape (un seul menu ouvert à la fois). Fermer aussi le tri « Plus récents » au clic à côté. */
+  useEffect(() => {
     const ref =
       openDropdown === 'type' ? typeDropdownRef :
+      openDropdown === 'articleType' ? articleTypeDropdownRef :
       openDropdown === 'marque' ? marqueDropdownRef :
       openDropdown === 'modele' ? modeleDropdownRef :
       openDropdown === 'taille' ? tailleDropdownRef :
+      openDropdown === 'tailleMontres' ? tailleMontresDropdownRef :
       openDropdown === 'pointure' ? pointureDropdownRef :
       openDropdown === 'color' ? colorDropdownRef :
       materialDropdownRef;
     const onMouseDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpenDropdown(null);
+      if (openDropdown !== null && ref.current && !ref.current.contains(e.target as Node)) setOpenDropdown(null);
       const inSort = sortDropdownRef.current?.contains(e.target as Node) || sortDropdownRefMobile.current?.contains(e.target as Node);
       if (!inSort) setSortDropdownOpen(false);
       if (locationInputRef.current && !locationInputRef.current.contains(e.target as Node)) setLocationSuggestionsOpen(false);
@@ -1087,7 +1277,39 @@ function CatalogueContent() {
     setFilters((prev) => {
       const current = prev.categories ?? (prev.category ? [prev.category] : []);
       const next = current.includes(value) ? current.filter((c) => c !== value) : [...current, value];
-      return { ...prev, categories: next.length ? next : undefined, category: undefined };
+      const base = { ...prev, categories: next.length ? next : undefined, category: undefined, articleTypes: undefined };
+      if (next.length === 0) return { ...base, brands: undefined, brand: undefined, models: undefined, model: undefined };
+      const categoryKeys = [...new Set(next.flatMap((t) => CATEGORY_TO_BRAND_KEYS[t] ?? [t]))];
+      const validBrandSet = new Set(categoryKeys.flatMap((k) => BRANDS_BY_CATEGORY[k] ?? []));
+      const prevBrands = prev.brands ?? (prev.brand ? [prev.brand] : []);
+      const keptBrands = prevBrands.filter((b) => validBrandSet.has(b));
+      const brandsChanged = keptBrands.length !== prevBrands.length;
+      const nextBrands = keptBrands.length ? keptBrands : undefined;
+      const prevModels = prev.models ?? (prev.model ? [prev.model] : []);
+      if (keptBrands.length === 0) {
+        return { ...base, brands: nextBrands, brand: undefined, models: undefined, model: undefined };
+      }
+      if (prevModels.length === 0) {
+        return { ...base, brands: nextBrands, brand: undefined, ...(brandsChanged ? { models: undefined, model: undefined } : {}) };
+      }
+      const modelSet = new Set<string>();
+      for (const cat of categoryKeys) {
+        const byBrand = MODELS_BY_CATEGORY_BRAND[cat];
+        if (!byBrand) continue;
+        for (const brand of keptBrands) {
+          const models = byBrand[brand];
+          if (models) models.forEach((m) => modelSet.add(m));
+        }
+      }
+      const keptModels = prevModels.filter((m) => modelSet.has(m));
+      const nextModels = keptModels.length ? keptModels : undefined;
+      return {
+        ...base,
+        brands: nextBrands,
+        brand: undefined,
+        models: nextModels,
+        model: undefined,
+      };
     });
   };
 
@@ -1096,20 +1318,57 @@ function CatalogueContent() {
     setFilters((prev) => {
       const current = prev.brands ?? (prev.brand ? [prev.brand] : []);
       const next = current.includes(brand) ? current.filter((b) => b !== brand) : [...current, brand];
-      return { ...prev, brands: next.length ? next : undefined, brand: undefined };
+      const removingBrand = next.length < current.length;
+      return {
+        ...prev,
+        brands: next.length ? next : undefined,
+        brand: undefined,
+        ...(removingBrand ? { models: undefined, model: undefined } : {}),
+      };
     });
   };
 
   const selectedModels = filters.models ?? (filters.model ? [filters.model] : []);
-  const hasPantalon = selectedModels.some((m) => normalizeForSearch(m).includes('pantalon'));
-  const hasJean = selectedModels.some((m) => normalizeForSearch(m).includes('jean'));
-  const clothingSizeOptions = (selectedTypes.includes('vetements') && (hasPantalon || hasJean)
-    ? [...new Set([...CLOTHING_SIZES, ...(hasPantalon ? PANT_SIZES_MIX : []), ...(hasJean ? JEAN_SIZES_MIX : [])])]
+  const hasPantalonModel = selectedModels.some((m) => normalizeForSearch(m).includes('pantalon'));
+  const hasJeanModel = selectedModels.some((m) => normalizeForSearch(m).includes('jean'));
+  const hasPantalonType = selectedArticleTypes.includes('pantalon') || selectedArticleTypes.includes('pantalon_short');
+  const hasJeanType = selectedArticleTypes.includes('jean');
+  const showPantSizes = hasPantalonModel || hasPantalonType;
+  const showJeanSizes = hasJeanModel || hasJeanType;
+  /** Toutes les options de taille vêtements : toujours afficher standard + pantalon + jean quand catégorie vêtements. */
+  const clothingSizeOptions = (selectedTypes.includes('vetements')
+    ? [...new Set([...CLOTHING_SIZES, ...PANT_SIZES_MIX, ...JEAN_SIZES_MIX])]
     : [...CLOTHING_SIZES]) as string[];
+  /** Sections pour le sous-menu Taille (vêtements) : présentation claire par type d'article. */
+  const clothingSizeSections = selectedTypes.includes('vetements')
+    ? [
+        { label: 'Taille standard', values: [...CLOTHING_SIZES] as string[] },
+        { label: 'Pantalon', values: [...PANT_SIZES_MIX] as string[] },
+        { label: 'Jean', values: [...JEAN_SIZES_MIX] as string[] },
+      ]
+    : [];
   const toggleModele = (model: string) => {
     setFilters((prev) => {
       const current = prev.models ?? (prev.model ? [prev.model] : []);
       const next = current.includes(model) ? current.filter((m) => m !== model) : [...current, model];
+      const addedModel = next.length > current.length;
+      const noCategory = !(prev.categories?.length || prev.category);
+      const noBrand = !(prev.brands?.length || prev.brand);
+      if (addedModel && (noCategory || noBrand)) {
+        const resolved = getCategoryAndBrandForModel(model);
+        if (resolved) {
+          return {
+            ...prev,
+            models: next,
+            model: undefined,
+            categories: [resolved.filterCategory],
+            category: undefined,
+            brands: [resolved.brand],
+            brand: undefined,
+            articleTypes: undefined,
+          };
+        }
+      }
       return { ...prev, models: next.length ? next : undefined, model: undefined };
     });
   };
@@ -1449,7 +1708,7 @@ function CatalogueContent() {
       >
         Recherche
       </div>
-      {/* Femme / Homme — même largeur et hauteur que la case Type d'article (même wrapper) */}
+      {/* Femme / Homme — même largeur et hauteur que la case Catégorie (même wrapper) */}
       <div>
         <FilterSection title="" defaultOpen collapsible={false} noBorder>
           <div style={{ position: 'relative' }}>
@@ -1521,7 +1780,7 @@ function CatalogueContent() {
           </div>
         </FilterSection>
       </div>
-      {/* Type d'article — libellé dans la case + pastille nombre si sélection */}
+      {/* Catégorie — libellé dans la case + pastille nombre si sélection */}
       <div>
         <FilterSection title="" defaultOpen collapsible={false} noBorder>
         <div ref={typeDropdownRef} style={{ position: 'relative' }}>
@@ -1546,7 +1805,7 @@ function CatalogueContent() {
             }}
           >
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              Type d'article
+              Catégorie
             </span>
             {selectedTypes.length > 0 && (
               <span
@@ -1654,6 +1913,151 @@ function CatalogueContent() {
         </div>
       </FilterSection>
       </div>
+
+      {/* Type de produit — affiché uniquement quand au moins une catégorie avec type est sélectionnée (même options que Déposer une annonce) */}
+      {hasArticleTypeFilter && (
+      <div>
+        <FilterSection title="" defaultOpen collapsible={false} noBorder>
+        <div ref={articleTypeDropdownRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setOpenDropdown((prev) => (prev === 'articleType' ? null : 'articleType'))}
+            style={{
+              width: '100%',
+              height: 44,
+              padding: '0 14px',
+              fontSize: 14,
+              border: '1px solid #d2d2d7',
+              borderRadius: 12,
+              backgroundColor: '#fff',
+              color: '#1d1d1f',
+              textAlign: 'left',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              gap: 8,
+            }}
+          >
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              Type de produit
+            </span>
+            {selectedArticleTypes.length > 0 && (
+              <span
+                style={{
+                  flexShrink: 0,
+                  minWidth: 22,
+                  height: 22,
+                  padding: '0 8px',
+                  borderRadius: 11,
+                  backgroundColor: '#f5f5f7',
+                  color: '#1d1d1f',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid #d2d2d7',
+                }}
+              >
+                {selectedArticleTypes.length}
+              </span>
+            )}
+            <ChevronRight
+              size={16}
+              style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
+            />
+          </button>
+          {articleTypeDropdownOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: '100%',
+                marginLeft: 20,
+                minWidth: 415,
+                maxHeight: 360,
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#fff',
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                zIndex: 9999,
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => { setFilters((p) => ({ ...p, articleTypes: undefined })); setOpenDropdown(null); }}
+                style={{
+                  padding: '10px 12px',
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                  background: '#fff',
+                  border: 'none',
+                  borderBottom: '1px solid #d2d2d7',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: selectedArticleTypes.length === 0 ? 600 : 400,
+                  flexShrink: 0,
+                }}
+              >
+                Tous les types
+              </button>
+              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: 8, backgroundColor: '#fff' }}>
+                {articleTypeOptionsByCategory.map((group, groupIndex) => (
+                  <div key={group.categoryKey} style={{ marginBottom: groupIndex < articleTypeOptionsByCategory.length - 1 ? 16 : 0 }}>
+                    {articleTypeOptionsByCategory.length > 1 && (
+                      <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
+                        {group.categoryLabel}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {group.options.map((opt) => (
+                        <label
+                          key={opt.value}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedArticleTypes.includes(opt.value)}
+                            onChange={() => toggleArticleType(opt.value)}
+                            style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                          />
+                          <span style={{ fontSize: 14, color: '#1d1d1f' }}>{opt.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {selectedArticleTypes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilters((p) => ({ ...p, articleTypes: undefined })); setOpenDropdown(null); }}
+                    style={{
+                      marginTop: 2,
+                      marginBottom: 0,
+                      fontSize: 12,
+                      color: '#6e6e73',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      padding: '2px 4px',
+                      width: '100%',
+                    }}
+                  >
+                    Réinitialiser le type
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </FilterSection>
+      </div>
+      )}
 
       {/* Marque — libellé dans la case + pastille nombre si sélection */}
       <FilterSection title="" defaultOpen collapsible={false} noBorder>
@@ -1951,9 +2355,65 @@ function CatalogueContent() {
                 </div>
               </div>
               <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 5mm)', padding: 8, backgroundColor: '#fff' }}>
+                {hasMultipleBrandsForModeles ? (
+                  /* Plusieurs marques : modèles groupés par marque, avec 6 favoris par marque quand recherche vide */
+                  modelesByBrand.map((group, groupIndex) => {
+                    const searchNorm = modeleSearchQuery.trim();
+                    const filtered = group.models.filter((m) => normalizeForSearch(m).includes(normalizeForSearch(searchNorm)));
+                    if (filtered.length === 0) return null;
+                    const showFavoris = searchNorm === '' && group.favoris.length > 0 && group.models.length >= 6;
+                    const favorisFiltered = showFavoris ? group.favoris.filter((m) => group.models.includes(m)) : [];
+                    const restModels = showFavoris ? filtered.filter((m) => !favorisFiltered.includes(m)) : filtered;
+                    return (
+                      <div key={group.brandLabel} style={{ marginBottom: groupIndex < modelesByBrand.length - 1 ? 16 : 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
+                          {group.brandLabel}
+                        </div>
+                        {showFavoris && favorisFiltered.length > 0 && (
+                          <div style={{ paddingBottom: 6, marginBottom: 6 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                              {favorisFiltered.map((model) => (
+                                <label
+                                  key={model}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedModels.includes(model)}
+                                    onChange={() => toggleModele(model)}
+                                    style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                                  />
+                                  <span style={{ fontSize: 14, color: '#1d1d1f' }}>{model}</span>
+                                </label>
+                              ))}
+                            </div>
+                            {restModels.length > 0 && <div style={{ marginLeft: 4, marginRight: 4, marginTop: 6, borderBottom: '1px solid #e8e6e3' }} />}
+                          </div>
+                        )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                          {restModels.map((model) => (
+                            <label
+                              key={model}
+                              style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedModels.includes(model)}
+                                onChange={() => toggleModele(model)}
+                                style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                              />
+                              <span style={{ fontSize: 14, color: '#1d1d1f' }}>{model}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <>
                 {/* 6 modèles les plus connus (masqués dès que l'utilisateur tape une recherche) */}
                 {(() => {
-                  const modelesTop = modeleSearchQuery.trim() === '' ? modelesSuggestion : [];
+                      const modelesTop = (modeleSearchQuery.trim() === '' && modelesAlphabetiques.length >= 6) ? modelesSuggestion : [];
                   if (modelesTop.length > 0) {
                     return (
                       <div style={{ paddingBottom: 6, marginBottom: 6 }}>
@@ -1995,6 +2455,8 @@ function CatalogueContent() {
                     </label>
                   ))}
                 </div>
+                  </>
+                )}
                 {selectedModels.length > 0 && (
                   <button
                     type="button"
@@ -2113,8 +2575,14 @@ function CatalogueContent() {
                     Toutes les tailles
                   </button>
                   <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
+                    {clothingSizeSections.length > 0 ? (
+                      clothingSizeSections.map((section) => (
+                        <div key={section.label} style={{ marginBottom: 14 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
+                            {section.label}
+                          </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                      {clothingSizeOptions.map((s) => (
+                            {section.values.map((s) => (
                         <label
                           key={s}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -2129,10 +2597,170 @@ function CatalogueContent() {
                         </label>
                       ))}
                     </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                        {clothingSizeOptions.map((s) => (
+                          <label
+                            key={s}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSizes.includes(s)}
+                              onChange={() => toggleSize(s)}
+                              style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                     {selectedSizes.some((s) => clothingSizeOptions.includes(s)) && (
                       <button
                         type="button"
                         onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !clothingSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
+                        style={{
+                          marginTop: 2,
+                          marginBottom: 0,
+                          fontSize: 12,
+                          color: '#6e6e73',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          padding: '2px 4px',
+                          width: '100%',
+                        }}
+                      >
+                        Réinitialiser les tailles
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </FilterSection>
+        </div>
+      )}
+
+      {/* Taille (montres) — tailles présentes dans les annonces montres */}
+      {selectedTypes.includes('montres') && (
+        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
+          <FilterSection title="Taille" defaultOpen collapsible={false} noBorder>
+            <div ref={tailleMontresDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setOpenDropdown((prev) => (prev === 'tailleMontres' ? null : 'tailleMontres'))}
+                style={{
+                  width: '100%',
+                  height: 44,
+                  padding: '0 14px',
+                  fontSize: 14,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  gap: 8,
+                }}
+              >
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Taille
+                </span>
+                {selectedSizes.some((s) => montresSizeOptions.includes(s)) && (
+                  <span
+                    style={{
+                      flexShrink: 0,
+                      minWidth: 22,
+                      height: 22,
+                      padding: '0 8px',
+                      borderRadius: 11,
+                      backgroundColor: '#f5f5f7',
+                      color: '#1d1d1f',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #d2d2d7',
+                    }}
+                  >
+                    {selectedSizes.filter((s) => montresSizeOptions.includes(s)).length}
+                  </span>
+                )}
+                <ChevronRight
+                  size={16}
+                  style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
+                />
+              </button>
+              {tailleMontresDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '100%',
+                    marginLeft: 20,
+                    minWidth: 415,
+                    maxHeight: 'calc(360px - 1mm)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    backgroundColor: '#fff',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
+                    zIndex: 9999,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !montresSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
+                    style={{
+                      padding: '10px 12px',
+                      fontSize: 14,
+                      color: '#1d1d1f',
+                      background: '#fff',
+                      border: 'none',
+                      borderBottom: '1px solid #d2d2d7',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      fontWeight: !selectedSizes.some((s) => montresSizeOptions.includes(s)) ? 600 : 400,
+                      flexShrink: 0,
+                    }}
+                  >
+                    Toutes les tailles
+                  </button>
+                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
+                      {montresSizeOptions.length === 0 ? (
+                        <span style={{ fontSize: 14, color: '#6e6e73', padding: 8 }}>Chargement…</span>
+                      ) : (
+                        montresSizeOptions.map((s) => (
+                          <label
+                            key={s}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedSizes.includes(s)}
+                              onChange={() => toggleSize(s)}
+                              style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
+                            />
+                            <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}{s.match(/^\d+$/) ? ' mm' : ''}</span>
+                          </label>
+                        ))
+                      )}
+                    </div>
+                    {selectedSizes.some((s) => montresSizeOptions.includes(s)) && (
+                      <button
+                        type="button"
+                        onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !montresSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
                         style={{
                           marginTop: 2,
                           marginBottom: 0,
@@ -2894,7 +3522,7 @@ function CatalogueContent() {
   return (
     <>
       {loading && <div className="catalogue-loading-bar" aria-hidden />}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 'var(--header-height)' }}>
+    <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 'var(--header-height)' }}>
       <div className="catalogue-page-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 calc(24px - 0.5mm) 0 24px', boxSizing: 'border-box' }}>
         <div className="catalogue-page-inner" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 'calc(1100px + 1cm)', width: '100%', margin: '0 auto' }}>
         {/* Contenu catalogue : 1100px + 0,5cm de chaque côté */}
@@ -3185,15 +3813,15 @@ function CatalogueContent() {
               </div>
                     </div>
                     {(seller.address || seller.city || seller.postcode) && (
-                      <button
-                        type="button"
-                        onClick={() => setShowMapPopup(true)}
+                          <button
+                            type="button"
+                            onClick={() => setShowMapPopup(true)}
                         style={{ height: 44, minWidth: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
-                      >
+                          >
                         <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
                         {seller.postcode && <span style={{ fontSize: 16 }}>{seller.postcode}</span>}
                         {seller.city && <span style={{ fontSize: 16 }}>{seller.city}</span>}
-                      </button>
+                          </button>
                     )}
                   </>
                 ) : (
@@ -3347,7 +3975,7 @@ function CatalogueContent() {
                       display: viewMode === 'grid' ? 'grid' : 'flex',
                       gridTemplateColumns: viewMode === 'grid' ? 'repeat(3, 1fr)' : undefined,
                       flexDirection: viewMode === 'grid' ? undefined : 'column',
-                      gap: 20,
+                      gap: viewMode === 'grid' ? 24 : 20,
                       minWidth: 0,
                     }}
                   >
@@ -3365,6 +3993,7 @@ function CatalogueContent() {
                           boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                           minWidth: 0,
                           minHeight: viewMode === 'grid' ? undefined : 56,
+                          position: 'relative',
                         }}
                       >
                         <div
@@ -3374,22 +4003,20 @@ function CatalogueContent() {
                             minWidth: viewMode === 'grid' ? undefined : 64,
                             aspectRatio: '1',
                             flexShrink: 0,
+                            borderRadius: viewMode === 'grid' ? 0 : 4,
                           }}
                         />
-                        <div style={{ padding: viewMode === 'grid' ? 12 : '10px 48px 10px 14px', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: viewMode === 'grid' ? 6 : 8, justifyContent: viewMode === 'grid' ? undefined : 'space-between' }}>
+                        <div style={{ padding: viewMode === 'grid' ? '14px 14px 10px' : '10px 48px 10px 14px', flex: 1, minWidth: 0, minHeight: viewMode === 'grid' ? 'calc(112px + 2mm)' : undefined, display: 'flex', flexDirection: 'column', gap: viewMode === 'grid' ? 6 : 8, justifyContent: viewMode === 'grid' ? undefined : 'space-between' }}>
                           {viewMode === 'grid' ? (
                             <>
-                              <div className="catalogue-skeleton" style={{ height: 15, width: '90%', marginBottom: 2 }} />
-                              <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap', marginBottom: 2 }}>
+                              <div className="catalogue-skeleton" style={{ height: 12, width: '85%' }} />
+                              <div className="catalogue-skeleton" style={{ height: 16, width: '92%' }} />
+                              <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap' }}>
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 60 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 70 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 55 }} />
                               </div>
-                              <div className="catalogue-skeleton" style={{ height: 18, width: '40%', marginTop: 2 }} />
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                                <div className="catalogue-skeleton" style={{ height: 13, flex: 1, maxWidth: '60%' }} />
-                                <div className="catalogue-skeleton" style={{ height: 12, width: 48 }} />
-                              </div>
+                              <div className="catalogue-skeleton" style={{ height: 18, width: '38%', marginTop: 2 }} />
                             </>
                           ) : (
                             <>
@@ -3447,7 +4074,7 @@ function CatalogueContent() {
               }
               if (viewMode === 'grid') {
                 return (
-              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, minWidth: 0 }}>
+              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0 }}>
                 {paginatedListings.map((listing) => (
                   <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent(catalogueReturnUrl)}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                     <article
@@ -3488,22 +4115,46 @@ function CatalogueContent() {
                       >
                         <Heart size={16} color={favoritedListingIds[listing.id] ? '#1d1d1f' : '#6e6e73'} fill={favoritedListingIds[listing.id] ? '#1d1d1f' : 'none'} strokeWidth={2} />
                       </button>
-                      <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f7', overflow: 'hidden' }}>
+                      <div
+                        style={{
+                          width: '100%',
+                          aspectRatio: '1',
+                          background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                          overflow: 'hidden',
+                        }}
+                      >
                         {listing.photos[0] ? (
                           <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>Photo</div>
                         )}
                       </div>
-                      <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                        <h3 title={listing.title} style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                          {highlightSearchTerms(listing.title, filters.query)}
+                      <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                        <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                          <span>{listing.sellerName}</span>
+                          {listing.sellerPostcode && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                              <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                              {listing.sellerPostcode}
+                            </span>
+                          )}
+                        </p>
+                        {(() => {
+                          const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                          const marque = listing.brand || listing.title;
+                          const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
+                            ? (listing.model ?? '')
+                            : [typeLabel, listing.model].filter(Boolean).join(' ');
+                          const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                          return (
+                            <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                              {highlightSearchTerms(lineText, filters.query)}
                         </h3>
+                          );
+                        })()}
                         <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.3 }}>
-                            {formatPrice(listing.price)}
-                          </p>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
+                          <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                           {dealByListingId[listing.id] && (() => {
                             const deal = dealByListingId[listing.id]!;
                             return (
@@ -3515,16 +4166,6 @@ function CatalogueContent() {
                               </span>
                             );
                           })()}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                          <p title={listing.sellerName} style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>
-                            {listing.sellerName}
-                          </p>
-                          {listing.sellerPostcode && (
-                            <span style={{ fontSize: 12, color: '#6e6e73', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
-                              <MapPin size={12} /> {listing.sellerPostcode}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </article>
@@ -3610,32 +4251,28 @@ function CatalogueContent() {
                               display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
-                          padding: '10px 48px 10px 14px',
+                          padding: '6px 48px 6px 14px',
                           minWidth: 0,
                           overflow: 'hidden',
                         }}
                       >
-                        <div style={{ paddingBottom: 6, minWidth: 0, overflow: 'hidden' }}>
-                          <h3
-                            title={listing.title}
-                        style={{
-                              fontSize: 22,
-                          fontWeight: 600,
-                              color: '#1d1d1f',
-                              margin: 0,
-                              marginBottom: 5,
-                              minWidth: 0,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {highlightSearchTerms(listing.title, filters.query)}
+                        <div style={{ paddingBottom: 4, minWidth: 0, overflow: 'hidden' }}>
+                          {(() => {
+                            const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                            const marque = listing.brand || listing.title;
+                            const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
+                              ? (listing.model ?? '')
+                              : [typeLabel, listing.model].filter(Boolean).join(' ');
+                            const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                            return (
+                              <h3 title={lineText} style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                                {highlightSearchTerms(lineText, filters.query)}
                           </h3>
-                          <ListingCaracteristiques listing={listing} className="catalogue-listing-caracteristiques" />
+                            );
+                          })()}
+                          <ListingCaracteristiques listing={listing} variant="line" className="catalogue-listing-caracteristiques" />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <p className="catalogue-listing-prix" style={{ fontSize: 24, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
+                            <p className="catalogue-listing-prix" style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
                               {formatPrice(listing.price)}
                             </p>
                             {dealByListingId[listing.id] && (() => {
@@ -3667,15 +4304,17 @@ function CatalogueContent() {
                             })()}
                           </div>
                         </div>
-                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, marginTop: 8 }}>
-                          <p className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 12, paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', minHeight: 40 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 500, color: '#86868b', lineHeight: 1.4, minWidth: 0, width: '100%', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                            <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {listing.sellerName}
-                          </p>
+                            </span>
                           {listing.sellerPostcode && (
-                            <p className="catalogue-listing-codepostal" style={{ fontSize: 15, color: '#6e6e73', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1.4 }}>
-                              <MapPin size={15} /> {listing.sellerPostcode}
-                            </p>
+                              <span className="catalogue-listing-codepostal" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                              <MapPin size={18} strokeWidth={2} /> {listing.sellerPostcode}
+                              </span>
                           )}
+                          </div>
                         </div>
                       </div>
                     </article>
