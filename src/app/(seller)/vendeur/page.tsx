@@ -12,6 +12,7 @@ import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { CATEGORIES } from '@/lib/utils';
 import { getArticleTypeLabel } from '@/lib/constants';
+import { ListingPhoto } from '@/components/ListingPhoto';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
 function normalizeForSearch(s: string): string {
@@ -339,19 +340,14 @@ export default function SellerDashboardPage() {
           {showSkeletons ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {Array.from({ length: 8 }, (_, i) => (
-                <div key={i} style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                <div key={i} className="catalogue-skeleton-card" style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', ['--skeleton-index' as string]: i }}>
                   <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
-                  <div style={{ padding: '16px 16px 12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="catalogue-skeleton" style={{ height: 15, width: '85%', marginBottom: 6, borderRadius: 4 }} />
-                        <div className="catalogue-skeleton" style={{ height: 18, width: '50%', borderRadius: 4 }} />
-                      </div>
-                      <div className="catalogue-skeleton" style={{ width: 52, height: 22, borderRadius: 4, flexShrink: 0 }} />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                      <div className="catalogue-skeleton" style={{ height: 12, width: 40, borderRadius: 4 }} />
-                      <div className="catalogue-skeleton" style={{ height: 12, width: 70, borderRadius: 4 }} />
+                  <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: '88px' }}>
+                    <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
+                    <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
+                    <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+                      <div className="catalogue-skeleton" style={{ height: 14, width: 48 }} />
+                      <div className="catalogue-skeleton" style={{ height: 14, width: 72 }} />
                     </div>
                   </div>
                   <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
@@ -376,15 +372,9 @@ export default function SellerDashboardPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {filteredListings.map((listing) => (
                 <div key={listing.id} style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
-                  <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                  <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
-                      {listing.photos[0] ? (
-                        <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Package size={48} color="#ccc" />
-                        </div>
-                      )}
+                      <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
                       <span style={{ position: 'absolute', top: 8, right: 8, padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500, borderRadius: 4 }}>
                         {listing.isActive ? 'Active' : 'Inactive'}
                       </span>
@@ -418,8 +408,8 @@ export default function SellerDashboardPage() {
                         Modifier
                       </Link>
                     )}
-                    <Link href={`/produit/${listing.id}`} style={{ flex: 1, padding: '8px 14px', backgroundColor: '#000', color: '#fff', fontSize: 13, textAlign: 'center', borderRadius: 6 }}>
-                      Voir
+                    <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ flex: 1, padding: '8px 14px', backgroundColor: '#000', color: '#fff', fontSize: 13, textAlign: 'center', borderRadius: 6 }}>
+                      Détails
                     </Link>
                   </div>
                 </div>

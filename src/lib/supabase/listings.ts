@@ -264,7 +264,32 @@ export async function getListings(options?: {
   }
 
   if (articleTypes?.length) {
-    query = query.in('article_type', articleTypes);
+    const articleTypeList = articleTypes.map((t) => String(t).trim()).filter(Boolean);
+    if (articleTypeList.length > 0) {
+      const catsNormalized = cats?.map((c) => (c || '').toLowerCase()) ?? [];
+      const includeMontres = catsNormalized.includes('montres');
+      const hasPoloOrTshirt = articleTypeList.some((t) => t === 'polo' || t === 'tshirt');
+      if (includeMontres) {
+        const inPart = `article_type.in.(${articleTypeList.join(',')})`;
+        query = query.or(`${inPart},category.eq.montres`);
+      } else if (hasPoloOrTshirt) {
+        // Types indépendants : Polo = tshirt_polo avec model contenant "polo" ; T-shirt = tshirt_polo sans "polo" (ou model null)
+        const orParts: string[] = [];
+        const poloPattern = '%polo%'; // encodé par le client dans l'URL
+        for (const t of articleTypeList) {
+          if (t === 'polo') {
+            orParts.push(`and(article_type.eq.tshirt_polo,model.ilike.${poloPattern})`);
+          } else if (t === 'tshirt') {
+            orParts.push(`and(article_type.eq.tshirt_polo,or(model.is.null,model.not.ilike.${poloPattern}))`);
+          } else {
+            orParts.push(`article_type.eq.${t}`);
+          }
+        }
+        if (orParts.length > 0) query = query.or(orParts.join(','));
+      } else {
+        query = query.in('article_type', articleTypeList);
+      }
+    }
   }
 
   if (year != null) {

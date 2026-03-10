@@ -239,26 +239,30 @@ a:focus-visible {
 
 /* Catalogue : squelettes de chargement premium (shimmer fluide) */
 @keyframes catalogue-skeleton-shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% { background-position: -150% 0; }
+  100% { background-position: 150% 0; }
 }
 .catalogue-skeleton {
   background: linear-gradient(
-    90deg,
-    #e8e6e3 0%,
-    #eeedeb 25%,
-    #f2f1ef 50%,
-    #eeedeb 75%,
-    #e8e6e3 100%
+    105deg,
+    #eae8e6 0%,
+    #eae8e6 35%,
+    #f4f3f1 50%,
+    #eae8e6 65%,
+    #eae8e6 100%
   );
-  background-size: 200% 100%;
-  animation: catalogue-skeleton-shimmer 2.2s linear infinite;
+  background-size: 300% 100%;
+  animation: catalogue-skeleton-shimmer 2.4s ease-in-out infinite;
   border-radius: 4px;
+  will-change: background-position;
 }
 .catalogue-skeleton-card {
   border-radius: 12px;
   overflow: hidden;
-  contain: layout;
+  contain: layout paint;
+}
+.catalogue-skeleton-card .catalogue-skeleton {
+  animation-delay: calc(var(--skeleton-index, 0) * 0.06s);
 }
 
 /* Barre de chargement catalogue (indéterminée) */

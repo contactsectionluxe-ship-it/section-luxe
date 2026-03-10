@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,8 +14,8 @@ import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES } from '@/lib/utils';
-import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
+import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
+import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -231,19 +231,38 @@ function NewListingContent() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [hoveredPhotoIndex, setHoveredPhotoIndex] = useState<number | null>(null);
+  const [photoDropTargetIndex, setPhotoDropTargetIndex] = useState<number | null>(null);
+  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null);
+  const [photoRejectMessage, setPhotoRejectMessage] = useState<string | null>(null);
 
   const maxPhotos = 9;
   const onDropPhotos = useCallback(
-    (acceptedFiles: File[]) => {
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
       const remaining = maxPhotos - photos.length;
-      const toAdd = acceptedFiles.slice(0, remaining);
+      const validFiles = acceptedFiles.filter((f) => validateImageFile(f).ok);
+      const toAdd = validFiles.slice(0, remaining);
       setPhotos((prev) => [...prev, ...toAdd]);
+      const rejectedCount = fileRejections.length + (acceptedFiles.length - validFiles.length);
+      if (rejectedCount > 0) {
+        setPhotoRejectMessage(
+          rejectedCount === 1
+            ? '1 fichier non ajouté : max 5 Mo/photo, types JPEG ou PNG.'
+            : `${rejectedCount} fichiers non ajoutés : max 5 Mo/photo, types JPEG ou PNG.`
+        );
+      } else {
+        setPhotoRejectMessage(null);
+      }
     },
     [photos.length]
   );
+  useEffect(() => {
+    if (!photoRejectMessage) return;
+    const t = setTimeout(() => setPhotoRejectMessage(null), 5000);
+    return () => clearTimeout(t);
+  }, [photoRejectMessage]);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropPhotos,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
     maxFiles: maxPhotos - photos.length,
     maxSize: MAX_FILE_SIZE_BYTES,
     disabled: photos.length >= maxPhotos,
@@ -255,6 +274,15 @@ function NewListingContent() {
   }, [photos]);
   const handleRemovePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+  const handleMovePhoto = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setPhotos((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
   };
 
   // Étape 3
@@ -292,6 +320,7 @@ function NewListingContent() {
   // Modèles selon catégorie, marque, genre et type de produit — sans préfixe type dans les propositions
   const brandForModels = brand || marqueSearchQuery.trim();
   const hasTypeCategory = category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires';
+  const effectiveArticleType = articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType;
   const modelOptions = (() => {
     if (!category || category === 'autre' || genre.length === 0) return [];
     // Pour les catégories avec type de produit : n'afficher des modèles que si type ET marque sont choisis
@@ -350,7 +379,7 @@ function NewListingContent() {
     const raw = [...set]
       .filter((m) => m !== 'Autre' && !excludedAsCategory.includes(m))
       .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
-      .filter((m) => modelMatchesArticleType(m, articleType, category, brandForModels))
+      .filter((m) => modelMatchesArticleType(m, effectiveArticleType, category, brandForModels))
       .filter((m) => !articleTypeLabels.includes(m))
       .sort((a, b) => a.localeCompare(b, 'fr'));
     return raw;
@@ -466,7 +495,8 @@ if (modelOptions.length > 0) {
       const modelToSave = modelOptions.length > 0 ? (model || modeleSearchQuery.trim() || null) : (customModel.trim() || null);
       const materialToSave = (material || materialSearchQuery.trim() || null) || null;
       const colorToSave = (color || colorSearchQuery.trim() || null) || null;
-      const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${categoryLabel}`;
+      const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
+      const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${typeLabelForTitle || categoryLabel}`;
       const priceNum = parseFloat(price.replace(',', '.'));
 
       // Créer l'annonce d'abord (sans photos) pour obtenir un id existant en base
@@ -489,7 +519,7 @@ if (modelOptions.length > 0) {
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? articleType : null,
+        articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? (articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType) : null,
         isActive,
       });
 
@@ -795,7 +825,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                 <div style={{ marginBottom: 18, position: 'relative' }}>
                   <label style={labelStyle}>Type de produit <span style={{ color: '#1d1d1f' }}>*</span></label>
                   {(() => {
-                    const articleTypeOptions = category === 'vetements' ? getVetementsTypesForGenre(genre) : category === 'sacs' ? getSacsTypesForGenre(genre) : category === 'bijoux' ? getBijouxTypesForGenre(genre) : category === 'chaussures' ? getChaussuresTypesForGenre(genre) : getAccessoiresTypesForGenre(genre);
+                    const articleTypeOptions = category === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : category === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : category === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : category === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
                     return (
                       <>
                         <button
@@ -842,7 +872,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                           >
                             {articleTypeOptions.map((opt) => (
                               <button
-                                key={opt.value}
+                                key={`${opt.value}-${opt.label}`}
                                 type="button"
                                 onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => {
@@ -1490,7 +1520,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                 transition={{ duration: 0.25 }}
               >
                 <div style={{ marginBottom: 18 }}>
-                  <label style={labelStyle}>Photos (minimum 1, maximum 9) <span style={{ color: '#1d1d1f' }}>*</span></label>
+                  <label style={labelStyle}>Déposer les photos <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>
                     La première photo sera l&apos;image principale. Insérez ou supprimez des photos.
                   </p>
@@ -1520,13 +1550,36 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                           {isDragActive ? 'Déposez ici' : 'Glissez-déposez ou cliquez pour insérer une photo'}
                         </span>
                         <span style={{ fontSize: 12, color: '#86868b' }}>
-                          Maximum {maxPhotos} photos — {Math.round(MAX_FILE_SIZE_BYTES / 1024 / 1024)} Mo max
+                          Maximum {maxPhotos} photos — 5 Mo max/photo. Types JPEG, PNG.
                         </span>
                       </div>
                     </div>
                   )}
 
+                  {photoRejectMessage && (
+                    <p style={{ fontSize: 12, color: '#e53935', marginTop: 8, marginBottom: 0 }}>
+                      {photoRejectMessage}
+                    </p>
+                  )}
+
                   {photos.length > 0 && (
+                    <p style={{ fontSize: 12, color: '#86868b', marginTop: 8, marginBottom: 0 }}>
+                      Glissez une photo pour modifier l&apos;ordre
+                    </p>
+                  )}
+                  {photos.length > 0 && (() => {
+                    const isDragging = draggingPhotoIndex !== null && photoDropTargetIndex !== null;
+                    const displaySlots: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = isDragging
+                      ? (() => {
+                          const rest = photos.map((_, origIndex) => ({ url: photoPreviews[origIndex], originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                          return [
+                            ...rest.slice(0, photoDropTargetIndex),
+                            { type: 'placeholder' as const },
+                            ...rest.slice(photoDropTargetIndex),
+                          ];
+                        })()
+                      : photos.map((_, i) => ({ type: 'photo' as const, url: photoPreviews[i], originalIndex: i }));
+                    return (
                     <div
                       style={{
                         display: 'grid',
@@ -1535,53 +1588,117 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                         marginTop: photos.length < maxPhotos ? 16 : 0,
                       }}
                     >
-                      {photoPreviews.map((url, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            position: 'relative',
-                            aspectRatio: 1,
-                            borderRadius: 12,
-                            overflow: 'hidden',
-                            border: '1px solid #e8e8e8',
-                            backgroundColor: '#fafafa',
-                          }}
-                          onMouseEnter={() => setHoveredPhotoIndex(index)}
-                          onMouseLeave={() => setHoveredPhotoIndex(null)}
-                        >
-                          <img
-                            src={url}
-                            alt={`Photo ${index + 1}`}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemovePhoto(index)}
+                      {displaySlots.map((slot, displayIndex) =>
+                        slot.type === 'placeholder' ? (
+                          <div
+                            key="placeholder"
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              setPhotoDropTargetIndex(displayIndex);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                              if (!Number.isNaN(from) && from !== displayIndex) handleMovePhoto(from, displayIndex);
+                              setDraggingPhotoIndex(null);
+                              setPhotoDropTargetIndex(null);
+                            }}
                             style={{
-                              position: 'absolute',
-                              inset: 0,
-                              background: 'rgba(0,0,0,0.6)',
+                              aspectRatio: 1,
+                              borderRadius: 12,
+                              border: '2px dashed #1d1d1f',
+                              backgroundColor: 'rgba(29,29,31,0.06)',
                               display: 'flex',
-                              flexDirection: 'column',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: 6,
-                              opacity: hoveredPhotoIndex === index ? 1 : 0,
-                              transition: 'opacity 0.2s',
-                              color: '#fff',
+                              color: '#1d1d1f',
                               fontSize: 11,
-                              fontWeight: 500,
-                              border: 'none',
-                              cursor: 'pointer',
+                              fontWeight: 600,
+                              textAlign: 'center',
+                              padding: 4,
                             }}
                           >
-                            <Trash2 size={22} />
-                            <span>Supprimer</span>
-                          </button>
-                        </div>
-                      ))}
+                            Déposer ici
+                          </div>
+                        ) : (
+                          <div
+                            key={slot.originalIndex}
+                            draggable
+                            onDragStart={(e) => {
+                              e.dataTransfer.setData('text/plain', String(slot.originalIndex));
+                              e.dataTransfer.effectAllowed = 'move';
+                              setDraggingPhotoIndex(slot.originalIndex);
+                              setPhotoDropTargetIndex(null);
+                            }}
+                            onDragEnd={() => {
+                              setDraggingPhotoIndex(null);
+                              setPhotoDropTargetIndex(null);
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = 'move';
+                              setPhotoDropTargetIndex(displayIndex);
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                              if (!Number.isNaN(from) && from !== displayIndex) handleMovePhoto(from, displayIndex);
+                              setDraggingPhotoIndex(null);
+                              setPhotoDropTargetIndex(null);
+                            }}
+                            style={{
+                              position: 'relative',
+                              aspectRatio: 1,
+                              borderRadius: 12,
+                              overflow: 'hidden',
+                              border: '1px solid #e8e8e8',
+                              backgroundColor: '#fafafa',
+                              cursor: 'grab',
+                              userSelect: 'none',
+                              opacity: draggingPhotoIndex === slot.originalIndex ? 0.5 : 1,
+                              transition: 'opacity 0.15s ease',
+                            }}
+                            onMouseEnter={() => setHoveredPhotoIndex(slot.originalIndex)}
+                            onMouseLeave={() => setHoveredPhotoIndex(null)}
+                          >
+                            <img
+                              src={slot.url}
+                              alt={`Photo ${slot.originalIndex + 1}`}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                              draggable={false}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleRemovePhoto(slot.originalIndex)}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                background: 'rgba(0,0,0,0.6)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 6,
+                                opacity: hoveredPhotoIndex === slot.originalIndex ? 1 : 0,
+                                transition: 'opacity 0.2s',
+                                color: '#fff',
+                                fontSize: 11,
+                                fontWeight: 500,
+                                border: 'none',
+                                cursor: 'pointer',
+                                pointerEvents: draggingPhotoIndex !== null ? 'none' : 'auto',
+                              }}
+                            >
+                              <Trash2 size={22} />
+                              <span>Supprimer</span>
+                            </button>
+                          </div>
+                        )
+                      )}
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button
@@ -1842,7 +1959,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     id="isActiveNew"
                     checked={isActive}
                     onChange={(e) => setIsActive(e.target.checked)}
-                    style={{ width: 20, height: 20, accentColor: '#1d1d1f' }}
+                    style={{ width: 16, height: 16, accentColor: '#1d1d1f', marginLeft: 4 }}
                   />
                   <label htmlFor="isActiveNew" style={{ fontSize: 14, color: '#333' }}>
                     Annonce active (visible dans le catalogue)

@@ -26,6 +26,8 @@ import {
   getCategoryAndBrandForModel,
   getArticleTypeLabelsForCategory,
   getArticleTypeLabel,
+  getArticleTypeOptionsForCatalogue,
+  expandArticleTypesForFilter,
   modelMatchesArticleType,
   MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE,
   MODELE_VETEMENTS_GENERIQUES_EXCLUS,
@@ -43,6 +45,7 @@ import {
   VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE,
 } from '@/lib/constants';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { ListingPhoto } from '@/components/ListingPhoto';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
@@ -435,7 +438,7 @@ function CatalogueContent() {
     const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
     const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
     const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
-    const selectedArticleTypes = filters.articleTypes ?? [];
+    const selectedArticleTypeValues = [...new Set((filters.articleTypes ?? []).map((t) => (t.includes('::') ? t.split('::')[0] : t)))];
     const categoryKeys =
       selectedTypes.length > 0
         ? [...new Set(selectedTypes.flatMap((t) => CATEGORY_TO_BRAND_KEYS[t] ?? [t]))]
@@ -455,7 +458,7 @@ function CatalogueContent() {
     for (const filterCat of selectedTypes) {
       if (!CATEGORIES_WITH_ARTICLE_TYPE.includes(filterCat)) continue;
       const optionValues = getOptionValuesForCategory(filterCat);
-      applicableByFilterCategory[filterCat] = selectedArticleTypes.filter((t) => optionValues.includes(t));
+      applicableByFilterCategory[filterCat] = selectedArticleTypeValues.filter((t) => optionValues.includes(t));
     }
     const modelSet = new Set<string>();
     for (const categoryKey of categoryKeys) {
@@ -510,7 +513,7 @@ function CatalogueContent() {
     const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
     if (selectedBrands.length <= 1) return [];
     const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
-    const selectedArticleTypes = filters.articleTypes ?? [];
+    const selectedArticleTypeValues = [...new Set((filters.articleTypes ?? []).map((t) => (t.includes('::') ? t.split('::')[0] : t)))];
     const categoryKeys =
       selectedTypes.length > 0
         ? [...new Set(selectedTypes.flatMap((t) => CATEGORY_TO_BRAND_KEYS[t] ?? [t]))]
@@ -530,7 +533,7 @@ function CatalogueContent() {
     for (const filterCat of selectedTypes) {
       if (!CATEGORIES_WITH_ARTICLE_TYPE.includes(filterCat)) continue;
       const optionValues = getOptionValuesForCategory(filterCat);
-      applicableByFilterCategory[filterCat] = selectedArticleTypes.filter((t) => optionValues.includes(t));
+      applicableByFilterCategory[filterCat] = selectedArticleTypeValues.filter((t) => optionValues.includes(t));
     }
     const out: { brandLabel: string; models: string[]; favoris: string[] }[] = [];
     for (const brand of selectedBrands) {
@@ -604,18 +607,37 @@ function CatalogueContent() {
         : cat === 'chaussures' ? getChaussuresTypesForGenre(genre)
         : cat === 'accessoires' ? getAccessoiresTypesForGenre(genre)
         : [];
+      const options = getArticleTypeOptionsForCatalogue(list);
       const categoryLabel = CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
-      return { categoryKey: cat, categoryLabel, options: [...list].sort((a, b) => a.label.localeCompare(b.label, 'fr')) };
+      return { categoryKey: cat, categoryLabel, options };
     }).filter((g) => g.options.length > 0);
   }, [filters.categories, filters.category, filters.genre]);
   const articleTypeOptions = useMemo(() => articleTypeOptionsByCategory.flatMap((g) => g.options), [articleTypeOptionsByCategory]);
   const hasArticleTypeFilter = articleTypeOptions.length > 0;
   const selectedArticleTypes = filters.articleTypes ?? [];
-  const toggleArticleType = (value: string) => {
+  /** Valeurs uniques pour l’API et la logique métier (une entrée par value, même si plusieurs libellés sont cochés). */
+  const selectedArticleTypeValues = useMemo(
+    () => [...new Set((filters.articleTypes ?? []).map((t) => (t.includes('::') ? t.split('::')[0] : t)))],
+    [filters.articleTypes]
+  );
+  const articleTypeKey = (opt: { value: string; label: string }) => `${opt.value}::${opt.label}`;
+  const isArticleTypeOptionChecked = (opt: { value: string; label: string }) =>
+    selectedArticleTypes.includes(opt.value) || selectedArticleTypes.includes(articleTypeKey(opt));
+  const toggleArticleType = (opt: { value: string; label: string }) => {
     setFilters((prev) => {
       const current = prev.articleTypes ?? [];
-      const next = current.includes(value) ? current.filter((t) => t !== value) : [...current, value];
-      return { ...prev, articleTypes: next.length ? next : undefined };
+      const key = articleTypeKey(opt);
+      if (current.includes(key)) {
+        const next = current.filter((t) => t !== key);
+        return { ...prev, articleTypes: next.length ? next : undefined };
+      }
+      if (current.includes(opt.value)) {
+        const otherSameValue = articleTypeOptions.filter((o) => o.value === opt.value && o.label !== opt.label);
+        const next = current.filter((t) => t !== opt.value).concat(otherSameValue.map((o) => articleTypeKey(o)));
+        return { ...prev, articleTypes: next.length ? next : undefined };
+      }
+      const next = [...current, key];
+      return { ...prev, articleTypes: next };
     });
   };
 
@@ -727,14 +749,10 @@ function CatalogueContent() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  /** Affichage des annonces : horizontal (défaut) ou grille 3 par ligne — stocké en localStorage, pas dans l'URL */
-  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>(() => {
-    if (typeof window === 'undefined') return 'horizontal';
-    const saved = localStorage.getItem('catalogue-view-mode');
-    return saved === 'grid' || saved === 'horizontal' ? saved : 'horizontal';
-  });
-  useEffect(() => {
-    const saved = localStorage.getItem('catalogue-view-mode');
+  /** Affichage des annonces : horizontal (défaut) ou grille — stocké en localStorage. useLayoutEffect pour restaurer avant le premier paint et éviter flash. */
+  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
+  useLayoutEffect(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('catalogue-view-mode') : null;
     if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
   }, []);
   const [showMapPopup, setShowMapPopup] = useState(false);
@@ -980,7 +998,9 @@ function CatalogueContent() {
       const conditions = filters.conditions?.length ? filters.conditions : (filters.condition ? [filters.condition] : undefined);
       const sizes = filters.sizes?.length ? filters.sizes : undefined;
       const genres = filters.genre?.length ? filters.genre : undefined;
-      const articleTypes = filters.articleTypes?.length ? filters.articleTypes : undefined;
+      const articleTypes = filters.articleTypes?.length
+        ? expandArticleTypesForFilter(selectedArticleTypeValues)
+        : undefined;
       const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, articleTypes, sellerId: filters.sellerId, sortBy });
 
       if (loadId !== loadListingsIdRef.current) return;
@@ -1079,24 +1099,27 @@ function CatalogueContent() {
 
       if (loadId !== loadListingsIdRef.current) return;
       setListings(filtered);
+      if (loadId !== loadListingsIdRef.current) return;
+      setLoading(false);
 
-      // Calcul des étiquettes « bonne affaire » (même logique que page produit : similaires = même catégorie, année, modèle)
-      const keyToPair = new Map<string, { category: string; year: number | undefined; model: string | undefined }>();
+      // Calcul des étiquettes « bonne affaire » en différé pour ne pas bloquer l’affichage (N requêtes getListings)
+      const computeDeal = async () => {
+        const keyToPair = new Map<string, { category: string; year: number | undefined; brand: string | undefined; articleType: string | undefined }>();
       filtered.forEach((l) => {
-        const k = `${l.category}_${l.year ?? 'all'}_${l.model ?? 'all'}`;
-        if (!keyToPair.has(k)) keyToPair.set(k, { category: l.category, year: l.year ?? undefined, model: l.model ?? undefined });
+          const k = `${l.category}_${l.year ?? 'all'}_${l.brand ?? 'all'}_${l.articleType ?? 'all'}`;
+          if (!keyToPair.has(k)) keyToPair.set(k, { category: l.category, year: l.year ?? undefined, brand: l.brand ?? undefined, articleType: l.articleType ?? undefined });
       });
       const pairs = [...keyToPair.entries()];
       const similarLists = await Promise.all(
-        pairs.map(([, p]) => {
-          const modelVariants = p.model ? getModelFilterVariants(p.model) : undefined;
-          return getListings({
-            category: p.category,
-            year: p.year,
-            models: modelVariants?.length ? modelVariants : undefined,
-            limitCount: 100,
-          });
-        })
+          pairs.map(([, p]) =>
+            getListings({
+              category: p.category,
+              year: p.year,
+              brand: p.brand ?? undefined,
+              articleTypes: p.articleType ? [p.articleType] : undefined,
+              limitCount: 30,
+            })
+          )
       );
       const similarByKey = new Map<string, { id: string; price: number }[]>();
       pairs.forEach(([k], i) => {
@@ -1107,15 +1130,20 @@ function CatalogueContent() {
       });
       const next: Record<string, { label: string; color: string }> = {};
       filtered.forEach((listing) => {
-        const k = `${listing.category}_${listing.year ?? 'all'}_${listing.model ?? 'all'}`;
+          const k = `${listing.category}_${listing.year ?? 'all'}_${listing.brand ?? 'all'}_${listing.articleType ?? 'all'}`;
         const others = (similarByKey.get(k) ?? []).filter((x) => x.id !== listing.id);
         if (others.length === 0) return;
         const average = others.reduce((s, x) => s + x.price, 0) / others.length;
         const deal = getDealLevel(listing.price, average);
         next[listing.id] = { label: deal.label, color: deal.color };
       });
-      if (loadId !== loadListingsIdRef.current) return;
-      setDealByListingId(next);
+        if (loadListingsIdRef.current === loadId) setDealByListingId(next);
+      };
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => { computeDeal(); }, { timeout: 2000 });
+      } else {
+        setTimeout(() => { computeDeal(); }, 0);
+      }
     } catch (error) {
       const msg = error instanceof Error ? error.message : (error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : null);
       if (msg) console.error('Catalogue loadListings:', msg);
@@ -1331,8 +1359,8 @@ function CatalogueContent() {
   const selectedModels = filters.models ?? (filters.model ? [filters.model] : []);
   const hasPantalonModel = selectedModels.some((m) => normalizeForSearch(m).includes('pantalon'));
   const hasJeanModel = selectedModels.some((m) => normalizeForSearch(m).includes('jean'));
-  const hasPantalonType = selectedArticleTypes.includes('pantalon') || selectedArticleTypes.includes('pantalon_short');
-  const hasJeanType = selectedArticleTypes.includes('jean');
+  const hasPantalonType = selectedArticleTypeValues.includes('pantalon') || selectedArticleTypeValues.includes('pantalon_short');
+  const hasJeanType = selectedArticleTypeValues.includes('jean');
   const showPantSizes = hasPantalonModel || hasPantalonType;
   const showJeanSizes = hasJeanModel || hasJeanType;
   /** Toutes les options de taille vêtements : toujours afficher standard + pantalon + jean quand catégorie vêtements. */
@@ -2016,13 +2044,13 @@ function CatalogueContent() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {group.options.map((opt) => (
                         <label
-                          key={opt.value}
+                          key={articleTypeKey(opt)}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
                         >
                           <input
                             type="checkbox"
-                            checked={selectedArticleTypes.includes(opt.value)}
-                            onChange={() => toggleArticleType(opt.value)}
+                            checked={isArticleTypeOptionChecked(opt)}
+                            onChange={() => toggleArticleType(opt)}
                             style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                           />
                           <span style={{ fontSize: 14, color: '#1d1d1f' }}>{opt.label}</span>
@@ -3966,7 +3994,7 @@ function CatalogueContent() {
 
             {/* Results — marginTop 24 pour même espace qu'entre "Plus récents" et la ligne au-dessus */}
             {(() => {
-              if (loading) {
+              if (loading && listings.length === 0) {
                 const count = viewMode === 'grid' ? 9 : 6;
                 return (
                   <div
@@ -3994,6 +4022,7 @@ function CatalogueContent() {
                           minWidth: 0,
                           minHeight: viewMode === 'grid' ? undefined : 56,
                           position: 'relative',
+                          ['--skeleton-index' as string]: i,
                         }}
                       >
                         <div
@@ -4004,19 +4033,25 @@ function CatalogueContent() {
                             aspectRatio: '1',
                             flexShrink: 0,
                             borderRadius: viewMode === 'grid' ? 0 : 4,
+                            borderRight: viewMode === 'grid' ? undefined : '1px solid #e8e6e3',
                           }}
                         />
                         <div style={{ padding: viewMode === 'grid' ? '14px 14px 10px' : '10px 48px 10px 14px', flex: 1, minWidth: 0, minHeight: viewMode === 'grid' ? 'calc(112px + 2mm)' : undefined, display: 'flex', flexDirection: 'column', gap: viewMode === 'grid' ? 6 : 8, justifyContent: viewMode === 'grid' ? undefined : 'space-between' }}>
                           {viewMode === 'grid' ? (
                             <>
-                              <div className="catalogue-skeleton" style={{ height: 12, width: '85%' }} />
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 12 }}>
+                                <div className="catalogue-skeleton" style={{ height: 12, width: '50%' }} />
+                                <div className="catalogue-skeleton" style={{ height: 12, width: 60, flexShrink: 0 }} />
+                              </div>
                               <div className="catalogue-skeleton" style={{ height: 16, width: '92%' }} />
-                              <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap', marginBottom: 6 }}>
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 60 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 70 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 55 }} />
                               </div>
-                              <div className="catalogue-skeleton" style={{ height: 18, width: '38%', marginTop: 2 }} />
+                              <div style={{ marginTop: -5, minHeight: 24, display: 'flex', alignItems: 'center' }}>
+                                <div className="catalogue-skeleton" style={{ height: 18, width: '38%' }} />
+                              </div>
                             </>
                           ) : (
                             <>
@@ -4074,7 +4109,7 @@ function CatalogueContent() {
               }
               if (viewMode === 'grid') {
                 return (
-              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0 }}>
+              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
                   <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent(catalogueReturnUrl)}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                     <article
@@ -4117,17 +4152,14 @@ function CatalogueContent() {
                       </button>
                       <div
                         style={{
+                          position: 'relative',
                           width: '100%',
                           aspectRatio: '1',
                           background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
                           overflow: 'hidden',
                         }}
                       >
-                        {listing.photos[0] ? (
-                          <img src={listing.photos[0]} alt={listing.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 12 }}>Photo</div>
-                        )}
+                        <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 768px) 50vw, 33vw" />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -4175,7 +4207,7 @@ function CatalogueContent() {
                 );
               }
               return (
-              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
+              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
                   <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent(catalogueReturnUrl)}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                     <article
@@ -4225,25 +4257,17 @@ function CatalogueContent() {
                       </button>
                       <div
                         style={{
+                          position: 'relative',
                           width: '28%',
                           minWidth: 64,
                           aspectRatio: '1',
                           backgroundColor: '#f5f5f7',
                           overflow: 'hidden',
                           flexShrink: 0,
+                          borderRight: '1px solid #e8e6e3',
                         }}
                       >
-                        {listing.photos[0] ? (
-                          <img
-                            src={listing.photos[0]}
-                            alt={listing.title}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 9 }}>
-                            Photo
-                          </div>
-                        )}
+                        <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="120px" />
                       </div>
                             <div
                             style={{
@@ -4567,26 +4591,7 @@ function CatalogueContent() {
 
 export default function CataloguePage() {
   return (
-    <Suspense
-      fallback={
-        <div
-          style={{
-            paddingTop: 'var(--header-height)',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 16,
-            backgroundColor: '#fff',
-          }}
-        >
-          <div className="catalogue-loading-bar" aria-hidden />
-          <div className="catalogue-skeleton" style={{ width: 120, height: 120, borderRadius: 12 }} />
-          <p style={{ fontSize: 15, color: '#6e6e73', fontFamily: 'var(--font-playfair), Georgia, serif' }}>Chargement du catalogue</p>
-        </div>
-      }
-    >
+    <Suspense fallback={null}>
       <CatalogueContent />
     </Suspense>
   );

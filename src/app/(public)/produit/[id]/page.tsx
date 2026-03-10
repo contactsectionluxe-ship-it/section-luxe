@@ -13,6 +13,7 @@ import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
+import { ListingPhoto } from '@/components/ListingPhoto';
 
 /** Titre d’annonce comme dans le catalogue : marque - type modèle (pour vêtements avec " & " dans le type : seulement modèle). */
 function getListingDisplayTitle(listing: Listing): string {
@@ -52,6 +53,8 @@ export default function ProductPage() {
   })();
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
   const { user, isAuthenticated } = useAuth();
+  /** Venu de Mes annonces (clic sur la case) → retour à mes annonces, sinon retour au catalogue */
+  const fromVendeurParam = searchParams.get('from') === 'vendeur';
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -339,7 +342,8 @@ export default function ProductPage() {
         const similar = await getListings({
           category: listingData.category,
           year: listingData.year ?? undefined,
-          model: listingData.model ?? undefined,
+          brand: listingData.brand ?? undefined,
+          articleTypes: listingData.articleType ? [listingData.articleType] : undefined,
           limitCount: 100,
         });
         const others = similar.filter((l) => l.id !== listingData.id && l.price > 0);
@@ -520,9 +524,9 @@ export default function ProductPage() {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
-          <Link href={returnToCatalogue} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
+          <Link href={fromVendeurParam ? '/vendeur' : returnToCatalogue} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
             <ArrowLeft size={16} />
-            Retour au catalogue
+            {fromVendeurParam ? 'Retour à mes annonces' : 'Retour au catalogue'}
           </Link>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
             {/* Desktop skeleton — même structure que la page produit */}
@@ -622,11 +626,11 @@ export default function ProductPage() {
       <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
-          href={returnToCatalogue}
+          href={fromVendeurParam ? '/vendeur' : returnToCatalogue}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}
         >
           <ArrowLeft size={16} />
-          Retour au catalogue
+          {fromVendeurParam ? 'Retour à mes annonces' : 'Retour au catalogue'}
         </Link>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
@@ -642,17 +646,12 @@ export default function ProductPage() {
                   onKeyDown={(e) => e.key === 'Enter' && listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
                   style={{ width: '100%', height: '100%', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
                 >
-                  {listing.photos[currentPhotoIndex] ? (
-                    <img
-                      src={listing.photos[currentPhotoIndex]}
-                      alt={getListingDisplayTitle(listing)}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
-                      Photo
-                    </div>
-                  )}
+                  <ListingPhoto
+                    src={listing.photos[currentPhotoIndex]}
+                    alt={getListingDisplayTitle(listing)}
+                    sizes="(max-width: 768px) 100vw, 520px"
+                    priority
+                  />
                   {listing.photos.length > 1 && (
                     <>
                       <button
@@ -847,6 +846,7 @@ export default function ProductPage() {
                       key={index}
                       onClick={() => setCurrentPhotoIndex(index)}
                       style={{
+                        position: 'relative',
                         width: 60,
                         height: 60,
                         border: currentPhotoIndex === index ? '2px solid #000' : '1px solid #ddd',
@@ -855,7 +855,7 @@ export default function ProductPage() {
                         overflow: 'hidden',
                       }}
                     >
-                      <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <ListingPhoto src={photo} alt="" sizes="60px" />
                     </button>
                   ))}
                 </div>
@@ -1097,7 +1097,7 @@ export default function ProductPage() {
                 </p>
                 {priceStats && (
                   <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
                   </p>
                 )}
                 <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -1230,11 +1230,12 @@ export default function ProductPage() {
                 onKeyDown={(e) => e.key === 'Enter' && listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
                 style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
               >
-                {listing.photos[currentPhotoIndex] ? (
-                  <img src={listing.photos[currentPhotoIndex]} alt={getListingDisplayTitle(listing)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>Photo</div>
-                )}
+                <ListingPhoto
+                  src={listing.photos[currentPhotoIndex]}
+                  alt={getListingDisplayTitle(listing)}
+                  sizes="(max-width: 768px) 100vw, 520px"
+                  priority
+                />
               </div>
               {listing.photos.length > 1 && (
                 <div style={{ display: 'flex', gap: 6, overflowX: 'auto' }}>
@@ -1242,9 +1243,9 @@ export default function ProductPage() {
                     <button
                       key={index}
                       onClick={() => setCurrentPhotoIndex(index)}
-                      style={{ width: 50, height: 50, flexShrink: 0, border: currentPhotoIndex === index ? '2px solid #1d1d1f' : '1px solid #d2d2d7', borderRadius: 12, padding: 0, cursor: 'pointer', overflow: 'hidden' }}
+                      style={{ position: 'relative', width: 50, height: 50, flexShrink: 0, border: currentPhotoIndex === index ? '2px solid #1d1d1f' : '1px solid #d2d2d7', borderRadius: 12, padding: 0, cursor: 'pointer', overflow: 'hidden' }}
                     >
-                      <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <ListingPhoto src={photo} alt="" sizes="50px" />
                     </button>
                   ))}
                 </div>
@@ -1478,7 +1479,7 @@ export default function ProductPage() {
                   </p>
                   {priceStats && (
                     <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
@@ -2193,7 +2194,7 @@ Ces données sont utilisées pour :`}
             </p>
             {priceStats && (
               <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même catégorie{listing.year != null ? ', même année' : ''}{listing.model ? ', même modèle' : ''}).
+                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
               </p>
             )}
             <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>

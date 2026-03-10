@@ -4,16 +4,26 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 // Check if Supabase is configured
-export const isSupabaseConfigured = 
-  supabaseUrl && 
-  supabaseAnonKey && 
+const envOk =
+  supabaseUrl &&
+  supabaseAnonKey &&
   supabaseUrl !== 'https://votre-projet.supabase.co' &&
   supabaseAnonKey !== 'votre_anon_key_ici';
 
-// Create Supabase client (sans typage Database strict pour éviter les erreurs de build)
-export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl!, supabaseAnonKey!)
-  : null;
+let _supabase: SupabaseClient | null = null;
+let _isConfigured = false;
+
+if (envOk) {
+  try {
+    _supabase = createClient(supabaseUrl!, supabaseAnonKey!);
+    _isConfigured = true;
+  } catch (e) {
+    console.warn('Supabase createClient failed:', e);
+  }
+}
+
+export const isSupabaseConfigured = _isConfigured;
+export const supabase = _supabase;
 
 if (!isSupabaseConfigured) {
   console.warn(

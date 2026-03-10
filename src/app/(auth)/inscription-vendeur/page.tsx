@@ -39,14 +39,14 @@ function FileUploadField({
     if (isTooLarge) {
       setRejectMessage('Votre fichier dépasse 5 Mo. Choisissez un fichier plus léger.');
     } else {
-      setRejectMessage('Votre fichier : format non accepté. Utilisez JPEG, PNG, WebP ou PDF.');
+      setRejectMessage('Votre fichier : format non accepté. Utilisez JPEG, PNG ou PDF.');
     }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     onDropRejected,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'], 'application/pdf': ['.pdf'] },
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'application/pdf': ['.pdf'] },
     maxFiles: 1,
     maxSize: 5 * 1024 * 1024,
   });
@@ -93,7 +93,7 @@ function FileUploadField({
           <p style={{ fontSize: 13, color: '#666' }}>
             Glissez-déposez ou cliquez
           </p>
-          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>5 Mo max. JPEG, PNG, WebP ou PDF.</p>
+          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>5 Mo max. JPEG, PNG ou PDF.</p>
         </div>
       )}
       {rejectMessage && (
@@ -779,7 +779,7 @@ export default function SellerRegisterPage() {
                   Pour valider votre compte, nous avons besoin de vérifier votre identité et
                   l&apos;existence légale de votre entreprise.
                   <br />
-                  <strong>Formats acceptés : JPEG, PNG, WebP, PDF. (5 Mo max)</strong>
+                  <strong>Formats acceptés : JPEG, PNG, PDF. (5 Mo max)</strong>
                 </div>
 
                 <FileUploadField

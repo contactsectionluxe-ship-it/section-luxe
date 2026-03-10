@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase/server';
-import { validateImageFile } from '@/lib/file-validation';
+import { validateImageFile, MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
+
+const MAX_PHOTOS_PER_REQUEST = 12;
+const MAX_TOTAL_UPLOAD_BYTES = MAX_FILE_SIZE_BYTES * MAX_PHOTOS_PER_REQUEST;
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -40,11 +43,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const formData = await request.formData();
-    const listingId = formData.get('listingId') as string | null;
-    if (!listingId?.trim()) {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch (parseErr) {
+      const msg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+      const cause = parseErr instanceof Error && parseErr.cause instanceof Error ? parseErr.cause.message : '';
+      console.error('upload-listing-photos formData parse:', parseErr);
+      const isFormDataParse = msg.includes('FormData') || msg.includes('parse body') || cause.includes('boundary') || cause.includes('CRLF');
       return NextResponse.json(
-        { error: 'listingId manquant' },
+        {
+          error: isFormDataParse
+            ? 'Envoi des photos impossible. Réessayez avec moins de photos ou des fichiers plus légers (max 5 Mo par photo). Si le problème persiste, évitez les noms de fichiers avec accents ou emoji.'
+            : msg,
+        },
+        { status: 400 }
+      );
+    }
+
+    const listingId = (formData.get('listingId') as string | null)?.trim() || '';
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!listingId || !uuidRegex.test(listingId)) {
+      return NextResponse.json(
+        { error: 'listingId invalide' },
         { status: 400 }
       );
     }
@@ -59,9 +80,23 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (photos.length > MAX_PHOTOS_PER_REQUEST) {
+      return NextResponse.json(
+        { error: `Maximum ${MAX_PHOTOS_PER_REQUEST} photos par envoi` },
+        { status: 400 }
+      );
+    }
+    let totalSize = 0;
     for (const photo of photos) {
       const v = validateImageFile(photo);
       if (!v.ok) return NextResponse.json({ error: v.error }, { status: 400 });
+      totalSize += photo.size;
+    }
+    if (totalSize > MAX_TOTAL_UPLOAD_BYTES) {
+      return NextResponse.json(
+        { error: 'Taille totale des photos trop importante' },
+        { status: 400 }
+      );
     }
 
     const { data: listing, error: listingError } = await server
@@ -90,8 +125,9 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < photos.length; i++) {
       const file = photos[i];
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-      const path = `${sellerId}/${listingId}/photo_${startIndex + i}.${ext}`;
+      const rawExt = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+      const allowedExt = ['jpg', 'jpeg', 'png'].includes(rawExt) ? rawExt : 'jpg';
+      const path = `${sellerId}/${listingId}/photo_${startIndex + i}.${allowedExt}`;
       const buf = Buffer.from(await file.arrayBuffer());
       const { error: uploadError } = await server.storage
         .from(bucket)
@@ -110,9 +146,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ urls });
   } catch (err) {
     console.error('upload-listing-photos:', err);
-    const msg = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: `Erreur serveur : ${msg}` },
+      { error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : 'Erreur serveur' },
       { status: 500 }
     );
   }

@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getListing, deleteListing } from '@/lib/supabase/listings';
+import { getListing, deleteListing, updateListing } from '@/lib/supabase/listings';
 import { recordListingDeletion } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
@@ -37,6 +37,9 @@ export default function VoirAnnoncePage() {
   const [deleteReason, setDeleteReason] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [showToggleModal, setShowToggleModal] = useState(false);
+  const [toggleToActive, setToggleToActive] = useState<boolean | null>(null);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -109,6 +112,30 @@ export default function VoirAnnoncePage() {
     setDeleteModalStep(1);
     setDeleteReason('');
     setDeleteError(null);
+  };
+
+  const openToggleModal = (activate: boolean) => {
+    setToggleToActive(activate);
+    setShowToggleModal(true);
+  };
+
+  const closeToggleModal = () => {
+    setShowToggleModal(false);
+    setToggleToActive(null);
+  };
+
+  const handleToggleActive = async () => {
+    if (toggleToActive === null || !listingId) return;
+    setToggling(true);
+    try {
+      await updateListing(listingId, { isActive: toggleToActive });
+      setListing((prev) => (prev ? { ...prev, isActive: toggleToActive } : null));
+      closeToggleModal();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setToggling(false);
+    }
   };
 
   if (!user || !seller || !listing) {
@@ -204,19 +231,48 @@ export default function VoirAnnoncePage() {
               <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, margin: 0, flex: 1, minWidth: 0 }}>
                 {listing.title}
               </h1>
-              <span
-                style={{
-                  padding: '6px 12px',
-                  backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5',
-                  color: listing.isActive ? '#166534' : '#666',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  borderRadius: 8,
-                  flexShrink: 0,
-                }}
-              >
-                {listing.isActive ? 'Active' : 'Inactive'}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                {isApprovedSeller && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openToggleModal(true)}
+                      disabled={listing.isActive}
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 8,
+                        minWidth: 96,
+                        border: listing.isActive ? '1px solid #166534' : '1px solid #d2d2d7',
+                        backgroundColor: listing.isActive ? '#dcfce7' : '#fff',
+                        color: listing.isActive ? '#166534' : '#1d1d1f',
+                        cursor: listing.isActive ? 'default' : 'pointer',
+                      }}
+                    >
+                      Activer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openToggleModal(false)}
+                      disabled={!listing.isActive}
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        borderRadius: 8,
+                        minWidth: 96,
+                        border: !listing.isActive ? '1px solid #dc2626' : '1px solid #d2d2d7',
+                        backgroundColor: !listing.isActive ? '#fee2e2' : '#fff',
+                        color: !listing.isActive ? '#dc2626' : '#1d1d1f',
+                        cursor: !listing.isActive ? 'default' : 'pointer',
+                      }}
+                    >
+                      Désactiver
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
             <p style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f', margin: '12px 0 0' }}>{formatPrice(listing.price)}</p>
             {listing.listingNumber && (
@@ -525,6 +581,49 @@ export default function VoirAnnoncePage() {
                     </div>
                   </>
                 )}
+              </div>
+            </div>
+          )}
+
+          {showToggleModal && toggleToActive !== null && (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+              <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={closeToggleModal} aria-hidden />
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  maxWidth: 380,
+                  backgroundColor: '#fff',
+                  padding: '24px 20px',
+                  borderRadius: 16,
+                  boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+                }}
+              >
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 12, color: '#0a0a0a', textAlign: 'center' }}>
+                  {toggleToActive ? 'Activer l\'annonce' : 'Désactiver l\'annonce'}
+                </h2>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
+                  {toggleToActive
+                    ? 'Voulez-vous activer cette annonce ? Elle sera à nouveau visible dans le catalogue.'
+                    : 'Voulez-vous désactiver cette annonce ? Elle ne sera plus visible dans le catalogue.'}
+                </p>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={closeToggleModal}
+                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleToggleActive}
+                    disabled={toggling}
+                    style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.7 : 1 }}
+                  >
+                    {toggling ? 'Enregistrement...' : toggleToActive ? 'Activer' : 'Désactiver'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

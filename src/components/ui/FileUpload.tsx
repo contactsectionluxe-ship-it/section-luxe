@@ -19,7 +19,7 @@ export interface FileUploadProps {
 
 export function FileUpload({
   label,
-  accept = { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+  accept = { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
   maxFiles = 1,
   maxSize = MAX_FILE_SIZE_BYTES,
   onFilesChange,

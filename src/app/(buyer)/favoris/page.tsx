@@ -12,6 +12,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { ListingPhoto } from '@/components/ListingPhoto';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(price);
@@ -310,6 +311,7 @@ export default function FavoritesPage() {
                     </button>
                     <div
                       style={{
+                        position: 'relative',
                         width: '28%',
                         minWidth: 64,
                         aspectRatio: '1',
@@ -318,17 +320,7 @@ export default function FavoritesPage() {
                         flexShrink: 0,
                       }}
                     >
-                      {listing.photos[0] ? (
-                        <img
-                          src={listing.photos[0]}
-                          alt={listing.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 9 }}>
-                          Photo
-                        </div>
-                      )}
+                      <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="120px" />
                     </div>
                     <div
                       style={{

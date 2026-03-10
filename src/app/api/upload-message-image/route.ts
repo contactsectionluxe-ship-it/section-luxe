@@ -63,11 +63,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Image trop volumineuse (max. 3 Mo).' }, { status: 400 });
     }
     if (!isAllowedImageType(file)) {
-      return NextResponse.json({ error: 'Format accepté : JPEG, PNG ou WebP.' }, { status: 400 });
+      return NextResponse.json({ error: 'Format accepté : JPEG ou PNG.' }, { status: 400 });
     }
 
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-    const safeExt = ['jpg', 'jpeg', 'png', 'webp'].includes(ext) ? ext : 'jpg';
+    const safeExt = ['jpg', 'jpeg', 'png'].includes(ext) ? ext : 'jpg';
     const uuid = crypto.randomUUID();
     const path = `${user.id}/messages/${conversationId}/${uuid}.${safeExt}`;
     const bucket = 'listings';

@@ -40,7 +40,7 @@ export default function RootLayout({
           <Suspense fallback={<header className="h-16 border-b border-[#e5e5e7]" />}>
             <Header />
           </Suspense>
-          <div className="flex-1">{children}</div>
+          <div className="flex-1" style={{ backgroundColor: '#fff' }}>{children}</div>
           <Footer />
         </AuthProvider>
       </body>

@@ -30,7 +30,7 @@ function formatPrice(price: number): string {
 const CATEGORIES_VISIBLE = 4;
 const CATEGORY_GAP = 12;
 
-export default function HomePage() {
+export default function HomeContent() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const categoriesScrollRef = useRef<HTMLDivElement>(null);
@@ -514,7 +514,7 @@ export default function HomePage() {
             </div>
           ) : listings.length > 0 ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
-              {listings.map((listing, i) => (
+              {listings.map((listing) => (
                 <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
                     style={{
@@ -538,7 +538,7 @@ export default function HomePage() {
                         overflow: 'hidden',
                       }}
                     >
-                      <ListingPhoto src={listing.photos[0]} alt={listing.title} priority={i < 6} sizes="(max-width: 640px) 50vw, 25vw" />
+                      <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 640px) 50vw, 25vw" />
                     </div>
                     <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                       <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>

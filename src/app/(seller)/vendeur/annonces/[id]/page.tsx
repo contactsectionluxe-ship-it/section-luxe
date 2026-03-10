@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useDropzone } from 'react-dropzone';
+import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Info, Trash2, Upload } from 'lucide-react';
 import Link from 'next/link';
@@ -12,8 +12,8 @@ import { getListing, updateListing } from '@/lib/supabase/listings';
 import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
-import { MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
+import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -158,6 +158,11 @@ export default function EditListingPage() {
   const [cguCgvError, setCguCgvError] = useState('');
   const [hoveredExistingIndex, setHoveredExistingIndex] = useState<number | null>(null);
   const [hoveredNewIndex, setHoveredNewIndex] = useState<number | null>(null);
+  const [photoDropTargetExisting, setPhotoDropTargetExisting] = useState<number | null>(null);
+  const [photoDropTargetNew, setPhotoDropTargetNew] = useState<number | null>(null);
+  const [draggingPhotoSource, setDraggingPhotoSource] = useState<'existing' | 'new' | null>(null);
+  const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null);
+  const [photoRejectMessage, setPhotoRejectMessage] = useState<string | null>(null);
   const [newPhotoPreviews, setNewPhotoPreviews] = useState<string[]>([]);
   const [step, setStep] = useState(1);
 
@@ -184,6 +189,7 @@ export default function EditListingPage() {
   })();
   const brandForModels = brand || marqueSearchQuery.trim();
   const hasTypeCategory = category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires';
+  const effectiveArticleType = articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType;
   const modelOptions = (() => {
     if (!category || category === 'autre' || genre.length === 0) return [];
     if (hasTypeCategory && (!articleType || !brandForModels)) return [];
@@ -241,7 +247,7 @@ export default function EditListingPage() {
     const raw = [...set]
       .filter((m) => m !== 'Autre' && !excludedAsCategory.includes(m))
       .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
-      .filter((m) => modelMatchesArticleType(m, articleType, category, brandForModels))
+      .filter((m) => modelMatchesArticleType(m, effectiveArticleType, category, brandForModels))
       .filter((m) => !articleTypeLabels.includes(m))
       .sort((a, b) => a.localeCompare(b, 'fr'));
     if (model && !raw.includes(model)) return [model, ...raw];
@@ -255,17 +261,33 @@ export default function EditListingPage() {
   const maxSize = MAX_FILE_SIZE_BYTES;
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
       const remaining = maxPhotos - totalPhotosCount;
-      const toAdd = acceptedFiles.slice(0, remaining);
+      const validFiles = acceptedFiles.filter((f) => validateImageFile(f).ok);
+      const toAdd = validFiles.slice(0, remaining);
       setNewPhotos((prev) => [...prev, ...toAdd]);
+      const rejectedCount = fileRejections.length + (acceptedFiles.length - validFiles.length);
+      if (rejectedCount > 0) {
+        setPhotoRejectMessage(
+          rejectedCount === 1
+            ? '1 fichier non ajouté : max 5 Mo/photo, types JPEG ou PNG.'
+            : `${rejectedCount} fichiers non ajoutés : max 5 Mo/photo, types JPEG ou PNG.`
+        );
+      } else {
+        setPhotoRejectMessage(null);
+      }
     },
     [totalPhotosCount]
   );
 
+  useEffect(() => {
+    if (!photoRejectMessage) return;
+    const t = setTimeout(() => setPhotoRejectMessage(null), 5000);
+    return () => clearTimeout(t);
+  }, [photoRejectMessage]);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'image/webp': ['.webp'] },
+    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
     maxFiles: maxPhotos - totalPhotosCount,
     maxSize,
     disabled: totalPhotosCount >= maxPhotos,
@@ -279,6 +301,26 @@ export default function EditListingPage() {
 
   const handleRemoveNewPhoto = (index: number) => {
     setNewPhotos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const reorderExistingPhotos = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setExistingPhotos((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
+  };
+
+  const reorderNewPhotos = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+    setNewPhotos((prev) => {
+      const next = [...prev];
+      const [removed] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, removed);
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -299,7 +341,16 @@ export default function EditListingPage() {
         setListing(data);
         setCategory(data.category);
         setGenre(Array.isArray(data.genre) && data.genre.length > 0 ? data.genre : []);
-        setArticleType(data.articleType || '');
+        // T-shirt et Polo partagent la valeur BDD tshirt_polo : en formulaire on distingue par une clé composite pour n'afficher qu'un seul sélectionné
+        // Richelieus et Derbies partagent derbies_richelieu : idem avec composite (défaut Richelieus)
+        const at = data.articleType || '';
+        setArticleType(
+          at === 'tshirt_polo'
+            ? (data.model && String(data.model).toLowerCase().includes('polo') ? 'tshirt_polo::Polo' : 'tshirt_polo::T-shirt')
+            : at === 'derbies_richelieu'
+              ? 'derbies_richelieu::Richelieus'
+              : at
+        );
         setCustomCategory('');
         const brandsForCat = data.category && BRANDS_BY_CATEGORY[data.category] ? BRANDS_BY_CATEGORY[data.category] : [];
         if (data.brand && brandsForCat.includes(data.brand)) {
@@ -654,7 +705,8 @@ export default function EditListingPage() {
       const modelToSave = modelOptions.length > 0 ? (model || modeleSearchQuery.trim() || null) : (customModel.trim() || null);
       const materialToSave = (material || materialSearchQuery.trim() || null) || null;
       const colorToSave = (color || colorSearchQuery.trim() || null) || null;
-      const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${categoryLabel}`;
+      const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
+      const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${typeLabelForTitle || categoryLabel}`;
 
       await updateListing(listingId, {
         title,
@@ -674,7 +726,7 @@ export default function EditListingPage() {
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: hasTypeCategory && articleType ? articleType : null,
+        articleType: hasTypeCategory && articleType ? (articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType) : null,
       });
 
       setError('');
@@ -941,7 +993,12 @@ export default function EditListingPage() {
               <div style={{ marginBottom: 18, position: 'relative' }}>
                 <label style={labelStyle}>Type de produit <span style={{ color: '#1d1d1f' }}>*</span></label>
                 {(() => {
-                  const articleTypeOptions = category === 'vetements' ? getVetementsTypesForGenre(genre) : category === 'sacs' ? getSacsTypesForGenre(genre) : category === 'bijoux' ? getBijouxTypesForGenre(genre) : category === 'chaussures' ? getChaussuresTypesForGenre(genre) : getAccessoiresTypesForGenre(genre);
+                  const articleTypeOptions = category === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : category === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : category === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : category === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
+                  const articleTypeDisplayLabel = articleType
+                    ? (articleType.startsWith('tshirt_polo::') || articleType.startsWith('derbies_richelieu::') ? articleType.split('::')[1] : articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
+                    : '';
+                  const isOptionSelected = (opt: { value: string; label: string }) =>
+                    articleType === opt.value || (articleType.startsWith('tshirt_polo::') && opt.value === 'tshirt_polo' && opt.label === articleType.split('::')[1]);
                   return (
                     <>
                       <button
@@ -964,7 +1021,7 @@ export default function EditListingPage() {
                         {genre.length === 0
                           ? 'Sélectionner Femme et/ou Homme'
                           : articleType
-                            ? (articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
+                            ? (articleTypeDisplayLabel || 'Sélectionner un type de produit')
                             : 'Sélectionner un type de produit'}
                       </button>
                       {typeOpen && genre.length > 0 && (
@@ -988,11 +1045,11 @@ export default function EditListingPage() {
                         >
                           {articleTypeOptions.map((opt) => (
                             <button
-                              key={opt.value}
+                              key={`${opt.value}-${opt.label}`}
                               type="button"
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => {
-                                setArticleType(opt.value);
+                                setArticleType(opt.value === 'tshirt_polo' ? `tshirt_polo::${opt.label}` : opt.value);
                                 setTypeOpen(false);
                               }}
                               style={{
@@ -1002,10 +1059,10 @@ export default function EditListingPage() {
                                 textAlign: 'left',
                                 fontSize: 15,
                                 color: '#1d1d1f',
-                                background: articleType === opt.value ? '#f5f5f7' : 'none',
+                                background: isOptionSelected(opt) ? '#f5f5f7' : 'none',
                                 border: 'none',
                                 cursor: 'pointer',
-                                fontWeight: articleType === opt.value ? 600 : 400,
+                                fontWeight: isOptionSelected(opt) ? 600 : 400,
                               }}
                             >
                               {opt.label}
@@ -1617,7 +1674,7 @@ export default function EditListingPage() {
                   transition={{ duration: 0.25 }}
                 >
             <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Photos <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <label style={labelStyle}>Déposer les photos <span style={{ color: '#1d1d1f' }}>*</span></label>
               <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>
                 La première photo sera l&apos;image principale. Insérez ou supprimez des photos.
               </p>
@@ -1647,12 +1704,23 @@ export default function EditListingPage() {
                       {isDragActive ? 'Déposez ici' : 'Glissez-déposez ou cliquez pour insérer une photo'}
                     </span>
                     <span style={{ fontSize: 12, color: '#86868b' }}>
-                      Maximum {maxPhotos} photos — {Math.round(maxSize / 1024 / 1024)} Mo max
+                      Maximum {maxPhotos} photos — 5 Mo max/photo. Types JPEG, PNG.
                     </span>
                   </div>
                 </div>
               )}
 
+              {photoRejectMessage && (
+                <p style={{ fontSize: 12, color: '#e53935', marginTop: 8, marginBottom: 0 }}>
+                  {photoRejectMessage}
+                </p>
+              )}
+
+              {(existingPhotos.length > 0 || newPhotos.length > 0) && (
+                <p style={{ fontSize: 12, color: '#86868b', marginTop: 8, marginBottom: 0 }}>
+                  Glissez une photo pour modifier l&apos;ordre
+                </p>
+              )}
               {(existingPhotos.length > 0 || newPhotos.length > 0) && (
                 <div
                   style={{
@@ -1662,96 +1730,272 @@ export default function EditListingPage() {
                     marginTop: totalPhotosCount < maxPhotos ? 16 : 0,
                   }}
                 >
-                  {existingPhotos.map((photo, index) => (
-                    <div
-                      key={`existing-${index}`}
-                      style={{
-                        position: 'relative',
-                        aspectRatio: 1,
-                        borderRadius: 12,
-                        overflow: 'hidden',
-                        border: '1px solid #e8e8e8',
-                        backgroundColor: '#fafafa',
-                      }}
-                      onMouseEnter={() => setHoveredExistingIndex(index)}
-                      onMouseLeave={() => setHoveredExistingIndex(null)}
-                    >
-                      <img
-                        src={photo}
-                        alt={`Photo ${index + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExistingPhoto(index)}
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'rgba(0,0,0,0.6)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          opacity: hoveredExistingIndex === index ? 1 : 0,
-                          transition: 'opacity 0.2s',
-                          color: '#fff',
-                          fontSize: 11,
-                          fontWeight: 500,
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Trash2 size={22} />
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  ))}
-                  {newPhotoPreviews.map((url, index) => (
-                    <div
-                      key={`new-${index}`}
-                      style={{
-                        position: 'relative',
-                        aspectRatio: 1,
-                        borderRadius: 12,
-                        overflow: 'hidden',
-                        border: '1px solid #e8e8e8',
-                        backgroundColor: '#fafafa',
-                      }}
-                      onMouseEnter={() => setHoveredNewIndex(index)}
-                      onMouseLeave={() => setHoveredNewIndex(null)}
-                    >
-                      <img
-                        src={url}
-                        alt={`Nouvelle photo ${index + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveNewPhoto(index)}
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          background: 'rgba(0,0,0,0.6)',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 6,
-                          opacity: hoveredNewIndex === index ? 1 : 0,
-                          transition: 'opacity 0.2s',
-                          color: '#fff',
-                          fontSize: 11,
-                          fontWeight: 500,
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Trash2 size={22} />
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  ))}
+                  {(() => {
+                    const dragExisting = draggingPhotoSource === 'existing' && draggingPhotoIndex !== null && photoDropTargetExisting !== null;
+                    const slotsExisting: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = dragExisting
+                      ? (() => {
+                          const rest = existingPhotos.map((url, origIndex) => ({ url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                          return [...rest.slice(0, photoDropTargetExisting!), { type: 'placeholder' as const }, ...rest.slice(photoDropTargetExisting!)];
+                        })()
+                      : existingPhotos.map((url, i) => ({ type: 'photo' as const, url, originalIndex: i }));
+                    return (
+                      <>
+                        {slotsExisting.map((slot, displayIndex) =>
+                          slot.type === 'placeholder' ? (
+                            <div
+                              key="placeholder-existing"
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                                setPhotoDropTargetExisting(displayIndex);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const raw = e.dataTransfer.getData('text/plain');
+                                if (!raw.startsWith('existing-')) return;
+                                const from = parseInt(raw.replace('existing-', ''), 10);
+                                if (!Number.isNaN(from) && from !== displayIndex) reorderExistingPhotos(from, displayIndex);
+                                setDraggingPhotoSource(null);
+                                setDraggingPhotoIndex(null);
+                                setPhotoDropTargetExisting(null);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              style={{
+                                aspectRatio: 1,
+                                borderRadius: 12,
+                                border: '2px dashed #1d1d1f',
+                                backgroundColor: 'rgba(29,29,31,0.06)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#1d1d1f',
+                                fontSize: 11,
+                                fontWeight: 600,
+                                textAlign: 'center',
+                                padding: 4,
+                              }}
+                            >
+                              Déposer ici
+                            </div>
+                          ) : (
+                            <div
+                              key={`existing-${slot.originalIndex}`}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.setData('text/plain', `existing-${slot.originalIndex}`);
+                                e.dataTransfer.effectAllowed = 'move';
+                                setDraggingPhotoSource('existing');
+                                setDraggingPhotoIndex(slot.originalIndex);
+                                setPhotoDropTargetExisting(null);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              onDragEnd={() => {
+                                setDraggingPhotoSource(null);
+                                setDraggingPhotoIndex(null);
+                                setPhotoDropTargetExisting(null);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                                setPhotoDropTargetExisting(displayIndex);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const raw = e.dataTransfer.getData('text/plain');
+                                if (!raw.startsWith('existing-')) return;
+                                const from = parseInt(raw.replace('existing-', ''), 10);
+                                if (!Number.isNaN(from) && from !== displayIndex) reorderExistingPhotos(from, displayIndex);
+                                setDraggingPhotoSource(null);
+                                setDraggingPhotoIndex(null);
+                                setPhotoDropTargetExisting(null);
+                                setPhotoDropTargetNew(null);
+                              }}
+                              style={{
+                                position: 'relative',
+                                aspectRatio: 1,
+                                borderRadius: 12,
+                                overflow: 'hidden',
+                                border: '1px solid #e8e8e8',
+                                backgroundColor: '#fafafa',
+                                cursor: 'grab',
+                                userSelect: 'none',
+                                opacity: draggingPhotoSource === 'existing' && draggingPhotoIndex === slot.originalIndex ? 0.5 : 1,
+                                transition: 'opacity 0.15s ease',
+                              }}
+                              onMouseEnter={() => setHoveredExistingIndex(slot.originalIndex)}
+                              onMouseLeave={() => setHoveredExistingIndex(null)}
+                            >
+                              <img
+                                src={slot.url}
+                                alt={`Photo ${slot.originalIndex + 1}`}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                                draggable={false}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveExistingPhoto(slot.originalIndex)}
+                                style={{
+                                  position: 'absolute',
+                                  inset: 0,
+                                  background: 'rgba(0,0,0,0.6)',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: 6,
+                                  opacity: hoveredExistingIndex === slot.originalIndex ? 1 : 0,
+                                  transition: 'opacity 0.2s',
+                                  color: '#fff',
+                                  fontSize: 11,
+                                  fontWeight: 500,
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  pointerEvents: draggingPhotoSource !== null ? 'none' : 'auto',
+                                }}
+                              >
+                                <Trash2 size={22} />
+                                <span>Supprimer</span>
+                              </button>
+                            </div>
+                          )
+                        )}
+                        {(() => {
+                          const dragNew = draggingPhotoSource === 'new' && draggingPhotoIndex !== null && photoDropTargetNew !== null;
+                          const slotsNew: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = dragNew
+                            ? (() => {
+                                const rest = newPhotoPreviews.map((url, origIndex) => ({ url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                                return [...rest.slice(0, photoDropTargetNew!), { type: 'placeholder' as const }, ...rest.slice(photoDropTargetNew!)];
+                              })()
+                            : newPhotoPreviews.map((url, i) => ({ type: 'photo' as const, url, originalIndex: i }));
+                          return slotsNew.map((slot, displayIndex) =>
+                            slot.type === 'placeholder' ? (
+                              <div
+                                key="placeholder-new"
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  setPhotoDropTargetNew(displayIndex);
+                                  setPhotoDropTargetExisting(null);
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const raw = e.dataTransfer.getData('text/plain');
+                                  if (!raw.startsWith('new-')) return;
+                                  const from = parseInt(raw.replace('new-', ''), 10);
+                                  if (!Number.isNaN(from) && from !== displayIndex) reorderNewPhotos(from, displayIndex);
+                                  setDraggingPhotoSource(null);
+                                  setDraggingPhotoIndex(null);
+                                  setPhotoDropTargetExisting(null);
+                                  setPhotoDropTargetNew(null);
+                                }}
+                                style={{
+                                  aspectRatio: 1,
+                                  borderRadius: 12,
+                                  border: '2px dashed #1d1d1f',
+                                  backgroundColor: 'rgba(29,29,31,0.06)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#1d1d1f',
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  textAlign: 'center',
+                                  padding: 4,
+                                }}
+                              >
+                                Déposer ici
+                              </div>
+                            ) : (
+                              <div
+                                key={`new-${slot.originalIndex}`}
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.setData('text/plain', `new-${slot.originalIndex}`);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  setDraggingPhotoSource('new');
+                                  setDraggingPhotoIndex(slot.originalIndex);
+                                  setPhotoDropTargetExisting(null);
+                                  setPhotoDropTargetNew(null);
+                                }}
+                                onDragEnd={() => {
+                                  setDraggingPhotoSource(null);
+                                  setDraggingPhotoIndex(null);
+                                  setPhotoDropTargetExisting(null);
+                                  setPhotoDropTargetNew(null);
+                                }}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  e.dataTransfer.dropEffect = 'move';
+                                  setPhotoDropTargetNew(displayIndex);
+                                  setPhotoDropTargetExisting(null);
+                                }}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const raw = e.dataTransfer.getData('text/plain');
+                                  if (!raw.startsWith('new-')) return;
+                                  const from = parseInt(raw.replace('new-', ''), 10);
+                                  if (!Number.isNaN(from) && from !== displayIndex) reorderNewPhotos(from, displayIndex);
+                                  setDraggingPhotoSource(null);
+                                  setDraggingPhotoIndex(null);
+                                  setPhotoDropTargetExisting(null);
+                                  setPhotoDropTargetNew(null);
+                                }}
+                                style={{
+                                  position: 'relative',
+                                  aspectRatio: 1,
+                                  borderRadius: 12,
+                                  overflow: 'hidden',
+                                  border: '1px solid #e8e8e8',
+                                  backgroundColor: '#fafafa',
+                                  cursor: 'grab',
+                                  userSelect: 'none',
+                                  opacity: draggingPhotoSource === 'new' && draggingPhotoIndex === slot.originalIndex ? 0.5 : 1,
+                                  transition: 'opacity 0.15s ease',
+                                }}
+                                onMouseEnter={() => setHoveredNewIndex(slot.originalIndex)}
+                                onMouseLeave={() => setHoveredNewIndex(null)}
+                              >
+                                <img
+                                  src={slot.url}
+                                  alt={`Nouvelle photo ${slot.originalIndex + 1}`}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
+                                  draggable={false}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveNewPhoto(slot.originalIndex)}
+                                  style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    background: 'rgba(0,0,0,0.6)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 6,
+                                    opacity: hoveredNewIndex === slot.originalIndex ? 1 : 0,
+                                    transition: 'opacity 0.2s',
+                                    color: '#fff',
+                                    fontSize: 11,
+                                    fontWeight: 500,
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    pointerEvents: draggingPhotoSource !== null ? 'none' : 'auto',
+                                  }}
+                                >
+                                  <Trash2 size={22} />
+                                  <span>Supprimer</span>
+                                </button>
+                              </div>
+                            )
+                          );
+                        })()}
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </div>
@@ -1905,7 +2149,7 @@ export default function EditListingPage() {
               <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 5000" style={inputStyle} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-              <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} style={{ width: 20, height: 20, accentColor: '#1d1d1f' }} />
+              <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#1d1d1f', marginLeft: 4 }} />
               <label htmlFor="isActive" style={{ fontSize: 14, color: '#333' }}>Annonce active (visible dans le catalogue)</label>
             </div>
             <CguCgvCheckbox
