@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X, LineChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, getSellerListings, getListings, incrementPhoneReveals, getVisitorId } from '@/lib/supabase/listings';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
@@ -676,11 +676,14 @@ export default function ProductPage() {
               {/* Détails — reste de la ligne */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                {categoryLabel && listing.category && (
-                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
-                    {categoryLabel}
-                  </Link>
-                )}
+                {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
+                  const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                  return typeLabel ? (
+                    <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
+                      {typeLabel}
+                    </Link>
+                  ) : null;
+                })()}
                 {listing.brand && (
                   <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                     {listing.brand}
@@ -781,7 +784,7 @@ export default function ProductPage() {
               </div>
 
               {seller && (
-                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
+                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 8, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
@@ -1047,7 +1050,7 @@ export default function ProductPage() {
               {/* Section Prix — design type barre de comparaison (offre et prix) */}
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
                 <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
-                  <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
+                  <LineChart size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Indicateur de marché
                 </h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -1429,7 +1432,7 @@ export default function ProductPage() {
                 {/* Section Prix - mobile */}
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
                   <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
-                    <Euro size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
+                    <LineChart size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                     Indicateur de marché
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -1505,9 +1508,12 @@ export default function ProductPage() {
 
             {/* Details */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {categoryLabel && listing.category && (
-                <Link href={`/catalogue?category=${encodeURIComponent(listing.category)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
-              )}
+              {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
+                const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                return typeLabel ? (
+                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{typeLabel}</Link>
+                ) : null;
+              })()}
               {listing.brand && (
                 <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
               )}
@@ -1599,7 +1605,7 @@ export default function ProductPage() {
             </div>
 
             {seller && (
-              <div style={{ padding: 24, backgroundColor: '#fafafb', borderRadius: 18 }}>
+              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 8, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                   <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {seller.avatarUrl ? (

@@ -48,6 +48,9 @@ function rowToListing(row: any): Listing {
   };
 }
 
+/** Colonnes nécessaires pour rowToListing — select explicite pour alléger le payload et le cache. */
+const LISTING_SELECT = 'id,seller_id,seller_name,title,description,price,category,genre,photos,likes_count,listing_number,is_active,created_at,updated_at,brand,model,condition,material,color,height_cm,width_cm,year,packaging,size,phone_reveals_count,article_type';
+
 /** Génère le prochain numéro d'annonce (unique à vie, jamais réutilisé). Utilise la séquence Supabase. */
 export async function getNextListingNumber(): Promise<string> {
   const client = checkSupabase();
@@ -159,7 +162,7 @@ export async function getListing(listingId: string): Promise<Listing | null> {
   
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_SELECT)
     .eq('id', listingId)
     .single();
 
@@ -215,7 +218,7 @@ export async function getListings(options?: {
 
   let query = supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_SELECT)
     .eq('is_active', true);
 
   const cats = categories?.length ? categories : (category ? [category] : undefined);
@@ -377,7 +380,7 @@ export async function getSellerListings(sellerId: string): Promise<Listing[]> {
   
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_SELECT)
     .eq('seller_id', sellerId)
     .order('created_at', { ascending: false });
 
@@ -466,7 +469,7 @@ export async function getFeaturedListings(limitCount = 8): Promise<Listing[]> {
   
   const { data, error } = await supabase
     .from('listings')
-    .select('*')
+    .select(LISTING_SELECT)
     .eq('is_active', true)
     .order('likes_count', { ascending: false })
     .limit(limitCount);

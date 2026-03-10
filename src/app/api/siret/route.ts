@@ -73,15 +73,17 @@ export async function GET(request: NextRequest) {
       }
     }
     if (!data?.results?.length) {
-      return NextResponse.json({ companyName: null, address: null });
+      const res = NextResponse.json({ companyName: null, address: null });
+      res.headers.set('Cache-Control', 'private, max-age=60');
+      return res;
     }
     const first = data.results[0];
     const companyName = getCompanyName(first);
     const address = buildAddress(first.siege, first.adresse as string);
-    return NextResponse.json({
-      companyName: companyName || null,
-      address: address || null,
-    });
+    const payload = { companyName: companyName || null, address: address || null };
+    const res = NextResponse.json(payload);
+    res.headers.set('Cache-Control', 'private, max-age=60');
+    return res;
   } catch (err) {
     console.error('SIRET API error:', err);
     return NextResponse.json(

@@ -1734,7 +1734,7 @@ export default function EditListingPage() {
                     const dragExisting = draggingPhotoSource === 'existing' && draggingPhotoIndex !== null && photoDropTargetExisting !== null;
                     const slotsExisting: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = dragExisting
                       ? (() => {
-                          const rest = existingPhotos.map((url, origIndex) => ({ url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                          const rest = existingPhotos.map((url, origIndex) => ({ type: 'photo' as const, url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
                           return [...rest.slice(0, photoDropTargetExisting!), { type: 'placeholder' as const }, ...rest.slice(photoDropTargetExisting!)];
                         })()
                       : existingPhotos.map((url, i) => ({ type: 'photo' as const, url, originalIndex: i }));
@@ -1866,7 +1866,7 @@ export default function EditListingPage() {
                           const dragNew = draggingPhotoSource === 'new' && draggingPhotoIndex !== null && photoDropTargetNew !== null;
                           const slotsNew: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = dragNew
                             ? (() => {
-                                const rest = newPhotoPreviews.map((url, origIndex) => ({ url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                                const rest = newPhotoPreviews.map((url, origIndex) => ({ type: 'photo' as const, url, originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
                                 return [...rest.slice(0, photoDropTargetNew!), { type: 'placeholder' as const }, ...rest.slice(photoDropTargetNew!)];
                               })()
                             : newPhotoPreviews.map((url, i) => ({ type: 'photo' as const, url, originalIndex: i }));

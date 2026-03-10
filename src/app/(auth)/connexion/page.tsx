@@ -21,7 +21,13 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const safeRedirect = redirect && redirect.startsWith('/') ? redirect : '/';
+  const safeRedirect = (() => {
+    if (!redirect || typeof redirect !== 'string') return '/';
+    const p = redirect.trim();
+    if (p !== '/' && !p.startsWith('/')) return '/';
+    if (p.startsWith('//')) return '/';
+    return p;
+  })();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

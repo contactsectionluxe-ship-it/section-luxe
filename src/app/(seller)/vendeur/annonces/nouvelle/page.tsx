@@ -1571,7 +1571,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     const isDragging = draggingPhotoIndex !== null && photoDropTargetIndex !== null;
                     const displaySlots: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = isDragging
                       ? (() => {
-                          const rest = photos.map((_, origIndex) => ({ url: photoPreviews[origIndex], originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                          const rest = photos.map((_, origIndex) => ({ type: 'photo' as const, url: photoPreviews[origIndex], originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
                           return [
                             ...rest.slice(0, photoDropTargetIndex),
                             { type: 'placeholder' as const },

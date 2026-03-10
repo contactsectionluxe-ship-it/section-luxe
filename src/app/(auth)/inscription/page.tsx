@@ -22,7 +22,13 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect');
-  const safeRedirect = redirect && redirect.startsWith('/') ? redirect : '/';
+  const safeRedirect = (() => {
+    if (!redirect || typeof redirect !== 'string') return '/';
+    const p = redirect.trim();
+    if (p !== '/' && !p.startsWith('/')) return '/';
+    if (p.startsWith('//')) return '/';
+    return p;
+  })();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
