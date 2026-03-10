@@ -27,7 +27,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   /** Cache de build hors iCloud : évite l’erreur 500 quand le projet est dans iCloud (fichiers non synchronisés). */
-  distDir: '.nosync/.next',
+  distDir: process.env.VERCEL ? '.next' : '.nosync/.next',
   experimental: {
     serverActions: { bodySizeLimit: '50mb' },
   },
