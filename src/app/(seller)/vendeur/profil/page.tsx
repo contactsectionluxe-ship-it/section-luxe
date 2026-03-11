@@ -49,6 +49,10 @@ export default function ProfilVendeurPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // aperçu local avant envoi
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  /** Après un upload réussi, ne pas écraser avatarUrl avec seller (refreshUser peut renvoyer l’ancienne valeur). */
+  const skipNextAvatarSyncRef = useRef(false);
+  /** Cache buster pour forcer l’affichage de la nouvelle photo après upload (même URL Supabase). */
+  const avatarDisplayKeyRef = useRef<number | null>(null);
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteCompanyName, setDeleteCompanyName] = useState('');
@@ -69,7 +73,12 @@ export default function ProfilVendeurPage() {
       setCity(seller.city ?? '');
       setPostcode(seller.postcode ?? '');
       setDescription(seller.description);
-      setAvatarUrl(prev => seller.avatarUrl ?? prev ?? null);
+      if (skipNextAvatarSyncRef.current) {
+        skipNextAvatarSyncRef.current = false;
+      } else {
+        setAvatarUrl(prev => seller.avatarUrl ?? prev ?? null);
+        if (seller.avatarUrl) avatarDisplayKeyRef.current = Date.now();
+      }
       setLoading(false);
     }
   }, [authLoading, user, seller, router]);
@@ -100,6 +109,8 @@ export default function ProfilVendeurPage() {
       await updateSellerProfile(user.uid, { avatarUrl: url });
       URL.revokeObjectURL(preview);
       setAvatarPreview(null);
+      skipNextAvatarSyncRef.current = true;
+      avatarDisplayKeyRef.current = Date.now();
       setAvatarUrl(url);
       await refreshUser();
     } catch (err) {
@@ -217,16 +228,16 @@ export default function ProfilVendeurPage() {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
             <input
               ref={fileInputRef}
+              id="avatar-upload"
               type="file"
               accept={ACCEPT_IMAGES}
               onChange={handleAvatarChange}
-              style={{ display: 'none' }}
+              style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}
               disabled={avatarUploading}
+              aria-label="Choisir une photo de profil"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={avatarUploading}
+            <label
+              htmlFor="avatar-upload"
               style={{
                 position: 'relative',
                 width: 100,
@@ -237,11 +248,15 @@ export default function ProfilVendeurPage() {
                 background: avatarUrl ? undefined : '#f5f5f7',
                 cursor: avatarUploading ? 'not-allowed' : 'pointer',
                 padding: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                pointerEvents: avatarUploading ? 'none' : 'auto',
               }}
             >
               {(avatarPreview || avatarUrl) ? (
                 <img
-                  src={avatarPreview ?? avatarUrl ?? ''}
+                  src={avatarPreview ?? (avatarUrl ? `${avatarUrl}${avatarDisplayKeyRef.current ? `?t=${avatarDisplayKeyRef.current}` : ''}` : '')}
                   alt="Photo de profil"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
@@ -253,7 +268,7 @@ export default function ProfilVendeurPage() {
                   <span style={{ color: '#fff', fontSize: 12 }}>...</span>
                 </div>
               )}
-            </button>
+            </label>
             <span style={{ marginTop: 10, fontSize: 13, color: '#666' }}>
               {avatarUploading ? 'Envoi en cours...' : 'Cliquez pour ajouter ou modifier la photo'}
             </span>

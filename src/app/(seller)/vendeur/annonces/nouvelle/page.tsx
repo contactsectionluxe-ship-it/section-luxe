@@ -15,7 +15,7 @@ import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -64,6 +64,8 @@ type NewListingDraft = {
   customColor?: string;
   size?: string;
   sizeSearchQuery?: string;
+  /** Partie du titre après "Marque - " (personnalisable) */
+  titleSuffix?: string;
   description?: string;
   heightCm?: string;
   widthCm?: string;
@@ -113,6 +115,8 @@ function NewListingContent() {
   const [size, setSize] = useState('');
   const [sizeSearchQuery, setSizeSearchQuery] = useState('');
   const [sizeOpen, setSizeOpen] = useState(false);
+  /** Partie du titre après "Marque - " (personnalisable par le vendeur) */
+  const [titleSuffix, setTitleSuffix] = useState('');
   const [description, setDescription] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [widthCm, setWidthCm] = useState('');
@@ -152,6 +156,7 @@ function NewListingContent() {
       if (d.customColor != null) setCustomColor(d.customColor);
       if (d.size != null) setSize(d.size);
       if (d.sizeSearchQuery != null) setSizeSearchQuery(d.sizeSearchQuery);
+      if (d.titleSuffix != null) setTitleSuffix(d.titleSuffix);
       if (d.description != null) setDescription(d.description);
       if (d.heightCm != null) setHeightCm(d.heightCm);
       if (d.widthCm != null) setWidthCm(d.widthCm);
@@ -166,10 +171,12 @@ function NewListingContent() {
 
   // Sauvegarder le brouillon complet (sessionStorage) à chaque modification + quand on quitte l'onglet
   const draftPayloadRef = useRef<NewListingDraft>({});
+  /** Si false, le titre est resynchronisé avec le titre suggéré quand marque / modèle / type changent. */
+  const titleManuallyEditedRef = useRef(false);
   draftPayloadRef.current = {
     step, category, genre, articleType, customCategory, brand, customBrand, marqueSearchQuery,
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
-    color, colorSearchQuery, customColor, size, sizeSearchQuery, description, heightCm, widthCm, year,
+    color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     contenuInclus, price, acceptCguCgv,
   };
   useEffect(() => {
@@ -190,7 +197,7 @@ function NewListingContent() {
   }, [
     step, category, genre?.join(','), articleType, customCategory, brand, customBrand, marqueSearchQuery,
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
-    color, colorSearchQuery, customColor, size, sizeSearchQuery, description, heightCm, widthCm, year,
+    color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     JSON.stringify(contenuInclus), price, acceptCguCgv,
   ]);
   useEffect(() => {
@@ -391,6 +398,16 @@ function NewListingContent() {
   // Couleurs selon catégorie (sans "Autre" : saisie libre dans le champ)
   const colorOptions = category ? (COLORS_BY_CATEGORY[category] ?? COLORS).filter((o) => o.value !== 'other') : [];
 
+  // Resynchroniser la partie personnalisable du titre quand le modèle ou le type changent (sauf si le vendeur l'a modifiée à la main)
+  useEffect(() => {
+    if (titleManuallyEditedRef.current) return;
+    const categoryLabel = category === 'autre' ? customCategory.trim() : (CATEGORIES.find((c) => c.value === category)?.label || category);
+    const modelForTitle = modelOptions.length > 0 ? (model || modeleSearchQuery.trim() || null) : (customModel.trim() || null);
+    const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
+    const suggested = [typeLabelForTitle, modelForTitle].filter(Boolean).join(' ').trim() || categoryLabel || '';
+    setTitleSuffix(suggested);
+  }, [category, customCategory, brand, marqueSearchQuery, model, modeleSearchQuery, customModel, genre, articleType, modelOptions.length]);
+
   if (authLoading) return <PageLoader />;
   if (!isApprovedSeller) {
     router.push('/vendeur');
@@ -496,14 +513,15 @@ if (modelOptions.length > 0) {
       const materialToSave = (material || materialSearchQuery.trim() || null) || null;
       const colorToSave = (color || colorSearchQuery.trim() || null) || null;
       const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
-      const title = modelToSave ? `${brandToSave} - ${modelToSave}` : `${brandToSave} - ${typeLabelForTitle || categoryLabel}`;
+      const suggestedSuffix = [typeLabelForTitle, modelToSave].filter(Boolean).join(' ').trim() || categoryLabel || '';
+      const finalTitle = brandToSave ? `${brandToSave} - ${(titleSuffix.trim() || suggestedSuffix).trim()}` : (titleSuffix.trim() || suggestedSuffix).trim();
       const priceNum = parseFloat(price.replace(',', '.'));
 
       // Créer l'annonce d'abord (sans photos) pour obtenir un id existant en base
       const listingId = await createListing({
         sellerId: user!.uid,
         sellerName: seller!.companyName,
-        title,
+        title: finalTitle,
         description: description.trim() || '',
         price: priceNum,
         category: (category === 'autre' ? customCategory.trim() : category) as ListingCategory,
@@ -1126,10 +1144,11 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       const m = (model || modeleSearchQuery.trim()).toLowerCase();
                       const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
                       const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
+                      const isRobe = category === 'vetements' && articleType === 'robe';
                       const options = category === 'chaussures'
                         ? getShoeSizesForGenre(genre)
-                        : (isPantalon || isJean
-                          ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : [])]
+                        : (isPantalon || isJean || isRobe
+                          ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : []), ...(isRobe ? [...ROBE_SIZES] : [])]
                           : [...CLOTHING_SIZES]);
                       const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
                       if (filtered.length === 0) return null;
@@ -1749,6 +1768,42 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.25 }}
               >
+                {(() => {
+                  const categoryLabel = category === 'autre' ? customCategory.trim() : (CATEGORIES.find((c) => c.value === category)?.label || category);
+                  const brandForTitle = (brand.trim() || marqueSearchQuery.trim()).trim();
+                  const modelForTitle = modelOptions.length > 0 ? (model || modeleSearchQuery.trim() || null) : (customModel.trim() || null);
+                  const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
+                  const suggestedSuffix = [typeLabelForTitle, modelForTitle].filter(Boolean).join(' ').trim() || categoryLabel || '';
+                  const titlePrefix = brandForTitle ? `${brandForTitle} - ` : '';
+                  return (
+                <>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Titre</label>
+                  <div style={{ display: 'flex', alignItems: 'center', height: 50, border: '1px solid #d2d2d7', borderRadius: 12, padding: '0 16px', fontSize: 15, background: '#fff', boxSizing: 'border-box' }}>
+                    <span style={{ color: '#86868b', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {titlePrefix || 'Marque - '}
+                    </span>
+                    <input
+                      type="text"
+                      value={titleSuffix}
+                      onChange={(e) => {
+                        titleManuallyEditedRef.current = true;
+                        setTitleSuffix(e.target.value);
+                      }}
+                      placeholder={suggestedSuffix || 'Modèle ou type'}
+                      style={{
+                        ...inputStyle,
+                        flex: 1,
+                        minWidth: 0,
+                        border: 'none',
+                        padding: 0,
+                        marginLeft: 2,
+                        fontSize: 15,
+                        background: 'transparent',
+                      }}
+                    />
+                  </div>
+                </div>
                 <div style={{ marginBottom: 18 }}>
                   <label style={labelStyle}>Description</label>
                   <textarea
@@ -1768,6 +1823,9 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     }}
                   />
                 </div>
+                </>
+                  );
+                })()}
                 {(category !== 'chaussures' && category !== 'vetements') && (
                 category === 'montres' ? (
                   <div style={{ marginBottom: 18 }}>

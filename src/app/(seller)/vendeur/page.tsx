@@ -11,7 +11,6 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { CATEGORIES } from '@/lib/utils';
-import { getArticleTypeLabel } from '@/lib/constants';
 import { ListingPhoto } from '@/components/ListingPhoto';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
@@ -383,12 +382,7 @@ export default function SellerDashboardPage() {
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {(() => {
-                            const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
-                            const marque = listing.brand || listing.title;
-                            const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
-                              ? (listing.model ?? '')
-                              : [typeLabel, listing.model].filter(Boolean).join(' ');
-                            const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                            const lineText = listing.title || '';
                             return (
                               <h3 title={lineText} style={{ fontSize: 15, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lineText}</h3>
                             );

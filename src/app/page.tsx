@@ -7,7 +7,6 @@ import { getFeaturedListings } from '@/lib/supabase/listings';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
-import { getArticleTypeLabel } from '@/lib/constants';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -455,6 +454,8 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* Grille avec hauteur min pour éviter le saut du footer au refresh */}
+          <div style={{ minHeight: 920 }}>
           {loading ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {Array.from({ length: 12 }, (_, i) => (
@@ -551,12 +552,7 @@ export default function HomePage() {
                         )}
                       </p>
                       {(() => {
-                        const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
-                        const marque = listing.brand || listing.title;
-                        const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
-                          ? (listing.model ?? '')
-                          : [typeLabel, listing.model].filter(Boolean).join(' ');
-                        const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                        const lineText = listing.title || '';
                         return (
                           <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                             {lineText}
@@ -595,6 +591,7 @@ export default function HomePage() {
               </Link>
             </div>
           )}
+          </div>
         </div>
       </section>
 

@@ -722,13 +722,16 @@ export function modelMatchesArticleType(modelName: string, articleType: string, 
 }
 
 /** Tailles vêtements (dépôt annonce + filtre catalogue) */
-export const CLOTHING_SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
+export const CLOTHING_SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'] as const;
 
 /** Tailles pantalon (numériques). À ajouter en plus de XS/S/M... quand le modèle est un pantalon. */
 export const PANT_SIZES_HOMME = ['38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58'] as const;
 export const PANT_SIZES_FEMME = ['32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52'] as const;
 /** Mix (homme+femme) ou quand aucun genre n’est précisé : 32 à 58. */
 export const PANT_SIZES_MIX = ['32', '34', '36', '38', '40', '42', '44', '46', '48', '50', '52', '54', '56', '58'] as const;
+
+/** Tailles robe (numériques 32 à 46, pas de 2). En plus des tailles standard quand le type est robe. */
+export const ROBE_SIZES = ['32', '34', '36', '38', '40', '42', '44', '46'] as const;
 
 export function getPantSizesForGenre(genre: ('homme' | 'femme')[] | null | undefined): string[] {
   const g = genre ?? [];

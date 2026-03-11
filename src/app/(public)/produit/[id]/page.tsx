@@ -10,13 +10,14 @@ import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorit
 import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
-import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS, getArticleTypeLabel } from '@/lib/constants';
+import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
+import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
 import { ListingPhoto } from '@/components/ListingPhoto';
 
-/** Titre d’annonce comme dans le catalogue : marque - type modèle (pour vêtements avec " & " dans le type : seulement modèle). */
+/** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
 function getListingDisplayTitle(listing: Listing): string {
+  if (listing.title && listing.title.trim()) return listing.title;
   const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
   const marque = listing.brand || listing.title;
   const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
@@ -79,7 +80,7 @@ export default function ProductPage() {
   const [contactFormSubmitting, setContactFormSubmitting] = useState(false);
   const [contactFormError, setContactFormError] = useState('');
   const [showMapPopup, setShowMapPopup] = useState(false);
-  const [mapZoom, setMapZoom] = useState(15);
+  const [mapZoom, setMapZoom] = useState(13);
   const [sellerListingsCount, setSellerListingsCount] = useState(0);
   const [showMoreAbout, setShowMoreAbout] = useState(false);
   const [showPrixEnSavoirPlus, setShowPrixEnSavoirPlus] = useState(false);
@@ -547,7 +548,7 @@ export default function ProductPage() {
                   </div>
                   <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                      <div className="catalogue-skeleton" style={{ width: 80, height: 80, borderRadius: '50%', flexShrink: 0 }} />
+                      <div className="catalogue-skeleton" style={{ width: 64, height: 64, borderRadius: 10, flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
                         <div className="catalogue-skeleton" style={{ height: 24, width: '70%', marginBottom: 8, borderRadius: 4 }} />
                         <div className="catalogue-skeleton" style={{ height: 14, width: 140, borderRadius: 4 }} />
@@ -601,7 +602,7 @@ export default function ProductPage() {
               <div className="catalogue-skeleton" style={{ height: 24, width: 100, borderRadius: 4 }} />
               <div style={{ padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                  <div className="catalogue-skeleton" style={{ width: 80, height: 80, borderRadius: '50%' }} />
+                  <div className="catalogue-skeleton" style={{ width: 64, height: 64, borderRadius: 10 }} />
                   <div>
                     <div className="catalogue-skeleton" style={{ height: 22, width: 140, marginBottom: 6, borderRadius: 4 }} />
                     <div className="catalogue-skeleton" style={{ height: 14, width: 120, borderRadius: 4 }} />
@@ -676,6 +677,11 @@ export default function ProductPage() {
               {/* Détails — reste de la ligne */}
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {listing.category === 'montres' && categoryLabel && (
+                  <Link href={`/catalogue?category=montres`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
+                    {categoryLabel}
+                  </Link>
+                )}
                 {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
                   const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
                   return typeLabel ? (
@@ -784,11 +790,11 @@ export default function ProductPage() {
               </div>
 
               {seller && (
-                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 8, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 80, height: 80, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
-                        <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <Store size={40} color="#888" />
                       )}
@@ -804,7 +810,7 @@ export default function ProductPage() {
                     <button
                       type="button"
                       onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }}
-                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                     >
                       {showPhone ? (
                         <span style={{ fontSize: 18 }}>{formatPhoneDisplay(seller.phone)}</span>
@@ -818,7 +824,7 @@ export default function ProductPage() {
                     <button
                       type="button"
                       onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }}
-                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}
+                      style={{ flex: 1, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                     >
                       <MessageCircle size={18} />
                       <span style={{ fontSize: 16 }}>Message</span>
@@ -827,8 +833,8 @@ export default function ProductPage() {
                   {seller.address && (
                     <button
                       type="button"
-                      onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                      style={{ width: '100%', marginTop: 12, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                      onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
+                      style={{ width: '100%', marginTop: 12, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                     >
                       <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
                       <span style={{ fontSize: 16 }}>{seller.postcode}</span>
@@ -996,7 +1002,7 @@ export default function ProductPage() {
                           <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
                     {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
@@ -1132,9 +1138,9 @@ export default function ProductPage() {
               </h2>
               <div style={{ maxWidth: 480 }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {seller.avatarUrl ? (
-                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Store size={40} color="#888" />
                     )}
@@ -1183,8 +1189,8 @@ export default function ProductPage() {
                 {(seller.address || seller.postcode || seller.city) && (
                   <button
                     type="button"
-                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                    style={{ width: '100%', marginTop: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                    onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
+                    style={{ width: '100%', marginTop: 0, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                   >
                     <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 16 }}>{seller.postcode}</span>
@@ -1199,7 +1205,7 @@ export default function ProductPage() {
           </div>
           {/* Section publicité — même largeur que cadre vendeur, uniquement sur PC (pas sur téléphone) */}
           <div className="hide-mobile" style={{ minWidth: 0, alignSelf: 'stretch', display: 'flex', flexDirection: 'column', paddingLeft: 32 }}>
-            <div ref={pubVideoWrapRef} style={{ width: '100%', flex: 1, minHeight: 300, padding: '20px 0', backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e5e5e7', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div ref={pubVideoWrapRef} style={{ width: '100%', flex: 1, minHeight: 300, padding: '20px 0', backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
                 <p style={{ margin: 0, fontSize: 14, color: '#888' }}>Publicité</p>
               </div>
@@ -1378,7 +1384,7 @@ export default function ProductPage() {
                           <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.category === 'chaussures' ? `${listing.size} EU` : listing.size}</span>
+                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
                       </div>
                     )}
                     {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
@@ -1508,6 +1514,9 @@ export default function ProductPage() {
 
             {/* Details */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+              {listing.category === 'montres' && categoryLabel && (
+                <Link href={`/catalogue?category=montres`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
+              )}
               {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
                 const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
                 return typeLabel ? (
@@ -1605,11 +1614,11 @@ export default function ProductPage() {
             </div>
 
             {seller && (
-              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 8, border: '1px solid #e8e6e3', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>
+              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 68, height: 68, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     {seller.avatarUrl ? (
-                      <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
                       <Store size={34} color="#888" />
                     )}
@@ -1622,7 +1631,7 @@ export default function ProductPage() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
                     {showPhone ? (
                       <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
                     ) : (
@@ -1632,7 +1641,7 @@ export default function ProductPage() {
                       </>
                     )}
                   </button>
-                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
                     <MessageCircle size={16} />
                     <span style={{ fontSize: 15 }}>Message</span>
                   </button>
@@ -1640,8 +1649,8 @@ export default function ProductPage() {
                 {seller.address && (
                   <button
                     type="button"
-                    onClick={() => { setMapZoom(15); setShowMapPopup(true); }}
-                    style={{ width: '100%', marginTop: 12, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                    onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
+                    style={{ width: '100%', marginTop: 12, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
                   >
                     <MapPin size={16} color="#1d1d1f" style={{ flexShrink: 0 }} />
                     <span style={{ fontSize: 15 }}>{seller.postcode}</span>

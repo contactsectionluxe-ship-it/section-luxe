@@ -10,7 +10,7 @@ import { recordListingDeletion } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS } from '@/lib/constants';
+import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
 const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
 
@@ -379,7 +379,7 @@ export default function VoirAnnoncePage() {
                       <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                       <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
                     </div>
-                    <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.size}</span>
+                    <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
                   </div>
                 )}
 {(listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null)) && (

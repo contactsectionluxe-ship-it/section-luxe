@@ -22,6 +22,13 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
+/** URL de l'avatar vendeur avec cache-buster (updated_at) pour afficher la photo à jour partout. */
+export function getSellerAvatarUrl(seller: { avatarUrl?: string | null; updatedAt?: Date } | null): string | null {
+  if (!seller?.avatarUrl) return null;
+  const t = seller.updatedAt instanceof Date ? seller.updatedAt.getTime() : 0;
+  return `${seller.avatarUrl}${seller.avatarUrl.includes('?') ? '&' : '?'}t=${t}`;
+}
+
 export function formatRelativeTime(date: Date): string {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);

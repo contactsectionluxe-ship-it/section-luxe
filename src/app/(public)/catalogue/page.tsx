@@ -5,13 +5,13 @@ import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
-import { getListings, getDistinctSizesForCategory } from '@/lib/supabase/listings';
+import { getListings, getDistinctSizesForCategory, getDistinctSizesForCategoryAndArticleTypes } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
 import { getDealLevel } from '@/lib/deal';
 import { useAuth } from '@/hooks/useAuth';
 import { Listing, Seller } from '@/types';
-import { CATEGORIES, formatDate } from '@/lib/utils';
+import { CATEGORIES, formatDate, getSellerAvatarUrl } from '@/lib/utils';
 import {
   BRANDS_BY_CATEGORY,
   CATEGORY_TO_BRAND_KEYS,
@@ -36,8 +36,6 @@ import {
   CONDITIONS,
   COLORS,
   MATERIALS,
-  JEAN_SIZES_MIX,
-  PANT_SIZES_MIX,
   REGIONS_FR,
   DEPARTEMENTS_FR,
   SHOE_SIZES,
@@ -420,7 +418,6 @@ function CatalogueContent() {
   const modeleDropdownRef = useRef<HTMLDivElement>(null);
   const [modeleSearchQuery, setModeleSearchQuery] = useState('');
   const tailleDropdownRef = useRef<HTMLDivElement>(null);
-  const tailleMontresDropdownRef = useRef<HTMLDivElement>(null);
   const pointureDropdownRef = useRef<HTMLDivElement>(null);
   const [pointureSearchQuery, setPointureSearchQuery] = useState('');
   const colorDropdownRef = useRef<HTMLDivElement>(null);
@@ -430,7 +427,6 @@ function CatalogueContent() {
   const marqueDropdownOpen = openDropdown === 'marque';
   const modeleDropdownOpen = openDropdown === 'modele';
   const tailleDropdownOpen = openDropdown === 'taille';
-  const tailleMontresDropdownOpen = openDropdown === 'tailleMontres';
   const pointureDropdownOpen = openDropdown === 'pointure';
   const colorDropdownOpen = openDropdown === 'color';
   const materialDropdownOpen = openDropdown === 'material';
@@ -759,7 +755,11 @@ function CatalogueContent() {
   const [showAuthModalFavoris, setShowAuthModalFavoris] = useState(false);
   /** Tailles de montres présentes dans les annonces (rempli quand catégorie montres est sélectionnée). */
   const [montresSizeOptions, setMontresSizeOptions] = useState<string[]>([]);
-  const [mapZoom, setMapZoom] = useState(15);
+  /** Tailles pantalon / jean / robe présentes dans les annonces (rempli quand catégorie vêtements est sélectionnée). */
+  const [pantalonSizeOptions, setPantalonSizeOptions] = useState<string[]>([]);
+  const [jeanSizeOptions, setJeanSizeOptions] = useState<string[]>([]);
+  const [robeSizeOptions, setRobeSizeOptions] = useState<string[]>([]);
+  const [mapZoom, setMapZoom] = useState(13);
   /** Évite que l'effet "retirer condition" ne s'exécute juste après une synchro URL → filtres (clic Neuf/Occasion). */
   const justSyncedConditionFromUrlRef = useRef(false);
   /** Quand true, les filtres viennent d'être mis à jour depuis le lien Neuf/Occasion ; ne pas resynchroniser vers l'URL (évite boucle). */
@@ -1265,6 +1265,30 @@ function CatalogueContent() {
     return () => { cancelled = true; };
   }, [filters.categories, filters.category]);
 
+  /** Charger les tailles pantalon / jean / robe présentes en annonces quand la catégorie vêtements est sélectionnée. */
+  useEffect(() => {
+    const types = filters.categories ?? (filters.category ? [filters.category] : []);
+    if (!types.includes('vetements')) {
+      setPantalonSizeOptions([]);
+      setJeanSizeOptions([]);
+      setRobeSizeOptions([]);
+      return;
+    }
+    let cancelled = false;
+    Promise.all([
+      getDistinctSizesForCategoryAndArticleTypes('vetements', ['pantalon', 'pantalon_short']),
+      getDistinctSizesForCategoryAndArticleTypes('vetements', ['jean']),
+      getDistinctSizesForCategoryAndArticleTypes('vetements', ['robe']),
+    ]).then(([pantalon, jean, robe]) => {
+      if (!cancelled) {
+        setPantalonSizeOptions(pantalon);
+        setJeanSizeOptions(jean);
+        setRobeSizeOptions(robe);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [filters.categories, filters.category]);
+
   /** Fermer le menu au clic extérieur ou Escape (un seul menu ouvert à la fois). Fermer aussi le tri « Plus récents » au clic à côté. */
   useEffect(() => {
     const ref =
@@ -1273,7 +1297,6 @@ function CatalogueContent() {
       openDropdown === 'marque' ? marqueDropdownRef :
       openDropdown === 'modele' ? modeleDropdownRef :
       openDropdown === 'taille' ? tailleDropdownRef :
-      openDropdown === 'tailleMontres' ? tailleMontresDropdownRef :
       openDropdown === 'pointure' ? pointureDropdownRef :
       openDropdown === 'color' ? colorDropdownRef :
       materialDropdownRef;
@@ -1361,20 +1384,43 @@ function CatalogueContent() {
   const hasJeanModel = selectedModels.some((m) => normalizeForSearch(m).includes('jean'));
   const hasPantalonType = selectedArticleTypeValues.includes('pantalon') || selectedArticleTypeValues.includes('pantalon_short');
   const hasJeanType = selectedArticleTypeValues.includes('jean');
-  const showPantSizes = hasPantalonModel || hasPantalonType;
-  const showJeanSizes = hasJeanModel || hasJeanType;
-  /** Toutes les options de taille vêtements : toujours afficher standard + pantalon + jean quand catégorie vêtements. */
+  const hasRobeType = selectedArticleTypeValues.includes('robe');
+  /** Si catégorie vêtements sans filtre par type : afficher toutes les tailles spécifiques. */
+  const noVetementsTypeSelected = selectedTypes.includes('vetements') && selectedArticleTypeValues.length === 0;
+  const showPantSizes = hasPantalonModel || hasPantalonType || noVetementsTypeSelected;
+  const showJeanSizes = hasJeanModel || hasJeanType || noVetementsTypeSelected;
+  const showRobeSizes = hasRobeType || noVetementsTypeSelected;
+  /** Options de taille vêtements : taille standard + tailles spécifiques présentes en annonces (pantalon, jean, robe) ; on n’affiche une catégorie que si au moins une taille existe. */
   const clothingSizeOptions = (selectedTypes.includes('vetements')
-    ? [...new Set([...CLOTHING_SIZES, ...PANT_SIZES_MIX, ...JEAN_SIZES_MIX])]
+    ? [...new Set([
+        ...CLOTHING_SIZES,
+        ...(showPantSizes && pantalonSizeOptions.length > 0 ? pantalonSizeOptions : []),
+        ...(showJeanSizes && jeanSizeOptions.length > 0 ? jeanSizeOptions : []),
+        ...(showRobeSizes && robeSizeOptions.length > 0 ? robeSizeOptions : []),
+      ])]
     : [...CLOTHING_SIZES]) as string[];
-  /** Sections pour le sous-menu Taille (vêtements) : présentation claire par type d'article. */
+  /** Sections pour le sous-menu Taille : taille standard + une section par type uniquement si des tailles existent en annonces. */
   const clothingSizeSections = selectedTypes.includes('vetements')
     ? [
         { label: 'Taille standard', values: [...CLOTHING_SIZES] as string[] },
-        { label: 'Pantalon', values: [...PANT_SIZES_MIX] as string[] },
-        { label: 'Jean', values: [...JEAN_SIZES_MIX] as string[] },
+        ...(showPantSizes && pantalonSizeOptions.length > 0 ? [{ label: 'Pantalon', values: [...pantalonSizeOptions] as string[] }] : []),
+        ...(showJeanSizes && jeanSizeOptions.length > 0 ? [{ label: 'Jean', values: [...jeanSizeOptions] as string[] }] : []),
+        ...(showRobeSizes && robeSizeOptions.length > 0 ? [{ label: 'Robe', values: [...robeSizeOptions] as string[] }] : []),
       ]
     : [];
+  /** Un seul filtre Taille quand vêtements et/ou montres : options et sections fusionnés si les deux catégories sont sélectionnées. */
+  const hasVetements = selectedTypes.includes('vetements');
+  const hasMontres = selectedTypes.includes('montres');
+  const sizeFilterOptions = hasVetements && hasMontres
+    ? [...new Set([...clothingSizeOptions, ...montresSizeOptions])] as string[]
+    : hasVetements
+      ? clothingSizeOptions
+      : montresSizeOptions;
+  const sizeFilterSections = hasVetements && hasMontres
+    ? [{ label: 'Montres', values: [...montresSizeOptions] as string[] }, ...clothingSizeSections]
+    : hasVetements
+      ? clothingSizeSections
+      : [{ label: 'Montres', values: [...montresSizeOptions] as string[] }];
   const toggleModele = (model: string) => {
     setFilters((prev) => {
       const current = prev.models ?? (prev.model ? [prev.model] : []);
@@ -1882,7 +1928,7 @@ function CatalogueContent() {
             >
               <button
                 type="button"
-                onClick={() => { setFilters((p) => ({ ...p, categories: undefined, category: undefined })); setOpenDropdown(null); }}
+                onClick={() => { setFilters((p) => ({ ...p, categories: CATEGORIES.map((c) => c.value), category: undefined })); setOpenDropdown(null); }}
                 style={{
                   padding: '10px 12px',
                   fontSize: 14,
@@ -1892,11 +1938,11 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedTypes.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
                 }}
               >
-                Tous les types
+                Toutes les catégories
               </button>
               <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: 8, backgroundColor: '#fff' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
@@ -2027,7 +2073,7 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedArticleTypes.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
                 }}
               >
@@ -2170,7 +2216,7 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedBrands.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
                 }}
               >
@@ -2271,7 +2317,7 @@ function CatalogueContent() {
       </FilterSection>
 
       {/* Modèle — libellé dans la case + pastille nombre si sélection */}
-      <FilterSection title="" defaultOpen collapsible={false}>
+      <FilterSection title="" defaultOpen collapsible={false} noBorder>
         <div ref={modeleDropdownRef} style={{ position: 'relative' }}>
             <button
             type="button"
@@ -2353,7 +2399,7 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                 cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedModels.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
               }}
             >
@@ -2511,10 +2557,10 @@ function CatalogueContent() {
         </div>
       </FilterSection>
 
-      {/* Taille (vêtements) — même sous-menu que Pointure, ligne en dessous, même espace titre/ligne que les autres */}
-      {selectedTypes.includes('vetements') && (
-        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
-          <FilterSection title="Taille" defaultOpen collapsible={false} noBorder>
+      {/* Taille (vêtements et/ou montres) — un seul filtre quand les deux catégories sont sélectionnées */}
+      {(hasVetements || hasMontres) && (
+        <div>
+          <FilterSection title="" defaultOpen collapsible={false} noBorder>
             <div ref={tailleDropdownRef} style={{ position: 'relative' }}>
               <button
                 type="button"
@@ -2539,7 +2585,7 @@ function CatalogueContent() {
                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   Taille
                 </span>
-                {selectedSizes.some((s) => clothingSizeOptions.includes(s)) && (
+                {selectedSizes.some((s) => sizeFilterOptions.includes(s)) && (
                   <span
                     style={{
                       flexShrink: 0,
@@ -2557,7 +2603,7 @@ function CatalogueContent() {
                       border: '1px solid #d2d2d7',
                     }}
                   >
-                    {selectedSizes.filter((s) => clothingSizeOptions.includes(s)).length}
+                    {selectedSizes.filter((s) => sizeFilterOptions.includes(s)).length}
                   </span>
                 )}
                 <ChevronRight
@@ -2586,7 +2632,7 @@ function CatalogueContent() {
                 >
                   <button
                     type="button"
-                    onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !clothingSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
+                    onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !sizeFilterOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
                     style={{
                       padding: '10px 12px',
                       fontSize: 14,
@@ -2596,21 +2642,26 @@ function CatalogueContent() {
                       borderBottom: '1px solid #d2d2d7',
                       cursor: 'pointer',
                       textAlign: 'left',
-                      fontWeight: !selectedSizes.some((s) => clothingSizeOptions.includes(s)) ? 600 : 400,
+                      fontWeight: 600,
                       flexShrink: 0,
                     }}
                   >
                     Toutes les tailles
                   </button>
                   <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
-                    {clothingSizeSections.length > 0 ? (
-                      clothingSizeSections.map((section) => (
+                    {sizeFilterSections.length > 0 ? (
+                      sizeFilterSections.map((section) => (
                         <div key={section.label} style={{ marginBottom: 14 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
                             {section.label}
                           </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                            {section.values.map((s) => (
+                            {section.label === 'Montres' && section.values.length === 0 ? (
+                              <span style={{ fontSize: 14, color: '#6e6e73', padding: 8 }}>Chargement…</span>
+                            ) : section.label !== 'Taille standard' && section.values.length === 0 ? (
+                              <span style={{ fontSize: 14, color: '#6e6e73', padding: 8 }}>Chargement…</span>
+                            ) : (
+                            section.values.map((s) => (
                         <label
                           key={s}
                           style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -2621,15 +2672,18 @@ function CatalogueContent() {
                             onChange={() => toggleSize(s)}
                             style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                           />
-                          <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}</span>
+                          <span style={{ fontSize: 14, color: '#1d1d1f' }}>
+                            {section.label === 'Montres' ? `${s}${s.match(/^\d+$/) ? ' mm' : ''}` : (section.label === 'Robe' || section.label === 'Jean' || section.label === 'Pantalon' ? `${s} EU` : s)}
+                          </span>
                         </label>
-                      ))}
+                      )))
+                            }
                     </div>
                         </div>
                       ))
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                        {clothingSizeOptions.map((s) => (
+                        {sizeFilterOptions.map((s) => (
                           <label
                             key={s}
                             style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -2645,10 +2699,10 @@ function CatalogueContent() {
                         ))}
                       </div>
                     )}
-                    {selectedSizes.some((s) => clothingSizeOptions.includes(s)) && (
+                    {selectedSizes.some((s) => sizeFilterOptions.includes(s)) && (
                       <button
                         type="button"
-                        onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !clothingSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
+                        onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !sizeFilterOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
                         style={{
                           marginTop: 2,
                           marginBottom: 0,
@@ -2673,150 +2727,10 @@ function CatalogueContent() {
         </div>
       )}
 
-      {/* Taille (montres) — tailles présentes dans les annonces montres */}
-      {selectedTypes.includes('montres') && (
-        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
-          <FilterSection title="Taille" defaultOpen collapsible={false} noBorder>
-            <div ref={tailleMontresDropdownRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setOpenDropdown((prev) => (prev === 'tailleMontres' ? null : 'tailleMontres'))}
-                style={{
-                  width: '100%',
-                  height: 44,
-                  padding: '0 14px',
-                  fontSize: 14,
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  backgroundColor: '#fff',
-                  color: '#1d1d1f',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  gap: 8,
-                }}
-              >
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  Taille
-                </span>
-                {selectedSizes.some((s) => montresSizeOptions.includes(s)) && (
-                  <span
-                    style={{
-                      flexShrink: 0,
-                      minWidth: 22,
-                      height: 22,
-                      padding: '0 8px',
-                      borderRadius: 11,
-                      backgroundColor: '#f5f5f7',
-                      color: '#1d1d1f',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #d2d2d7',
-                    }}
-                  >
-                    {selectedSizes.filter((s) => montresSizeOptions.includes(s)).length}
-                  </span>
-                )}
-                <ChevronRight
-                  size={16}
-                  style={{ flexShrink: 0, marginLeft: 0, color: '#86868b' }}
-                />
-              </button>
-              {tailleMontresDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '100%',
-                    marginLeft: 20,
-                    minWidth: 415,
-                    maxHeight: 'calc(360px - 1mm)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: '#fff',
-                    border: '1px solid #d2d2d7',
-                    borderRadius: 12,
-                    boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
-                    zIndex: 9999,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !montresSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
-                    style={{
-                      padding: '10px 12px',
-                      fontSize: 14,
-                      color: '#1d1d1f',
-                      background: '#fff',
-                      border: 'none',
-                      borderBottom: '1px solid #d2d2d7',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      fontWeight: !selectedSizes.some((s) => montresSizeOptions.includes(s)) ? 600 : 400,
-                      flexShrink: 0,
-                    }}
-                  >
-                    Toutes les tailles
-                  </button>
-                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                      {montresSizeOptions.length === 0 ? (
-                        <span style={{ fontSize: 14, color: '#6e6e73', padding: 8 }}>Chargement…</span>
-                      ) : (
-                        montresSizeOptions.map((s) => (
-                          <label
-                            key={s}
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedSizes.includes(s)}
-                              onChange={() => toggleSize(s)}
-                              style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
-                            />
-                            <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}{s.match(/^\d+$/) ? ' mm' : ''}</span>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                    {selectedSizes.some((s) => montresSizeOptions.includes(s)) && (
-                      <button
-                        type="button"
-                        onClick={() => { setFilters((p) => ({ ...p, sizes: p.sizes?.filter((s) => !montresSizeOptions.includes(s)) ?? undefined })); setOpenDropdown(null); }}
-                        style={{
-                          marginTop: 2,
-                          marginBottom: 0,
-                          fontSize: 12,
-                          color: '#6e6e73',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          padding: '2px 4px',
-                          width: '100%',
-                        }}
-                      >
-                        Réinitialiser les tailles
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </FilterSection>
-        </div>
-      )}
-
-      {/* Pointure (chaussures) — même espace au-dessus du titre que Prix et Année */}
+      {/* Pointure (chaussures) — même présentation que Taille (sans titre, même ligne au-dessus d'Année) */}
       {selectedTypes.includes('chaussures') && (
-        <div style={{ borderBottom: '1px solid #e8e6e3' }}>
-          <FilterSection title="Pointure" defaultOpen collapsible={false} noBorder>
+        <div>
+          <FilterSection title="" defaultOpen collapsible={false} noBorder>
             <div ref={pointureDropdownRef} style={{ position: 'relative' }}>
             <button
               type="button"
@@ -2898,7 +2812,7 @@ function CatalogueContent() {
                     borderBottom: '1px solid #d2d2d7',
                     cursor: 'pointer',
                     textAlign: 'left',
-                    fontWeight: !selectedSizes.some((s) => SHOE_SIZES.includes(s)) ? 600 : 400,
+                    fontWeight: 600,
                     flexShrink: 0,
                   }}
                 >
@@ -2940,7 +2854,7 @@ function CatalogueContent() {
                           onChange={() => toggleSize(p)}
                           style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                         />
-                        <span style={{ fontSize: 14, color: '#1d1d1f' }}>{p}</span>
+                        <span style={{ fontSize: 14, color: '#1d1d1f' }}>{p} EU</span>
                       </label>
                     ))}
                   </div>
@@ -2972,8 +2886,9 @@ function CatalogueContent() {
         </div>
       )}
 
-      {/* Année — même format que Prix (Min / Max sur une ligne) */}
-      <FilterSection title="Année" defaultOpen collapsible={false}>
+      {/* Année — même format que Prix (Min / Max sur une ligne), même ligne au-dessus que Prix */}
+      <div style={{ borderTop: '1px solid #e8e6e3' }}>
+        <FilterSection title="Année" defaultOpen collapsible={false}>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}>
       <input
@@ -2999,6 +2914,7 @@ function CatalogueContent() {
           </div>
         </div>
       </FilterSection>
+      </div>
 
       {priceInputs}
 
@@ -3085,7 +3001,7 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedColors.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
                 }}
               >
@@ -3217,7 +3133,7 @@ function CatalogueContent() {
                   borderBottom: '1px solid #d2d2d7',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  fontWeight: selectedMaterials.length === 0 ? 600 : 400,
+                  fontWeight: 600,
                   flexShrink: 0,
                 }}
               >
@@ -3824,17 +3740,23 @@ function CatalogueContent() {
                         }}
                       >
                         {seller.avatarUrl ? (
-                          <img src={seller.avatarUrl} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <Store size={32} color="#888" />
                         )}
                       </div>
                       <div>
+                        {filters.sellerId ? (
+                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
+                            {seller.companyName}
+                          </h2>
+                        ) : (
                         <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                           <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
                             {seller.companyName}
                           </h2>
                         </Link>
+                        )}
                         <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
                           {listings.length} annonce{listings.length !== 1 ? 's' : ''}
                 </p>
@@ -4172,12 +4094,7 @@ function CatalogueContent() {
                           )}
                         </p>
                         {(() => {
-                          const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
-                          const marque = listing.brand || listing.title;
-                          const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
-                            ? (listing.model ?? '')
-                            : [typeLabel, listing.model].filter(Boolean).join(' ');
-                          const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                          const lineText = listing.title || '';
                           return (
                             <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                               {highlightSearchTerms(lineText, filters.query)}
@@ -4282,12 +4199,7 @@ function CatalogueContent() {
                       >
                         <div style={{ paddingBottom: 4, minWidth: 0, overflow: 'hidden' }}>
                           {(() => {
-                            const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
-                            const marque = listing.brand || listing.title;
-                            const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
-                              ? (listing.model ?? '')
-                              : [typeLabel, listing.model].filter(Boolean).join(' ');
-                            const lineText = typeModel ? `${marque} - ${typeModel}` : marque;
+                            const lineText = listing.title || '';
                             return (
                               <h3 title={lineText} style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
                                 {highlightSearchTerms(lineText, filters.query)}

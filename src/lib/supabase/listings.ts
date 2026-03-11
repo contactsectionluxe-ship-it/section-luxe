@@ -374,6 +374,33 @@ export async function getDistinctSizesForCategory(category: string): Promise<str
   });
 }
 
+/** Tailles distinctes pour une catégorie et des types d’article (ex. vetements + pantalon/jean/robe). */
+export async function getDistinctSizesForCategoryAndArticleTypes(
+  category: string,
+  articleTypes: string[]
+): Promise<string[]> {
+  if (!isSupabaseConfigured || !supabase || !category || !articleTypes?.length) return [];
+  const cat = (category || '').toLowerCase();
+  const types = articleTypes.map((t) => String(t).trim()).filter(Boolean);
+  if (types.length === 0) return [];
+  const { data, error } = await supabase
+    .from('listings')
+    .select('size')
+    .eq('is_active', true)
+    .eq('category', cat)
+    .in('article_type', types)
+    .not('size', 'is', null);
+  if (error) return [];
+  const raw = (data || []).map((r) => (r.size as string)?.trim()).filter(Boolean);
+  const unique = [...new Set(raw)];
+  return unique.sort((a, b) => {
+    const na = Number(a.replace(/\s*mm?\s*$/i, ''));
+    const nb = Number(b.replace(/\s*mm?\s*$/i, ''));
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+    return String(a).localeCompare(String(b), 'fr');
+  });
+}
+
 // Get listings by seller
 export async function getSellerListings(sellerId: string): Promise<Listing[]> {
   if (!isSupabaseConfigured || !supabase) return [];

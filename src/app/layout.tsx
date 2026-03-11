@@ -41,7 +41,9 @@ export default function RootLayout({
             <Header />
           </Suspense>
           <div className="flex-1" style={{ backgroundColor: '#fff' }}>{children}</div>
-          <Footer />
+          <div style={{ flexShrink: 0 }}>
+            <Footer />
+          </div>
         </AuthProvider>
       </body>
     </html>

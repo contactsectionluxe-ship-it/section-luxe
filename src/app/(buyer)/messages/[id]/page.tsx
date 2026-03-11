@@ -14,7 +14,7 @@ import {
 } from '@/lib/supabase/messaging';
 import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
-import { formatRelativeTime, formatDate } from '@/lib/utils';
+import { formatRelativeTime, formatDate, getSellerAvatarUrl } from '@/lib/utils';
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -33,7 +33,7 @@ export default function ConversationPage() {
   const [popupLoading, setPopupLoading] = useState(false);
   const [sellerDescExpanded, setSellerDescExpanded] = useState(false);
   const [showMapPopup, setShowMapPopup] = useState(false);
-  const [mapZoom, setMapZoom] = useState(15);
+  const [mapZoom, setMapZoom] = useState(13);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -443,7 +443,7 @@ export default function ConversationPage() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
                     <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {popupSeller.avatarUrl ? (
-                        <img src={popupSeller.avatarUrl} alt={popupSeller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={getSellerAvatarUrl(popupSeller) ?? ''} alt={popupSeller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       ) : (
                         <Store size={40} color="#888" />
                       )}
