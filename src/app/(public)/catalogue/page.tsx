@@ -19,14 +19,14 @@ import {
   COLORS_BY_CATEGORY,
   getModelFilterVariants,
   getVetementsTypesForGenre,
-  getSacsTypesForGenre,
+  getVetementsTypesForGenreCatalogue,
+  getSacsTypesForGenreCatalogue,
   getBijouxTypesForGenre,
-  getChaussuresTypesForGenre,
-  getAccessoiresTypesForGenre,
+  getChaussuresTypesForGenreCatalogue,
+  getAccessoiresTypesForGenreCatalogue,
   getCategoryAndBrandForModel,
   getArticleTypeLabelsForCategory,
   getArticleTypeLabel,
-  getArticleTypeOptionsForCatalogue,
   expandArticleTypesForFilter,
   modelMatchesArticleType,
   MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE,
@@ -44,6 +44,7 @@ import {
 } from '@/lib/constants';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
+import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
@@ -88,6 +89,14 @@ const MODELES_PLUS_CONNUS_PAR_MARQUE: Record<string, string[]> = {
   'Bulgari': ['Serpenti', 'Divas\' Dream', 'Bvlgari Bvlgari', 'Octo', 'Octo Finissimo', 'Diagono'],
   'Tiffany': ['Atlas', 'T True', 'Return to Tiffany', 'HardWear', 'T1', 'Knot'],
 };
+
+/** Trie les modèles : d’abord alphabétique, les modèles contenant un chiffre sont mis en dernier. */
+function sortModelesWithNumericLast(a: string, b: string): number {
+  const aHasDigit = /\d/.test(a);
+  const bHasDigit = /\d/.test(b);
+  if (aHasDigit !== bHasDigit) return aHasDigit ? 1 : -1;
+  return a.localeCompare(b, 'fr');
+}
 
 /** Modèles favoris affichés en tête du menu Modèle quand la catégorie Vêtements est sélectionnée. */
 const MODELES_FAVORIS_VETEMENTS = ['Veste', 'Sweat', 'Chemise', 'T-shirt', 'Pantalon', 'Jean'];
@@ -444,10 +453,10 @@ function CatalogueContent() {
     const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
     const getOptionValuesForCategory = (filterCat: string) => {
       if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'sacs') return getSacsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'sacs') return getSacsTypesForGenreCatalogue(genre).map((o) => o.value);
       if (filterCat === 'bijoux') return getBijouxTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'chaussures') return getChaussuresTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'accessoires') return getAccessoiresTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'chaussures') return getChaussuresTypesForGenreCatalogue(genre).map((o) => o.value);
+      if (filterCat === 'accessoires') return getAccessoiresTypesForGenreCatalogue(genre).map((o) => o.value);
       return [];
     };
     const applicableByFilterCategory: Record<string, string[]> = {};
@@ -497,13 +506,10 @@ function CatalogueContent() {
         });
       }
     }
-    return [
-      ...[...modelSet].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr')),
-      'Autre',
-    ];
+    return [...modelSet].filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre').sort(sortModelesWithNumericLast);
   }, [filters.categories, filters.category, filters.brands, filters.brand, filters.articleTypes, filters.genre]);
 
-  /** Modèles groupés par marque (pour afficher des sections quand plusieurs marques sont choisies). Filtrage par type de produit comme dans Déposer une annonce. */
+  /** Modèles groupés par marque (pour afficher des sections quand plusieurs marques sont choisies). Filtrage par type de produit comme dans Déposer une annonce. "Autre" n'est jamais proposé. */
   const modelesByBrand = useMemo(() => {
     const selectedTypes = filters.categories ?? (filters.category ? [filters.category] : []);
     const selectedBrands = filters.brands ?? (filters.brand ? [filters.brand] : []);
@@ -519,10 +525,10 @@ function CatalogueContent() {
     const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
     const getOptionValuesForCategory = (filterCat: string) => {
       if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'sacs') return getSacsTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'sacs') return getSacsTypesForGenreCatalogue(genre).map((o) => o.value);
       if (filterCat === 'bijoux') return getBijouxTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'chaussures') return getChaussuresTypesForGenre(genre).map((o) => o.value);
-      if (filterCat === 'accessoires') return getAccessoiresTypesForGenre(genre).map((o) => o.value);
+      if (filterCat === 'chaussures') return getChaussuresTypesForGenreCatalogue(genre).map((o) => o.value);
+      if (filterCat === 'accessoires') return getAccessoiresTypesForGenreCatalogue(genre).map((o) => o.value);
       return [];
     };
     const applicableByFilterCategory: Record<string, string[]> = {};
@@ -564,10 +570,10 @@ function CatalogueContent() {
           modelSet.add(name);
         });
       }
-      const list = [...modelSet].filter((m) => m !== 'Autre').sort((a, b) => a.localeCompare(b, 'fr'));
-      const allModels = [...list, 'Autre'];
-      const favorisRaw = MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? [];
-      const favoris = favorisRaw.filter((m) => modelSet.has(m) || m === 'Autre').slice(0, 6);
+      const list = [...modelSet].filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre').sort(sortModelesWithNumericLast);
+      const allModels = list;
+      const favorisRaw = (MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? []).filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre');
+      const favoris = favorisRaw.filter((m) => modelSet.has(m)).slice(0, 6);
       out.push({ brandLabel: brand, models: allModels, favoris });
     }
     return out;
@@ -597,13 +603,13 @@ function CatalogueContent() {
     const genre = (filters.genre?.length ? filters.genre : ['femme', 'homme']) as ('femme' | 'homme')[];
     return withType.map((cat) => {
       const list =
-        cat === 'vetements' ? getVetementsTypesForGenre(genre)
-        : cat === 'sacs' ? getSacsTypesForGenre(genre)
+        cat === 'vetements' ? getVetementsTypesForGenreCatalogue(genre)
+        : cat === 'sacs' ? getSacsTypesForGenreCatalogue(genre)
         : cat === 'bijoux' ? getBijouxTypesForGenre(genre)
-        : cat === 'chaussures' ? getChaussuresTypesForGenre(genre)
-        : cat === 'accessoires' ? getAccessoiresTypesForGenre(genre)
+        : cat === 'chaussures' ? getChaussuresTypesForGenreCatalogue(genre)
+        : cat === 'accessoires' ? getAccessoiresTypesForGenreCatalogue(genre)
         : [];
-      const options = getArticleTypeOptionsForCatalogue(list);
+      const options = list;
       const categoryLabel = CATEGORIES.find((c) => c.value === cat)?.label ?? cat;
       return { categoryKey: cat, categoryLabel, options };
     }).filter((g) => g.options.length > 0);
@@ -673,7 +679,7 @@ function CatalogueContent() {
       const fallback = ['Submariner', 'Birkin', 'Kelly', 'Speedmaster', 'Santos', 'Lady Dior'];
       fromSuggest = fallback.filter((m) => modelesAlphabetiques.includes(m));
     }
-    const max6 = fromSuggest.length >= 6 ? fromSuggest.slice(0, 6) : [...fromSuggest, ...modelesAlphabetiques.filter((m) => !fromSuggest.includes(m))].slice(0, 6);
+    const max6 = fromSuggest.length >= 6 ? fromSuggest.slice(0, 6) : [...fromSuggest, ...modelesAlphabetiques.filter((m) => !fromSuggest.includes(m) && m !== 'Autre' && m.toLowerCase() !== 'autre')].slice(0, 6);
     const n = Math.min(max6.length, 6);
     const even = n % 2 === 0 ? n : n - 1;
     return max6.slice(0, Math.max(0, even));
@@ -1104,39 +1110,39 @@ function CatalogueContent() {
 
       // Calcul des étiquettes « bonne affaire » en différé pour ne pas bloquer l’affichage (N requêtes getListings)
       const computeDeal = async () => {
-        const keyToPair = new Map<string, { category: string; year: number | undefined; brand: string | undefined; articleType: string | undefined }>();
-      filtered.forEach((l) => {
-          const k = `${l.category}_${l.year ?? 'all'}_${l.brand ?? 'all'}_${l.articleType ?? 'all'}`;
-          if (!keyToPair.has(k)) keyToPair.set(k, { category: l.category, year: l.year ?? undefined, brand: l.brand ?? undefined, articleType: l.articleType ?? undefined });
-      });
-      const pairs = [...keyToPair.entries()];
-      const similarLists = await Promise.all(
+        const keyToPair = new Map<string, { category: string; brand: string | undefined; articleType: string | undefined; condition: string | undefined }>();
+        filtered.forEach((l) => {
+          const k = `${l.category}_${l.brand ?? 'all'}_${l.articleType ?? 'all'}_${l.condition ?? 'all'}`;
+          if (!keyToPair.has(k)) keyToPair.set(k, { category: l.category, brand: l.brand ?? undefined, articleType: l.articleType ?? undefined, condition: l.condition ?? undefined });
+        });
+        const pairs = [...keyToPair.entries()];
+        const similarLists = await Promise.all(
           pairs.map(([, p]) =>
             getListings({
               category: p.category,
-              year: p.year,
               brand: p.brand ?? undefined,
               articleTypes: p.articleType ? [p.articleType] : undefined,
-              limitCount: 30,
+              condition: p.condition ?? undefined,
+              limitCount: 50,
             })
           )
-      );
-      const similarByKey = new Map<string, { id: string; price: number }[]>();
-      pairs.forEach(([k], i) => {
-        similarByKey.set(
-          k,
-          similarLists[i].filter((l) => l.price > 0).map((l) => ({ id: l.id, price: l.price }))
         );
-      });
-      const next: Record<string, { label: string; color: string }> = {};
-      filtered.forEach((listing) => {
-          const k = `${listing.category}_${listing.year ?? 'all'}_${listing.brand ?? 'all'}_${listing.articleType ?? 'all'}`;
-        const others = (similarByKey.get(k) ?? []).filter((x) => x.id !== listing.id);
-        if (others.length === 0) return;
-        const average = others.reduce((s, x) => s + x.price, 0) / others.length;
-        const deal = getDealLevel(listing.price, average);
-        next[listing.id] = { label: deal.label, color: deal.color };
-      });
+        const similarByKey = new Map<string, { id: string; price: number }[]>();
+        pairs.forEach(([k], i) => {
+          similarByKey.set(
+            k,
+            similarLists[i].filter((l) => l.price > 0).map((l) => ({ id: l.id, price: l.price }))
+          );
+        });
+        const next: Record<string, { label: string; color: string }> = {};
+        filtered.forEach((listing) => {
+          const k = `${listing.category}_${listing.brand ?? 'all'}_${listing.articleType ?? 'all'}_${listing.condition ?? 'all'}`;
+          const others = (similarByKey.get(k) ?? []).filter((x) => x.id !== listing.id);
+          if (others.length === 0) return;
+          const average = others.reduce((s, x) => s + x.price, 0) / others.length;
+          const deal = getDealLevel(listing.price, average);
+          next[listing.id] = { label: deal.label, color: deal.color };
+        });
         if (loadListingsIdRef.current === loadId) setDealByListingId(next);
       };
       if (typeof requestIdleCallback !== 'undefined') {
@@ -1160,22 +1166,41 @@ function CatalogueContent() {
   const requestPosition = useCallback(() => {
     setGeoError(null);
     setGeoLoading(true);
-    if (!navigator.geolocation) {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGeoError('La géolocalisation n’est pas supportée par votre navigateur.');
       setGeoLoading(false);
       return;
     }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setGeoError('La localisation nécessite une connexion sécurisée (HTTPS). Ouvrez le site en https.');
+      setGeoLoading(false);
+      return;
+    }
+    const options: PositionOptions = {
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 300000,
+    };
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setUserCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
         setGeoError(null);
         setGeoLoading(false);
       },
-      () => {
-        setGeoError('Impossible d’obtenir votre position. Vérifiez les autorisations du navigateur.');
+      (err: GeolocationPositionError) => {
+        const code = err?.code ?? 0;
+        const message =
+          code === 1
+            ? 'Localisation refusée.'
+            : code === 2
+              ? 'Position indisponible. Vérifiez que la localisation est activée sur votre appareil.'
+              : code === 3
+                ? 'Délai dépassé. Réessayez dans un endroit avec meilleur signal.'
+                : 'Impossible d’obtenir votre position. Vérifiez les autorisations du navigateur et réessayez.';
+        setGeoError(message);
         setGeoLoading(false);
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+      options
     );
   }, []);
 
@@ -1417,7 +1442,7 @@ function CatalogueContent() {
       ? clothingSizeOptions
       : montresSizeOptions;
   const sizeFilterSections = hasVetements && hasMontres
-    ? [{ label: 'Montres', values: [...montresSizeOptions] as string[] }, ...clothingSizeSections]
+    ? [...clothingSizeSections, { label: 'Montres', values: [...montresSizeOptions] as string[] }]
     : hasVetements
       ? clothingSizeSections
       : [{ label: 'Montres', values: [...montresSizeOptions] as string[] }];
@@ -2050,7 +2075,7 @@ function CatalogueContent() {
                 left: '100%',
                 marginLeft: 20,
                 minWidth: 415,
-                maxHeight: 360,
+                maxHeight: articleTypeOptionsByCategory.length > 1 ? 420 : 420,
                 display: 'flex',
                 flexDirection: 'column',
                 backgroundColor: '#fff',
@@ -2079,7 +2104,7 @@ function CatalogueContent() {
               >
                 Tous les types
               </button>
-              <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, padding: 8, backgroundColor: '#fff' }}>
+              <div style={{ overflowY: articleTypeOptions.length > 9 ? 'auto' : 'visible', flex: articleTypeOptions.length > 9 ? 1 : undefined, minHeight: articleTypeOptions.length > 9 ? 0 : undefined, maxHeight: articleTypeOptions.length > 9 ? (articleTypeOptionsByCategory.length > 1 ? 'calc(340px + 2mm)' : 'calc(304px + 4mm)') : undefined, padding: 8, backgroundColor: '#fff' }}>
                 {articleTypeOptionsByCategory.map((group, groupIndex) => (
                   <div key={group.categoryKey} style={{ marginBottom: groupIndex < articleTypeOptionsByCategory.length - 1 ? 16 : 0 }}>
                     {articleTypeOptionsByCategory.length > 1 && (
@@ -2433,7 +2458,7 @@ function CatalogueContent() {
                   /* Plusieurs marques : modèles groupés par marque, avec 6 favoris par marque quand recherche vide */
                   modelesByBrand.map((group, groupIndex) => {
                     const searchNorm = modeleSearchQuery.trim();
-                    const filtered = group.models.filter((m) => normalizeForSearch(m).includes(normalizeForSearch(searchNorm)));
+                    const filtered = group.models.filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre' && normalizeForSearch(m).includes(normalizeForSearch(searchNorm)));
                     if (filtered.length === 0) return null;
                     const showFavoris = searchNorm === '' && group.favoris.length > 0 && group.models.length >= 6;
                     const favorisFiltered = showFavoris ? group.favoris.filter((m) => group.models.includes(m)) : [];
@@ -2514,7 +2539,7 @@ function CatalogueContent() {
                   return null;
                 })()}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
-                  {modelesAlphabetiques.filter((m) => normalizeForSearch(m).includes(normalizeForSearch(modeleSearchQuery.trim()))).map((model) => (
+                  {modelesAlphabetiques.filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre' && normalizeForSearch(m).includes(normalizeForSearch(modeleSearchQuery.trim()))).map((model) => (
                     <label
                       key={model}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
@@ -2619,7 +2644,7 @@ function CatalogueContent() {
                     left: '100%',
                     marginLeft: 20,
                     minWidth: 415,
-                    maxHeight: 'calc(360px - 1mm)',
+                    maxHeight: 360,
                     display: 'flex',
                     flexDirection: 'column',
                     backgroundColor: '#fff',
@@ -2648,13 +2673,15 @@ function CatalogueContent() {
                   >
                     Toutes les tailles
                   </button>
-                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 4mm)', padding: '8px 8px 4px 8px', backgroundColor: '#fff' }}>
+                  <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 5mm)', padding: '8px 8px 0 8px', backgroundColor: '#fff' }}>
                     {sizeFilterSections.length > 0 ? (
-                      sizeFilterSections.map((section) => (
-                        <div key={section.label} style={{ marginBottom: 14 }}>
-                          <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
-                            {section.label}
-                          </div>
+                      sizeFilterSections.map((section, sectionIndex) => (
+                        <div key={section.label} style={{ marginBottom: sectionIndex < sizeFilterSections.length - 1 ? 14 : 0 }}>
+                          {(sizeFilterSections.length > 1 || section.label !== 'Taille standard') && (
+                            <div style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid #e8e6e3' }}>
+                              {section.label}
+                            </div>
+                          )}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                             {section.label === 'Montres' && section.values.length === 0 ? (
                               <span style={{ fontSize: 14, color: '#6e6e73', padding: 8 }}>Chargement…</span>
@@ -2664,7 +2691,7 @@ function CatalogueContent() {
                             section.values.map((s) => (
                         <label
                           key={s}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8, minHeight: 26, lineHeight: 1.25 }}
                         >
                           <input
                             type="checkbox"
@@ -2672,7 +2699,7 @@ function CatalogueContent() {
                             onChange={() => toggleSize(s)}
                             style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                           />
-                          <span style={{ fontSize: 14, color: '#1d1d1f' }}>
+                          <span style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.25, overflow: 'visible', whiteSpace: 'nowrap' }}>
                             {section.label === 'Montres' ? `${s}${s.match(/^\d+$/) ? ' mm' : ''}` : (section.label === 'Robe' || section.label === 'Jean' || section.label === 'Pantalon' ? `${s} EU` : s)}
                           </span>
                         </label>
@@ -2686,7 +2713,7 @@ function CatalogueContent() {
                         {sizeFilterOptions.map((s) => (
                           <label
                             key={s}
-                            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8, minHeight: 26, lineHeight: 1.25 }}
                           >
                             <input
                               type="checkbox"
@@ -2694,7 +2721,7 @@ function CatalogueContent() {
                               onChange={() => toggleSize(s)}
                               style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                             />
-                            <span style={{ fontSize: 14, color: '#1d1d1f' }}>{s}</span>
+                            <span style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.25, overflow: 'visible', whiteSpace: 'nowrap' }}>{s}</span>
                           </label>
                         ))}
                       </div>
@@ -2789,7 +2816,7 @@ function CatalogueContent() {
                   left: '100%',
                   marginLeft: 20,
                   minWidth: 415,
-                  maxHeight: 'calc(360px - 1.5mm - 0.3cm)',
+                  maxHeight: 360,
                   display: 'flex',
                   flexDirection: 'column',
                   backgroundColor: '#fff',
@@ -2841,12 +2868,12 @@ function CatalogueContent() {
                     />
                   </div>
                 </div>
-                <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, maxHeight: 'calc(252px + 3.5mm - 0.3cm)', padding: 8, backgroundColor: '#fff' }}>
+                <div style={{ overflowY: 'auto', flex: 1, minHeight: 0, height: 224, maxHeight: 224, padding: '8px 8px 0 8px', backgroundColor: '#fff' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px 56px' }}>
                     {SHOE_SIZES.filter((p) => normalizeForSearch(p).includes(normalizeForSearch(pointureSearchQuery.trim()))).map((p) => (
                       <label
                         key={p}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8 }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '6px 4px', borderRadius: 8, minHeight: 26, lineHeight: 1.25 }}
                       >
                         <input
                           type="checkbox"
@@ -2854,7 +2881,7 @@ function CatalogueContent() {
                           onChange={() => toggleSize(p)}
                           style={{ width: 16, height: 16, accentColor: '#1d1d1f', flexShrink: 0 }}
                         />
-                        <span style={{ fontSize: 14, color: '#1d1d1f' }}>{p} EU</span>
+                        <span style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.25, overflow: 'visible', whiteSpace: 'nowrap' }}>{p} EU</span>
                       </label>
                     ))}
                   </div>
@@ -3351,6 +3378,7 @@ function CatalogueContent() {
                 const nextKm = idx === 0 ? 0 : RADIUS_KM_OPTIONS[idx - 1] ?? 5;
                 setRadiusKm(nextKm);
                 if (nextKm > 0) {
+                  setGeoError(null);
                   setFilters((p) => ({ ...p, locations: undefined, postalCode: undefined, region: undefined }));
                   setLocationQuery('');
                   setLocationSuggestionsOpen(false);
@@ -3367,6 +3395,9 @@ function CatalogueContent() {
               {radiusKm === 0 ? '— —' : `${radiusKm} km`}
             </span>
           </div>
+          {geoLoading && (
+            <p style={{ fontSize: 12, color: '#6e6e73', marginTop: 6 }}>Obtention de votre position…</p>
+          )}
           {geoError && (
             <p style={{ fontSize: 12, color: '#c00', marginTop: 6 }}>{geoError}</p>
           )}
@@ -4081,7 +4112,11 @@ function CatalogueContent() {
                           overflow: 'hidden',
                         }}
                       >
-                        <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 768px) 50vw, 33vw" />
+                        <CatalogueCardPhotos
+                          photos={listing.photos}
+                          alt={listing.title}
+                          sizes="(max-width: 768px) 50vw, 33vw"
+                        />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
@@ -4184,7 +4219,11 @@ function CatalogueContent() {
                           borderRight: '1px solid #e8e6e3',
                         }}
                       >
-                        <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="120px" />
+                        <CatalogueCardPhotos
+                          photos={listing.photos}
+                          alt={listing.title}
+                          sizes="120px"
+                        />
                       </div>
                             <div
                             style={{

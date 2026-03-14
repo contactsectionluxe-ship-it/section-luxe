@@ -426,7 +426,7 @@ export default function HomeContent() {
       </section>
 
       {/* Featured Products */}
-      <section style={{ padding: '80px 24px' }}>
+      <section style={{ padding: '56px 24px 80px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 36 }}>
             <div>

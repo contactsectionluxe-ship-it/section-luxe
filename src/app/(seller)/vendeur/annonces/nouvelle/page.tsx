@@ -15,7 +15,7 @@ import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 
 const ETAT_OPTIONS = [
@@ -327,7 +327,7 @@ function NewListingContent() {
   // Modèles selon catégorie, marque, genre et type de produit — sans préfixe type dans les propositions
   const brandForModels = brand || marqueSearchQuery.trim();
   const hasTypeCategory = category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires';
-  const effectiveArticleType = articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType;
+  const effectiveArticleType = articleType.includes('::') ? articleType.split('::')[0] : articleType;
   const modelOptions = (() => {
     if (!category || category === 'autre' || genre.length === 0) return [];
     // Pour les catégories avec type de produit : n'afficher des modèles que si type ET marque sont choisis
@@ -378,9 +378,6 @@ function NewListingContent() {
         if (genre.includes('homme')) byBrand.homme.filter(allowModel).forEach((m) => set.add(m));
       }
     }
-    if (category === 'sacs') {
-      set.add('Pochette');
-    }
     const excludedAsCategory = category ? (MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[category] ?? []) : [];
     const articleTypeLabels = (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') ? getArticleTypeLabelsForCategory(category, genre) : [];
     const raw = [...set]
@@ -388,6 +385,7 @@ function NewListingContent() {
       .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
       .filter((m) => modelMatchesArticleType(m, effectiveArticleType, category, brandForModels))
       .filter((m) => !articleTypeLabels.includes(m))
+      .filter((m) => !category || !isModelNameATypeLabel(category, m))
       .sort((a, b) => a.localeCompare(b, 'fr'));
     return raw;
   })();
@@ -537,7 +535,7 @@ if (modelOptions.length > 0) {
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? (articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType) : null,
+        articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? (articleType.includes('::') ? articleType.split('::')[0] : articleType) : null,
         isActive,
       });
 
@@ -621,7 +619,7 @@ if (modelOptions.length > 0) {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       {/* Ligne titre : Retour à gauche (comme Modifier l'annonce), Déposer une annonce au centre */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.5cm 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href={fromVentes ? '/vendeur/ventes' : '/vendeur'}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}

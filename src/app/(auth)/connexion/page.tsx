@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from '@/lib/supabase/auth';
@@ -33,6 +33,11 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const t = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(t);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,11 +54,29 @@ function LoginForm() {
     }
   };
 
+  const pageWrapStyle: React.CSSProperties = {
+    paddingTop: 'var(--header-height)',
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    paddingLeft: 24,
+    paddingRight: 24,
+    paddingBottom: 24,
+  };
+
   return (
-    <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px' }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+    <div style={pageWrapStyle}>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 420,
+          paddingTop: 30,
+          opacity: mounted ? 1 : 0,
+          transition: 'opacity 0.2s ease-out',
+        }}
+      >
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ height: 88, marginBottom: 0 }} aria-hidden />
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
             Connexion
           </h1>
@@ -174,9 +197,38 @@ function LoginForm() {
   );
 }
 
+const connexionPageWrapStyle: React.CSSProperties = {
+  paddingTop: 'var(--header-height)',
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'flex-start',
+  justifyContent: 'center',
+  paddingLeft: 24,
+  paddingRight: 24,
+  paddingBottom: 24,
+};
+
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Chargement...</div>}>
+    <Suspense
+      fallback={
+        <div style={connexionPageWrapStyle}>
+          <div style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
+            <div style={{ textAlign: 'center', marginBottom: 36 }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
+                Connexion
+              </h1>
+              <p style={{ fontSize: 15, color: '#6e6e73' }}>Accédez à votre compte</p>
+            </div>
+            <div style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+              <div style={{ height: 48, backgroundColor: '#f5f5f7', borderRadius: 12, marginBottom: 20 }} aria-hidden />
+              <div style={{ height: 48, backgroundColor: '#f5f5f7', borderRadius: 12, marginBottom: 28 }} aria-hidden />
+              <div style={{ height: 50, backgroundColor: '#e8e8ed', borderRadius: 980 }} aria-hidden />
+            </div>
+          </div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );

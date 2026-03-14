@@ -75,10 +75,9 @@ function RegisterForm() {
   };
 
   return (
-    <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
-      <div style={{ width: '100%', maxWidth: 420 }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
+      <div style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div style={{ height: 88, marginBottom: 0 }} aria-hidden />
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
             Créer un compte
           </h1>
@@ -256,7 +255,7 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbfbfb' }}>Chargement...</div>}>
+    <Suspense fallback={<div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fbfbfb' }}>Chargement...</div>}>
       <RegisterForm />
     </Suspense>
   );

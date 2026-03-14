@@ -14,6 +14,7 @@ import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/u
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
 import { ListingPhoto } from '@/components/ListingPhoto';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 
 /** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
 function getListingDisplayTitle(listing: Listing): string {
@@ -342,9 +343,9 @@ export default function ProductPage() {
 
         const similar = await getListings({
           category: listingData.category,
-          year: listingData.year ?? undefined,
           brand: listingData.brand ?? undefined,
           articleTypes: listingData.articleType ? [listingData.articleType] : undefined,
+          condition: listingData.condition ?? undefined,
           limitCount: 100,
         });
         const others = similar.filter((l) => l.id !== listingData.id && l.price > 0);
@@ -658,14 +659,14 @@ export default function ProductPage() {
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1); }}
-                        style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <ChevronLeft size={20} />
                       </button>
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0); }}
-                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: '#fff', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       >
                         <ChevronRight size={20} />
                       </button>
@@ -696,13 +697,14 @@ export default function ProductPage() {
                   </Link>
                 )}
               </div>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#0a0a0a' }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 16, color: '#0a0a0a' }}>
                 {getListingDisplayTitle(listing)}
               </h1>
+              <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
               {listing.listingNumber && (
-                <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 15, color: '#888', marginBottom: 16 }}>N° annonce {listing.listingNumber}</p>
+                <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 13, color: '#6e6e73', marginBottom: 16, lineHeight: 1.35, margin: 0 }}>N° annonce {listing.listingNumber}</p>
               )}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 'calc(6px + 1mm)', marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
                   {priceStats && (() => {
@@ -817,7 +819,7 @@ export default function ProductPage() {
                       ) : (
                         <>
                           <Phone size={18} />
-                          <span style={{ fontSize: 16 }}>N° téléphone</span>
+                          <span style={{ fontSize: 16 }}>Téléphone</span>
                         </>
                       )}
                     </button>
@@ -1106,7 +1108,7 @@ export default function ProductPage() {
                 </p>
                 {priceStats && (
                   <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
                   </p>
                 )}
                 <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -1488,7 +1490,7 @@ export default function ProductPage() {
                   </p>
                   {priceStats && (
                     <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
@@ -1527,8 +1529,9 @@ export default function ProductPage() {
                 <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
               )}
             </div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 12, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
+            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
+            <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 'calc(6px + 1mm)', marginBottom: 12, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
                 {priceStats && (() => {
@@ -1637,7 +1640,7 @@ export default function ProductPage() {
                     ) : (
                       <>
                         <Phone size={16} />
-                        <span style={{ fontSize: 15 }}>N° téléphone</span>
+                        <span style={{ fontSize: 15 }}>Téléphone</span>
                       </>
                     )}
                   </button>
@@ -2209,7 +2212,7 @@ Ces données sont utilisées pour :`}
             </p>
             {priceStats && (
               <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type).
+                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
               </p>
             )}
             <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -2368,7 +2371,7 @@ Ces données sont utilisées pour :`}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i > 0 ? i - 1 : listing.photos.length - 1); }}
-                style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: 12, border: 'none', backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 aria-label="Photo précédente"
               >
                 <ChevronLeft size={28} />
@@ -2376,7 +2379,7 @@ Ces données sont utilisées pour :`}
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); setCurrentPhotoIndex(i => i < listing.photos.length - 1 ? i + 1 : 0); }}
-                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: '50%', border: 'none', backgroundColor: 'rgba(255,255,255,0.2)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', zIndex: 1, width: 48, height: 48, borderRadius: 12, border: 'none', backgroundColor: 'rgba(255,255,255,0.12)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                 aria-label="Photo suivante"
               >
                 <ChevronRight size={28} />

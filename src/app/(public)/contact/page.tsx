@@ -80,8 +80,8 @@ export default function ContactPage() {
   };
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '0.5cm 24px 80px' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 640, margin: 0, padding: '30px 24px 80px', boxSizing: 'border-box' }}>
         {/* Titre centré — même design que Déposer une annonce */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1

@@ -13,7 +13,7 @@ import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
@@ -195,7 +195,7 @@ export default function EditListingPage() {
   })();
   const brandForModels = brand || marqueSearchQuery.trim();
   const hasTypeCategory = category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires';
-  const effectiveArticleType = articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType;
+  const effectiveArticleType = articleType.includes('::') ? articleType.split('::')[0] : articleType;
   const modelOptions = (() => {
     if (!category || category === 'autre' || genre.length === 0) return [];
     if (hasTypeCategory && (!articleType || !brandForModels)) return [];
@@ -224,7 +224,7 @@ export default function EditListingPage() {
             if (onlyFemme && CHAUSSURES_MODELES_HOMME_ONLY.includes(m)) return false;
             return true;
           }
-          if (category === 'sacs') {
+    if (category === 'sacs') {
             if (onlyHomme && SACS_MODELES_FEMME_ONLY.includes(m)) return false;
             if (onlyFemme && SACS_MODELES_HOMME_ONLY.includes(m)) return false;
             return true;
@@ -245,9 +245,6 @@ export default function EditListingPage() {
         if (genre.includes('homme')) byBrand.homme.filter(allowModel).forEach((m) => set.add(m));
       }
     }
-    if (category === 'sacs') {
-      set.add('Pochette');
-    }
     const excludedAsCategory = category ? (MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE[category] ?? []) : [];
     const articleTypeLabels = hasTypeCategory ? getArticleTypeLabelsForCategory(category, genre) : [];
     const raw = [...set]
@@ -255,6 +252,7 @@ export default function EditListingPage() {
       .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
       .filter((m) => modelMatchesArticleType(m, effectiveArticleType, category, brandForModels))
       .filter((m) => !articleTypeLabels.includes(m))
+      .filter((m) => !category || !isModelNameATypeLabel(category, m))
       .sort((a, b) => a.localeCompare(b, 'fr'));
     if (model && !raw.includes(model)) return [model, ...raw];
     return raw;
@@ -357,16 +355,18 @@ export default function EditListingPage() {
         setListing(data);
         setCategory(data.category);
         setGenre(Array.isArray(data.genre) && data.genre.length > 0 ? data.genre : []);
-        // T-shirt et Polo partagent la valeur BDD tshirt_polo : en formulaire on distingue par une clé composite pour n'afficher qu'un seul sélectionné
-        // Richelieus et Derbies partagent derbies_richelieu : idem avec composite (défaut Richelieus)
         const at = data.articleType || '';
-        setArticleType(
-          at === 'tshirt_polo'
-            ? (data.model && String(data.model).toLowerCase().includes('polo') ? 'tshirt_polo::Polo' : 'tshirt_polo::T-shirt')
-            : at === 'derbies_richelieu'
-              ? 'derbies_richelieu::Richelieus'
-              : at
-        );
+        const genre = data.genre || [];
+        const cat = data.category;
+        let typeToSet = at;
+        if (at && (cat === 'vetements' || cat === 'sacs' || cat === 'bijoux' || cat === 'chaussures' || cat === 'accessoires')) {
+          const opts = cat === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : cat === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : cat === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : cat === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
+          const opt = opts.find((o) => o.value === at || o.value.startsWith(at + '::'));
+          if (opt) typeToSet = opt.value;
+          else if (at === 'tshirt_polo') typeToSet = data.model && String(data.model).toLowerCase().includes('polo') ? 'tshirt_polo::Polo' : 'tshirt_polo::T-shirt';
+          else if (at === 'derbies_richelieu') typeToSet = 'derbies_richelieu::Richelieus';
+        }
+        setArticleType(typeToSet);
         setCustomCategory('');
         const brandsForCat = data.category && BRANDS_BY_CATEGORY[data.category] ? BRANDS_BY_CATEGORY[data.category] : [];
         if (data.brand && brandsForCat.includes(data.brand)) {
@@ -752,7 +752,7 @@ export default function EditListingPage() {
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: hasTypeCategory && articleType ? (articleType.startsWith('tshirt_polo::') ? 'tshirt_polo' : articleType.startsWith('derbies_richelieu::') ? 'derbies_richelieu' : articleType) : null,
+        articleType: hasTypeCategory && articleType ? (articleType.includes('::') ? articleType.split('::')[0] : articleType) : null,
       });
 
       setError('');
@@ -773,11 +773,11 @@ export default function EditListingPage() {
         // ignore
       }
       try {
-        await fetch('/api/cgu-cgv-acceptance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user!.uid, context: 'modification_annonce' }),
-        });
+      await fetch('/api/cgu-cgv-acceptance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user!.uid, context: 'modification_annonce' }),
+      });
       } catch (e) {
         console.error('Enregistrement acceptation CGU/CGV', e);
       }
@@ -801,7 +801,7 @@ export default function EditListingPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
       {/* Ligne titre : Retour à gauche (même position que Ma messagerie), Modifier l'annonce au centre */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '0.5cm 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href="/vendeur"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
@@ -828,35 +828,35 @@ export default function EditListingPage() {
           </p>
         </div>
         <div style={{ width: 220, flexShrink: 0 }} aria-hidden />
-      </div>
+            </div>
 
       <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-          {[1, 2, 3, 4].map((s, i) => (
-            <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 980,
-                  backgroundColor: step >= s ? '#1d1d1f' : '#d2d2d7',
-                  color: step >= s ? '#fff' : '#86868b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 15,
-                  fontWeight: 600,
-                }}
-              >
-                {step > s ? <Check size={18} /> : s}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+            {[1, 2, 3, 4].map((s, i) => (
+              <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 980,
+                    backgroundColor: step >= s ? '#1d1d1f' : '#d2d2d7',
+                    color: step >= s ? '#fff' : '#86868b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 15,
+                    fontWeight: 600,
+                  }}
+                >
+                  {step > s ? <Check size={18} /> : s}
+                </div>
+                {i < 3 && (
+                  <div style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
+                )}
               </div>
-              {i < 3 && (
-                <div style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
-              )}
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -990,12 +990,12 @@ export default function EditListingPage() {
                         setCustomModel('');
                         setModeleSearchQuery('');
                         setMaterial('');
-                        setMaterialSearchQuery('');
-                        setCustomMaterial('');
-                        setColor('');
-                        setColorSearchQuery('');
-                        setCustomColor('');
-                        setCategoryOpen(false);
+setMaterialSearchQuery('');
+                          setCustomMaterial('');
+                          setColor('');
+                          setColorSearchQuery('');
+                          setCustomColor('');
+                          setCategoryOpen(false);
                       }}
                       style={{
                         display: 'block',
@@ -1021,18 +1021,17 @@ export default function EditListingPage() {
                 {(() => {
                   const articleTypeOptions = category === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : category === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : category === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : category === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
                   const articleTypeDisplayLabel = articleType
-                    ? (articleType.startsWith('tshirt_polo::') || articleType.startsWith('derbies_richelieu::') ? articleType.split('::')[1] : articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
+                    ? (articleType.includes('::') ? articleType.split('::')[1] : articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
                     : '';
-                  const isOptionSelected = (opt: { value: string; label: string }) =>
-                    articleType === opt.value || (articleType.startsWith('tshirt_polo::') && opt.value === 'tshirt_polo' && opt.label === articleType.split('::')[1]);
+                  const isOptionSelected = (opt: { value: string; label: string }) => articleType === opt.value;
                   return (
                     <>
-                      <button
-                        type="button"
+                <button
+                  type="button"
                         onClick={() => genre.length > 0 && setTypeOpen((o) => !o)}
                         onBlur={() => setTimeout(() => setTypeOpen(false), 200)}
                         disabled={genre.length === 0}
-                        style={{
+                  style={{
                           ...inputStyle,
                           textAlign: 'left',
                           cursor: genre.length > 0 ? 'pointer' : 'not-allowed',
@@ -1049,7 +1048,7 @@ export default function EditListingPage() {
                           : articleType
                             ? (articleTypeDisplayLabel || 'Sélectionner un type de produit')
                             : 'Sélectionner un type de produit'}
-                      </button>
+                </button>
                       {typeOpen && genre.length > 0 && (
                         <div
                           ref={typeListRef}
@@ -1070,15 +1069,15 @@ export default function EditListingPage() {
                           }}
                         >
                           {articleTypeOptions.map((opt) => (
-                            <button
+                <button
                               key={`${opt.value}-${opt.label}`}
-                              type="button"
+                  type="button"
                               onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => {
-                                setArticleType(opt.value === 'tshirt_polo' ? `tshirt_polo::${opt.label}` : opt.value);
+                  onClick={() => {
+                                setArticleType(opt.value);
                                 setTypeOpen(false);
-                              }}
-                              style={{
+                  }}
+                  style={{
                                 display: 'block',
                                 width: '100%',
                                 padding: '6px 12px',
@@ -1086,20 +1085,20 @@ export default function EditListingPage() {
                                 fontSize: 15,
                                 color: '#1d1d1f',
                                 background: isOptionSelected(opt) ? '#f5f5f7' : 'none',
-                                border: 'none',
-                                cursor: 'pointer',
+                    border: 'none',
+                    cursor: 'pointer',
                                 fontWeight: isOptionSelected(opt) ? 600 : 400,
-                              }}
-                            >
+                  }}
+                >
                               {opt.label}
-                            </button>
+                </button>
                           ))}
-                        </div>
+              </div>
                       )}
                     </>
                   );
                 })()}
-              </div>
+            </div>
             )}
             {category === 'autre' && (
               <div style={{ marginBottom: 18 }}>
@@ -1201,18 +1200,18 @@ export default function EditListingPage() {
                 const modelePlaceholder = modeleDisabled ? 'Sélectionner d\'abord une marque' : 'Rechercher ou préciser le modèle...';
                 const modelePlaceholderCustom = modeleDisabled ? 'Sélectionner d\'abord une marque' : 'Précisez le modèle';
                 return modelOptions.length > 0 ? (
-                  <>
-                    <input
-                      type="text"
-                      value={modeleSearchQuery}
-                      onChange={(e) => {
+                <>
+                  <input
+                    type="text"
+                    value={modeleSearchQuery}
+                    onChange={(e) => {
                         if (modeleDisabled) return;
-                        setModeleSearchQuery(e.target.value);
-                        if (model && e.target.value !== model) setModel('');
-                        setModeleOpen(true);
-                      }}
+                      setModeleSearchQuery(e.target.value);
+                      if (model && e.target.value !== model) setModel('');
+                      setModeleOpen(true);
+                    }}
                       onFocus={() => { if (!modeleDisabled) setModeleOpen(true); }}
-                      onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
+                    onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
                       placeholder={modelePlaceholder}
                       disabled={modeleDisabled}
                       style={{
@@ -1222,55 +1221,55 @@ export default function EditListingPage() {
                       }}
                     />
                     {!modeleDisabled && modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
-                      <div
-                        ref={modeleListRef}
-                        className="listing-dropdown-list"
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          marginTop: 4,
-                          maxHeight: 'calc(228px - 5mm)',
-                          overflowY: 'auto',
-                          backgroundColor: '#fff',
-                          border: '1px solid #d2d2d7',
-                          borderRadius: 10,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                          zIndex: 10,
-                        }}
-                      >
-                        {modelOptions
-                          .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
-                          .map((name) => (
-                            <button
-                              key={name}
-                              type="button"
-                              onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => {
-                                setModel(name);
-                                setModeleSearchQuery(name);
-                                setModeleOpen(false);
-                              }}
-                              style={{
-                                display: 'block',
-                                width: '100%',
-                                padding: '6px 12px',
-                                textAlign: 'left',
-                                fontSize: 15,
-                                color: '#1d1d1f',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              {name}
-                            </button>
-                          ))}
-                      </div>
-                    )}
-                  </>
-                ) : (
+                    <div
+                      ref={modeleListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {modelOptions
+                        .filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase()))
+                        .map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              setModel(name);
+                              setModeleSearchQuery(name);
+                              setModeleOpen(false);
+                            }}
+                            style={{
+                              display: 'block',
+                              width: '100%',
+                              padding: '6px 12px',
+                              textAlign: 'left',
+                              fontSize: 15,
+                              color: '#1d1d1f',
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {name}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </>
+              ) : (
                   <input
                     type="text"
                     value={customModel}
@@ -1295,17 +1294,17 @@ export default function EditListingPage() {
                   const sizePlaceholder = sizeDisabled ? 'Renseigner d\'abord le modèle' : (category === 'chaussures' ? 'Rechercher ou préciser la pointure…' : 'Rechercher ou préciser la taille…');
                   return (
                     <>
-                      <input
-                        type="text"
-                        value={sizeSearchQuery}
-                        onChange={(e) => {
+                <input
+                  type="text"
+                  value={sizeSearchQuery}
+                  onChange={(e) => {
                           if (sizeDisabled) return;
-                          setSizeSearchQuery(e.target.value);
-                          if (size && e.target.value !== size) setSize('');
-                          setSizeOpen(true);
-                        }}
+                    setSizeSearchQuery(e.target.value);
+                    if (size && e.target.value !== size) setSize('');
+                    setSizeOpen(true);
+                  }}
                         onFocus={() => { if (!sizeDisabled) setSizeOpen(true); }}
-                        onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
+                  onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
                         placeholder={sizePlaceholder}
                         disabled={sizeDisabled}
                         style={{
@@ -1324,53 +1323,53 @@ export default function EditListingPage() {
                           : (isPantalon || isJean || isRobe
                             ? [...CLOTHING_SIZES, ...(isPantalon ? getPantSizesForGenre(genre) : []), ...(isJean ? getJeanSizesForGenre(genre) : []), ...(isRobe ? [...ROBE_SIZES] : [])]
                             : [...CLOTHING_SIZES]);
-                        const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
-                        if (filtered.length === 0) return null;
-                        return (
-                          <div
-                            ref={sizeListRef}
-                            className="listing-dropdown-list"
-                            style={{
-                              position: 'absolute',
-                              top: '100%',
-                              left: 0,
-                              right: 0,
-                              marginTop: 4,
-                              maxHeight: 'calc(228px - 5mm)',
-                              overflowY: 'auto',
-                              backgroundColor: '#fff',
-                              border: '1px solid #d2d2d7',
-                              borderRadius: 10,
-                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                              zIndex: 10,
-                            }}
-                          >
-                            {filtered.map((opt) => (
-                              <button
-                                key={opt}
-                                type="button"
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
-                                  setSize(opt);
-                                  setSizeSearchQuery(opt);
-                                  setSizeOpen(false);
-                                }}
-                                style={{
-                                  display: 'block',
-                                  width: '100%',
-                                  padding: '6px 12px',
-                                  textAlign: 'left',
-                                  fontSize: 15,
-                                  color: '#1d1d1f',
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                {opt}
-                              </button>
-                            ))}
-                          </div>
+                  const filtered = options.filter((o) => !sizeSearchQuery.trim() || o.toLowerCase().includes(sizeSearchQuery.trim().toLowerCase()));
+                  if (filtered.length === 0) return null;
+                  return (
+                    <div
+                      ref={sizeListRef}
+                      className="listing-dropdown-list"
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: 4,
+                        maxHeight: 'calc(228px - 5mm)',
+                        overflowY: 'auto',
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 10,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        zIndex: 10,
+                      }}
+                    >
+                      {filtered.map((opt) => (
+                        <button
+                          key={opt}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setSize(opt);
+                            setSizeSearchQuery(opt);
+                            setSizeOpen(false);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '6px 12px',
+                            textAlign: 'left',
+                            fontSize: 15,
+                            color: '#1d1d1f',
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
                         );
                       })()}
                     </>
@@ -1448,23 +1447,23 @@ export default function EditListingPage() {
                     ))}
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => setConditionOpen((o) => !o)}
-                  onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
-                  style={{
-                    ...inputStyle,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                    color: condition ? '#1d1d1f' : '#86868b',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'right 14px center',
-                    paddingRight: 40,
-                  }}
-                >
-                  {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
-                </button>
+              <button
+                type="button"
+                onClick={() => setConditionOpen((o) => !o)}
+                onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
+                style={{
+                  ...inputStyle,
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  color: condition ? '#1d1d1f' : '#86868b',
+                  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right 14px center',
+                  paddingRight: 40,
+                }}
+              >
+                {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
+              </button>
               </div>
               {conditionOpen && (
                 <div
@@ -1840,53 +1839,53 @@ export default function EditListingPage() {
                                 setPhotoDropTargetExisting(null);
                                 setPhotoDropTargetNew(null);
                               }}
-                              style={{
-                                position: 'relative',
-                                aspectRatio: 1,
-                                borderRadius: 12,
-                                overflow: 'hidden',
-                                border: '1px solid #e8e8e8',
-                                backgroundColor: '#fafafa',
+                      style={{
+                        position: 'relative',
+                        aspectRatio: 1,
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        border: '1px solid #e8e8e8',
+                        backgroundColor: '#fafafa',
                                 cursor: 'grab',
                                 userSelect: 'none',
                                 opacity: draggingPhotoSource === 'existing' && draggingPhotoIndex === slot.originalIndex ? 0.5 : 1,
                                 transition: 'opacity 0.15s ease',
-                              }}
+                      }}
                               onMouseEnter={() => setHoveredExistingIndex(slot.originalIndex)}
-                              onMouseLeave={() => setHoveredExistingIndex(null)}
-                            >
-                              <img
+                      onMouseLeave={() => setHoveredExistingIndex(null)}
+                    >
+                      <img
                                 src={slot.url}
                                 alt={`Photo ${slot.originalIndex + 1}`}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
                                 draggable={false}
-                              />
-                              <button
-                                type="button"
+                      />
+                      <button
+                        type="button"
                                 onClick={() => handleRemoveExistingPhoto(slot.originalIndex)}
-                                style={{
-                                  position: 'absolute',
-                                  inset: 0,
-                                  background: 'rgba(0,0,0,0.6)',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: 6,
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
                                   opacity: hoveredExistingIndex === slot.originalIndex ? 1 : 0,
-                                  transition: 'opacity 0.2s',
-                                  color: '#fff',
-                                  fontSize: 11,
-                                  fontWeight: 500,
-                                  border: 'none',
-                                  cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                          color: '#fff',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          border: 'none',
+                          cursor: 'pointer',
                                   pointerEvents: draggingPhotoSource !== null ? 'none' : 'auto',
-                                }}
-                              >
-                                <Trash2 size={22} />
-                                <span>Supprimer</span>
-                              </button>
-                            </div>
+                        }}
+                      >
+                        <Trash2 size={22} />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
                           )
                         )}
                         {(() => {
@@ -1970,53 +1969,53 @@ export default function EditListingPage() {
                                   setPhotoDropTargetExisting(null);
                                   setPhotoDropTargetNew(null);
                                 }}
-                                style={{
-                                  position: 'relative',
-                                  aspectRatio: 1,
-                                  borderRadius: 12,
-                                  overflow: 'hidden',
-                                  border: '1px solid #e8e8e8',
-                                  backgroundColor: '#fafafa',
+                      style={{
+                        position: 'relative',
+                        aspectRatio: 1,
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        border: '1px solid #e8e8e8',
+                        backgroundColor: '#fafafa',
                                   cursor: 'grab',
                                   userSelect: 'none',
                                   opacity: draggingPhotoSource === 'new' && draggingPhotoIndex === slot.originalIndex ? 0.5 : 1,
                                   transition: 'opacity 0.15s ease',
-                                }}
+                      }}
                                 onMouseEnter={() => setHoveredNewIndex(slot.originalIndex)}
-                                onMouseLeave={() => setHoveredNewIndex(null)}
-                              >
-                                <img
+                      onMouseLeave={() => setHoveredNewIndex(null)}
+                    >
+                      <img
                                   src={slot.url}
                                   alt={`Nouvelle photo ${slot.originalIndex + 1}`}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}
                                   draggable={false}
-                                />
-                                <button
-                                  type="button"
+                      />
+                      <button
+                        type="button"
                                   onClick={() => handleRemoveNewPhoto(slot.originalIndex)}
-                                  style={{
-                                    position: 'absolute',
-                                    inset: 0,
-                                    background: 'rgba(0,0,0,0.6)',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 6,
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(0,0,0,0.6)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 6,
                                     opacity: hoveredNewIndex === slot.originalIndex ? 1 : 0,
-                                    transition: 'opacity 0.2s',
-                                    color: '#fff',
-                                    fontSize: 11,
-                                    fontWeight: 500,
-                                    border: 'none',
-                                    cursor: 'pointer',
+                          transition: 'opacity 0.2s',
+                          color: '#fff',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          border: 'none',
+                          cursor: 'pointer',
                                     pointerEvents: draggingPhotoSource !== null ? 'none' : 'auto',
-                                  }}
-                                >
-                                  <Trash2 size={22} />
-                                  <span>Supprimer</span>
-                                </button>
-                              </div>
+                        }}
+                      >
+                        <Trash2 size={22} />
+                        <span>Supprimer</span>
+                      </button>
+                    </div>
                             )
                           );
                         })()}

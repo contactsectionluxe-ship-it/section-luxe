@@ -234,7 +234,6 @@ export async function getListings(options?: {
 
   const modelList = models?.length ? models : (model ? [model] : undefined);
   if (modelList?.length) {
-    // Match partiel : "Sandales" affiche aussi "Sandales Mules", "T-Shirt" aussi "Tshirt" (si variantes passées)
     const orConditions = modelList
       .filter((m) => m != null && String(m).trim() !== '')
       .map((m) => `model.ilike.%${escapeIlike(String(m).trim())}%`);
@@ -267,7 +266,7 @@ export async function getListings(options?: {
   }
 
   if (articleTypes?.length) {
-    const articleTypeList = articleTypes.map((t) => String(t).trim()).filter(Boolean);
+    let articleTypeList = articleTypes.map((t) => String(t).trim()).filter(Boolean);
     if (articleTypeList.length > 0) {
       const catsNormalized = cats?.map((c) => (c || '').toLowerCase()) ?? [];
       const includeMontres = catsNormalized.includes('montres');
@@ -290,6 +289,36 @@ export async function getListings(options?: {
         }
         if (orParts.length > 0) query = query.or(orParts.join(','));
       } else {
+        if (articleTypeList.includes('top_tshirt')) {
+          articleTypeList = [...new Set([...articleTypeList, 'tshirt_polo'])];
+        }
+        if (articleTypeList.includes('chemise_blouse')) {
+          articleTypeList = [...new Set([...articleTypeList, 'chemise'])];
+        }
+        if (articleTypeList.includes('pantalon_jean')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'pantalon_jean'), 'jean', 'pantalon', 'pantalon_short'])];
+        }
+        if (articleTypeList.includes('tailleur_costume')) {
+          articleTypeList = [...new Set([...articleTypeList, 'costume'])];
+        }
+        if (articleTypeList.includes('pochette_clutch_pochette')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'pochette_clutch_pochette'), 'pochette_clutch', 'pochette'])];
+        }
+        if (articleTypeList.includes('sac_bandouliere_bandouliere')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'sac_bandouliere_bandouliere'), 'sac_bandouliere', 'sac_bandouliere_messenger'])];
+        }
+        if (articleTypeList.includes('sac_voyage_bagage')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'sac_voyage_bagage'), 'sac_voyage', 'bagage'])];
+        }
+        if (articleTypeList.includes('bottes_bottines')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'bottes_bottines'), 'bottes', 'bottines_talons'])];
+        }
+        if (articleTypeList.includes('porte_monnaie_portefeuille_porte_cartes')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'porte_monnaie_portefeuille_porte_cartes'), 'porte_monnaie_portefeuille', 'porte_cartes'])];
+        }
+        if (articleTypeList.includes('echarpe_foulard_carre_soie')) {
+          articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'echarpe_foulard_carre_soie'), 'echarpe', 'foulard_carre_soie'])];
+        }
         query = query.in('article_type', articleTypeList);
       }
     }

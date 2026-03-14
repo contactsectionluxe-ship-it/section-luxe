@@ -135,12 +135,11 @@ export const VETEMENTS_TYPES_FEMME: { value: string; label: string }[] = [
   { value: 'maille_sweatshirt', label: 'Mailles & Sweatshirts' },
   { value: 'top_tshirt', label: 'Tops & T-shirts' },
   { value: 'robe', label: 'Robes' },
-  { value: 'jean', label: 'Jeans' },
-  { value: 'pantalon', label: 'Pantalons' },
+  { value: 'pantalon_jean', label: 'Pantalons & Jeans' },
   { value: 'jupe_short', label: 'Jupes & Shorts' },
   { value: 'veste', label: 'Vestes' },
   { value: 'manteau_blouson', label: 'Manteaux & Blousons' },
-  { value: 'tailleur_costume', label: 'Tailleurs & Costumes' },
+  { value: 'tailleur_costume', label: 'Tailleurs' },
 ];
 
 /** Retourne les types d'article vêtements selon le(s) genre(s) sélectionné(s). */
@@ -160,26 +159,51 @@ export function getVetementsTypesForGenre(genre: ('homme' | 'femme')[]): { value
   return [];
 }
 
-/** Types d'article sacs Femme (catalogue = pluriel). */
+/** Ordre d'affichage catalogue pour les types vêtements (types proches regroupés, cohérent avec le dépôt). */
+const VETEMENTS_TYPES_ORDER_CATALOGUE: string[] = [
+  'tshirt_polo', 'top_tshirt', 'chemise_blouse', 'chemise', 'maille_sweatshirt',
+  'veste', 'tailleur_costume', 'costume',
+  'robe', 'jean', 'pantalon_short', 'pantalon', 'pantalon_jean', 'jupe_short',
+  'manteau_blouson',
+];
+
+/** Même liste que getVetementsTypesForGenre mais ordre optimisé pour le filtre catalogue.
+ * Quand les deux genres sont sélectionnés (ou aucun) : types fusionnés (T-shirts & Polos → Tops & T-shirts, Chemises → Chemises & Blouses, Jeans/Pantalons/Pantalons & Shorts → Pantalons & Jeans). */
+export function getVetementsTypesForGenreCatalogue(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  let list = getVetementsTypesForGenre(genre);
+  if (genre.length === 2) {
+    list = list.filter((t) =>
+      t.value !== 'tshirt_polo' && t.value !== 'chemise' && t.value !== 'jean' && t.value !== 'pantalon' && t.value !== 'pantalon_short' && t.value !== 'costume' && t.value !== 'pantalon_jean'
+    );
+    list.push({ value: 'pantalon_jean', label: 'Pantalons & Jeans' });
+  }
+  const orderMap = new Map(VETEMENTS_TYPES_ORDER_CATALOGUE.map((v, i) => [v, i]));
+  return [...list].sort((a, b) => {
+    const ia = orderMap.get(a.value) ?? 999;
+    const ib = orderMap.get(b.value) ?? 999;
+    return ia - ib;
+  });
+}
+
+/** Types d'article sacs Femme (catalogue = pluriel). Ordre : Sacs à main, Sacs bandoulière, Pochettes, Sacs Ceinture, puis le reste. */
 export const SACS_TYPES_FEMME: { value: string; label: string }[] = [
   { value: 'sac_main', label: 'Sacs à main' },
   { value: 'sac_bandouliere', label: 'Sacs bandoulière' },
   { value: 'pochette_clutch', label: 'Pochettes' },
+  { value: 'sac_ceinture', label: 'Sacs Ceinture' },
   { value: 'porte_documents', label: 'Porte-documents' },
   { value: 'sac_dos', label: 'Sacs à dos' },
-  { value: 'sac_voyage', label: 'Sacs de voyage' },
-  { value: 'bagage', label: 'Bagages' },
+  { value: 'sac_voyage_bagage', label: 'Sacs de voyage & Bagages' },
 ];
 
-/** Types d'article sacs Homme (catalogue = pluriel). */
+/** Types d'article sacs Homme (catalogue = pluriel). Ordre : Pochettes, Sacs bandoulière, Sacs Ceinture, puis le reste. */
 export const SACS_TYPES_HOMME: { value: string; label: string }[] = [
   { value: 'pochette', label: 'Pochettes' },
   { value: 'sac_bandouliere_messenger', label: 'Sacs bandoulière' },
-  { value: 'sac_dos', label: 'Sacs à dos' },
-  { value: 'porte_documents', label: 'Porte-documents' },
-  { value: 'sac_voyage', label: 'Sacs de voyage' },
-  { value: 'bagage', label: 'Bagages' },
   { value: 'sac_ceinture', label: 'Sacs Ceinture' },
+  { value: 'porte_documents', label: 'Porte-documents' },
+  { value: 'sac_dos', label: 'Sacs à dos' },
+  { value: 'sac_voyage_bagage', label: 'Sacs de voyage & Bagages' },
 ];
 
 /** Retourne les types d'article sacs selon le(s) genre(s) sélectionné(s). */
@@ -197,6 +221,28 @@ export function getSacsTypesForGenre(genre: ('homme' | 'femme')[]): { value: str
   if (hasH) return [...SACS_TYPES_HOMME];
   if (hasF) return [...SACS_TYPES_FEMME];
   return [];
+}
+
+/** Même liste que getSacsTypesForGenre mais pour le filtre catalogue : quand les deux genres sont sélectionnés, options regroupées (Pochettes, Sacs bandoulière, Sacs de voyage & Bagages). Ordre : Sacs à main, Sacs bandoulière, Pochettes, Sacs Ceinture, Porte-documents, Sacs à dos, Sacs de voyage & Bagages. */
+export function getSacsTypesForGenreCatalogue(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  let list = getSacsTypesForGenre(genre);
+  if (genre.length === 2) {
+    list = list.filter(
+      (t) =>
+        t.value !== 'pochette_clutch' && t.value !== 'pochette' &&
+        t.value !== 'sac_bandouliere' && t.value !== 'sac_bandouliere_messenger'
+    );
+    const idxMain = list.findIndex((t) => t.value === 'sac_main');
+    const insertAt = idxMain >= 0 ? idxMain + 1 : list.length;
+    list.splice(insertAt, 0, { value: 'sac_bandouliere_bandouliere', label: 'Sacs bandoulière' }, { value: 'pochette_clutch_pochette', label: 'Pochettes' });
+    const idxCeinture = list.findIndex((t) => t.value === 'sac_ceinture');
+    if (idxCeinture >= 0) {
+      const [ceinture] = list.splice(idxCeinture, 1);
+      const idxPochettes = list.findIndex((t) => t.value === 'pochette_clutch_pochette');
+      list.splice(idxPochettes >= 0 ? idxPochettes + 1 : list.length, 0, ceinture);
+    }
+  }
+  return list;
 }
 
 /** Types d'article bijoux (catalogue = pluriel). */
@@ -220,18 +266,18 @@ export const CHAUSSURES_TYPES_FEMME: { value: string; label: string }[] = [
   { value: 'sandales_plates', label: 'Sandales' },
   { value: 'ballerines', label: 'Ballerines' },
   { value: 'mules_plates', label: 'Mules' },
-  { value: 'bottes', label: 'Bottes & Bottines' },
   { value: 'mocassins', label: 'Mocassins' },
   { value: 'derbies_richelieu', label: 'Richelieus & Derbies' },
+  { value: 'bottes', label: 'Bottes & Bottines' },
 ];
 
-/** Types d'article chaussures Homme (catalogue = pluriel). */
+/** Types d'article chaussures Homme (catalogue = pluriel). Ordre : Sneakers, Sandales, Mocassins, Richelieus & Derbies, Bottines. */
 export const CHAUSSURES_TYPES_HOMME: { value: string; label: string }[] = [
   { value: 'sneakers', label: 'Sneakers' },
-  { value: 'derbies_richelieu', label: 'Richelieus & Derbies' },
-  { value: 'mocassins', label: 'Mocassins' },
-  { value: 'bottines_talons', label: 'Bottines' },
   { value: 'sandales_plates', label: 'Sandales' },
+  { value: 'mocassins', label: 'Mocassins' },
+  { value: 'derbies_richelieu', label: 'Richelieus & Derbies' },
+  { value: 'bottines_talons', label: 'Bottines' },
 ];
 
 /** Retourne les types d'article chaussures selon le(s) genre(s) sélectionné(s). */
@@ -249,6 +295,18 @@ export function getChaussuresTypesForGenre(genre: ('homme' | 'femme')[]): { valu
   if (hasH) return [...CHAUSSURES_TYPES_HOMME];
   if (hasF) return [...CHAUSSURES_TYPES_FEMME];
   return [];
+}
+
+/** Même liste que getChaussuresTypesForGenre mais pour le filtre catalogue : quand les deux genres sont sélectionnés, un seul "Bottes & Bottines" regroupe bottes (femme) et Bottines (homme). */
+export function getChaussuresTypesForGenreCatalogue(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  let list = getChaussuresTypesForGenre(genre);
+  if (genre.length === 2) {
+    list = list.filter((t) => t.value !== 'bottes' && t.value !== 'bottines_talons');
+    const idxDerbies = list.findIndex((t) => t.value === 'derbies_richelieu');
+    const insertAt = idxDerbies >= 0 ? idxDerbies + 1 : list.length;
+    list.splice(insertAt, 0, { value: 'bottes_bottines', label: 'Bottes & Bottines' });
+  }
+  return list;
 }
 
 /** Types d'article accessoires (catalogue = pluriel). */
@@ -276,6 +334,19 @@ export function getAccessoiresTypesForGenre(genre: ('homme' | 'femme')[]): { val
     return ACCESSOIRES_TYPES.filter((t) => !ACCESSOIRES_TYPES_EXCLUS_HOMME.has(t.value));
   }
   return [...ACCESSOIRES_TYPES];
+}
+
+/** Même liste que getAccessoiresTypesForGenre mais pour le filtre catalogue : "Portefeuilles & Porte-cartes" regroupe les deux ; quand seul homme, "Écharpes & Foulards" regroupe Écharpes et Foulards & Carrés de soie. */
+export function getAccessoiresTypesForGenreCatalogue(genre: ('homme' | 'femme')[]): { value: string; label: string }[] {
+  let list = getAccessoiresTypesForGenre(genre);
+  list = list.filter((t) => t.value !== 'porte_monnaie_portefeuille' && t.value !== 'porte_cartes');
+  list.unshift({ value: 'porte_monnaie_portefeuille_porte_cartes', label: 'Portefeuilles & Porte-cartes' });
+  if (genre.length === 1 && genre[0] === 'homme') {
+    list = list.filter((t) => t.value !== 'echarpe' && t.value !== 'foulard_carre_soie');
+    const idxGants = list.findIndex((t) => t.value === 'gants');
+    list.splice(idxGants >= 0 ? idxGants + 1 : list.length, 0, { value: 'echarpe_foulard_carre_soie', label: 'Écharpes & Foulards' });
+  }
+  return list;
 }
 
 /** Libellés au singulier pour les formulaires Déposer/Modifier une annonce (catalogue = pluriel). */
@@ -395,7 +466,7 @@ export function getArticleTypeOptionsForForm(options: { value: string; label: st
         if (o.value === 'tailleur_costume' && part === 'Costume') continue;
         if (seenLabel.has(part)) continue;
         seenLabel.add(part);
-        const formValue = ARTICLE_TYPE_FORM_SPLIT_VALUE[o.value]?.[part] ?? o.value;
+        const formValue = ARTICLE_TYPE_FORM_SPLIT_VALUE[o.value]?.[part] ?? `${o.value}::${part}`;
         result.push({ value: formValue, label: part });
       }
     } else {
@@ -415,7 +486,7 @@ export function getArticleTypeOptionsForForm(options: { value: string; label: st
         if (o.value === 'tailleur_costume' && part === 'Costume') continue;
         if (!seenFinal.has(part)) {
           seenFinal.add(part);
-          const formValue = ARTICLE_TYPE_FORM_SPLIT_VALUE[o.value]?.[part] ?? o.value;
+          const formValue = ARTICLE_TYPE_FORM_SPLIT_VALUE[o.value]?.[part] ?? `${o.value}::${part}`;
           final.push({ value: formValue, label: part });
         }
       }
@@ -620,15 +691,15 @@ export function expandArticleTypesForFilter(articleTypes: string[]): string[] {
   return [...out];
 }
 
-/** Mots-clés pour filtrer les modèles vêtements selon le type de produit (dépôt annonce). */
+/** Mots-clés pour filtrer les modèles vêtements selon le type de produit (dépôt annonce). Chaque type a des mots-clés exclusifs : aucun mot-clé ne doit être partagé entre deux types (évite qu’un même modèle soit lié à plusieurs types). */
 export const VETEMENTS_ARTICLE_TYPE_MODEL_KEYWORDS: Record<string, string[]> = {
-  tshirt_polo: ['T-shirt', 'Polo', 'Sweat'],
+  tshirt_polo: ['T-shirt', 'Polo'],
   chemise: ['Chemise'],
   maille_sweatshirt: ['Maille', 'Sweat', 'Pull', 'Cardigan'],
   jean: ['Jean'],
   pantalon_short: ['Pantalon', 'Short'],
   veste: ['Veste'],
-  costume: ['Costume', 'Smoking', 'Tailleur'],
+  costume: ['Costume', 'Smoking'],
   manteau_blouson: ['Manteau', 'Blouson', 'Caban', 'Trench', 'Parka'],
   chemise_blouse: ['Chemise', 'Blouse'],
   top_tshirt: ['Top', 'T-shirt'],
@@ -876,14 +947,28 @@ function normalizeModelForFilter(s: string): string {
   return (s || '').toLowerCase().replace(/-/g, '').replace(/\s+/g, '').trim();
 }
 
-/** Retourne toutes les variantes d’orthographe à envoyer à l’API pour un filtre modèle (ex. "T-Shirt" → ["T-Shirt", "Tshirt", "T shirt", ...]). */
+/** Retourne toutes les variantes à envoyer à l’API pour un filtre modèle : équivalents d’orthographe + chaque mot significatif pour matcher les variantes (ex. "Speedy 25" → ["Speedy 25", "Speedy"] ; "T-shirt Oblique" → ["T-shirt Oblique", "T-shirt", "Oblique"] pour afficher aussi les annonces dont le modèle est "Oblique"). */
 export function getModelFilterVariants(model: string): string[] {
   if (!model?.trim()) return [];
+  const trimmed = model.trim();
   const key = normalizeModelForFilter(model);
+  let list: string[] = [];
   for (const group of MODEL_FILTER_EQUIVALENTS) {
-    if (group.some((m) => normalizeModelForFilter(m) === key)) return group;
+    if (group.some((m) => normalizeModelForFilter(m) === key)) {
+      list = [...group];
+      break;
+    }
   }
-  return [model.trim()];
+  if (list.length === 0) list = [trimmed];
+  const parts = trimmed.split(/\s+/).filter(Boolean);
+  const seen = new Set(list.map((m) => m.toLowerCase()));
+  for (const part of parts) {
+    if (part.length >= 2 && !/^\d+$/.test(part) && !seen.has(part.toLowerCase())) {
+      seen.add(part.toLowerCase());
+      list.push(part);
+    }
+  }
+  return list;
 }
 
 function shoeSizesInRange(min: number, max: number): string[] {
@@ -938,6 +1023,7 @@ export const REGIONS = [
   { value: 'autre', label: 'Autre' },
 ];
 
+/** Toutes les matières avec libellé français (pour affichage page produit, catalogue, etc.). */
 export const MATERIALS = [
   { value: 'leather', label: 'Cuir' },
   { value: 'canvas', label: 'Toile' },
@@ -948,6 +1034,31 @@ export const MATERIALS = [
   { value: 'precious_stone', label: 'Pierre précieuse' },
   { value: 'fabric', label: 'Tissu' },
   { value: 'other', label: 'Autre' },
+  { value: 'wool', label: 'Laine' },
+  { value: 'cashmere', label: 'Cachemire' },
+  { value: 'silk', label: 'Soie' },
+  { value: 'cotton', label: 'Coton' },
+  { value: 'tweed', label: 'Tweed' },
+  { value: 'denim', label: 'Denim' },
+  { value: 'exotic_leather', label: 'Cuir exotique' },
+  { value: 'calfskin', label: 'Veau' },
+  { value: 'goatskin', label: 'Chèvre' },
+  { value: 'epsom', label: 'Epsom' },
+  { value: 'togo', label: 'Togo' },
+  { value: 'clemence', label: 'Clémence' },
+  { value: 'two_tone', label: 'Bicolore' },
+  { value: 'titanium', label: 'Titane' },
+  { value: 'ceramic', label: 'Céramique' },
+  { value: 'platinum', label: 'Platine' },
+  { value: 'carbon', label: 'Carbone' },
+  { value: 'bronze', label: 'Bronze' },
+  { value: 'diamond', label: 'Diamant' },
+  { value: 'pearl', label: 'Perle' },
+  { value: 'enamel', label: 'Émail' },
+  { value: 'rose_gold', label: 'Or rose' },
+  { value: 'white_gold', label: 'Or blanc' },
+  { value: 'patent_leather', label: 'Cuir verni' },
+  { value: 'metal', label: 'Métal' },
 ];
 
 /** Matières proposées par catégorie (puis par marque si défini). Clé = catégorie, puis marque optionnelle. */
@@ -1428,6 +1539,34 @@ const MODEL_IS_ALREADY_TYPE_VETEMENTS = new Set(['Tweed', 'Cardigan', 'Veste cla
 
 /** Modèles chaussures qui sont déjà le type (évite "Botte Bottes", "Escarpin Escarpins"). */
 const MODEL_IS_ALREADY_TYPE_CHAUSSURES = new Set(['Bottes', 'Escarpins', 'Baskets', 'Sandales', 'Ballerines', 'Bottines', 'Mocassins', 'Sandals']);
+
+function buildModeleTypeLabelsToExclude(): Record<string, Set<string>> {
+  const chaussures = new Set<string>(MODEL_IS_ALREADY_TYPE_CHAUSSURES);
+  for (const byBrand of Object.values(MODEL_TYPE_CHAUSSURES)) {
+    for (const v of Object.values(byBrand)) chaussures.add(v);
+  }
+  const sacs = new Set<string>();
+  for (const byBrand of Object.values(MODEL_TYPE_SACS)) {
+    for (const v of Object.values(byBrand)) sacs.add(v);
+  }
+  const bijoux = new Set<string>();
+  for (const byBrand of Object.values(MODEL_TYPE_BIJOUX)) {
+    for (const v of Object.values(byBrand)) bijoux.add(v);
+  }
+  return {
+    chaussures,
+    sacs,
+    bijoux,
+    accessoires: new Set(MODEL_IS_ALREADY_TYPE_ACCESSOIRES),
+    vetements: new Set(MODEL_IS_ALREADY_TYPE_VETEMENTS),
+  };
+}
+const MODELE_TYPE_LABELS_TO_EXCLUDE = buildModeleTypeLabelsToExclude();
+
+export function isModelNameATypeLabel(category: string, modelName: string): boolean {
+  const set = MODELE_TYPE_LABELS_TO_EXCLUDE[category];
+  return set ? set.has(modelName) : false;
+}
 
 /** Retourne le libellé "Type + Modèle" pour l’affichage. N’affiche jamais un type identique à la catégorie (ex. pas "Bijou" en bijoux, pas "Sac" seul en sacs — sauf pour montres où "Montre" est autorisé : Montre Santos, Montre Submariner). */
 export function getModelDisplayName(category: string, brand: string, model: string): string {
