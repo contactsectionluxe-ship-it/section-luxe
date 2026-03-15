@@ -42,6 +42,7 @@ import {
   VETEMENTS_MODELES_TOUJOURS_PROPOSES,
   VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE,
 } from '@/lib/constants';
+import { searchCommuneArrondissement } from '@/lib/communes-arrondissements';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
@@ -200,11 +201,16 @@ async function fetchCoordsForPostcode(
   if (!q) return null;
   try {
     const res = await fetch(
-      `https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(q)}&fields=centre&limit=1`
+      `https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(q)}&limit=1`
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const centre = Array.isArray(data) && data[0]?.centre?.coordinates;
+    const first = Array.isArray(data) ? data[0] : null;
+    if (!first || typeof first !== 'object') return null;
+    const o = first as { centre?: { coordinates?: number[] }; geometry?: { type?: string; coordinates?: number[] } };
+    const centre =
+      o.centre?.coordinates ??
+      (o.geometry?.type === 'Point' ? o.geometry?.coordinates : null);
     if (!centre || !Array.isArray(centre) || centre.length < 2) return null;
     const [lon, lat] = centre;
     return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
@@ -224,8 +230,11 @@ async function fetchPostcodeFromCoords(
     );
     if (!res.ok) return null;
     const data = await res.json();
-    const postcode = data?.features?.[0]?.properties?.postcode;
-    return typeof postcode === 'string' ? postcode.replace(/\s/g, '').trim() : null;
+    const props = data?.features?.[0]?.properties;
+    if (!props) return null;
+    const postcode = props.postcode ?? props.postal_code ?? props.code_postal;
+    const str = postcode != null ? String(postcode).replace(/\s/g, '').trim() : '';
+    return str || null;
   } catch {
     return null;
   }
@@ -751,10 +760,15 @@ function CatalogueContent() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  /** Affichage des annonces : horizontal (défaut) ou grille — stocké en localStorage. useLayoutEffect pour restaurer avant le premier paint et éviter flash. */
+  /** Affichage des annonces : horizontal (défaut) ou grille — stocké en localStorage. Sur mobile toujours grille. */
   const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
   useLayoutEffect(() => {
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('catalogue-view-mode') : null;
+    if (typeof window === 'undefined') return;
+    if (window.innerWidth <= 767) {
+      setViewMode('grid');
+      return;
+    }
+    const saved = localStorage.getItem('catalogue-view-mode');
     if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
   }, []);
   const [showMapPopup, setShowMapPopup] = useState(false);
@@ -1091,14 +1105,16 @@ function CatalogueContent() {
         }
         const userPostcode = await fetchPostcodeFromCoords(userCoords.lat, userCoords.lon);
         const userPostcodeNorm = userPostcode?.replace(/\s/g, '').trim() ?? '';
-        const epsilonKm = 0.5;
+        const norm5 = (s: string) => s.replace(/\s/g, '').trim().slice(0, 5);
+        const epsilonKm = 2;
         filtered = filtered.filter((l) => {
           const pc = l.sellerPostcode?.replace(/\s/g, '').trim();
           if (!pc) return false;
-          if (userPostcodeNorm && pc === userPostcodeNorm) return true;
+          if (userPostcodeNorm && (pc === userPostcodeNorm || norm5(pc) === norm5(userPostcodeNorm))) return true;
           const c = coordsMap.get(pc);
           if (!c) return false;
           const d = haversineKm(userCoords, c);
+          if (d < 1) return true;
           return d <= radiusKm + epsilonKm;
         });
       }
@@ -1533,7 +1549,7 @@ function CatalogueContent() {
     return out;
   }, [locationQuery, allDeptCodes]);
 
-  /** Appel API communes : par nom et par code postal (recherche intelligente, ex. 75016 ou 75 016 → Paris 16e (75016)) */
+  /** Appel API communes : par nom, par code postal, ou par département (tous les codes postaux du département). */
   useEffect(() => {
     const q = locationQuery.trim();
     if (q.length < 2) {
@@ -1541,31 +1557,63 @@ function CatalogueContent() {
       return;
     }
     const qNorm = q.replace(/\s/g, '');
-    const isPostalCode = /^\d{2,5}$/.test(qNorm);
+    const isPostalCode = /^\d{2,5}$/.test(qNorm) || qNorm === '2A' || qNorm === '2B';
+    const isDeptCode = qNorm.length === 2 && (/^\d{2}$/.test(qNorm) || qNorm === '2A' || qNorm === '2B');
     const t = setTimeout(async () => {
       setLocationCityLoading(true);
       try {
-        const [byNom, byPostal] = await Promise.all([
-          fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux&limit=15&boost=population`).then((r) => r.json() as Promise<Array<{ nom: string; codesPostaux: string[] }>>),
-          isPostalCode ? fetch(`https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(qNorm)}&fields=nom,codesPostaux&limit=15`).then((r) => r.json() as Promise<Array<{ nom: string; codesPostaux: string[] }>>) : Promise.resolve([]),
-        ]);
+        const limit = 200;
+        let byPostal: Array<{ nom: string; codesPostaux: string[] }> = [];
+        if (isPostalCode) {
+          if (isDeptCode) {
+            const r = await fetch(`https://geo.api.gouv.fr/departements/${encodeURIComponent(qNorm)}/communes?fields=nom,codesPostaux`);
+            if (r.ok) {
+              const data = await r.json();
+              byPostal = Array.isArray(data) ? data : [];
+            }
+          } else {
+            const r = await fetch(`https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(qNorm)}&fields=nom,codesPostaux&limit=${limit}`);
+            if (r.ok) {
+              const data = await r.json();
+              byPostal = Array.isArray(data) ? data : [];
+            }
+            if (byPostal.length === 0 && qNorm.length >= 3 && qNorm.length <= 5) {
+              const depts = qNorm.startsWith('20') ? ['2A', '2B'] : [qNorm.slice(0, 2)];
+              for (const dept of depts) {
+                const rDept = await fetch(`https://geo.api.gouv.fr/departements/${encodeURIComponent(dept)}/communes?fields=nom,codesPostaux`);
+                if (rDept.ok) {
+                  const dataDept = await rDept.json();
+                  const communes = Array.isArray(dataDept) ? dataDept : [];
+                  const found = communes.filter((c: { codesPostaux?: string[] }) => (c.codesPostaux ?? []).some((cp: string) => cp.replace(/\s/g, '') === qNorm));
+                  byPostal = byPostal.concat(found);
+                }
+                if (byPostal.length > 0) break;
+              }
+            }
+          }
+        }
+        const byNom = await fetch(`https://geo.api.gouv.fr/communes?nom=${encodeURIComponent(q)}&fields=nom,codesPostaux,codePostal&limit=${limit}&boost=population`).then((r) => r.json() as Promise<Array<{ nom: string; codesPostaux?: string[]; codePostal?: string }>>).catch(() => []);
         const listNom = Array.isArray(byNom) ? byNom : [];
         const listPostal = Array.isArray(byPostal) ? byPostal : [];
+        const normalizeCommune = (c: { nom: string; codesPostaux?: string[]; codePostal?: string }) => {
+          const raw = c.codesPostaux ?? [];
+          const single = c.codePostal;
+          const codes = (raw.length ? raw : single != null ? [String(single)] : []).map((x) => String(x).replace(/\s/g, '').trim()).filter(Boolean);
+          return { nom: c.nom, codesPostaux: codes };
+        };
         const seen = new Set<string>();
         const merged: Array<{ nom: string; codesPostaux: string[] }> = [];
         for (const c of listPostal) {
-          const key = `${c.nom}|${(c.codesPostaux ?? []).join(',')}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            merged.push(c);
-          }
+          const { nom, codesPostaux } = normalizeCommune(c as { nom: string; codesPostaux?: string[]; codePostal?: string });
+          if (codesPostaux.length === 0) continue;
+          const key = `${nom}|${codesPostaux.join(',')}`;
+          if (!seen.has(key)) { seen.add(key); merged.push({ nom, codesPostaux }); }
         }
         for (const c of listNom) {
-          const key = `${c.nom}|${(c.codesPostaux ?? []).join(',')}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            merged.push(c);
-          }
+          const { nom, codesPostaux } = normalizeCommune(c);
+          if (codesPostaux.length === 0) continue;
+          const key = `${nom}|${codesPostaux.join(',')}`;
+          if (!seen.has(key)) { seen.add(key); merged.push({ nom, codesPostaux }); }
         }
         setLocationCitySuggestions(merged);
       } catch {
@@ -1577,62 +1625,70 @@ function CatalogueContent() {
     return () => clearTimeout(t);
   }, [locationQuery]);
 
-  /** Fusion suggestions statiques + villes API. Pour les villes : une ligne "Ville (XX)" puis une ligne par arrondissement si plusieurs codes. */
-  /** Ne pas afficher "XX - Ville" (département) quand "Ville (XX)" est déjà présent (évite doublon 75 - Paris / Paris (75)). */
+  /** Fusion suggestions statiques + villes API. Format d’en-tête unifié : "CODE - Ville" (ex. 75 - Paris, 75017 - Paris). */
   const locationSuggestions = useMemo(() => {
+    const fromLocal: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
+    const localCommunes = searchCommuneArrondissement(locationQuery, normalizeForSearch);
+    for (const c of localCommunes) {
+      for (const code of c.codesPostaux) {
+        fromLocal.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: [code] });
+      }
+    }
     const fromCities: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
     for (const c of locationCitySuggestions) {
-      const codes = c.codesPostaux?.length ? c.codesPostaux.map((x) => x.replace(/\s/g, '')) : [];
-      const deptPrefixes = codesToPrefixes(codes);
-      const deptLabel = codes[0]
-        ? (codes[0].startsWith('20') ? codes[0].slice(0, 2) : codes[0].slice(0, 2))
-        : '';
-      const mainLabel = codes.length === 1 ? `${c.nom} (${codes[0]})` : `${c.nom} (${deptLabel})`;
-      const mainPrefixes = codes.length === 1 ? [codes[0]] : deptPrefixes;
-      fromCities.push({ type: 'city', label: mainLabel, prefixes: mainPrefixes });
-      if (codes.length > 1) {
+      const raw = (c as { codesPostaux?: string[]; codePostal?: string }).codesPostaux ?? [];
+      const single = (c as { codePostal?: string }).codePostal;
+      const codes = (raw.length ? raw : single != null ? [String(single)] : [])
+        .map((x) => String(x).replace(/\s/g, '').trim())
+        .filter(Boolean);
+      if (codes.length === 0) continue;
+      if (codes.length === 1) {
+        fromCities.push({ type: 'city', label: `${codes[0]} - ${c.nom}`, prefixes: [codes[0]] });
+      } else {
         for (const code of codes) {
-          const lastTwo = code.slice(-2);
-          const ord = arrondissementOrdinal(lastTwo);
-          fromCities.push({ type: 'city', label: `${c.nom} ${ord} (${code})`, prefixes: [code] });
+          fromCities.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: [code] });
         }
       }
     }
-    const cityLabelSet = new Set(fromCities.map((s) => s.label));
+    const fromCitiesAndLocal = [...fromLocal, ...fromCities];
+    const cityLabelSet = new Set(fromCitiesAndLocal.map((s) => s.label));
     const seen = new Set<string>();
     const qNorm = locationQuery.trim().replace(/\s/g, '');
-    const isPostalQuery = /^\d{2,5}$/.test(qNorm);
-    const postalFirst = isPostalQuery ? fromCities.filter((s) => s.prefixes.some((p) => p === qNorm || qNorm.startsWith(p))) : [];
+    const isPostalQuery = /^\d{2,5}$/.test(qNorm) || qNorm === '2A' || qNorm === '2B';
+    const isPrecisePostal = isPostalQuery && qNorm.length >= 3;
+    const exactMatch = isPostalQuery ? fromCitiesAndLocal.filter((s) => s.prefixes.some((p) => p === qNorm)) : [];
+    const postalFirst = isPostalQuery ? fromCitiesAndLocal.filter((s) => s.prefixes.some((p) => p === qNorm || qNorm.startsWith(p))) : [];
     const out: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
-    if (isPostalQuery && postalFirst.length > 0) {
+    if (exactMatch.length > 0) {
+      for (const s of exactMatch) {
+        if (!seen.has(s.label)) { seen.add(s.label); out.push(s); }
+      }
+    }
+    if (postalFirst.length > 0 && exactMatch.length === 0) {
       for (const s of postalFirst) {
-        if (!seen.has(s.label)) {
-          seen.add(s.label);
-          out.push(s);
-        }
+        if (!seen.has(s.label)) { seen.add(s.label); out.push(s); }
       }
     }
     for (const s of locationSuggestionsStatic) {
+      if (isPrecisePostal && s.type === 'postal') continue;
       if (s.type === 'postal') {
         const matchDept = s.label.match(/^(\d{2}|2A|2B)\s*-\s*(.+)$/);
         if (matchDept) {
           const code = matchDept[1];
           const name = matchDept[2].trim();
-          if (cityLabelSet.has(`${name} (${code})`)) continue;
+          if (cityLabelSet.has(`${code} - ${name}`)) continue;
         }
       }
       const k = s.label;
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push(s);
-      }
+      if (!seen.has(k)) { seen.add(k); out.push(s); }
+    }
+    for (const s of fromLocal) {
+      const k = s.label;
+      if (!seen.has(k)) { seen.add(k); out.push(s); }
     }
     for (const s of fromCities) {
       const k = s.label;
-      if (!seen.has(k)) {
-        seen.add(k);
-        out.push(s);
-      }
+      if (!seen.has(k)) { seen.add(k); out.push(s); }
     }
     return out;
   }, [locationSuggestionsStatic, locationCitySuggestions, locationQuery, codesToPrefixes]);
@@ -1798,6 +1854,7 @@ function CatalogueContent() {
     <>
       {/* Recherche — même police que Année */}
       <div
+        className="catalogue-filters-recherche-block"
         style={{
           marginBottom: 12,
           fontSize: 14,
@@ -1934,6 +1991,7 @@ function CatalogueContent() {
           </button>
           {typeDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -2069,6 +2127,7 @@ function CatalogueContent() {
           </button>
           {articleTypeDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -2212,6 +2271,7 @@ function CatalogueContent() {
           </button>
           {marqueDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -2395,6 +2455,7 @@ function CatalogueContent() {
           </button>
           {modeleDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -2638,6 +2699,7 @@ function CatalogueContent() {
               </button>
               {tailleDropdownOpen && (
                 <div
+                  className="catalogue-filter-dropdown"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -2810,6 +2872,7 @@ function CatalogueContent() {
             </button>
             {pointureDropdownOpen && (
               <div
+                className="catalogue-filter-dropdown"
                 style={{
                   position: 'absolute',
                   top: 0,
@@ -2999,6 +3062,7 @@ function CatalogueContent() {
           </button>
           {colorDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -3131,6 +3195,7 @@ function CatalogueContent() {
           </button>
           {materialDropdownOpen && (
             <div
+              className="catalogue-filter-dropdown"
               style={{
                 position: 'absolute',
                 top: 0,
@@ -3222,7 +3287,7 @@ function CatalogueContent() {
                 setLocationSuggestionsOpen(true);
               }}
               onFocus={() => setLocationSuggestionsOpen(locationQuery.trim().length > 0 || locationSuggestions.length > 0)}
-              placeholder="Ville, région…"
+              placeholder="Ville, code postal, région…"
               autoComplete="off"
               style={{
                 flex: 1,
@@ -3250,7 +3315,7 @@ function CatalogueContent() {
                 borderRadius: 8,
                 boxShadow: '0 4px 24px rgba(0,0,0,0.12)',
                 zIndex: 1000,
-                maxHeight: 'calc(220px - 3mm)',
+                maxHeight: 'min(400px, 60vh)',
                 overflowY: 'auto',
               }}
             >
@@ -3382,6 +3447,7 @@ function CatalogueContent() {
                   setFilters((p) => ({ ...p, locations: undefined, postalCode: undefined, region: undefined }));
                   setLocationQuery('');
                   setLocationSuggestionsOpen(false);
+                  requestPosition();
                 }
               }}
               style={{
@@ -3395,11 +3461,20 @@ function CatalogueContent() {
               {radiusKm === 0 ? '— —' : `${radiusKm} km`}
             </span>
           </div>
+          {radiusKm > 0 && !userCoords && !geoLoading && !geoError && (
+            <button
+              type="button"
+              onClick={() => requestPosition()}
+              style={{ marginTop: 10, fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 10, border: '1px solid #1d1d1f', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer' }}
+            >
+              Autoriser l’accès à ma position
+            </button>
+          )}
           {geoLoading && (
             <p style={{ fontSize: 12, color: '#6e6e73', marginTop: 6 }}>Obtention de votre position…</p>
           )}
           {geoError && (
-            <p style={{ fontSize: 12, color: '#c00', marginTop: 6 }}>{geoError}</p>
+            <p style={{ fontSize: 12, color: '#c00', marginTop: 8, marginBottom: 0 }}>{geoError}</p>
           )}
         </div>
       </FilterSection>
@@ -3826,7 +3901,7 @@ function CatalogueContent() {
                 {/* Mobile filter button — à gauche */}
                 <button
                   onClick={() => setMobileFiltersOpen(true)}
-                  className="hide-desktop"
+                  className="hide-desktop catalogue-barre-tri-filtres"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -3851,7 +3926,7 @@ function CatalogueContent() {
                   onClick={toggleViewMode}
                   title={viewMode === 'horizontal' ? 'Afficher en grille' : 'Afficher en liste'}
                   aria-label={viewMode === 'horizontal' ? 'Afficher en grille' : 'Afficher en liste'}
-                  className="hide-desktop"
+                  className="hide-desktop catalogue-barre-tri-view-toggle"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -3870,7 +3945,7 @@ function CatalogueContent() {
                 </button>
 
                 {/* Sort — menu déroulant à droite (mobile uniquement ; desktop : tri à côté de la barre de recherche) */}
-                <div ref={sortDropdownRefMobile} className="hide-desktop" style={{ position: 'relative' }}>
+                <div ref={sortDropdownRefMobile} className="hide-desktop catalogue-barre-tri-sort" style={{ position: 'relative' }}>
                   <button
                     type="button"
                     onClick={() => setSortDropdownOpen((v) => !v)}
@@ -4119,10 +4194,10 @@ function CatalogueContent() {
                         />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                        <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                          <span>{listing.sellerName}</span>
+                        <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                          <span className="listing-grid-vendeur-nom" title={listing.sellerName}>{listing.sellerName}</span>
                           {listing.sellerPostcode && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                            <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
                               <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
                               {listing.sellerPostcode}
                             </span>
@@ -4131,18 +4206,18 @@ function CatalogueContent() {
                         {(() => {
                           const lineText = listing.title || '';
                           return (
-                            <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                            <h3 className="listing-grid-title" title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                               {highlightSearchTerms(lineText, filters.query)}
                         </h3>
                           );
                         })()}
                         <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
+                        <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
                           <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                           {dealByListingId[listing.id] && (() => {
                             const deal = dealByListingId[listing.id]!;
                             return (
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '2px 5px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 9, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
+                              <span className="catalogue-listing-deal-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '2px 5px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 9, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
                                 <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <Euro size={6} color="#fff" strokeWidth={2.5} />
                                 </span>
@@ -4465,6 +4540,7 @@ function CatalogueContent() {
             onClick={() => setMobileFiltersOpen(false)}
           />
           <div
+            className="catalogue-mobile-filters-panel"
             style={{
               position: 'relative',
               width: '100%',
@@ -4477,6 +4553,7 @@ function CatalogueContent() {
             }}
           >
             <div
+              className="catalogue-mobile-filters-panel-header"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -4504,6 +4581,7 @@ function CatalogueContent() {
               {filtersContent}
             </div>
             <div
+              className="catalogue-mobile-filters-panel-footer"
               style={{
                 position: 'fixed',
                 bottom: 0,

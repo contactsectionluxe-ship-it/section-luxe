@@ -45,9 +45,17 @@ export default function HomeContent() {
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const max = scrollWidth - clientWidth;
+    if (typeof window !== 'undefined' && window.innerWidth <= 767 && max > 0 && scrollLeft > max) {
+      el.scrollLeft = max;
+      setScrollState('end');
+      return;
+    }
     if (max <= 0) setScrollState('start');
-    else if (scrollLeft >= max - 2) setScrollState('end');
     else if (scrollLeft <= 2) setScrollState('start');
+    else if (
+      scrollLeft >= max - 2 ||
+      (typeof window !== 'undefined' && window.innerWidth <= 767 && scrollLeft >= max - Math.max(20, clientWidth * 0.15))
+    ) setScrollState('end');
     else setScrollState('middle');
   }, []);
 
@@ -112,7 +120,7 @@ export default function HomeContent() {
             }}
           >
             <span className="hide-mobile">Trouvez la pièce de luxe qui vous correspond</span>
-            <span className="hide-desktop">Trouvez la pièce<br />de luxe qui vous<br />correspond</span>
+            <span className="hide-desktop">Trouvez la pièce de luxe<br />qui vous correspond</span>
           </h1>
           <p
             className="hero-sous-titre"
@@ -128,7 +136,7 @@ export default function HomeContent() {
             <br />
             Comparez, analysez, choisissez
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
             <Link
               href="/catalogue"
               style={{
@@ -181,7 +189,7 @@ export default function HomeContent() {
       </section>
 
       {/* Categories */}
-      <section style={{ padding: '80px 24px', overflow: 'visible' }}>
+      <section className="home-section-padded home-section-categories" style={{ padding: '80px 24px', overflow: 'visible' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', overflow: 'visible' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 36 }}>
             <div>
@@ -208,13 +216,17 @@ export default function HomeContent() {
               Tout voir <ArrowRight size={14} strokeWidth={2} />
             </Link>
           </div>
-          <div style={{ position: 'relative' }}>
+          <div className="categories-scroll-wrap" style={{ position: 'relative' }} data-scroll-state={scrollState}>
             <button
               type="button"
               aria-label="Catégories précédentes"
               onClick={() => {
                 const el = categoriesScrollRef.current;
-                if (el) el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
+                if (!el) return;
+                const pageW = el.clientWidth;
+                const pageIndex = Math.round(el.scrollLeft / pageW);
+                const target = Math.max((pageIndex - 1) * pageW, 0);
+                el.scrollTo({ left: target, behavior: 'smooth' });
               }}
               style={{
                 position: 'absolute',
@@ -295,6 +307,7 @@ export default function HomeContent() {
               className="categories-scroll categories-scroll-container"
             >
               <div
+                className="categories-scroll-inner"
                 style={{
                   display: 'flex',
                   gap: CATEGORY_GAP,
@@ -306,6 +319,7 @@ export default function HomeContent() {
                   <Link
                     key={cat.name}
                     href={cat.href}
+                    className="categories-scroll-item"
                     onClick={(e) => {
                       if (hasDragged.current) e.preventDefault();
                     }}
@@ -368,6 +382,7 @@ export default function HomeContent() {
                       )}
                     </div>
                     <span
+                      className="category-item-label"
                       style={{
                         fontSize: 15,
                         color: '#6e6e73',
@@ -386,7 +401,12 @@ export default function HomeContent() {
               aria-label="Catégories suivantes"
               onClick={() => {
                 const el = categoriesScrollRef.current;
-                if (el) el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
+                if (!el) return;
+                const pageW = el.clientWidth;
+                const maxScroll = el.scrollWidth - pageW;
+                const pageIndex = Math.round(el.scrollLeft / pageW);
+                const target = Math.min((pageIndex + 1) * pageW, maxScroll);
+                el.scrollTo({ left: target, behavior: 'smooth' });
               }}
               style={{
                 position: 'absolute',
@@ -426,7 +446,7 @@ export default function HomeContent() {
       </section>
 
       {/* Featured Products */}
-      <section style={{ padding: '56px 24px 80px' }}>
+      <section className="home-section-padded home-section-featured" style={{ padding: '56px 24px 80px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 36 }}>
             <div>
@@ -455,7 +475,7 @@ export default function HomeContent() {
           </div>
 
           {loading ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
+            <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {Array.from({ length: 12 }, (_, i) => (
                 <div
                   key={i}
@@ -512,7 +532,7 @@ export default function HomeContent() {
               ))}
             </div>
           ) : listings.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
+            <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {listings.map((listing) => (
                 <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
@@ -540,10 +560,10 @@ export default function HomeContent() {
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 640px) 50vw, 25vw" />
                     </div>
                     <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                        <span>{listing.sellerName}</span>
+                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                        <span className="listing-grid-vendeur-nom" title={listing.sellerName}>{listing.sellerName}</span>
                         {listing.sellerPostcode && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                          <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
                             <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
                             {listing.sellerPostcode}
                           </span>
@@ -552,13 +572,13 @@ export default function HomeContent() {
                       {(() => {
                         const lineText = listing.title || '';
                         return (
-                          <h3 title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          <h3 className="listing-grid-title" title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
                             {lineText}
                           </h3>
                         );
                       })()}
                       <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
+                      <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
                         <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                       </div>
                     </div>
@@ -594,6 +614,7 @@ export default function HomeContent() {
 
       {/* CTA — fond marbre */}
       <section
+        className="home-section-padded home-section-vendeur-cta"
         style={{
           position: 'relative',
           marginTop: -24,
@@ -633,7 +654,7 @@ export default function HomeContent() {
           >
             Vous êtes un vendeur professionnel ?
           </h2>
-          <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
+          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link

@@ -3,17 +3,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle, BarChart2 } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle, BarChart2, LayoutGrid, Tag, Sparkles, Info, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 const navigation = [
-  { name: 'Catalogue', href: '/catalogue?reset=1' },
-  { name: 'Occasion', href: '/catalogue?condition=occasion' },
-  { name: 'Neuf', href: '/catalogue?condition=new' },
-  { name: 'À propos', href: '/a-propos' },
-  { name: 'Contact', href: '/contact' },
+  { name: 'Catalogue', href: '/catalogue?reset=1', icon: LayoutGrid },
+  { name: 'Occasion', href: '/catalogue?condition=occasion', icon: Tag },
+  { name: 'Neuf', href: '/catalogue?condition=new', icon: Sparkles },
+  { name: 'À propos', href: '/a-propos', icon: Info },
+  { name: 'Contact', href: '/contact', icon: Mail },
 ];
 
 export function Header() {
@@ -37,6 +37,8 @@ export function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [userMenuRight, setUserMenuRight] = useState(24);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [mobileMenuRight, setMobileMenuRight] = useState(12);
   const [scrolled, setScrolled] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -66,6 +68,21 @@ export function Header() {
       return () => document.removeEventListener('click', handleClick);
     }
   }, [userMenuOpen]);
+
+  useEffect(() => {
+    if (mobileMenuOpen && mobileMenuButtonRef.current) {
+      const rect = mobileMenuButtonRef.current.getBoundingClientRect();
+      setMobileMenuRight(window.innerWidth - rect.right);
+    }
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const handleClick = () => setMobileMenuOpen(false);
+    if (mobileMenuOpen) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [mobileMenuOpen]);
 
   const updateUnreadCount = useCallback(
     (conversations: { unreadBuyer: number; unreadSeller: number }[]) => {
@@ -157,6 +174,7 @@ export function Header() {
         }}
       >
         <div
+          className="header-inner"
           style={{
             maxWidth: 1100,
             margin: '0 auto',
@@ -169,8 +187,8 @@ export function Header() {
             gap: 16,
           }}
         >
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
-            <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
+          <Link href="/" className="header-logo-link" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
+            <img src="/logo.png" alt="Section Luxe" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
           </Link>
 
           <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
@@ -194,8 +212,8 @@ export function Header() {
             })}
           </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
-            <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
+            <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" style={iconLabelStyle}>
               <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.5} /></div>
               <span>Favoris</span>
@@ -256,6 +274,8 @@ export function Header() {
                         top: 'calc(var(--header-height) + 1px)',
                         right: userMenuRight,
                         width: 240,
+                        minWidth: 240,
+                        maxWidth: 240,
                         backgroundColor: '#fbfbfb',
                         borderTopLeftRadius: 0,
                         borderTopRightRadius: 0,
@@ -306,8 +326,9 @@ export function Header() {
             )}
             </div>
             <button
+              ref={mobileMenuButtonRef}
               className="hide-desktop"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={(e) => { e.stopPropagation(); setMobileMenuOpen(!mobileMenuOpen); }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12 }}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -319,76 +340,52 @@ export function Header() {
       {mobileMenuOpen && (
         <div
           className="hide-desktop"
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
-            top: 72,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            top: 'calc(var(--header-height) + 1px)',
+            right: mobileMenuRight,
+            width: 180,
+            minWidth: 180,
+            maxWidth: 180,
             backgroundColor: '#fbfbfb',
-            zIndex: 99,
-            overflowY: 'auto',
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            borderBottomLeftRadius: 18,
+            borderBottomRightRadius: 18,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+            overflow: 'hidden',
+            zIndex: 110,
           }}
         >
-          <div style={{ padding: 24 }}>
-            <nav style={{ marginBottom: 32 }}>
-              {navigation.map((item) => {
-                const active = isNavActive(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    style={{
-                      display: 'block',
-                      padding: '16px 0',
-                      fontSize: 17,
-                      fontWeight: 500,
-                      color: active ? '#1d1d1f' : '#6e6e73',
-                      borderBottom: '1px solid #f5f5f7',
-                    }}
-                  >
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-            {isAuthenticated ? (
-              <div>
-                <p style={{ fontSize: 13, color: '#86868b', marginBottom: 4 }}>Connecté</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>
-                  {(user?.displayName || '').trim().split(/\s+/)[0] || user?.email || 'Compte'}
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  {seller ? (
-                    <>
-                      <Link href="/vendeur/annonces/nouvelle" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Déposer une annonce</Link>
-                      <Link href="/vendeur" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes annonces</Link>
-                      <Link href="/vendeur/ventes" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes ventes</Link>
-                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Ma messagerie {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
-                      <Link href="/vendeur/factures" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes factures</Link>
-                      <Link href="/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
-                      {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
-                      <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Se déconnecter</button>
-                    </>
-                  ) : (
-                    <>
-                      <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mes favoris</Link>
-                      <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages {unreadMessages > 0 && <span style={{ backgroundColor: '#dc2626', color: '#fff', fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
-                      <Link href="/profil" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Mon profil</Link>
-                      {showAdmin && <Link href="/admin" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Admin</Link>}
-                      <button onClick={handleSignOut} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0', background: 'none', border: 'none', textAlign: 'left', marginTop: 12 }}>Déconnexion</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <Link href="/favoris" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Favoris</Link>
-                <Link href="/messages" onClick={() => setMobileMenuOpen(false)} style={{ fontSize: 16, color: '#1d1d1f', padding: '12px 0' }}>Messages</Link>
-                <Link href="/connexion" onClick={() => setMobileMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 50, padding: '0 32px', fontSize: 15, fontWeight: 500, border: '1.5px solid #d2d2d7', color: '#1d1d1f', borderRadius: 980, marginTop: 8 }}>Connexion</Link>
-              </div>
-            )}
+          <div style={{ padding: 8, minHeight: 0 }}>
+            {navigation.map((item) => {
+              const active = isNavActive(item.href);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: '12px 14px',
+                    fontSize: 15,
+                    color: '#1d1d1f',
+                    borderRadius: 10,
+                    transition: 'background-color 0.15s',
+                    backgroundColor: active ? '#e8e8ed' : 'transparent',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent'; }}
+                >
+                  <Icon size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+                  {item.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
       )}

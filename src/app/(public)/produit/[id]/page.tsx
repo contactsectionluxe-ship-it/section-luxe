@@ -525,7 +525,7 @@ export default function ProductPage() {
   if (loading) {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-        <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
+        <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
           <Link href={fromVendeurParam ? '/vendeur' : returnToCatalogue} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
             <ArrowLeft size={16} />
             {fromVendeurParam ? 'Retour à mes annonces' : 'Retour au catalogue'}
@@ -625,7 +625,7 @@ export default function ProductPage() {
   return (
     <>
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
+      <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
           href={fromVendeurParam ? '/vendeur' : returnToCatalogue}
@@ -1262,6 +1262,159 @@ export default function ProductPage() {
                 </div>
               )}
 
+              {/* Titre, prix, info vendeur - mobile (sous les photos) */}
+              <div style={{ marginTop: 36 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                  {listing.category === 'montres' && categoryLabel && (
+                    <Link href={`/catalogue?category=montres`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
+                  )}
+                  {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
+                    const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
+                    return typeLabel ? (
+                      <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{typeLabel}</Link>
+                    ) : null;
+                  })()}
+                  {listing.brand && (
+                    <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
+                  )}
+                </div>
+                <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
+                <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 24, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                    {priceStats && (() => {
+                      const deal = getDealLevel(listing.price, priceStats.average);
+                      return (
+                        <button
+                          type="button"
+                          onClick={() => setShowPrixPopup(true)}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                        >
+                          <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Euro size={8} color="#fff" strokeWidth={2.5} />
+                          </span>
+                          {deal.label}
+                        </button>
+                      );
+                    })()}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    {likesCount > 0 ? (
+                      <button
+                        onClick={handleFavoriteClick}
+                        disabled={favoriteLoading}
+                        style={{
+                          height: 40,
+                          paddingLeft: 12,
+                          paddingRight: 12,
+                          borderRadius: 20,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 5,
+                          backgroundColor: '#fff',
+                          color: '#1d1d1f',
+                          border: '1.5px solid #d2d2d7',
+                          cursor: 'pointer',
+                          fontSize: 14,
+                          fontWeight: 500,
+                        }}
+                        title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                      >
+                        <span>{likesCount}</span>
+                        <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleFavoriteClick}
+                        disabled={favoriteLoading}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#fff',
+                          color: '#1d1d1f',
+                          border: '1.5px solid #d2d2d7',
+                          cursor: 'pointer',
+                        }}
+                        title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                      >
+                        <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                      </button>
+                    )}
+                    <button
+                      onClick={handleShare}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: '#fff',
+                        color: '#1d1d1f',
+                        border: '1.5px solid #d2d2d7',
+                        cursor: 'pointer',
+                      }}
+                      title="Partager"
+                    >
+                      <Share2 size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {seller && (
+                  <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {seller.avatarUrl ? (
+                          <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Store size={34} color="#888" />
+                        )}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
+                        </Link>
+                        <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                      <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                        {showPhone ? (
+                          <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
+                        ) : (
+                          <>
+                            <Phone size={16} />
+                            <span style={{ fontSize: 15 }}>Téléphone</span>
+                          </>
+                        )}
+                      </button>
+                      <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+                        <MessageCircle size={16} />
+                        <span style={{ fontSize: 15 }}>Message</span>
+                      </button>
+                    </div>
+                    {seller.address && (
+                      <button
+                        type="button"
+                        onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
+                        style={{ width: '100%', marginTop: 12, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
+                      >
+                        <MapPin size={16} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 15 }}>{seller.postcode}</span>
+                        <span style={{ fontSize: 15 }}>{seller.city}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Informations puis Description en dessous - mobile */}
               <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20, display: 'flex', flexDirection: 'column', gap: 0 }}>
                 <div>
@@ -1514,162 +1667,14 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Details */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-              {listing.category === 'montres' && categoryLabel && (
-                <Link href={`/catalogue?category=montres`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{categoryLabel}</Link>
-              )}
-              {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
-                const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
-                return typeLabel ? (
-                  <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{typeLabel}</Link>
-                ) : null;
-              })()}
-              {listing.brand && (
-                <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
-              )}
-            </div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
-            <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, marginTop: 'calc(6px + 1mm)', marginBottom: 12, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
-                {priceStats && (() => {
-                  const deal = getDealLevel(listing.price, priceStats.average);
-                  return (
-                    <button
-                      type="button"
-                      onClick={() => setShowPrixPopup(true)}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
-                    >
-                      <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Euro size={8} color="#fff" strokeWidth={2.5} />
-                      </span>
-                      {deal.label}
-                    </button>
-                  );
-                })()}
-              </div>
-              {likesCount > 0 ? (
-                <button
-                  onClick={handleFavoriteClick}
-                  disabled={favoriteLoading}
-                  style={{
-                    height: 40,
-                    paddingLeft: 12,
-                    paddingRight: 12,
-                    borderRadius: 20,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 5,
-                    backgroundColor: '#fff',
-                    color: '#1d1d1f',
-                    border: '1.5px solid #d2d2d7',
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    fontWeight: 500,
-                  }}
-                  title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                >
-                  <span>{likesCount}</span>
-                  <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
-                </button>
-              ) : (
-                <button
-                  onClick={handleFavoriteClick}
-                  disabled={favoriteLoading}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: '#fff',
-                    color: '#1d1d1f',
-                    border: '1.5px solid #d2d2d7',
-                    cursor: 'pointer',
-                  }}
-                  title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                >
-                  <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
-                </button>
-              )}
-              <button
-                onClick={handleShare}
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fff',
-                  color: '#1d1d1f',
-                  border: '1.5px solid #d2d2d7',
-                  cursor: 'pointer',
-                }}
-                title="Partager"
-              >
-                <Share2 size={18} />
-              </button>
-            </div>
-
-            {seller && (
-              <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {seller.avatarUrl ? (
-                      <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Store size={34} color="#888" />
-                    )}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                      <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
-                    </Link>
-                    <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                  <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                    {showPhone ? (
-                      <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
-                    ) : (
-                      <>
-                        <Phone size={16} />
-                        <span style={{ fontSize: 15 }}>Téléphone</span>
-                      </>
-                    )}
-                  </button>
-                  <button type="button" onClick={() => { if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-                    <MessageCircle size={16} />
-                    <span style={{ fontSize: 15 }}>Message</span>
-                  </button>
-                </div>
-                {seller.address && (
-                  <button
-                    type="button"
-                    onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
-                    style={{ width: '100%', marginTop: 12, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}
-                  >
-                    <MapPin size={16} color="#1d1d1f" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 15 }}>{seller.postcode}</span>
-                    <span style={{ fontSize: 15 }}>{seller.city}</span>
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
       </div>
       </div>
 
       {/* Boutons Signaler / Conseils de sécurité + infos annonce */}
-      <div style={{ maxWidth: 960, margin: 'calc(24px - 1cm) auto 40px', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div className="produit-section-signaler-conseils" style={{ maxWidth: 960, margin: 'calc(24px - 1cm) auto 40px', padding: '0 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="produit-buttons-signaler-conseils" style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
           <button
             type="button"
             onClick={() => { setShowReportModal(true); setReportError(''); setReportStep(1); setReportRgpdExpanded(false); }}

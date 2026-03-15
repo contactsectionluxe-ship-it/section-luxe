@@ -64,6 +64,7 @@ export function CatalogueCardPhotos({
 
   return (
     <div
+      className="catalogue-card-photos"
       style={{
         position: 'relative',
         width: '100%',

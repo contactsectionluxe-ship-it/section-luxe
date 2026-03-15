@@ -197,6 +197,7 @@ export default function AProposPage() {
 
       {/* CTA vendeur — même section, même taille et même dégradé que la page d'accueil (pleine largeur) */}
       <section
+        className="home-section-vendeur-cta"
         style={{
           position: 'relative',
           marginTop: -40,
@@ -236,7 +237,7 @@ export default function AProposPage() {
           >
             Vous êtes un vendeur professionnel ?
           </h2>
-          <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
+          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link

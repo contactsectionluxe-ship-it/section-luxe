@@ -49,6 +49,7 @@ export function HeaderFallback() {
       }}
     >
       <div
+        className="header-inner"
         style={{
           maxWidth: 1100,
           margin: '0 auto',

@@ -9,6 +9,7 @@ export function Footer() {
     <footer style={{ borderTop: '1px solid rgba(0,0,0,0.06)', padding: '80px 24px 40px', backgroundColor: '#fbfbfb' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto' }}>
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
@@ -16,7 +17,7 @@ export function Footer() {
             marginBottom: 48,
           }}
         >
-          <div>
+          <div className="footer-grid-brand">
             <Link
               href="/"
               style={{
@@ -28,7 +29,7 @@ export function Footer() {
             >
               Section Luxe
             </Link>
-            <p style={{ marginTop: 14, fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>
+            <p className="footer-grid-brand-desc" style={{ marginTop: 14, fontSize: 14, color: '#6e6e73', lineHeight: 1.5 }}>
               La marketplace de référence pour les articles de luxe.
             </p>
           </div>
@@ -67,8 +68,8 @@ export function Footer() {
           </div>
         </div>
 
-        <div style={{ paddingTop: 24, borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-          <nav style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px' }}>
+        <div className="footer-bottom" style={{ paddingTop: 24, borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+          <nav className="footer-bottom-nav" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 20px' }}>
             <Link href="/accessibilite" style={{ fontSize: 13, color: '#86868b' }}>Accessibilité</Link>
             <Link href="/mentions-legales" style={{ fontSize: 13, color: '#86868b' }}>Mentions légales</Link>
             <Link href="/cgu" style={{ fontSize: 13, color: '#86868b' }}>Conditions générales</Link>
