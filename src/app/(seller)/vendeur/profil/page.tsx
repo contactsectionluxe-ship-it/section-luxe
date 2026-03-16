@@ -216,7 +216,7 @@ export default function ProfilVendeurPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '30px 24px 80px' }}>
+      <div className="mon-profil-page-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '30px 24px 80px' }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
             Mon profil

@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="admin-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Header — même style que Mes annonces */}
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
@@ -149,10 +149,11 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Filtres — boutons style vendeur */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div className="admin-filters-row" style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {(['pending', 'approved', 'rejected', 'all'] as const).map((f) => (
             <button
               key={f}
+              className={f === 'all' ? 'admin-filter-btn admin-filter-all' : 'admin-filter-btn'}
               onClick={() => setFilter(f)}
               style={{
                 padding: '10px 18px',

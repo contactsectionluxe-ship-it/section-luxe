@@ -28,6 +28,15 @@ export default function MesVentesPage() {
   const [showReservePopup, setShowReservePopup] = useState(false);
   const [reserveList, setReserveList] = useState<DeletionItem[]>([]);
   const [reserveListLoading, setReserveListLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onMatch = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', onMatch);
+    return () => mq.removeEventListener('change', onMatch);
+  }, []);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -99,7 +108,7 @@ export default function MesVentesPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="mes-ventes-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
@@ -125,18 +134,19 @@ export default function MesVentesPage() {
             </div>
           </div>
           {isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle?from=ventes" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+            <Link href="/vendeur/annonces/nouvelle?from=ventes" className="mes-ventes-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
               <Plus size={18} /> Déposer une annonce
             </Link>
           )}
         </div>
 
         {/* Filtres dates (même style que Mes factures) */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div className="mes-ventes-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+          <div className="mes-ventes-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
             <input
               type="date"
+              className="mes-ventes-date-input"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               style={{
@@ -151,6 +161,7 @@ export default function MesVentesPage() {
             <label style={{ fontSize: 14, color: '#6e6e73' }}>et</label>
             <input
               type="date"
+              className="mes-ventes-date-input"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               style={{
@@ -162,24 +173,27 @@ export default function MesVentesPage() {
                 color: '#1d1d1f',
               }}
             />
+          </div>
+          <span className="mes-ventes-filtres-reset-wrap">
             <button
               type="button"
               onClick={(e) => { e.preventDefault(); setDateFrom(''); setDateTo(''); }}
               style={{ fontSize: 14, color: '#6e6e73', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-inter), var(--font-sans)' }}
             >
-              Réinitialiser les filtres
+              <span className="mes-ventes-reset-desktop">Réinitialiser les filtres</span>
+              <span className="mes-ventes-reset-mobile">Réinitialiser</span>
             </button>
-          </div>
+          </span>
         </div>
 
         {/* Stats période : mêmes cases que Mes annonces (filtrées par dates) — icônes toujours visibles, seul le chiffre change */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+        <div className="mes-ventes-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
           <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
               <Package size={22} color="#666" />
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: '#888' }}>Annonces publiées</p>
+              <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Annonces publiées</span><span className="mes-ventes-stat-mobile">Publiées</span></p>
               <p style={{ fontSize: 22, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'center' }}>
                 {stats?.createdInPeriod ?? 0}
               </p>
@@ -190,7 +204,7 @@ export default function MesVentesPage() {
               <Heart size={22} color="#666" />
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: '#888' }}>Total likes</p>
+              <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total likes</span><span className="mes-ventes-stat-mobile">Likes</span></p>
               <p style={{ fontSize: 22, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'center' }}>
                 {stats?.totalLikesInPeriod ?? 0}
               </p>
@@ -201,7 +215,7 @@ export default function MesVentesPage() {
               <MessageCircle size={22} color="#666" />
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: '#888' }}>Total messages</p>
+              <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total messages</span><span className="mes-ventes-stat-mobile">Messages</span></p>
               <p style={{ fontSize: 22, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'center' }}>
                 {stats?.totalMessagesInPeriod ?? 0}
               </p>
@@ -212,7 +226,7 @@ export default function MesVentesPage() {
               <Phone size={22} color="#666" />
             </div>
             <div style={{ minWidth: 0 }}>
-              <p style={{ fontSize: 11, color: '#888' }}>Total appels</p>
+              <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total appels</span><span className="mes-ventes-stat-mobile">Appels</span></p>
               <p style={{ fontSize: 22, fontWeight: 600, minHeight: 28, display: 'flex', alignItems: 'center' }}>
                 {stats?.totalAppelsInPeriod ?? 0}
               </p>
@@ -221,7 +235,7 @@ export default function MesVentesPage() {
         </div>
 
         {/* Stats : annonces mises en ligne / supprimées — icônes et textes statiques, seul le chiffre change */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <div className="mes-ventes-stats-deux-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
           <div style={{ padding: 20, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
@@ -362,7 +376,8 @@ export default function MesVentesPage() {
         <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
             <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 16, fontWeight: 400, margin: 0, color: '#888' }}>
-              Évolution des ventes des 12 derniers mois
+              <span className="mes-ventes-evolution-title-desktop">Évolution des ventes des 12 derniers mois</span>
+              <span className="mes-ventes-evolution-title-mobile">Évolution des ventes</span>
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
@@ -404,11 +419,12 @@ export default function MesVentesPage() {
               Chargement du graphique...
             </div>
           ) : (() => {
+            const chartEvolution = isMobile ? evolution.slice(-6) : evolution;
             const chartHeight = 180;
-            const values = evolution.map((m) => (chartMode === 'volume' ? m.volume : m.amountCents / 100));
+            const values = chartEvolution.map((m) => (chartMode === 'volume' ? m.volume : m.amountCents / 100));
             const maxVal = Math.max(1, ...values);
             const gridLines = 5;
-            const n = evolution.length;
+            const n = chartEvolution.length;
             const points = values.map((v, i) => {
               const x = n > 1 ? (i / (n - 1)) * 100 : 50;
               const y = chartHeight - (v / maxVal) * chartHeight;
@@ -434,7 +450,7 @@ export default function MesVentesPage() {
                   {maxVal > 0 && <polyline points={points} fill="none" stroke="#1d1d1f" strokeWidth="0.8" strokeLinecap="round" strokeLinejoin="round" />}
                 </svg>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                  {evolution.map((m) => (
+                  {chartEvolution.map((m) => (
                     <span key={`${m.year}-${m.month}`} style={{ fontSize: 11, color: '#86868b', flex: 1, textAlign: 'center', minWidth: 0 }}>
                       {getMonthLabel(m)}
                     </span>

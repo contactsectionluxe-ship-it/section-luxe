@@ -24,7 +24,17 @@ function normalizeForSearch(s: string): string {
     .replace(/[-'\s]+/g, '');
 }
 
-type SortOrder = 'newest' | 'oldest';
+type SortOrder = 'newest' | 'oldest' | 'priceAsc' | 'priceDesc';
+
+function sortOrderLabel(order: SortOrder): string {
+  switch (order) {
+    case 'newest': return 'Plus récents';
+    case 'oldest': return 'Plus anciens';
+    case 'priceAsc': return 'Prix croissant';
+    case 'priceDesc': return 'Prix décroissant';
+    default: return 'Plus récents';
+  }
+}
 
 export default function FacturesPage() {
   const router = useRouter();
@@ -91,11 +101,13 @@ export default function FacturesPage() {
           normalizeForSearch(formatDate(inv.issuedAt)).includes(q)
       );
     }
-    list.sort((a, b) =>
-      sortOrder === 'newest'
-        ? b.issuedAt.getTime() - a.issuedAt.getTime()
-        : a.issuedAt.getTime() - b.issuedAt.getTime()
-    );
+    list.sort((a, b) => {
+      if (sortOrder === 'newest') return b.issuedAt.getTime() - a.issuedAt.getTime();
+      if (sortOrder === 'oldest') return a.issuedAt.getTime() - b.issuedAt.getTime();
+      if (sortOrder === 'priceAsc') return a.amountCents - b.amountCents;
+      if (sortOrder === 'priceDesc') return b.amountCents - a.amountCents;
+      return b.issuedAt.getTime() - a.issuedAt.getTime();
+    });
     return list;
   }, [invoices, dateFrom, dateTo, sortOrder, searchQuery]);
 
@@ -111,7 +123,7 @@ export default function FacturesPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="mes-factures-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
             Mes factures
@@ -121,7 +133,7 @@ export default function FacturesPage() {
               ? 'Chargement des factures...'
               : invoices.length === 0
                 ? 'Consulter et télécharger les factures liées à la publication de vos annonces'
-                : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'} (émetteur : Section luxe)`}
+                : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'}`}
           </p>
         </div>
 
@@ -145,8 +157,58 @@ export default function FacturesPage() {
           />
         </div>
 
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            <div style={{ position: 'relative' }}>
+        <div className="mes-factures-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <div className="mes-factures-filtres-left" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+            <div className="mes-factures-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
+              <input
+                type="date"
+                className="mes-factures-date-input"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                style={{
+                  height: 44,
+                  padding: '0 12px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                }}
+              />
+              <label style={{ fontSize: 14, color: '#6e6e73' }}>et</label>
+              <input
+                type="date"
+                className="mes-factures-date-input"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                style={{
+                  height: 44,
+                  padding: '0 12px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                }}
+              />
+            </div>
+            <span
+              className="mes-factures-filtres-reset-wrap"
+              role="button"
+              tabIndex={0}
+              onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); } }}
+              style={{
+                fontSize: 14,
+                color: '#6e6e73',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              <span className="mes-factures-reset-desktop">Réinitialiser les filtres</span>
+              <span className="mes-factures-reset-mobile">Réinitialiser</span>
+            </span>
+            </div>
+            <div className="mes-factures-sort-dropdown" style={{ position: 'relative', marginLeft: 'auto' }}>
               <button
                 type="button"
                 onClick={() => setSortDropdownOpen((o) => !o)}
@@ -165,7 +227,7 @@ export default function FacturesPage() {
                   minWidth: 160,
                 }}
               >
-                <span>{sortOrder === 'newest' ? 'Plus récents' : 'Plus anciens'}</span>
+                <span>{sortOrderLabel(sortOrder)}</span>
                 <ChevronDown size={16} style={{ color: '#86868b' }} />
               </button>
               {sortDropdownOpen && (
@@ -175,7 +237,7 @@ export default function FacturesPage() {
                     style={{
                       position: 'absolute',
                       top: '100%',
-                      left: 0,
+                      right: 0,
                       marginTop: 4,
                       backgroundColor: '#fff',
                       border: '1px solid #d2d2d7',
@@ -222,53 +284,45 @@ export default function FacturesPage() {
                     >
                       Plus anciens
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSortOrder('priceAsc'); setSortDropdownOpen(false); }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: sortOrder === 'priceAsc' ? '#f5f5f7' : 'transparent',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: sortOrder === 'priceAsc' ? 600 : 400,
+                      }}
+                    >
+                      Prix croissant
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setSortOrder('priceDesc'); setSortDropdownOpen(false); }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '10px 14px',
+                        border: 'none',
+                        background: sortOrder === 'priceDesc' ? '#f5f5f7' : 'transparent',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        fontWeight: sortOrder === 'priceDesc' ? 600 : 400,
+                      }}
+                    >
+                      Prix décroissant
+                    </button>
                   </div>
                 </>
               )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                style={{
-                  height: 44,
-                  padding: '0 12px',
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  fontSize: 14,
-                  color: '#1d1d1f',
-                }}
-              />
-              <label style={{ fontSize: 14, color: '#6e6e73' }}>et</label>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                style={{
-                  height: 44,
-                  padding: '0 12px',
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  fontSize: 14,
-                  color: '#1d1d1f',
-                }}
-              />
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); } }}
-                style={{
-                  fontSize: 14,
-                  color: '#6e6e73',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                Réinitialiser les filtres
-              </span>
             </div>
           </div>
 

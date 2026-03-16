@@ -100,7 +100,7 @@ export default function AdminSellerDetailPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 600, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="admin-page-inner" style={{ maxWidth: 600, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <Link
           href="/admin"
           style={{

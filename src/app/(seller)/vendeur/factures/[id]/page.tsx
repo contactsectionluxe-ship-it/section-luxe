@@ -88,7 +88,7 @@ export default function FactureViewPage() {
   if (!invoice) {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
-        <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
+        <div className="mes-facture-detail-page-inner" style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ fontSize: 16, color: '#6e6e73', marginBottom: 24 }}>Facture introuvable.</p>
           <Link href="/vendeur/factures" style={{ fontSize: 15, color: '#1d1d1f', textDecoration: 'underline' }}>
             ← Retour aux factures
@@ -102,7 +102,7 @@ export default function FactureViewPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 800, margin: '0 auto', paddingTop: 32, paddingRight: 24, paddingBottom: 60, paddingLeft: 24 }}>
+      <div className="mes-facture-detail-page-inner" style={{ maxWidth: 800, margin: '0 auto', paddingTop: 32, paddingRight: 24, paddingBottom: 60, paddingLeft: 24 }}>
         <div className="no-print" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <Link
             href="/vendeur/factures"
@@ -134,7 +134,7 @@ export default function FactureViewPage() {
           </button>
         </div>
 
-        <div ref={printRef} className="print-only-ref" style={{ backgroundColor: '#fff', paddingTop: 40, paddingRight: 40, paddingBottom: 40, paddingLeft: 40, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
+        <div ref={printRef} className="print-only-ref mes-facture-detail-invoice-card" style={{ backgroundColor: '#fff', paddingTop: 40, paddingRight: 40, paddingBottom: 40, paddingLeft: 40, borderRadius: 8, boxShadow: '0 1px 3px rgba(0,0,0,0.08)' }}>
           {/* En-tête : émetteur et client */}
           <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32, marginBottom: 28 }}>
             <div>
@@ -166,6 +166,7 @@ export default function FactureViewPage() {
           </div>
 
           {/* Tableau des prestations */}
+          <div className="mes-facture-detail-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 24 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #e8e6e3' }}>
@@ -188,6 +189,7 @@ export default function FactureViewPage() {
               </tr>
             </tbody>
           </table>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 32 }}>
             <div style={{ textAlign: 'right' }}>

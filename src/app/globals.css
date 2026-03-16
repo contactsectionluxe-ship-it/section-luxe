@@ -125,6 +125,26 @@ a:focus-visible {
   display: none;
 }
 
+/* Page Mes ventes : libellés stats courts masqués par défaut (affichés uniquement sur mobile) */
+.mes-ventes-stat-mobile {
+  display: none;
+}
+
+/* Page Mes ventes : bouton Réinitialiser court masqué par défaut */
+.mes-ventes-reset-mobile {
+  display: none;
+}
+
+/* Page Mes factures : libellé Réinitialiser court masqué par défaut (affiché uniquement sur mobile) */
+.mes-factures-reset-mobile {
+  display: none;
+}
+
+/* Page Mes ventes : titre court du graphique évolution masqué par défaut (affiché uniquement sur mobile) */
+.mes-ventes-evolution-title-mobile {
+  display: none;
+}
+
 /* Page Détails annonce : libellés boutons courts (Modifier / Supprimer) masqués par défaut */
 .voir-annonce-btn-label-mobile {
   display: none;
@@ -514,6 +534,77 @@ a:focus-visible {
   .contact-intro-text {
     display: none !important;
   }
+  /* Page Mes ventes : pleine largeur sur mobile */
+  .mes-ventes-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Mes ventes : même format que Mes annonces sur mobile */
+  .mes-ventes-deposer-link {
+    display: none !important;
+  }
+  .mes-ventes-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .mes-ventes-stats-grid > div {
+    padding: 10px 8px !important;
+    min-width: 0 !important;
+  }
+  .mes-ventes-stat-desktop {
+    display: none !important;
+  }
+  .mes-ventes-stat-mobile {
+    display: inline !important;
+  }
+  .mes-ventes-stats-deux-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  /* Page Mes ventes : deux sélecteurs de date sur la même ligne, Réinitialiser à la ligne sur mobile */
+  .mes-ventes-filtres-row {
+    gap: 8px 16px !important;
+    margin-bottom: 20px !important;
+  }
+  .mes-ventes-filtres-dates {
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .mes-ventes-date-input {
+    height: 38px !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+    border-radius: 10px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+  .mes-ventes-filtres-reset-wrap {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    margin-top: -4px !important;
+  }
+  .mes-ventes-filtres-reset-wrap button {
+    font-size: 12px !important;
+    color: #999 !important;
+  }
+  .mes-ventes-reset-desktop {
+    display: none !important;
+  }
+  .mes-ventes-reset-mobile {
+    display: inline !important;
+  }
+  /* Page Mes ventes : titre court du graphique évolution sur mobile */
+  .mes-ventes-evolution-title-desktop {
+    display: none !important;
+  }
+  .mes-ventes-evolution-title-mobile {
+    display: inline !important;
+  }
   /* Page Mes annonces : pleine largeur sur mobile */
   .mes-annonces-page-inner {
     max-width: none !important;
@@ -521,6 +612,102 @@ a:focus-visible {
     padding-left: 24px !important;
     padding-right: 24px !important;
     box-sizing: border-box !important;
+  }
+  /* Page Mes factures : masquer le sélecteur Plus récents / Plus anciens sur mobile */
+  .mes-factures-sort-dropdown {
+    display: none !important;
+  }
+  /* Page Mes factures : pleine largeur sur mobile */
+  .mes-factures-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page détail facture (après clic sur une facture) : pleine largeur sur mobile, éviter zoom */
+  .mes-facture-detail-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Mon profil : pleine largeur sur mobile */
+  .mon-profil-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Admin : pleine largeur sur mobile */
+  .admin-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Admin : masquer « Tous » et mettre les 3 filtres sur une ligne pleine largeur */
+  .admin-filter-all {
+    display: none !important;
+  }
+  .admin-filters-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .mes-facture-detail-invoice-card {
+    padding: 24px !important;
+    max-width: 480px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+  .mes-facture-detail-table-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mes-facture-detail-table-wrap table {
+    min-width: 460px;
+    font-size: 14px !important;
+  }
+  .mes-facture-detail-table-wrap th,
+  .mes-facture-detail-table-wrap td {
+    padding: 12px 10px !important;
+  }
+  /* Page Mes factures : sélecteur de dates comme Mes ventes sur mobile */
+  .mes-factures-filtres-row {
+    gap: 8px 16px !important;
+    margin-bottom: 20px !important;
+  }
+  .mes-factures-filtres-dates {
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .mes-factures-date-input {
+    height: 38px !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
+  }
+  .mes-factures-filtres-reset-wrap {
+    flex-basis: 100% !important;
+    width: 100% !important;
+    margin-top: -4px !important;
+  }
+  .mes-factures-filtres-reset-wrap {
+    font-size: 12px !important;
+    color: #999 !important;
+  }
+  .mes-factures-reset-desktop {
+    display: none !important;
+  }
+  .mes-factures-reset-mobile {
+    display: inline !important;
   }
   /* Page Mes annonces : libellés courts des stats sur mobile */
   .mes-annonces-stat-desktop {
@@ -582,14 +769,6 @@ a:focus-visible {
   .voir-annonce-stats-grid > div {
     padding: 10px 8px !important;
     min-width: 0 !important;
-  }
-  .voir-annonce-stats-grid > div:nth-child(3) {
-    grid-column: 1 / -1 !important;
-    width: calc((100% - 8px) / 2) !important;
-    max-width: calc((100% - 8px) / 2) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    box-sizing: border-box !important;
   }
   .voir-annonce-stats-grid .voir-annonce-stat-desktop {
     display: none !important;
