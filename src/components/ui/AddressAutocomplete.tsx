@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const API_URL = 'https://api-adresse.data.gouv.fr/search/';
+/** Appel via notre API pour éviter CORS / blocages en navigateur */
+const API_URL = '/api/search-address';
 
 interface AddressFeature {
   type: string;
@@ -61,15 +62,31 @@ export function AddressAutocomplete({
     setLoading(true);
     try {
       const res = await fetch(
-        `${API_URL}?q=${encodeURIComponent(trimmed)}&limit=15`
+        `${API_URL}?q=${encodeURIComponent(trimmed)}&limit=10`,
+        { credentials: 'same-origin' }
       );
       const data = await res.json();
+      if (!res.ok) {
+        setSuggestions([]);
+        return;
+      }
       const features = (data.features || []) as AddressFeature[];
-      const withType = features as (AddressFeature & { properties: { type?: string } })[];
-      const onlyFullAddresses = withType.filter(
-        (f) => f.properties?.type === 'housenumber' || f.properties?.type === 'street'
-      );
-      setSuggestions(onlyFullAddresses);
+      const withProps = features as (AddressFeature & { properties: { type?: string; label?: string; score?: number } })[];
+      const withLabel = withProps.filter((f) => f.properties?.label);
+      // Ordre logique : du plus précis au plus large (numéro → rue → lieu-dit → commune)
+      const typeOrder: Record<string, number> = {
+        housenumber: 4,
+        street: 3,
+        locality: 2,
+        municipality: 1,
+      };
+      const sorted = [...withLabel].sort((a, b) => {
+        const orderA = typeOrder[a.properties?.type ?? ''] ?? 0;
+        const orderB = typeOrder[b.properties?.type ?? ''] ?? 0;
+        if (orderB !== orderA) return orderB - orderA;
+        return (b.properties?.score ?? 0) - (a.properties?.score ?? 0);
+      });
+      setSuggestions(sorted);
       setHighlightedIndex(-1);
     } catch {
       setSuggestions([]);
@@ -181,7 +198,7 @@ export function AddressAutocomplete({
         autoComplete="off"
         style={inputStyle}
       />
-      {isOpen && lastSelectedRef.current !== query.trim() && (query.trim().length >= 3 || suggestions.length > 0) && (
+      {isOpen && !loading && suggestions.length > 0 && lastSelectedRef.current !== query.trim() && (
         <ul
           role="listbox"
           style={{
@@ -197,23 +214,12 @@ export function AddressAutocomplete({
             border: '1px solid #d2d2d7',
             borderRadius: 12,
             boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-            maxHeight: 280,
+            maxHeight: 192,
             overflowY: 'auto',
             zIndex: 50,
           }}
         >
-          {loading && (
-            <li style={{ padding: 12, fontSize: 13, color: '#86868b' }}>
-              Recherche...
-            </li>
-          )}
-          {!loading && suggestions.length === 0 && query.trim().length >= 3 && (
-            <li style={{ padding: 12, fontSize: 13, color: '#86868b' }}>
-              Aucune adresse trouvée
-            </li>
-          )}
-          {!loading &&
-            suggestions.map((feature, index) => {
+          {suggestions.map((feature, index) => {
               const label = feature.properties.label;
               const isHighlighted = index === highlightedIndex;
               return (

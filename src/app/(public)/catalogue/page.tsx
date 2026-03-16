@@ -459,7 +459,7 @@ function CatalogueContent() {
         : Object.keys(MODELS_BY_CATEGORY_BRAND);
     const dataKeyToFilterCategory = (dataKey: string) =>
       Object.entries(CATEGORY_TO_BRAND_KEYS).find(([, keys]) => keys.includes(dataKey))?.[0] ?? dataKey;
-    const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+    const CATEGORIES_WITH_ARTICLE_TYPE = ['sacs', 'vetements', 'chaussures', 'accessoires', 'bijoux'];
     const getOptionValuesForCategory = (filterCat: string) => {
       if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
       if (filterCat === 'sacs') return getSacsTypesForGenreCatalogue(genre).map((o) => o.value);
@@ -531,7 +531,7 @@ function CatalogueContent() {
         : Object.keys(MODELS_BY_CATEGORY_BRAND);
     const dataKeyToFilterCategory = (dataKey: string) =>
       Object.entries(CATEGORY_TO_BRAND_KEYS).find(([, keys]) => keys.includes(dataKey))?.[0] ?? dataKey;
-    const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+    const CATEGORIES_WITH_ARTICLE_TYPE = ['sacs', 'vetements', 'chaussures', 'accessoires', 'bijoux'];
     const getOptionValuesForCategory = (filterCat: string) => {
       if (filterCat === 'vetements') return getVetementsTypesForGenre(genre).map((o) => o.value);
       if (filterCat === 'sacs') return getSacsTypesForGenreCatalogue(genre).map((o) => o.value);
@@ -603,7 +603,7 @@ function CatalogueContent() {
   }, [filters.categories, filters.category]);
 
   /** Catégories qui ont un type de produit (comme dans Déposer une annonce). */
-  const CATEGORIES_WITH_ARTICLE_TYPE = ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'];
+  const CATEGORIES_WITH_ARTICLE_TYPE = ['sacs', 'vetements', 'chaussures', 'accessoires', 'bijoux'];
   /** Options "Type de produit" groupées par catégorie (pour afficher des sections quand plusieurs catégories choisies). */
   const articleTypeOptionsByCategory = useMemo(() => {
     const selected = filters.categories ?? (filters.category ? [filters.category] : []);
@@ -760,8 +760,8 @@ function CatalogueContent() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  /** Affichage des annonces : horizontal (défaut) ou grille — stocké en localStorage. Sur mobile toujours grille. */
-  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('horizontal');
+  /** Affichage des annonces : grille (défaut) ou horizontal — stocké en localStorage. Sur mobile toujours grille. */
+  const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('grid');
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.innerWidth <= 767) {
@@ -1021,7 +1021,8 @@ function CatalogueContent() {
       const articleTypes = filters.articleTypes?.length
         ? expandArticleTypesForFilter(selectedArticleTypeValues)
         : undefined;
-      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, articleTypes, sellerId: filters.sellerId, sortBy });
+      const limitCount = radiusKm > 0 && userCoords ? 500 : 200;
+      const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, articleTypes, sellerId: filters.sellerId, sortBy, limitCount });
 
       if (loadId !== loadListingsIdRef.current) return;
 
@@ -1238,6 +1239,13 @@ function CatalogueContent() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [etatInfoClicked, etatInfoHover]);
+
+  /** Quand aucun résultat, remonter en haut pour afficher le message et le bouton Réinitialiser les filtres */
+  useEffect(() => {
+    if (!loading && listings.length === 0) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [loading, listings.length]);
 
   /** Charger les favoris de l'utilisateur pour les annonces affichées */
   useEffect(() => {
@@ -3450,6 +3458,7 @@ function CatalogueContent() {
                   requestPosition();
                 }
               }}
+              aria-label="Rayon en kilomètres autour de ma position"
               style={{
                 flex: '1 1 120px',
                 minWidth: 120,
@@ -3461,20 +3470,8 @@ function CatalogueContent() {
               {radiusKm === 0 ? '— —' : `${radiusKm} km`}
             </span>
           </div>
-          {radiusKm > 0 && !userCoords && !geoLoading && !geoError && (
-            <button
-              type="button"
-              onClick={() => requestPosition()}
-              style={{ marginTop: 10, fontSize: 13, fontWeight: 500, padding: '8px 14px', borderRadius: 10, border: '1px solid #1d1d1f', backgroundColor: '#1d1d1f', color: '#fff', cursor: 'pointer' }}
-            >
-              Autoriser l’accès à ma position
-            </button>
-          )}
-          {geoLoading && (
-            <p style={{ fontSize: 12, color: '#6e6e73', marginTop: 6 }}>Obtention de votre position…</p>
-          )}
-          {geoError && (
-            <p style={{ fontSize: 12, color: '#c00', marginTop: 8, marginBottom: 0 }}>{geoError}</p>
+          {geoError && radiusKm > 0 && (
+            <p style={{ fontSize: 13, color: '#1d1d1f', marginTop: 8, marginBottom: 0 }}>{geoError}</p>
           )}
         </div>
       </FilterSection>
@@ -4213,13 +4210,13 @@ function CatalogueContent() {
                         })()}
                         <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
                         <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
-                          <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
+                          <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                           {dealByListingId[listing.id] && (() => {
                             const deal = dealByListingId[listing.id]!;
                             return (
-                              <span className="catalogue-listing-deal-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '2px 5px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 9, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
-                                <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <Euro size={6} color="#fff" strokeWidth={2.5} />
+                              <span className="catalogue-listing-deal-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '3px 6px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 10, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
+                                <span style={{ width: 13, height: 13, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Euro size={7} color="#fff" strokeWidth={2.5} />
                                 </span>
                                 {deal.label}
                               </span>
@@ -4334,19 +4331,19 @@ function CatalogueContent() {
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     gap: 3,
-                                    padding: '3px 6px',
+                                    padding: '4px 7px',
                                     marginLeft: 4,
                                     backgroundColor: '#fff',
                                     border: `1px solid ${deal.color}`,
                                     borderRadius: 4,
-                                    fontSize: 10,
+                                    fontSize: 11,
                           fontWeight: 500,
                                     color: deal.color,
                           whiteSpace: 'nowrap',
                         }}
                       >
-                                  <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Euro size={8} color="#fff" strokeWidth={2.5} />
+                                  <span style={{ width: 15, height: 15, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Euro size={9} color="#fff" strokeWidth={2.5} />
                                   </span>
                                   {deal.label}
                                 </span>

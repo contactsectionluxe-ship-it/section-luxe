@@ -14,7 +14,7 @@ import {
 } from '@/lib/supabase/messaging';
 import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
-import { formatRelativeTime, formatDate, getSellerAvatarUrl } from '@/lib/utils';
+import { formatRelativeTime, formatDate, formatDateShort, getSellerAvatarUrl } from '@/lib/utils';
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -184,7 +184,7 @@ export default function ConversationPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', padding: '30px 24px 80px', boxSizing: 'border-box' }}>
+      <div className="messages-conversation-inner" style={{ maxWidth: 800, width: '100%', margin: '0 auto', padding: '30px 24px 80px', boxSizing: 'border-box' }}>
         {/* En-tête : titre + barre avec retour, miniature, interlocuteur (même niveau que page Contact) */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1
@@ -330,7 +330,8 @@ export default function ConversationPage() {
                       </p>
                         )}
                       <p style={{ fontSize: 11, marginTop: 8, marginBottom: 0, opacity: isOwn ? 0.7 : 0.85 }}>
-                        {formatRelativeTime(message.createdAt)}
+                        <span className="messages-date-relative">{formatRelativeTime(message.createdAt)}</span>
+                        <span className="messages-date-short">{formatDateShort(message.createdAt)}</span>
                       </p>
                     </div>
                   </div>

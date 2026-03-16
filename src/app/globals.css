@@ -105,6 +105,36 @@ a:focus-visible {
   color: #ffffff;
 }
 
+/* Ma messagerie : format date court masqué par défaut (affiché uniquement sur mobile) */
+.messages-date-short {
+  display: none;
+}
+
+/* Page Déposer une annonce : sous-titre court masqué par défaut (affiché uniquement sur mobile) */
+.deposer-annonce-subtitle-mobile {
+  display: none;
+}
+
+/* Page Déposer une annonce : placeholder catégorie court masqué par défaut (affiché uniquement sur mobile) */
+.deposer-annonce-category-placeholder-mobile {
+  display: none;
+}
+
+/* Page Détails annonce : libellés stats courts masqués par défaut (affichés uniquement sur mobile) */
+.voir-annonce-stat-mobile {
+  display: none;
+}
+
+/* Page Détails annonce : libellés boutons courts (Modifier / Supprimer) masqués par défaut */
+.voir-annonce-btn-label-mobile {
+  display: none;
+}
+
+/* Page Mes annonces : libellés courts des stats masqués par défaut (affichés uniquement sur mobile) */
+.mes-annonces-stat-mobile {
+  display: none;
+}
+
 /* Responsive breakpoints helper classes */
 @media (max-width: 767px) {
   .hide-mobile {
@@ -213,18 +243,18 @@ a:focus-visible {
   .home-section-categories {
     padding-top: 40px !important;
   }
-  /* Page d'accueil mobile : afficher 3 catégories puis défiler, centrage par snap */
+  /* Page d'accueil mobile : afficher 2 catégories puis défiler (desktop inchangé), centrage par snap */
   .categories-scroll-container {
     scroll-snap-type: x mandatory !important;
     scroll-padding-inline: 0;
     overscroll-behavior-x: none !important;
   }
   .categories-scroll-inner {
-    /* 6 items × (100cqw - 24px)/3 + 5×12px gap = 200cqw + 12px — pas d’espace vide à droite */
-    width: calc(200cqw + 12px) !important;
+    /* 6 items × (100cqw - 12px)/2 + 5×12px gap = 300cqw + 24px — pas d’espace vide à droite */
+    width: calc(300cqw + 24px) !important;
   }
   .categories-scroll-item {
-    flex: 0 0 calc((100cqw - 24px) / 3) !important;
+    flex: 0 0 calc((100cqw - 12px) / 2) !important;
     scroll-snap-align: start !important;
     scroll-snap-stop: always !important;
   }
@@ -353,12 +383,12 @@ a:focus-visible {
     display: none !important;
   }
   .catalogue-mobile-filters-panel {
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 90vw !important;
+    max-width: 90vw !important;
   }
   .catalogue-mobile-filters-panel-footer {
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 90vw !important;
+    max-width: 90vw !important;
   }
   .catalogue-mobile-filters-panel-header {
     min-height: var(--header-height) !important;
@@ -402,6 +432,249 @@ a:focus-visible {
   }
   .catalogue-search-submit-text {
     display: none !important;
+  }
+  /* Mes favoris : pleine largeur sur mobile */
+  .favoris-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Mes favoris : barre de recherche pleine largeur, masquer le tri (Plus récents) sur mobile */
+  .favoris-search-row {
+    width: 100% !important;
+  }
+  .favoris-sort-dropdown {
+    display: none !important;
+  }
+  /* Mes favoris : même présentation que À la une (grille 2 colonnes, gap 12px, afficher vendeur et caractéristiques) */
+  .favoris-list-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  .favoris-list-grid .catalogue-listing-caracteristiques {
+    display: flex !important;
+  }
+  .favoris-list-grid .listing-grid-vendeur-nom {
+    display: inline !important;
+  }
+  /* Ma messagerie : pleine largeur sur mobile */
+  .messages-page-inner,
+  .messages-conversation-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Ma messagerie : masquer le trait et l'icône corbeille dans la liste sur mobile */
+  .messages-list-delete-cell {
+    display: none !important;
+  }
+  /* Ma messagerie : barre de recherche pleine largeur, masquer le filtre « Tous » sur mobile */
+  .messages-search-row {
+    flex-wrap: wrap;
+  }
+  .messages-search-input-wrap {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    max-width: none !important;
+  }
+  .messages-filter-dropdown {
+    display: none !important;
+  }
+  /* Ma messagerie : date en jj/mm/aaaa sur mobile (masquer le relatif) */
+  .messages-date-relative {
+    display: none !important;
+  }
+  .messages-date-short {
+    display: inline !important;
+  }
+  /* Page À propos : pleine largeur sur mobile */
+  .a-propos-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  .a-propos-page-inner .a-propos-section {
+    max-width: none !important;
+  }
+  /* Page Contact : pleine largeur sur mobile */
+  .contact-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Contact : masquer l'intro « Pour toute demande... » sur mobile */
+  .contact-intro-text {
+    display: none !important;
+  }
+  /* Page Mes annonces : pleine largeur sur mobile */
+  .mes-annonces-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Mes annonces : libellés courts des stats sur mobile */
+  .mes-annonces-stat-desktop {
+    display: none !important;
+  }
+  .mes-annonces-stat-mobile {
+    display: inline !important;
+  }
+  /* Page Mes annonces : masquer le bouton « Déposer une annonce » sur mobile */
+  .mes-annonces-deposer-link {
+    display: none !important;
+  }
+  /* Page Mes annonces : barre de recherche pleine largeur, masquer « Plus récents » (tri) sur mobile */
+  .mes-annonces-search-row {
+    flex-wrap: wrap;
+  }
+  .mes-annonces-search-input-wrap {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    max-width: none !important;
+  }
+  .mes-annonces-sort-dropdown {
+    display: none !important;
+  }
+  /* Page Mes annonces : 2 annonces par ligne sur mobile */
+  .mes-annonces-list-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  /* Page Mes annonces : Modifier et Détails rentrent dans la carte sur mobile */
+  .mes-annonces-card-actions {
+    padding: 0 10px 12px !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+  }
+  .mes-annonces-card-actions a {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    min-width: 0 !important;
+  }
+  /* Page Détails mon annonce : titre en dessous de Activer/Désactiver, boutons centrés, titre à gauche sur mobile */
+  .voir-annonce-title-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .voir-annonce-toggle-buttons {
+    order: -1 !important;
+    justify-content: center !important;
+  }
+  .voir-annonce-title {
+    order: 0 !important;
+    text-align: left !important;
+  }
+  /* Page Détails annonce : 2 stats par ligne, le 3e centré en dessous, libellés courts sur mobile */
+  .voir-annonce-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+  .voir-annonce-stats-grid > div {
+    padding: 10px 8px !important;
+    min-width: 0 !important;
+  }
+  .voir-annonce-stats-grid > div:nth-child(3) {
+    grid-column: 1 / -1 !important;
+    width: calc((100% - 8px) / 2) !important;
+    max-width: calc((100% - 8px) / 2) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    box-sizing: border-box !important;
+  }
+  .voir-annonce-stats-grid .voir-annonce-stat-desktop {
+    display: none !important;
+  }
+  .voir-annonce-stats-grid .voir-annonce-stat-mobile {
+    display: inline !important;
+  }
+  /* Page Détails annonce : boutons Modifier / Supprimer en court sur mobile */
+  .voir-annonce-btn-label-desktop {
+    display: none !important;
+  }
+  .voir-annonce-btn-label-mobile {
+    display: inline !important;
+  }
+  /* Page Détails annonce : réduire l'espace à gauche de l'icône Modifier sur mobile */
+  .voir-annonce-btn-modifier {
+    padding-left: 14px !important;
+  }
+  /* Page Déposer une annonce : pleine largeur sur mobile */
+  .deposer-annonce-title-row,
+  .deposer-annonce-form-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Déposer une annonce : sur mobile, garder seulement la flèche à gauche du titre (masquer le texte du lien et le spacer) */
+  .deposer-annonce-back-link-text,
+  .deposer-annonce-title-spacer {
+    display: none !important;
+  }
+  /* Page Déposer une annonce : sous-titre court sur mobile + titre centré (flèche en position absolue) */
+  .deposer-annonce-subtitle-desktop {
+    display: none !important;
+  }
+  .deposer-annonce-subtitle-mobile {
+    display: inline !important;
+  }
+  /* Page Déposer une annonce : dans la case catégorie, texte court sur mobile */
+  .deposer-annonce-category-placeholder-desktop {
+    display: none !important;
+  }
+  .deposer-annonce-category-placeholder-mobile {
+    display: inline !important;
+  }
+  .deposer-annonce-title-row {
+    position: relative !important;
+    padding-left: 48px !important;
+    padding-right: 48px !important;
+  }
+  .deposer-annonce-back-link {
+    position: absolute !important;
+    left: 24px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+  }
+  /* Page Déposer une annonce : étapes 1–4 rapprochées et centrées, traits bien centrés sur mobile */
+  .deposer-annonce-steps-row {
+    width: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+  .deposer-annonce-steps-row > div {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .deposer-annonce-steps-connector {
+    flex: 0 0 auto !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    max-width: 22px !important;
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+  }
+  /* Page Déposer une annonce : réduire la taille des cercles d’étapes sur mobile */
+  .deposer-annonce-step-circle {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 14px !important;
+  }
+  .deposer-annonce-step-circle svg {
+    width: 16px !important;
+    height: 16px !important;
   }
 }
 

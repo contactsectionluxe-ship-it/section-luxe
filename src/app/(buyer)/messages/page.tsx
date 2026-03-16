@@ -7,7 +7,7 @@ import { MessageCircle, Trash2, Search, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { subscribeToConversations, deleteConversation } from '@/lib/supabase/messaging';
 import { Conversation } from '@/types';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, formatDateShort } from '@/lib/utils';
 
 type FilterTab = 'all' | 'read' | 'unread';
 
@@ -129,7 +129,7 @@ export default function MessagesPage() {
     return (
       <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         {(authLoading || loading) && <div className="catalogue-loading-bar" aria-hidden />}
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        <div className="messages-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
               Ma messagerie
@@ -221,7 +221,7 @@ export default function MessagesPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="messages-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Même structure que Mes favoris : bloc titre puis barre de recherche + filtre sur une ligne */}
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
@@ -233,8 +233,8 @@ export default function MessagesPage() {
         </div>
 
         {conversations.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+          <div className="messages-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div className="messages-search-input-wrap" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
             <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
             <input
               type="text"
@@ -255,7 +255,7 @@ export default function MessagesPage() {
                 }}
               />
             </div>
-            <div ref={filterDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <div className="messages-filter-dropdown" ref={filterDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setFilterDropdownOpen((v) => !v)}
@@ -373,7 +373,8 @@ export default function MessagesPage() {
                             {getOtherPartyName(conversation)}
                           </span>
                           <span style={{ fontSize: 12, color: '#86868b', flexShrink: 0 }}>
-                            {formatRelativeTime(conversation.lastMessageAt)}
+                            <span className="messages-date-relative">{formatRelativeTime(conversation.lastMessageAt)}</span>
+                            <span className="messages-date-short">{formatDateShort(conversation.lastMessageAt)}</span>
                           </span>
                         </div>
                         <p style={{ fontSize: 13, color: '#6e6e73', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -391,7 +392,7 @@ export default function MessagesPage() {
                         </div>
                       </div>
                     </Link>
-                    <div style={{ flexShrink: 0, borderLeft: '1px solid #e8e6e3', paddingLeft: 14, display: 'flex', alignItems: 'center', alignSelf: 'stretch', minHeight: 80 }}>
+                    <div className="messages-list-delete-cell" style={{ flexShrink: 0, borderLeft: '1px solid #e8e6e3', paddingLeft: 14, display: 'flex', alignItems: 'center', alignSelf: 'stretch', minHeight: 80 }}>
                       <button
                         type="button"
                         onClick={(e) => { e.preventDefault(); setDeleteTargetId(conversation.id); }}

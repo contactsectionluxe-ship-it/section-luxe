@@ -81,7 +81,7 @@ export default function ContactPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-      <div style={{ width: '100%', maxWidth: 640, margin: 0, padding: '30px 24px 80px', boxSizing: 'border-box' }}>
+      <div className="contact-page-inner" style={{ width: '100%', maxWidth: 640, margin: 0, padding: '30px 24px 80px', boxSizing: 'border-box' }}>
         {/* Titre centré — même design que Déposer une annonce */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1
@@ -103,7 +103,7 @@ export default function ContactPage() {
 
         {/* Carte blanche — même style que le formulaire Déposer une annonce */}
         <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-          <p style={{ fontSize: 15, color: '#6e6e73', lineHeight: 1.6, marginBottom: 24 }}>
+          <p className="contact-intro-text" style={{ fontSize: 15, color: '#6e6e73', lineHeight: 1.6, marginBottom: 24 }}>
             Pour toute demande, utilisez le formulaire ci-dessous ou écrivez-nous à{' '}
             <a
               href="mailto:contact.sectionluxe@gmail.com"

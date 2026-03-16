@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown } from 'lucide-react';
+import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getSellerListings } from '@/lib/supabase/listings';
+import { getSellerListings, deleteListing } from '@/lib/supabase/listings';
+import { recordListingDeletion } from '@/lib/supabase/sales';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
@@ -29,6 +30,14 @@ const ANNONCES_SORT_OPTIONS = [
   { value: 'price_desc' as const, label: 'Prix décroissant' },
 ];
 
+const SUPPRESSION_RAISONS = [
+  { value: 'vendu', label: 'Article vendu' },
+  { value: 'reserve', label: 'Article réservé' },
+  { value: 'erreur', label: 'Erreur dans l\'annonce' },
+  { value: 'retire', label: 'Article retiré de la vente' },
+  { value: 'autre', label: 'Autre' },
+] as const;
+
 export default function SellerDashboardPage() {
   const router = useRouter();
   const { user, seller, isSeller, isApprovedSeller, loading: authLoading, refreshUser } = useAuth();
@@ -40,6 +49,12 @@ export default function SellerDashboardPage() {
   const [sortBy, setSortBy] = useState<SortOption>('recent');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteModalStep, setDeleteModalStep] = useState<1 | 2>(1);
+  const [deleteReason, setDeleteReason] = useState<string>('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -101,6 +116,43 @@ export default function SellerDashboardPage() {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, [sortDropdownOpen]);
 
+  const openDeleteModal = (listing: Listing) => {
+    setListingToDelete(listing);
+    setShowDeleteModal(true);
+    setDeleteModalStep(1);
+    setDeleteReason('');
+    setDeleteError(null);
+  };
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteModalStep(1);
+    setDeleteReason('');
+    setDeleteError(null);
+    setListingToDelete(null);
+  };
+
+  const handleDeleteListing = async () => {
+    if (!user?.uid || !listingToDelete) return;
+    setDeleting(true);
+    try {
+      const amountCents = (deleteReason === 'vendu' || deleteReason === 'reserve') && listingToDelete.price != null ? Math.round(Number(listingToDelete.price) * 100) : undefined;
+      try {
+        await recordListingDeletion(user.uid, listingToDelete.id, deleteReason || 'autre', amountCents, listingToDelete.title);
+      } catch (e) {
+        console.warn('Enregistrement suppression ignoré:', e);
+      }
+      await deleteListing(listingToDelete.id);
+      setListings((prev) => prev.filter((l) => l.id !== listingToDelete.id));
+      closeDeleteModal();
+    } catch (err) {
+      console.error(err);
+      setDeleteError('Impossible de supprimer l\'annonce. Réessayez ou contactez le support.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!authLoading && (!user || !seller)) return null;
 
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
@@ -135,7 +187,7 @@ export default function SellerDashboardPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="mes-annonces-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div>
@@ -166,7 +218,7 @@ export default function SellerDashboardPage() {
             </div>
           </div>
           {!showSkeletons && isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+            <Link href="/vendeur/annonces/nouvelle" className="mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
               <Plus size={18} /> Déposer une annonce
             </Link>
           )}
@@ -205,7 +257,7 @@ export default function SellerDashboardPage() {
                 {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#666" />}
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Annonces actives</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Annonces actives</span><span className="mes-annonces-stat-mobile">Annonces</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 32, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : activeListings}</p>
               </div>
             </div>
@@ -214,7 +266,7 @@ export default function SellerDashboardPage() {
                 {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#666" />}
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total likes</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total likes</span><span className="mes-annonces-stat-mobile">Likes</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 28, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalLikes}</p>
               </div>
             </div>
@@ -223,7 +275,7 @@ export default function SellerDashboardPage() {
                 {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#666" />}
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total messages</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total messages</span><span className="mes-annonces-stat-mobile">Messages</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 24, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalMessages}</p>
               </div>
             </div>
@@ -232,15 +284,15 @@ export default function SellerDashboardPage() {
                 {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#666" />}
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total appels</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total appels</span><span className="mes-annonces-stat-mobile">Appels</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{showSkeletons ? <span className="catalogue-skeleton" style={{ display: 'inline-block', width: 20, height: 22, borderRadius: 4, verticalAlign: 'middle' }} /> : totalAppels}</p>
               </div>
             </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+        <div className="mes-annonces-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+            <div className="mes-annonces-search-input-wrap" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
               <input
                 type="text"
@@ -261,7 +313,7 @@ export default function SellerDashboardPage() {
                 }}
               />
             </div>
-            <div ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <div className="mes-annonces-sort-dropdown" ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setSortDropdownOpen((v) => !v)}
@@ -337,7 +389,7 @@ export default function SellerDashboardPage() {
         {/* Listings */}
         <div>
           {showSkeletons ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {Array.from({ length: 8 }, (_, i) => (
                 <div key={i} className="catalogue-skeleton-card" style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', ['--skeleton-index' as string]: i }}>
                   <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
@@ -362,15 +414,42 @@ export default function SellerDashboardPage() {
               <h3 style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>Aucune annonce</h3>
               <p style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>Créez votre première annonce</p>
               {isApprovedSeller && (
-                <Link href="/vendeur/annonces/nouvelle" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+                <Link href="/vendeur/annonces/nouvelle" className="mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
                   <Plus size={18} /> Déposer une annonce
                 </Link>
               )}
             </div>
           ) : filteredListings.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {filteredListings.map((listing) => (
-                <div key={listing.id} style={{ border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
+                <div key={listing.id} style={{ position: 'relative', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openDeleteModal(listing); }}
+                    disabled={deleting && listingToDelete?.id === listing.id}
+                    aria-label="Supprimer l'annonce"
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      left: 8,
+                      zIndex: 10,
+                      padding: 4,
+                      width: 22,
+                      height: 22,
+                      boxSizing: 'border-box',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: 'none',
+                      borderRadius: 4,
+                      backgroundColor: '#f0f0f0',
+                      color: '#1d1d1f',
+                      cursor: deleting && listingToDelete?.id === listing.id ? 'not-allowed' : 'pointer',
+                      opacity: deleting && listingToDelete?.id === listing.id ? 0.7 : 1,
+                    }}
+                  >
+                    <X size={14} strokeWidth={2.5} />
+                  </button>
                   <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
@@ -396,7 +475,7 @@ export default function SellerDashboardPage() {
                       </div>
                     </div>
                   </Link>
-                  <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
+                  <div className="mes-annonces-card-actions" style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
                     {isApprovedSeller && (
                       <Link href={`/vendeur/annonces/${listing.id}`} style={{ flex: 1, padding: '8px 14px', border: '1px solid #ddd', fontSize: 13, textAlign: 'center', borderRadius: 6, color: '#1d1d1f' }}>
                         Modifier
@@ -416,6 +495,106 @@ export default function SellerDashboardPage() {
           )}
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={closeDeleteModal} aria-hidden />
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 410,
+              backgroundColor: '#fff',
+              padding: '24px 20px',
+              borderRadius: 16,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            }}
+          >
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+              Supprimer l&apos;annonce
+            </h2>
+            {deleteModalStep === 1 ? (
+              <>
+                <p style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500, marginTop: 16, marginBottom: 10 }}>
+                  Pour quelle raison souhaitez-vous retirer cette annonce ?
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                  {SUPPRESSION_RAISONS.map((r) => (
+                    <label
+                      key={r.value}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        padding: '10px 12px',
+                        borderRadius: 10,
+                        border: `1.5px solid ${deleteReason === r.value ? '#1d1d1f' : '#e5e5e7'}`,
+                        backgroundColor: deleteReason === r.value ? '#f5f5f7' : '#fff',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        color: '#1d1d1f',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="deleteReason"
+                        value={r.value}
+                        checked={deleteReason === r.value}
+                        onChange={() => setDeleteReason(r.value)}
+                        style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
+                      />
+                      {r.label}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={closeDeleteModal}
+                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalStep(2)}
+                    disabled={!deleteReason}
+                    style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: !deleteReason ? 'not-allowed' : 'pointer', opacity: !deleteReason ? 0.7 : 1 }}
+                  >
+                    Suivant
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
+                  Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
+                </p>
+                {deleteError && (
+                  <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteError}</p>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalStep(1)}
+                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: 'pointer' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteListing}
+                    disabled={deleting}
+                    style={{ flex: 1, height: 44, backgroundColor: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: deleting ? 'not-allowed' : 'pointer', opacity: deleting ? 0.7 : 1 }}
+                  >
+                    {deleting ? 'Suppression...' : 'Supprimer'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

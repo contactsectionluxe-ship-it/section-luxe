@@ -10,11 +10,11 @@ import { ListingPhoto } from '@/components/ListingPhoto';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
-  { name: 'Montres', href: '/catalogue?category=montres', image: '/montres-categorie.png' },
-  { name: 'Bijoux', href: '/catalogue?category=bijoux', image: '/bijoux-categorie.png' },
   { name: 'Vêtements', href: '/catalogue?category=vetements', image: '/vetements-categorie.png' },
   { name: 'Chaussures', href: '/catalogue?category=chaussures', image: '/chaussures-categorie.png' },
   { name: 'Accessoires', href: '/catalogue?category=accessoires', image: '/accessoires-categorie.png' },
+  { name: 'Bijoux', href: '/catalogue?category=bijoux', image: '/bijoux-categorie.png' },
+  { name: 'Montres', href: '/catalogue?category=montres', image: '/montres-categorie.png' },
 ];
 
 function formatPrice(price: number): string {
@@ -93,7 +93,7 @@ export default function HomePage() {
           paddingLeft: 24,
           paddingRight: 24,
           backgroundImage: 'url(/banniere-hero.png)',
-          backgroundSize: '55%',
+          backgroundSize: '60%',
           backgroundPosition: '100% center',
           backgroundRepeat: 'no-repeat',
         }}
@@ -581,7 +581,7 @@ export default function HomePage() {
                       })()}
                       <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
                       <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
-                        <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
+                        <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                       </div>
                     </div>
                   </article>

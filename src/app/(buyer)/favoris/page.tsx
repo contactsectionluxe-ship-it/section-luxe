@@ -122,14 +122,14 @@ export default function FavoritesPage() {
     return (
       <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         {(authLoading || loading) && <div className="catalogue-loading-bar" aria-hidden />}
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        <div className="favoris-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
               Mes favoris
             </h1>
             <p style={{ fontSize: 14, color: '#888' }}>Chargement...</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div className="favoris-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
               <input
@@ -152,7 +152,7 @@ export default function FavoritesPage() {
                 }}
               />
             </div>
-            <div ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <div className="favoris-sort-dropdown" ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 type="button"
                 disabled
@@ -258,7 +258,7 @@ export default function FavoritesPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="favoris-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
             Mes favoris
@@ -269,7 +269,7 @@ export default function FavoritesPage() {
         </div>
 
         {listings.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div className="favoris-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <Search size={18} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
             <input
@@ -291,7 +291,7 @@ export default function FavoritesPage() {
                 }}
               />
             </div>
-            <div ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <div className="favoris-sort-dropdown" ref={sortDropdownRef} style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setSortDropdownOpen((v) => !v)}
@@ -366,19 +366,19 @@ export default function FavoritesPage() {
         )}
 
         {filteredListings.length > 0 ? (
-          <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, minWidth: 0 }}>
+          <div className="favoris-list-grid home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24, minWidth: 0 }}>
             {filteredListings.map((listing) => (
-              <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent('/favoris')}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+              <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent('/favoris')}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                   <article
                     style={{
                       position: 'relative',
                       display: 'flex',
-                    flexDirection: 'column',
+                      flexDirection: 'column',
                       backgroundColor: '#fff',
-                    borderRadius: 12,
-                      overflow: 'hidden',
+                      borderRadius: 12,
                       border: '1px solid #e8e6e3',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      overflow: 'hidden',
                       minWidth: 0,
                     }}
                   >
@@ -389,11 +389,11 @@ export default function FavoritesPage() {
                       aria-label="Retirer des favoris"
                       style={{
                         position: 'absolute',
-                      top: 8,
-                      right: 8,
+                        top: 8,
+                        right: 8,
                         zIndex: 1,
-                      width: 32,
-                      height: 32,
+                        width: 32,
+                        height: 32,
                         borderRadius: '50%',
                         backgroundColor: 'rgba(255,255,255,0.95)',
                         border: '1px solid rgba(0,0,0,0.06)',
@@ -403,38 +403,38 @@ export default function FavoritesPage() {
                         justifyContent: 'center',
                         cursor: 'pointer',
                         padding: 0,
-                    }}
-                  >
-                    <Heart size={16} color="#1d1d1f" fill="#1d1d1f" strokeWidth={2} />
+                      }}
+                    >
+                      <Heart size={16} color="#1d1d1f" fill="#1d1d1f" strokeWidth={2} />
                     </button>
                     <div
                       style={{
-                      position: 'relative',
-                      width: '100%',
+                        position: 'relative',
+                        width: '100%',
                         aspectRatio: '1',
-                      background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                        background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
                         overflow: 'hidden',
-                    }}
-                  >
-                    <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 768px) 50vw, 25vw" />
-                        </div>
-                  <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                    <p style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                      <span>{listing.sellerName}</span>
-                      {listing.sellerPostcode && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
-                          <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
-                          {listing.sellerPostcode}
-                        </span>
-                      )}
-                    </p>
-                    <h3 title={listing.title} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                          {listing.title}
-                        </h3>
-                    <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
-                      <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
+                      }}
+                    >
+                      <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 640px) 50vw, 25vw" />
                     </div>
+                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+                        <span className="listing-grid-vendeur-nom" title={listing.sellerName}>{listing.sellerName}</span>
+                        {listing.sellerPostcode && (
+                          <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                            <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                            {listing.sellerPostcode}
+                          </span>
+                        )}
+                      </p>
+                      <h3 className="listing-grid-title" title={listing.title} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                        {listing.title}
+                      </h3>
+                      <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
+                      <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
+                        <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
+                      </div>
                     </div>
                 </article>
               </Link>

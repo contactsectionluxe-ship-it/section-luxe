@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, FileText, Camera, AlertTriangle, X } from 'lucide-react';
+import { Mail, FileText, Camera, AlertTriangle, X, CheckCircle, Clock, XCircle, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/utils';
 import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
@@ -393,16 +393,26 @@ export default function ProfilVendeurPage() {
           </div>
 
           <div style={{ borderTop: '1px solid #eee', paddingTop: 24, marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <FileText size={20} color="#666" />
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f' }}>Statut</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <BadgeCheck size={20} color="#666" />
+              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>Statut</h2>
+              {seller.status === 'approved' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <CheckCircle size={12} /> Validé
+                </span>
+              )}
+              {seller.status === 'pending' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <Clock size={12} /> En attente
+                </span>
+              )}
+              {seller.status === 'rejected' && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                  <XCircle size={12} /> Refusé
+                </span>
+              )}
+              <span style={{ marginLeft: 'auto', fontSize: 12, color: '#86868b' }}>Inscription le {formatDate(seller.createdAt)}</span>
             </div>
-            <p style={{ fontSize: 13, color: '#1d1d1f', marginBottom: 4 }}>
-              {seller.status === 'approved' && '✓ Validé'}
-              {seller.status === 'pending' && '⏳ En attente'}
-              {seller.status === 'rejected' && '✗ Refusé'}
-            </p>
-            <p style={{ fontSize: 12, color: '#86868b' }}>Inscription le {formatDate(seller.createdAt)}</p>
           </div>
 
           <button
@@ -425,7 +435,7 @@ export default function ProfilVendeurPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e5e5e7' }}>
+        <div style={{ marginTop: 12 }}>
           <button
             type="button"
             onClick={openDeleteModal}
@@ -446,129 +456,73 @@ export default function ProfilVendeurPage() {
       </div>
 
       {deleteModalOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 24,
-          }}
-          onClick={(e) => e.target === e.currentTarget && !deleting && setDeleteModalOpen(false)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 16,
-              maxWidth: 420,
-              width: '100%',
-              paddingTop: 24,
-              paddingRight: 24,
-              paddingBottom: 16,
-              paddingLeft: 24,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f' }}>Supprimer mon compte</h2>
-              <button
-                type="button"
-                onClick={() => !deleting && setDeleteModalOpen(false)}
-                style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#86868b' }}
-                aria-label="Fermer"
-              >
-                <X size={22} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: 12,
-                padding: '14px 16px',
-                backgroundColor: '#fef3c7',
-                borderRadius: 10,
-                marginBottom: 24,
-              }}
-            >
-              <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: 2 }} />
-              <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.5 }}>
-                <strong>Pensez à télécharger toutes vos factures</strong> avant de supprimer votre compte. Cette action est irréversible.
-              </p>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ ...labelStyle, marginBottom: 6 }}>
-                Recopiez le nom de votre entreprise : <strong>{seller?.companyName}</strong>
-              </label>
-              <input
-                type="text"
-                value={deleteCompanyName}
-                onChange={(e) => setDeleteCompanyName(e.target.value)}
-                placeholder="Nom de l'entreprise"
-                style={inputStyle}
-                disabled={deleting}
-              />
-            </div>
-            <div style={{ marginBottom: 12 }}>
-              <label style={{ ...labelStyle, marginBottom: 6 }}>
-                Tapez « supprimer mon compte »
-              </label>
-              <input
-                type="text"
-                value={deletePhrase}
-                onChange={(e) => setDeletePhrase(e.target.value)}
-                placeholder="supprimer mon compte"
-                style={inputStyle}
-                disabled={deleting}
-              />
-            </div>
-
-            {deleteError && (
-              <div style={{ marginBottom: 16, padding: 12, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, borderRadius: 10 }}>
-                {deleteError}
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !deleting && setDeleteModalOpen(false)} />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 420, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: 24 }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
+                <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Supprimer mon compte</h2>
+                <button type="button" onClick={() => !deleting && setDeleteModalOpen(false)} style={{ position: 'absolute', right: 0, top: -6, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
+                  <X size={20} />
+                </button>
               </div>
-            )}
 
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => !deleting && setDeleteModalOpen(false)}
-                disabled={deleting}
-                style={{
-                  padding: '12px 20px',
-                  fontSize: 14,
-                  color: '#1d1d1f',
-                  background: '#f5f5f7',
-                  border: 'none',
-                  borderRadius: 10,
-                  cursor: deleting ? 'not-allowed' : 'pointer',
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAccount}
-                disabled={!deleteAccountValid || deleting}
-                style={{
-                  padding: '12px 20px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: '#fff',
-                  background: deleteAccountValid && !deleting ? '#dc2626' : '#d2d2d7',
-                  border: 'none',
-                  borderRadius: 10,
-                  cursor: deleteAccountValid && !deleting ? 'pointer' : 'not-allowed',
-                }}
-              >
-                {deleting ? 'Suppression...' : 'Supprimer définitivement'}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '14px 16px', backgroundColor: '#fef3c7', borderRadius: 10, marginBottom: 24 }}>
+                <AlertTriangle size={20} color="#b45309" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.5, textAlign: 'justify' }}>
+                  Avant de supprimer votre compte, assurez-vous d'avoir téléchargé toutes les données dont vous pourriez avoir besoin. Cette action est irréversible.
+                </p>
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>
+                  Recopiez le nom de votre entreprise : <strong>{seller?.companyName}</strong>
+                </label>
+                <input
+                  type="text"
+                  value={deleteCompanyName}
+                  onChange={(e) => setDeleteCompanyName(e.target.value)}
+                  placeholder="Nom de l'entreprise"
+                  style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, boxSizing: 'border-box', outline: 'none' }}
+                  disabled={deleting}
+                />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>
+                  Tapez « supprimer mon compte » pour confirmer
+                </label>
+                <input
+                  type="text"
+                  value={deletePhrase}
+                  onChange={(e) => setDeletePhrase(e.target.value)}
+                  placeholder="supprimer mon compte"
+                  style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, boxSizing: 'border-box', outline: 'none' }}
+                  disabled={deleting}
+                />
+              </div>
+
+              {deleteError && (
+                <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16 }}>{deleteError}</p>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => !deleting && setDeleteModalOpen(false)}
+                  disabled={deleting}
+                  style={{ width: '100%', height: 48, padding: '0 20px', fontSize: 15, fontWeight: 500, color: '#1d1d1f', background: '#f5f5f7', border: 'none', borderRadius: 10, cursor: deleting ? 'not-allowed' : 'pointer' }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={!deleteAccountValid || deleting}
+                  style={{ width: '100%', height: 48, padding: '0 20px', fontSize: 15, fontWeight: 500, color: '#fff', background: deleteAccountValid && !deleting ? '#dc2626' : '#d2d2d7', border: 'none', borderRadius: 10, cursor: deleteAccountValid && !deleting ? 'pointer' : 'not-allowed' }}
+                >
+                  {deleting ? 'Suppression...' : 'Supprimer définitivement'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

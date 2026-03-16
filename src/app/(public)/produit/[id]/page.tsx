@@ -591,25 +591,55 @@ export default function ProductPage() {
                 <div className="catalogue-skeleton" style={{ width: '100%', minHeight: 300, borderRadius: 18 }} />
               </div>
             </div>
-            {/* Mobile skeleton */}
-            <div className="hide-desktop" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <div className="catalogue-skeleton" style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto', borderRadius: 18 }} />
-              <div style={{ display: 'flex', gap: 6 }}>
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="catalogue-skeleton" style={{ width: 50, height: 50, borderRadius: 12 }} />
-                ))}
-              </div>
-              <div className="catalogue-skeleton" style={{ height: 28, width: '90%', borderRadius: 4 }} />
-              <div className="catalogue-skeleton" style={{ height: 24, width: 100, borderRadius: 4 }} />
-              <div style={{ padding: 28, backgroundColor: '#fafafb', borderRadius: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
-                  <div className="catalogue-skeleton" style={{ width: 64, height: 64, borderRadius: 10 }} />
-                  <div>
-                    <div className="catalogue-skeleton" style={{ height: 22, width: 140, marginBottom: 6, borderRadius: 4 }} />
-                    <div className="catalogue-skeleton" style={{ height: 14, width: 120, borderRadius: 4 }} />
+            {/* Mobile skeleton — même structure que l'affichage mobile (galerie, miniatures, tags, titre, prix, carte vendeur, informations) */}
+            <div className="hide-desktop produit-page-skeleton-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+              <div style={{ marginBottom: 24 }}>
+                <div className="catalogue-skeleton" style={{ aspectRatio: '1/1', width: '100%', maxWidth: 400, margin: '0 auto 12px', borderRadius: 18 }} />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="catalogue-skeleton" style={{ width: 50, height: 50, borderRadius: 12, flexShrink: 0 }} />
+                  ))}
+                </div>
+                <div style={{ marginTop: 36 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    <div className="catalogue-skeleton" style={{ height: 28, width: 72, borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ height: 28, width: 88, borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ height: 28, width: 64, borderRadius: 4 }} />
+                  </div>
+                  <div className="catalogue-skeleton" style={{ height: 24, width: '95%', marginBottom: 14, borderRadius: 4 }} />
+                  <div className="catalogue-skeleton" style={{ height: 14, width: '75%', marginBottom: 12, borderRadius: 4 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 24, flexWrap: 'wrap' }}>
+                    <div className="catalogue-skeleton" style={{ height: 24, width: 80, borderRadius: 4 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="catalogue-skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                      <div className="catalogue-skeleton" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                    </div>
+                  </div>
+                  <div style={{ padding: 24, backgroundColor: '#fafafb', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                      <div className="catalogue-skeleton" style={{ width: 56, height: 56, borderRadius: 10, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="catalogue-skeleton" style={{ height: 22, width: 140, marginBottom: 6, borderRadius: 4 }} />
+                        <div className="catalogue-skeleton" style={{ height: 13, width: 120, borderRadius: 4 }} />
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                      <div className="catalogue-skeleton" style={{ flex: 1, height: 42, borderRadius: 10 }} />
+                      <div className="catalogue-skeleton" style={{ flex: 1, height: 42, borderRadius: 10 }} />
+                    </div>
                   </div>
                 </div>
-                <div className="catalogue-skeleton" style={{ width: '100%', height: 44, borderRadius: 10 }} />
+                <div style={{ marginTop: 20, borderTop: '1px solid #e5e5e7', paddingTop: 20 }}>
+                  <div className="catalogue-skeleton" style={{ height: 19, width: 140, marginBottom: 14, borderRadius: 4 }} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                        <div className="catalogue-skeleton" style={{ height: 14, width: 56, borderRadius: 4, flexShrink: 0 }} />
+                        <div className="catalogue-skeleton" style={{ height: 14, width: 70, borderRadius: 4 }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

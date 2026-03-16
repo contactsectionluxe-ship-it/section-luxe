@@ -22,6 +22,14 @@ export function formatDate(date: Date): string {
   }).format(date);
 }
 
+/** Date au format jj/mm/aaaa (pour affichage court, ex. mobile). */
+export function formatDateShort(date: Date): string {
+  const d = date.getDate();
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear();
+  return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+}
+
 /** URL de l'avatar vendeur avec cache-buster (updated_at) pour afficher la photo à jour partout. */
 export function getSellerAvatarUrl(seller: { avatarUrl?: string | null; updatedAt?: Date } | null): string | null {
   if (!seller?.avatarUrl) return null;
@@ -61,10 +69,10 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 export const CATEGORIES: { value: string; label: string }[] = [
-  { value: 'vetements', label: 'Vêtements' },
   { value: 'sacs', label: 'Sacs' },
-  { value: 'montres', label: 'Montres' },
-  { value: 'bijoux', label: 'Bijoux' },
+  { value: 'vetements', label: 'Vêtements' },
   { value: 'chaussures', label: 'Chaussures' },
   { value: 'accessoires', label: 'Accessoires' },
+  { value: 'bijoux', label: 'Bijoux' },
+  { value: 'montres', label: 'Montres' },
 ];

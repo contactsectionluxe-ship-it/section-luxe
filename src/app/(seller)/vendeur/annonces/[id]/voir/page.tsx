@@ -159,64 +159,40 @@ export default function VoirAnnoncePage() {
         </Link>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {/* Photos avec défilement — flèches à l'extérieur */}
+          {/* Photos avec défilement — flèches sur la photo (même style que page produit) */}
           <div style={{ width: '100%', maxWidth: 480, margin: '0 auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {listing.photos.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setPhotoIndex((i) => (i === 0 ? listing.photos.length - 1 : i - 1))}
-                  aria-label="Photo précédente"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    flexShrink: 0,
-                    borderRadius: '50%',
-                    backgroundColor: '#f5f5f5',
-                    border: '1px solid #e0e0e0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <ChevronLeft size={24} color="#1d1d1f" />
-                </button>
-              ) : null}
-              <div style={{ flex: 1, minWidth: 0, aspectRatio: '1', backgroundColor: '#f5f5f7', borderRadius: 16, overflow: 'hidden' }}>
-                {listing.photos.length > 0 ? (
-                  <img
-                    src={listing.photos[photoIndex]}
-                    alt={listing.title}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Package size={64} color="#ccc" />
-                  </div>
-                )}
-              </div>
-              {listing.photos.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setPhotoIndex((i) => (i === listing.photos.length - 1 ? 0 : i + 1))}
-                  aria-label="Photo suivante"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    flexShrink: 0,
-                    borderRadius: '50%',
-                    backgroundColor: '#f5f5f5',
-                    border: '1px solid #e0e0e0',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <ChevronRight size={24} color="#1d1d1f" />
-                </button>
-              ) : null}
+            <div style={{ position: 'relative', aspectRatio: '1', backgroundColor: '#f5f5f7', borderRadius: 16, overflow: 'hidden' }}>
+              {listing.photos.length > 0 ? (
+                <img
+                  src={listing.photos[photoIndex]}
+                  alt={listing.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Package size={64} color="#ccc" />
+                </div>
+              )}
+              {listing.photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoIndex((i) => (i === 0 ? listing.photos.length - 1 : i - 1))}
+                    aria-label="Photo précédente"
+                    style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <ChevronLeft size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPhotoIndex((i) => (i === listing.photos.length - 1 ? 0 : i + 1))}
+                    aria-label="Photo suivante"
+                    style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, backgroundColor: 'rgba(255,255,255,0.5)', border: 'none', borderRadius: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <ChevronRight size={20} />
+                  </button>
+                </>
+              )}
             </div>
             {listing.photos.length > 1 && (
               <p style={{ fontSize: 12, color: '#888', textAlign: 'center', marginTop: 8 }}>
@@ -227,11 +203,11 @@ export default function VoirAnnoncePage() {
 
           {/* Titre, prix, statut */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, margin: 0, flex: 1, minWidth: 0 }}>
+            <div className="voir-annonce-title-row" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <h1 className="voir-annonce-title" style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, margin: 0, flex: 1, minWidth: 0 }}>
                 {listing.title}
               </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <div className="voir-annonce-toggle-buttons" style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                 {isApprovedSeller && (
                   <>
                     <button
@@ -275,19 +251,21 @@ export default function VoirAnnoncePage() {
               </div>
             </div>
             <p style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f', margin: '12px 0 0' }}>{formatPrice(listing.price)}</p>
-            {listing.listingNumber && (
-              <p style={{ fontSize: 13, color: '#6e6e73', margin: '8px 0 0' }}>N° annonce {listing.listingNumber}</p>
-            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 12, color: '#86868b', marginTop: 8 }}>
+              <span>N° annonce {listing.listingNumber || listing.id}</span>
+              <span style={{ margin: '0 10px' }}>|</span>
+              <span>Publié le {formatDate(listing.createdAt)}</span>
+            </div>
           </div>
 
           {/* Stats — même design que Mes annonces */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
+          <div className="voir-annonce-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
                 <Heart size={22} color="#666" />
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total likes</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total likes</span><span className="voir-annonce-stat-mobile">Likes</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{listing.likesCount}</p>
               </div>
             </div>
@@ -296,7 +274,7 @@ export default function VoirAnnoncePage() {
                 <MessageCircle size={22} color="#666" />
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total messages</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total messages</span><span className="voir-annonce-stat-mobile">Messages</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{messagesCount}</p>
               </div>
             </div>
@@ -305,13 +283,11 @@ export default function VoirAnnoncePage() {
                 <Phone size={22} color="#666" />
               </div>
               <div>
-                <p style={{ fontSize: 11, color: '#888' }}>Total appels</p>
+                <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total appels</span><span className="voir-annonce-stat-mobile">Appels</span></p>
                 <p style={{ fontSize: 22, fontWeight: 600 }}>{listing.phoneRevealsCount ?? 0}</p>
               </div>
             </div>
           </div>
-
-          <p style={{ fontSize: 13, color: '#6e6e73', margin: '12px 0 0' }}>Publié le {formatDate(listing.createdAt)}</p>
 
           {/* Détails de l'annonce — même design titres que page produit Informations */}
           <div style={{ paddingTop: 4, marginTop: 0 }}>
@@ -441,6 +417,7 @@ export default function VoirAnnoncePage() {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, paddingTop: 8 }}>
               <Link
                 href={`/vendeur/annonces/${listing.id}`}
+                className="voir-annonce-btn-modifier"
                 style={{
                   flex: 1,
                   minWidth: 160,
@@ -457,7 +434,8 @@ export default function VoirAnnoncePage() {
                 }}
               >
                 <Pencil size={18} />
-                Modifier l&apos;annonce
+                <span className="voir-annonce-btn-label-desktop">Modifier l&apos;annonce</span>
+                <span className="voir-annonce-btn-label-mobile">Modifier</span>
               </Link>
               <button
                 type="button"
@@ -480,7 +458,8 @@ export default function VoirAnnoncePage() {
                 }}
               >
                 <Trash2 size={18} />
-                Supprimer l&apos;annonce
+                <span className="voir-annonce-btn-label-desktop">Supprimer l&apos;annonce</span>
+                <span className="voir-annonce-btn-label-mobile">Supprimer</span>
               </button>
             </div>
           )}

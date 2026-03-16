@@ -800,15 +800,16 @@ export default function EditListingPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      {/* Ligne titre : Retour à gauche (même position que Ma messagerie), Modifier l'annonce au centre */}
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
+      {/* Ligne titre : même design que Déposer une annonce (classes partagées pour le mobile) */}
+      <div className="deposer-annonce-title-row" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href="/vendeur"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
-          className="hover:opacity-80"
+          className="hover:opacity-80 deposer-annonce-back-link"
+          aria-label="Retour à mes annonces"
         >
           <ArrowLeft size={18} />
-          Retour à mes annonces
+          <span className="deposer-annonce-back-link-text">Retour à mes annonces</span>
         </Link>
         <div style={{ flex: 1, textAlign: 'center', minWidth: 0, padding: '0 16px' }}>
           <h1
@@ -824,18 +825,20 @@ export default function EditListingPage() {
             Modifier l&apos;annonce
           </h1>
           <p style={{ fontSize: 15, color: '#6e6e73' }}>
-            Modifiez les informations de votre annonce
+            <span className="deposer-annonce-subtitle-desktop">Modifiez les informations de votre annonce</span>
+            <span className="deposer-annonce-subtitle-mobile">Modifiez les informations</span>
           </p>
         </div>
-        <div style={{ width: 220, flexShrink: 0 }} aria-hidden />
+        <div className="deposer-annonce-title-spacer" style={{ width: 220, flexShrink: 0 }} aria-hidden />
             </div>
 
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
+      <div className="deposer-annonce-form-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+          <div className="deposer-annonce-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
             {[1, 2, 3, 4].map((s, i) => (
               <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
                 <div
+                  className="deposer-annonce-step-circle"
                   style={{
                     width: 40,
                     height: 40,
@@ -847,12 +850,16 @@ export default function EditListingPage() {
                     justifyContent: 'center',
                     fontSize: 15,
                     fontWeight: 600,
+                    flexShrink: 0,
                   }}
                 >
                   {step > s ? <Check size={18} /> : s}
                 </div>
                 {i < 3 && (
-                  <div style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
+                  <div
+                    className="deposer-annonce-steps-connector"
+                    style={{ width: 56, height: 2, backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }}
+                  />
                 )}
               </div>
             ))}
@@ -952,7 +959,12 @@ export default function EditListingPage() {
                   opacity: genre.length > 0 ? 1 : 0.7,
                 }}
               >
-                {genre.length === 0 ? 'Sélectionner d\'abord un ou des Genre(s)' : category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
+                {genre.length === 0 ? (
+                  <>
+                    <span className="deposer-annonce-category-placeholder-desktop">Sélectionner d&apos;abord un ou des Genre(s)</span>
+                    <span className="deposer-annonce-category-placeholder-mobile">Sélectionner d&apos;abord Genre</span>
+                  </>
+                ) : category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
               </button>
               {categoryOpen && genre.length > 0 && (
                 <div

@@ -73,7 +73,7 @@ function BulletItem({ children, centered }: { children: React.ReactNode; centere
 export default function AProposPage() {
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="a-propos-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
             <h1
@@ -95,7 +95,7 @@ export default function AProposPage() {
         </div>
 
         {/* Section 1 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
           <p style={paragraphStyle}>
             Section Luxe est la plateforme qui référence les articles des plus grands revendeurs professionnels du luxe.
             Nous ne vendons pas les produits.
@@ -108,7 +108,7 @@ export default function AProposPage() {
         </section>
 
         {/* Section 2 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Comparez, analysez, choisissez</h2>
           <p style={{ ...paragraphStyle, marginBottom: SPACE_AROUND_LIST }}>
             Aujourd&apos;hui, acheter dans le luxe exige précision et visibilité.
@@ -145,7 +145,7 @@ export default function AProposPage() {
         </section>
 
         {/* Section 3 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Une plateforme exclusivement professionnelle</h2>
           <p style={paragraphStyle}>
             Section Luxe réunit boutiques, dépôts-vente et maisons spécialisées légalement établies.
@@ -159,7 +159,7 @@ export default function AProposPage() {
         </section>
 
         {/* Section 4 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Une nouvelle référence du marché</h2>
           <p style={paragraphStyle}>
             Le luxe évolue.
@@ -172,7 +172,7 @@ export default function AProposPage() {
         </section>
 
         {/* Section 5 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: SPACE_LINE * 2 }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Notre ambition</h2>
           <p style={paragraphStyle}>
             Devenir la plateforme de référence du marché du luxe professionnel.
@@ -183,7 +183,7 @@ export default function AProposPage() {
         </section>
 
         {/* Section 6 */}
-        <section style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: 0, textAlign: 'center' }}>
+        <section className="a-propos-section" style={{ maxWidth: sectionBlockWidth, marginLeft: 'auto', marginRight: 'auto', marginBottom: 0, textAlign: 'center' }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0, textAlign: 'center' }}>Section Luxe en quelques mots</h2>
           <ul style={{ ...listStyle, listStyleType: 'none', paddingLeft: 0, marginTop: SPACE_AFTER_TITLE }}>
             <BulletItem centered>Plateforme de référencement d&apos;articles de luxe</BulletItem>
