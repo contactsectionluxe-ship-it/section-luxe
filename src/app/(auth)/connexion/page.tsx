@@ -68,6 +68,7 @@ function LoginForm() {
   return (
     <div style={pageWrapStyle}>
       <div
+        className="connexion-page-inner"
         style={{
           width: '100%',
           maxWidth: 420,
@@ -83,7 +84,7 @@ function LoginForm() {
           <p style={{ fontSize: 15, color: '#6e6e73' }}>Accédez à votre compte</p>
         </div>
 
-        <div style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div className="connexion-form-box" style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <form onSubmit={handleSubmit}>
             {error && (
               <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 14, marginBottom: 20, borderRadius: 12 }}>
@@ -220,7 +221,7 @@ export default function LoginPage() {
               </h1>
               <p style={{ fontSize: 15, color: '#6e6e73' }}>Accédez à votre compte</p>
             </div>
-            <div style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <div className="connexion-form-box" style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
               <div style={{ height: 48, backgroundColor: '#f5f5f7', borderRadius: 12, marginBottom: 20 }} aria-hidden />
               <div style={{ height: 48, backgroundColor: '#f5f5f7', borderRadius: 12, marginBottom: 28 }} aria-hidden />
               <div style={{ height: 50, backgroundColor: '#e8e8ed', borderRadius: 980 }} aria-hidden />

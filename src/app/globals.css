@@ -140,6 +140,17 @@ a:focus-visible {
   display: none;
 }
 
+/* Hero : libellé court « Voir le catalogue » masqué par défaut (affiché uniquement sur mobile) */
+.hero-catalogue-label-mobile {
+  display: none;
+}
+
+/* Page Devenir vendeur : sous-titre court masqué par défaut (affiché uniquement sur mobile) */
+.inscription-vendeur-subtitle-mobile {
+  display: none;
+}
+
+
 /* Page Mes ventes : titre court du graphique évolution masqué par défaut (affiché uniquement sur mobile) */
 .mes-ventes-evolution-title-mobile {
   display: none;
@@ -237,21 +248,33 @@ a:focus-visible {
     width: 100% !important;
     text-align: left !important;
     margin-bottom: 14px !important;
+    font-size: clamp(28px, 8.5vw, 40px) !important;
+    line-height: 1.15 !important;
   }
   .hero-buttons {
+    flex-direction: row !important;
     flex-wrap: nowrap !important;
     justify-content: flex-start !important;
     gap: 10px !important;
+    width: 100% !important;
   }
   .hero-buttons a {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
     height: 42px !important;
     padding: 0 14px !important;
     font-size: 13px !important;
-    min-width: 0 !important;
   }
   .hero-buttons a svg {
     width: 14px !important;
     height: 14px !important;
+  }
+  .hero-catalogue-label-desktop {
+    display: none !important;
+  }
+  .hero-catalogue-label-mobile {
+    display: inline !important;
   }
   .hero-sous-titre {
     display: block !important;
@@ -262,6 +285,12 @@ a:focus-visible {
   /* Page d'accueil mobile : remonter la section Catégories */
   .home-section-categories {
     padding-top: 40px !important;
+  }
+  .home-section-categories > div > div:first-of-type {
+    margin-bottom: 18px !important;
+  }
+  .home-section-categories > div > div:first-of-type p {
+    font-size: 14px !important;
   }
   /* Page d'accueil mobile : afficher 2 catégories puis défiler (desktop inchangé), centrage par snap */
   .categories-scroll-container {
@@ -284,6 +313,12 @@ a:focus-visible {
   .home-section-featured {
     padding-top: 0 !important;
     margin-top: -12px !important;
+  }
+  .home-section-featured > div > div:first-of-type {
+    margin-bottom: 18px !important;
+  }
+  .home-section-featured > div > div:first-of-type p {
+    font-size: 14px !important;
   }
   .home-section-featured .home-featured-grid {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -326,10 +361,32 @@ a:focus-visible {
     margin-top: 2px !important;
   }
   .home-section-vendeur-cta {
+    margin-top: -44px !important;
     padding-top: 56px !important;
+    padding-bottom: 56px !important;
+    background-position: center -12% !important;
+  }
+  .home-section-vendeur-cta-inner {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .home-section-vendeur-cta-title {
+    font-size: 22px !important;
   }
   .home-section-vendeur-cta-desc {
     font-size: 14px !important;
+    margin-bottom: 16px !important;
+  }
+  /* Même taille que le bouton Accéder au catalogue (hero-buttons a) */
+  .home-section-vendeur-cta-btn {
+    height: 42px !important;
+    padding: 0 14px !important;
+    font-size: 13px !important;
+  }
+  .home-section-vendeur-cta-btn svg {
+    width: 14px !important;
+    height: 14px !important;
   }
 }
 
@@ -342,6 +399,14 @@ a:focus-visible {
   .catalogue-page-inner {
     max-width: none !important;
     width: 100% !important;
+  }
+  /* Catalogue Aucun résultat : remonter légèrement le bouton + bouton plus petit sur mobile */
+  .catalogue-aucun-resultat-msg {
+    margin-bottom: 12px !important;
+  }
+  .catalogue-reset-filters-btn {
+    padding: 10px 18px !important;
+    font-size: 13px !important;
   }
   .catalogue-page-search {
     padding-left: 24px !important;
@@ -855,6 +920,64 @@ a:focus-visible {
     width: 16px !important;
     height: 16px !important;
   }
+  /* Page Devenir vendeur : pleine largeur sur mobile (comme Connexion) */
+  .inscription-vendeur-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding-bottom: 24px !important;
+  }
+  .inscription-vendeur-form-box {
+    padding: 24px !important;
+  }
+  /* Page Devenir vendeur : étapes comme Déposer une annonce sur mobile */
+  .inscription-vendeur-steps-row {
+    width: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+  .inscription-vendeur-steps-row > div {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .inscription-vendeur-steps-connector {
+    flex: 0 0 auto !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    max-width: 22px !important;
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+  }
+  .inscription-vendeur-step-circle {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 14px !important;
+  }
+  .inscription-vendeur-subtitle-desktop {
+    display: none !important;
+  }
+  .inscription-vendeur-subtitle-mobile {
+    display: inline !important;
+  }
+  /* Page Créer un compte : pleine largeur sur mobile (comme Connexion) */
+  .inscription-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .inscription-form-box {
+    padding: 24px !important;
+  }
+  /* Page Connexion : pleine largeur sur mobile (comme Déposer une annonce) */
+  .connexion-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .connexion-form-box {
+    padding: 24px !important;
+  }
 }
 
 /* Catalogue : squelettes de chargement premium (shimmer fluide) */
@@ -917,6 +1040,13 @@ a:focus-visible {
   /* Éviter tout débordement horizontal */
   body {
     overflow-x: hidden;
+  }
+
+  /* Éviter le zoom iOS/Android au focus sur les barres de recherche (font-size >= 16px) */
+  input[type="text"],
+  input[type="search"],
+  textarea {
+    font-size: 16px !important;
   }
 
   /* Page produit : Signaler / Conseils de sécurité sur la même ligne */

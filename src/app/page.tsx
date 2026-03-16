@@ -156,7 +156,8 @@ export default function HomePage() {
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
             >
-              Accéder au catalogue
+              <span className="hero-catalogue-label-desktop">Accéder au catalogue</span>
+              <span className="hero-catalogue-label-mobile">Voir le catalogue</span>
               <ArrowRight size={18} strokeWidth={2} />
             </Link>
             <Link
@@ -624,7 +625,7 @@ export default function HomePage() {
           padding: '120px 24px 88px',
           backgroundImage: 'url(/section-vendeur-bg.png)',
           backgroundSize: 'cover',
-          backgroundPosition: 'center 82%',
+          backgroundPosition: 'center 50%',
           backgroundRepeat: 'no-repeat',
         }}
       >
@@ -644,8 +645,9 @@ export default function HomePage() {
             pointerEvents: 'none',
           }}
         />
-        <div style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
           <h2
+            className="home-section-vendeur-cta-title"
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
               fontSize: 'clamp(24px, 4vw, 32px)',
@@ -661,6 +663,7 @@ export default function HomePage() {
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link
+            className="home-section-vendeur-cta-btn"
             href="/inscription-vendeur"
             style={{
               display: 'inline-flex',

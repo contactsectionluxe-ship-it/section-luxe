@@ -75,8 +75,8 @@ function RegisterForm() {
   };
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
-      <div style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+      <div className="inscription-page-inner" style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
             Créer un compte
@@ -84,7 +84,7 @@ function RegisterForm() {
           <p style={{ fontSize: 15, color: '#6e6e73' }}>Rejoignez Section Luxe</p>
         </div>
 
-        <div style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div className="inscription-form-box" style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <form onSubmit={handleSubmit}>
             {error && (
               <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 14, marginBottom: 20, borderRadius: 12 }}>

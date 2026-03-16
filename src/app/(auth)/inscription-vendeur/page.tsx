@@ -360,8 +360,8 @@ export default function SellerRegisterPage() {
 
   if (success) {
     return (
-      <main style={{ paddingTop: 89, minHeight: '100vh', backgroundColor: '#fafafa' }}>
-        <div style={{ maxWidth: 450, margin: '0 auto', padding: '60px 20px', textAlign: 'center' }}>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+        <div className="inscription-vendeur-page-inner" style={{ width: '100%', maxWidth: 450, paddingTop: 60, paddingBottom: 60, textAlign: 'center' }}>
           <div
             style={{
               width: 64,
@@ -461,13 +461,13 @@ export default function SellerRegisterPage() {
             Retour à l&apos;accueil
           </Link>
         </div>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main style={{ paddingTop: 89, minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+      <div className="inscription-vendeur-page-inner" style={{ width: '100%', maxWidth: 520, paddingTop: 30, paddingBottom: 80 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1
             style={{
@@ -482,17 +482,33 @@ export default function SellerRegisterPage() {
             Devenir vendeur
           </h1>
           <p style={{ fontSize: 15, color: '#6e6e73' }}>
-            Rejoignez Section Luxe en tant que vendeur professionnel
+            <span className="inscription-vendeur-subtitle-desktop">Rejoignez Section Luxe en tant que vendeur professionnel</span>
+            <span className="inscription-vendeur-subtitle-mobile">Rejoignez Section Luxe</span>
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-          <div style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: '#1d1d1f', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600 }}>1</div>
-          <div style={{ width: 56, height: 2, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }} />
-          <div style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', color: step >= 2 ? '#fff' : '#86868b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600 }}>2</div>
+        <div className="inscription-vendeur-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div
+              className="inscription-vendeur-step-circle"
+              style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: '#1d1d1f', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, flexShrink: 0 }}
+            >
+              1
+            </div>
+            <div
+              className="inscription-vendeur-steps-connector"
+              style={{ width: 56, height: 2, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }}
+            />
+            <div
+              className="inscription-vendeur-step-circle"
+              style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', color: step >= 2 ? '#fff' : '#86868b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, flexShrink: 0 }}
+            >
+              2
+            </div>
+          </div>
         </div>
 
-        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div className="inscription-vendeur-form-box" style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           {error && (
             <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 20 }}>
               {error}
@@ -894,6 +910,6 @@ export default function SellerRegisterPage() {
           </p>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

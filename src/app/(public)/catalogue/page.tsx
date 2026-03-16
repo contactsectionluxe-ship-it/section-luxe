@@ -4111,10 +4111,11 @@ function CatalogueContent() {
                     }}
                   >
                     <p style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 20, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Aucun résultat</p>
-                    <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 24 }}>
+                    <p className="catalogue-aucun-resultat-msg" style={{ fontSize: 15, color: '#6e6e73', marginBottom: 24 }}>
                       Essayez de modifier vos critères ou réinitialisez les filtres.
                     </p>
                     <button
+                      className="catalogue-reset-filters-btn"
                       onClick={handleReset}
                       style={{
                         padding: '14px 28px',
