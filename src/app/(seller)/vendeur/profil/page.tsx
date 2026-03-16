@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, FileText, Camera, AlertTriangle, X, CheckCircle, Clock, XCircle, BadgeCheck } from 'lucide-react';
+import { Mail, FileText, Camera, Image as ImageIcon, AlertTriangle, X, CheckCircle, Clock, XCircle, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDate } from '@/lib/utils';
 import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
@@ -63,7 +63,13 @@ export default function ProfilVendeurPage() {
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
       router.push('/connexion');
-    } else if (seller && user) {
+      return;
+    }
+    if (!authLoading && user && (seller?.status === 'rejected' || seller?.status === 'banned')) {
+      router.replace('/profil');
+      return;
+    }
+    if (seller && user) {
       const parts = (user.displayName || '').trim().split(/\s+/);
       setFirstName(parts[0] || '');
       setLastName(parts.slice(1).join(' ') || '');
@@ -261,7 +267,7 @@ export default function ProfilVendeurPage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : (
-                <Camera size={36} color="#86868b" style={{ margin: 'auto' }} />
+                <ImageIcon size={36} color="#86868b" style={{ margin: 'auto' }} />
               )}
               {avatarUploading && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -272,6 +278,34 @@ export default function ProfilVendeurPage() {
             <span style={{ marginTop: 10, fontSize: 13, color: '#666' }}>
               {avatarUploading ? 'Envoi en cours...' : 'Cliquez pour ajouter ou modifier la photo'}
             </span>
+
+            {seller?.status === 'pending' && (
+              <div
+                style={{
+                  marginTop: 20,
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1px solid #fde68a',
+                  backgroundColor: '#fffbeb',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  gap: 10,
+                }}
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+                  <Clock size={14} /> En attente
+                </span>
+                <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.45, fontWeight: 500 }}>
+                  Demande en cours d&apos;étude
+                </p>
+                <p style={{ fontSize: 13, color: '#a16207', margin: 0, lineHeight: 1.5, textAlign: 'justify' }}>
+                  Notre équipe examine vos documents. Vous ne pouvez pas encore publier d&apos;annonces.
+                </p>
+              </div>
+            )}
           </div>
 
           {error && (
@@ -285,6 +319,41 @@ export default function ProfilVendeurPage() {
             </div>
           )}
 
+          {seller.status === 'approved' && (
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+                <CheckCircle size={14} /> Validé
+              </span>
+            </div>
+          )}
+          {seller.status === 'suspended' && (
+            <div
+              style={{
+                marginBottom: 20,
+                padding: 16,
+                borderRadius: 12,
+                border: '1px solid #fdba74',
+                backgroundColor: '#fff7ed',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#ffedd5', color: '#c2410c', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+                  <AlertTriangle size={14} /> Compte suspendu
+                </span>
+                {seller.suspendedUntil && (
+                  <span style={{ fontSize: 13, fontWeight: 400, color: '#c2410c' }}>
+                    jusqu'au {formatDate(seller.suspendedUntil)}
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 14, color: '#c2410c', margin: 0, lineHeight: 1.45, fontWeight: 400 }}>
+                Votre compte vendeur est temporairement suspendu. Vous ne pouvez pas déposer de nouvelles annonces.
+              </p>
+              <p style={{ fontSize: 13, color: '#9a3412', margin: 0, marginTop: 8, lineHeight: 1.5 }}>
+                Contactez-nous pour plus d&apos;informations.
+              </p>
+            </div>
+          )}
           <div style={{ marginBottom: 28 }}>
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Nom de l&apos;entreprise <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -389,29 +458,6 @@ export default function ProfilVendeurPage() {
                 }}
                 placeholder="Présentez votre activité..."
               />
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid #eee', paddingTop: 24, marginBottom: 24 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <BadgeCheck size={20} color="#666" />
-              <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>Statut</h2>
-              {seller.status === 'approved' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <CheckCircle size={12} /> Validé
-                </span>
-              )}
-              {seller.status === 'pending' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <Clock size={12} /> En attente
-                </span>
-              )}
-              {seller.status === 'rejected' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <XCircle size={12} /> Refusé
-                </span>
-              )}
-              <span style={{ marginLeft: 'auto', fontSize: 12, color: '#86868b' }}>Inscription le {formatDate(seller.createdAt)}</span>
             </div>
           </div>
 

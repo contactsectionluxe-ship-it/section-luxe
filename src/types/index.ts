@@ -2,7 +2,7 @@
 
 export type UserRole = 'buyer' | 'seller' | 'admin';
 
-export type SellerStatus = 'pending' | 'approved' | 'rejected';
+export type SellerStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned';
 
 export type ListingCategory = 
   | 'sacs'
@@ -40,6 +40,8 @@ export interface Seller {
   idRectoType?: 'passeport' | 'cni_recto' | null;
   kbisUrl: string;
   avatarUrl?: string | null;
+  /** Date de fin de suspension (null si non suspendu) */
+  suspendedUntil?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

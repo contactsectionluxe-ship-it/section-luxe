@@ -2,11 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { CheckCircle, Upload, X } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { CheckCircle, FileText, Upload, X } from 'lucide-react';
 import { useDropzone, type FileRejection } from 'react-dropzone';
-import { signUpSeller } from '@/lib/supabase/auth';
-import { fetchCompanyBySiret, type CompanyInfo } from '@/lib/siret';
+import { signUpSeller, upgradeToSeller } from '@/lib/supabase/auth';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchSiretSuggestions, type SiretSuggestion } from '@/lib/siret';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { CguCgvCheckbox } from '@/components/ui';
 
@@ -24,6 +25,21 @@ function FileUploadField({
   required?: boolean;
 }) {
   const [rejectMessage, setRejectMessage] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file) {
+      setPreviewUrl(null);
+      return;
+    }
+    const isImage = file.type.startsWith('image/');
+    if (isImage) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setPreviewUrl(null);
+  }, [file]);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     setRejectMessage(null);
@@ -51,6 +67,8 @@ function FileUploadField({
     maxSize: 5 * 1024 * 1024,
   });
 
+  const isImageFile = file?.type.startsWith('image/');
+
   return (
     <div style={{ marginBottom: 20 }}>
       <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
@@ -60,22 +78,80 @@ function FileUploadField({
       {file ? (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '12px 14px',
-            backgroundColor: '#f0fdf4',
-            border: '1px solid #bbf7d0',
+            position: 'relative',
+            width: '100%',
+            maxWidth: 200,
+            borderRadius: 12,
+            overflow: 'hidden',
+            border: '1px solid #e8e8e8',
+            backgroundColor: '#fafafa',
           }}
         >
-          <span style={{ fontSize: 13, color: '#166534', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-          <button
-            type="button"
-            onClick={() => onFileChange(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#166534', flexShrink: 0, marginLeft: 8 }}
-          >
-            <X size={18} />
-          </button>
+          {isImageFile && previewUrl ? (
+            <div style={{ aspectRatio: 1, position: 'relative' }}>
+              <img
+                src={previewUrl}
+                alt="Aperçu"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+              <button
+                type="button"
+                onClick={() => onFileChange(null)}
+                aria-label="Supprimer le document"
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 8,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  border: 'none',
+                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                padding: 24,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+                minHeight: 140,
+              }}
+            >
+              <FileText size={40} color="#86868b" />
+              <span style={{ fontSize: 13, color: '#1d1d1f', textAlign: 'center', wordBreak: 'break-all', paddingLeft: 8, paddingRight: 8 }}>{file.name}</span>
+              <button
+                type="button"
+                onClick={() => onFileChange(null)}
+                style={{
+                  marginTop: 4,
+                  padding: '8px 16px',
+                  fontSize: 13,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 8,
+                  backgroundColor: '#fff',
+                  cursor: 'pointer',
+                  color: '#1d1d1f',
+                }}
+              >
+                Supprimer
+              </button>
+            </div>
+          )}
+          {isImageFile && (
+            <p style={{ fontSize: 12, color: '#666', padding: '8px 10px', margin: 0, borderTop: '1px solid #e8e8e8' }}>{file.name}</p>
+          )}
         </div>
       ) : (
         <div
@@ -108,12 +184,34 @@ function FileUploadField({
 
 export default function SellerRegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, isSeller, seller, loading: authLoading, refreshUser } = useAuth();
+  const fromProfil = searchParams.get('from') === 'profil';
+  const isUpgrade = Boolean(user && fromProfil && !isSeller);
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
+
+  // Rediriger si déjà vendeur
+  useEffect(() => {
+    if (!authLoading && user && isSeller && seller) {
+      router.replace('/vendeur/profil');
+    }
+  }, [authLoading, user, isSeller, seller, router]);
+
+  // Préremplir depuis le profil visiteur (Devenir vendeur depuis Mon profil)
+  useEffect(() => {
+    if (!user || !fromProfil) return;
+    const parts = (user.displayName || '').trim().split(/\s+/);
+    setFirstName(parts[0] || '');
+    setLastName(parts.slice(1).join(' ') || '');
+    setEmail(user.email ?? '');
+    setPhone(user.phone ?? '');
+  }, [user, fromProfil]);
 
   // Remonter le formulaire en haut à chaque changement d'étape
   useEffect(() => {
@@ -130,7 +228,7 @@ export default function SellerRegisterPage() {
   const [companyName, setCompanyName] = useState('');
   const [siret, setSiret] = useState('');
   const [siretLoading, setSiretLoading] = useState(false);
-  const [siretSuggestion, setSiretSuggestion] = useState<CompanyInfo | null>(null);
+  const [siretSuggestions, setSiretSuggestions] = useState<SiretSuggestion[]>([]);
   const siretFetchRef = useRef<string | null>(null);
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
@@ -150,27 +248,25 @@ export default function SellerRegisterPage() {
   const [idRectoType, setIdRectoType] = useState<'passeport' | 'cni_recto' | null>(null);
   const [kbis, setKbis] = useState<File | null>(null);
 
-  // Recherche entreprise quand le SIRET complet (14 chiffres) → affiche un menu déroulant (suggestion)
+  // Suggestions sociétés pendant la saisie du SIRET (dès 9 chiffres)
   useEffect(() => {
     const digits = siret.replace(/\D/g, '');
-    if (digits.length !== 14) {
-      setSiretSuggestion(null);
+    if (digits.length < 9) {
+      setSiretSuggestions([]);
       return;
     }
     if (siretFetchRef.current === digits) return;
     const t = setTimeout(async () => {
       siretFetchRef.current = digits;
       setSiretLoading(true);
-      setSiretSuggestion(null);
+      setSiretSuggestions([]);
       try {
-        const info = await fetchCompanyBySiret(digits);
-        if (info && (info.companyName || info.address)) {
-          setSiretSuggestion(info);
-        }
+        const list = await fetchSiretSuggestions(digits);
+        setSiretSuggestions(list);
       } finally {
         setSiretLoading(false);
       }
-    }, 600);
+    }, 200);
     return () => clearTimeout(t);
   }, [siret]);
 
@@ -184,13 +280,15 @@ export default function SellerRegisterPage() {
       setError('L\'email professionnel doit avoir un format valide');
       return false;
     }
-    if (password !== confirmPassword) {
-      setError('Les mots de passe ne correspondent pas');
-      return false;
-    }
-    if (password.length < 8) {
-      setError('Le mot de passe doit contenir au moins 8 caractères');
-      return false;
+    if (!isUpgrade) {
+      if (password !== confirmPassword) {
+        setError('Les mots de passe ne correspondent pas');
+        return false;
+      }
+      if (password.length < 8) {
+        setError('Le mot de passe doit contenir au moins 8 caractères');
+        return false;
+      }
     }
     return true;
   };
@@ -271,25 +369,49 @@ export default function SellerRegisterPage() {
       }
       const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
 
-      const seller = await signUpSeller(email, password, {
-        companyName,
-        siret,
-        address,
-        city: city.trim(),
-        postcode: postcode.trim(),
-        phone,
-        description,
-        idCardFrontUrl,
-        idCardBackUrl,
-        idRectoType,
-        kbisUrl,
-        displayName: `${firstName.trim()} ${lastName.trim()}`.trim(),
-      });
-      await fetch('/api/cgu-cgv-acceptance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: seller.uid, context: 'inscription_vendeur' }),
-      });
+      const displayNameVal = `${firstName.trim()} ${lastName.trim()}`.trim();
+      if (isUpgrade && user?.uid) {
+        await upgradeToSeller(user.uid, {
+          companyName,
+          siret,
+          address,
+          city: city.trim(),
+          postcode: postcode.trim(),
+          phone,
+          description,
+          idCardFrontUrl,
+          idCardBackUrl,
+          idRectoType,
+          kbisUrl,
+          displayName: displayNameVal,
+        });
+        await fetch('/api/cgu-cgv-acceptance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid, context: 'inscription_vendeur' }),
+        });
+        await refreshUser();
+      } else {
+        const seller = await signUpSeller(email, password, {
+          companyName,
+          siret,
+          address,
+          city: city.trim(),
+          postcode: postcode.trim(),
+          phone,
+          description,
+          idCardFrontUrl,
+          idCardBackUrl,
+          idRectoType,
+          kbisUrl,
+          displayName: displayNameVal,
+        });
+        await fetch('/api/cgu-cgv-acceptance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: seller.uid, context: 'inscription_vendeur' }),
+        });
+      }
 
       const formDataEmail = new FormData();
       formDataEmail.set('companyName', companyName);
@@ -358,6 +480,7 @@ export default function SellerRegisterPage() {
     outline: 'none',
   };
 
+  if (authLoading || (user && isSeller)) return null;
   if (success) {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
@@ -446,20 +569,39 @@ export default function SellerRegisterPage() {
               </p>
             </div>
           </div>
-          <Link
-            href="/"
-            style={{
-              display: 'inline-block',
-              padding: '14px 28px',
-              backgroundColor: '#1d1d1f',
-              color: '#fff',
-              fontSize: 15,
-              fontWeight: 500,
-              borderRadius: 980,
-            }}
-          >
-            Retour à l&apos;accueil
-          </Link>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center' }}>
+            <Link
+              href="/vendeur/profil"
+              style={{
+                display: 'inline-block',
+                padding: '14px 28px',
+                backgroundColor: '#1d1d1f',
+                color: '#fff',
+                fontSize: 15,
+                fontWeight: 500,
+                borderRadius: 980,
+                textDecoration: 'none',
+              }}
+            >
+              Accéder à mon espace vendeur
+            </Link>
+            <Link
+              href="/"
+              style={{
+                display: 'inline-block',
+                padding: '14px 28px',
+                backgroundColor: 'transparent',
+                color: '#1d1d1f',
+                fontSize: 15,
+                fontWeight: 500,
+                borderRadius: 980,
+                border: '1px solid #d2d2d7',
+                textDecoration: 'none',
+              }}
+            >
+              Retour à l&apos;accueil
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -514,7 +656,6 @@ export default function SellerRegisterPage() {
               {error}
             </div>
           )}
-
           <form onSubmit={handleSubmit}>
             {step === 1 ? (
               <>
@@ -542,7 +683,7 @@ export default function SellerRegisterPage() {
                     onChange={(e) => {
                       const v = e.target.value.replace(/\D/g, '').slice(0, 14);
                       setSiret(v);
-                      if (v.length !== 14) setSiretSuggestion(null);
+                      if (v.length < 9) setSiretSuggestions([]);
                     }}
                     placeholder="123 456 789 00012"
                     required
@@ -550,7 +691,11 @@ export default function SellerRegisterPage() {
                     inputMode="numeric"
                     maxLength={14}
                   />
-                  {siretSuggestion && !siretLoading && (
+                  {!siretLoading && siretSuggestions.length > 0 && (() => {
+                    const digits = siret.replace(/\D/g, '');
+                    const oneProposition = digits.length === 14;
+                    const toShow = oneProposition ? siretSuggestions.slice(0, 1) : siretSuggestions;
+                    return (
                     <div
                       style={{
                         marginTop: 6,
@@ -559,39 +704,51 @@ export default function SellerRegisterPage() {
                         backgroundColor: '#fff',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                         overflow: 'hidden',
+                        ...(oneProposition ? {} : { maxHeight: 192, overflowY: 'auto' as const }),
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (siretSuggestion.companyName) setCompanyName(siretSuggestion.companyName);
-                          if (siretSuggestion.address) setAddress(siretSuggestion.address);
-                          setSiretSuggestion(null);
-                        }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          padding: '12px 14px',
-                          textAlign: 'left',
-                          border: 'none',
-                          background: 'none',
-                          cursor: 'pointer',
-                          fontSize: 14,
-                          fontWeight: 500,
-                          color: '#1d1d1f',
-                          transition: 'background-color 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#f5f5f7';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.backgroundColor = 'transparent';
-                        }}
-                      >
-                        {siretSuggestion.companyName || siretSuggestion.address || 'Entreprise'}
-                      </button>
+                      {toShow.map((sug, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => {
+                            if (sug.companyName) setCompanyName(sug.companyName);
+                            if (sug.address) setAddress(sug.address);
+                            if (sug.siret) setSiret(sug.siret);
+                            setSiretSuggestions([]);
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            padding: '12px 14px',
+                            textAlign: 'left',
+                            border: 'none',
+                            borderBottom: i < toShow.length - 1 ? '1px solid #e8e8ed' : 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            fontSize: 14,
+                            fontWeight: 500,
+                            color: '#1d1d1f',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f5f5f7';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                          }}
+                        >
+                          {sug.companyName || sug.address || 'Entreprise'}
+                          {sug.siret && (
+                            <span style={{ display: 'block', fontSize: 12, color: '#86868b', marginTop: 2 }}>
+                              SIRET {sug.siret}
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
                 <div style={{ marginBottom: 18 }}>
@@ -648,7 +805,8 @@ export default function SellerRegisterPage() {
                     required
                     pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
                     title="Indiquez un email avec un @ (ex. contact@entreprise.com)"
-                    style={inputStyle}
+                    style={{ ...inputStyle, ...(isUpgrade && { backgroundColor: '#f5f5f7', color: '#6e6e73' }) }}
+                    readOnly={isUpgrade}
                   />
                 </div>
 
@@ -688,88 +846,92 @@ export default function SellerRegisterPage() {
                   />
                 </div>
 
-                <div style={{ marginBottom: 18 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Mot de passe <span style={{ color: '#1d1d1f' }}>*</span>
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      style={{ ...inputStyle, paddingRight: 48 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                      style={{
-                        position: 'absolute',
-                        right: 12,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        padding: 4,
-                        color: '#86868b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {showPassword ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                      )}
-                    </button>
-                  </div>
-                  <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>Minimum 8 caractères</p>
-                </div>
+                {!isUpgrade && (
+                  <>
+                    <div style={{ marginBottom: 18 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                        Mot de passe <span style={{ color: '#1d1d1f' }}>*</span>
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          style={{ ...inputStyle, paddingRight: 48 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                          style={{
+                            position: 'absolute',
+                            right: 12,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            border: 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            padding: 4,
+                            color: '#86868b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {showPassword ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          )}
+                        </button>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>Minimum 8 caractères</p>
+                    </div>
 
-                <div style={{ marginBottom: 24 }}>
-                  <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Confirmer le mot de passe
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      style={{ ...inputStyle, paddingRight: 48 }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword((v) => !v)}
-                      aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
-                      style={{
-                        position: 'absolute',
-                        right: 12,
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        border: 'none',
-                        background: 'none',
-                        cursor: 'pointer',
-                        padding: 4,
-                        color: '#86868b',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {showConfirmPassword ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                      ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
+                    <div style={{ marginBottom: 24 }}>
+                      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                        Confirmer le mot de passe
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          required
+                          style={{ ...inputStyle, paddingRight: 48 }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
+                          aria-label={showConfirmPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                          style={{
+                            position: 'absolute',
+                            right: 12,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            border: 'none',
+                            background: 'none',
+                            cursor: 'pointer',
+                            padding: 4,
+                            color: '#86868b',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {showConfirmPassword ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                          ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 <button
                   type="button"

@@ -215,9 +215,14 @@ export default function ProfilPage() {
           >
             {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
           </button>
+
+          <p style={{ fontSize: 14, color: '#6e6e73', marginTop: 24, textAlign: 'center' }}>
+            Vous êtes un professionnel ?{' '}
+            <Link href="/inscription-vendeur?from=profil" style={{ color: '#0066cc', fontWeight: 500 }}>Devenir vendeur</Link>
+          </p>
         </form>
 
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e5e5e7' }}>
+        <div style={{ marginTop: 12 }}>
           <button
             type="button"
             onClick={() => { setDeletePhrase(''); setDeleteError(''); setDeleteModalOpen(true); }}

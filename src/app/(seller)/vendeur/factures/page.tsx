@@ -51,7 +51,13 @@ export default function FacturesPage() {
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
       router.push('/connexion');
-    } else if (!authLoading) {
+      return;
+    }
+    if (!authLoading && user && (seller?.status === 'rejected' || seller?.status === 'banned')) {
+      router.replace('/profil');
+      return;
+    }
+    if (!authLoading) {
       setLoading(false);
     }
   }, [authLoading, user, seller, router]);

@@ -40,10 +40,11 @@ export interface Database {
           address: string
           phone: string
           description: string
-          status: 'pending' | 'approved' | 'rejected'
+          status: 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned'
           id_card_front_url: string
           id_card_back_url: string
           kbis_url: string
+          suspended_until: string | null
           created_at: string
           updated_at: string
         }
@@ -54,10 +55,11 @@ export interface Database {
           address: string
           phone: string
           description: string
-          status?: 'pending' | 'approved' | 'rejected'
+          status?: 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned'
           id_card_front_url: string
           id_card_back_url: string
           kbis_url: string
+          suspended_until?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -68,10 +70,11 @@ export interface Database {
           address?: string
           phone?: string
           description?: string
-          status?: 'pending' | 'approved' | 'rejected'
+          status?: 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned'
           id_card_front_url?: string
           id_card_back_url?: string
           kbis_url?: string
+          suspended_until?: string | null
           created_at?: string
           updated_at?: string
         }

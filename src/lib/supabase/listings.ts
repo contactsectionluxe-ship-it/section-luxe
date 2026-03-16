@@ -111,9 +111,27 @@ export async function updateListing(
   data: Partial<Omit<Listing, 'id' | 'sellerId' | 'createdAt'>>
 ): Promise<void> {
   const client = checkSupabase();
-  
+
+  if (data.isActive === true) {
+    const { data: listingRow } = await client
+      .from('listings')
+      .select('seller_id')
+      .eq('id', listingId)
+      .single();
+    if (listingRow?.seller_id) {
+      const { data: sellerRow } = await client
+        .from('sellers')
+        .select('status')
+        .eq('id', listingRow.seller_id)
+        .single();
+      if ((sellerRow as { status?: string } | null)?.status === 'banned') {
+        throw new Error('Impossible de réactiver une annonce tant que le compte vendeur n\'est pas réactivé.');
+      }
+    }
+  }
+
   const updateData: any = { updated_at: new Date().toISOString() };
-  
+
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.price !== undefined) updateData.price = data.price;

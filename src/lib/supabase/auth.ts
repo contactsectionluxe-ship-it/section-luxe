@@ -149,6 +149,88 @@ export async function signUpSeller(
   };
 }
 
+/** Passe un compte visiteur existant en vendeur (même utilisateur, pas de nouveau compte). */
+export type UpgradeToSellerData = {
+  companyName: string;
+  siret: string;
+  address: string;
+  city: string;
+  postcode: string;
+  phone: string;
+  description: string;
+  idCardFrontUrl: string;
+  idCardBackUrl: string | null;
+  idRectoType?: 'passeport' | 'cni_recto' | null;
+  kbisUrl: string;
+  displayName?: string;
+};
+
+export async function upgradeToSeller(uid: string, sellerData: UpgradeToSellerData): Promise<Seller> {
+  const client = checkSupabase();
+  const displayName = (sellerData.displayName || sellerData.companyName).trim() || sellerData.companyName;
+
+  const { data: userRow, error: userFetchError } = await client
+    .from('users')
+    .select('email')
+    .eq('id', uid)
+    .maybeSingle();
+
+  if (userFetchError || !userRow?.email) {
+    throw new Error('Compte utilisateur introuvable.');
+  }
+
+  const { error: profileError } = await client
+    .from('users')
+    .update({
+      display_name: displayName,
+      role: 'seller',
+    })
+    .eq('id', uid);
+
+  if (profileError) {
+    throw new Error(profileError.message || 'Erreur lors de la mise à jour du profil.');
+  }
+
+  const { error: sellerError } = await client
+    .from('sellers')
+    .insert({
+      id: uid,
+      email: userRow.email,
+      company_name: sellerData.companyName,
+      siret: sellerData.siret || null,
+      address: sellerData.address,
+      phone: sellerData.phone,
+      description: sellerData.description,
+      status: 'pending',
+      id_card_front_url: sellerData.idCardFrontUrl,
+      id_card_back_url: sellerData.idCardBackUrl ?? null,
+      id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
+      kbis_url: sellerData.kbisUrl,
+    });
+
+  if (sellerError) {
+    throw new Error(sellerError.message || sellerError.details || 'Erreur lors de l\'enregistrement vendeur.');
+  }
+
+  return {
+    uid,
+    email: userRow.email,
+    companyName: sellerData.companyName,
+    address: sellerData.address,
+    city: sellerData.city ?? '',
+    postcode: sellerData.postcode ?? '',
+    phone: sellerData.phone,
+    description: sellerData.description,
+    status: 'pending',
+    idCardFrontUrl: sellerData.idCardFrontUrl,
+    idCardBackUrl: sellerData.idCardBackUrl,
+    idRectoType: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
+    kbisUrl: sellerData.kbisUrl,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+}
+
 // Sign in
 export async function signIn(email: string, password: string) {
   const client = checkSupabase();
@@ -241,6 +323,7 @@ export async function getSellerData(uid: string): Promise<Seller | null> {
     idCardBackUrl: data.id_card_back_url,
     kbisUrl: data.kbis_url,
     avatarUrl: (row.avatar_url as string | null) ?? null,
+    suspendedUntil: row.suspended_until ? new Date(row.suspended_until as string) : null,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
   };

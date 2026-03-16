@@ -41,7 +41,13 @@ export default function MesVentesPage() {
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
       router.push('/connexion');
-    } else if (!authLoading) {
+      return;
+    }
+    if (!authLoading && user && (seller?.status === 'rejected' || seller?.status === 'banned')) {
+      router.replace('/profil');
+      return;
+    }
+    if (!authLoading) {
       setLoading(false);
     }
   }, [authLoading, user, seller, router]);
@@ -140,6 +146,41 @@ export default function MesVentesPage() {
           )}
         </div>
 
+        {seller.status === 'pending' && (
+          <div
+            style={{
+              marginBottom: 32,
+              padding: 16,
+              borderRadius: 12,
+              border: '1px solid #fde68a',
+              backgroundColor: '#fffbeb',
+              width: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+              <Clock size={14} /> En attente
+            </span>
+            <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.45, fontWeight: 500 }}>
+              Demande en cours d&apos;étude
+            </p>
+            <p style={{ fontSize: 13, color: '#a16207', margin: 0, lineHeight: 1.5 }}>
+              Notre équipe examine vos documents. Vous ne pouvez pas encore publier d&apos;annonces.
+            </p>
+          </div>
+        )}
+
+        <div
+          style={
+            seller.status === 'pending'
+              ? { filter: 'blur(6px)', pointerEvents: 'none', userSelect: 'none', marginTop: -24 }
+              : undefined
+          }
+        >
         {/* Filtres dates (même style que Mes factures) */}
         <div className="mes-ventes-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
           <div className="mes-ventes-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -461,6 +502,7 @@ export default function MesVentesPage() {
           })()}
         </div>
 
+        </div>
       </div>
     </div>
   );

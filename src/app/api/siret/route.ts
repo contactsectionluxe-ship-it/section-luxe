@@ -10,6 +10,15 @@ type Siege = {
   libelle_voie?: string;
   code_postal?: string;
   libelle_commune?: string;
+  siret?: string;
+};
+
+type EtablissementMatch = {
+  siret?: string;
+  adresse?: string;
+  libelle_commune?: string;
+  code_postal?: string;
+  [key: string]: unknown;
 };
 
 type ApiResult = {
@@ -18,6 +27,7 @@ type ApiResult = {
   nom_raison_sociale?: string;
   siege?: Siege;
   adresse?: string;
+  matching_etablissements?: EtablissementMatch[];
   [key: string]: unknown;
 };
 
@@ -39,6 +49,13 @@ function buildAddress(siege: Siege | undefined, fallback?: string): string {
   return parts.join(' ').trim() || fallback || '';
 }
 
+function buildAddressFromEtablissement(etab: EtablissementMatch | undefined): string {
+  if (!etab) return '';
+  if (etab.adresse && typeof etab.adresse === 'string') return etab.adresse;
+  const parts = [etab.code_postal, etab.libelle_commune].filter(Boolean) as string[];
+  return parts.join(' ').trim();
+}
+
 function getCompanyName(r: ApiResult): string {
   return (
     r.nom_complet ||
@@ -48,23 +65,58 @@ function getCompanyName(r: ApiResult): string {
   ).trim();
 }
 
+/** Construit la liste de suggestions : siège + établissements ; si 14 chiffres, filtre sur SIRET exact */
+function buildSuggestionsFromResults(
+  results: ApiResult[],
+  digits: string
+): Array<{ companyName: string; address: string; siret?: string }> {
+  const list: Array<{ companyName: string; address: string; siret?: string }> = [];
+  const exactMatch = digits.length === 14;
+  for (const r of results) {
+    const companyName = getCompanyName(r);
+    const siegeAddress = buildAddress(r.siege, r.adresse as string);
+    if (r.siege?.siret && (!exactMatch || r.siege.siret === digits)) {
+      list.push({ companyName, address: siegeAddress, siret: r.siege.siret });
+    }
+    for (const e of r.matching_etablissements ?? []) {
+      if (!e.siret || (exactMatch && e.siret !== digits)) continue;
+      if (!exactMatch || e.siret === digits) {
+        list.push({
+          companyName,
+          address: buildAddressFromEtablissement(e) || siegeAddress,
+          siret: e.siret,
+        });
+      }
+    }
+    if (!r.siege?.siret && (r.matching_etablissements?.length ?? 0) === 0 && (companyName || siegeAddress)) {
+      list.push({ companyName, address: siegeAddress, siret: undefined });
+    }
+  }
+  return list;
+}
+
 export async function GET(request: NextRequest) {
   const siret = request.nextUrl.searchParams.get('siret');
   const digits = (siret || '').replace(/\D/g, '');
-  if (digits.length !== 14) {
-    return NextResponse.json({ error: 'SIRET invalide' }, { status: 400 });
+  const len = digits.length;
+  if (len < 9 || len > 14) {
+    return NextResponse.json({ error: 'Saisir entre 9 et 14 chiffres' }, { status: 400 });
   }
 
   try {
-    // Essayer d'abord avec préfixe siret:, puis avec le numéro seul (SIREN = 9 premiers chiffres)
-    const urls = [
-      `${API_BASE}/search?q=siret:${digits}`,
-      `${API_BASE}/search?q=${digits}`,
-    ];
+    const siren = digits.slice(0, 9);
+    const urls =
+      len === 14
+        ? [
+            `${API_BASE}/search?q=${digits}`,
+            `${API_BASE}/search?q=siret:${digits}`,
+            `${API_BASE}/search?q=${siren}`,
+          ]
+        : [`${API_BASE}/search?q=${siren}`];
     let data: ApiResponse | null = null;
     for (const url of urls) {
       const res = await fetch(url, {
-        headers: { Accept: 'application/json' },
+        headers: { Accept: 'application/json', 'User-Agent': 'SectionLuxe/1.0' },
         next: { revalidate: 0 },
       });
       if (res.ok) {
@@ -73,15 +125,12 @@ export async function GET(request: NextRequest) {
       }
     }
     if (!data?.results?.length) {
-      const res = NextResponse.json({ companyName: null, address: null });
+      const res = NextResponse.json({ suggestions: [] });
       res.headers.set('Cache-Control', 'private, max-age=60');
       return res;
     }
-    const first = data.results[0];
-    const companyName = getCompanyName(first);
-    const address = buildAddress(first.siege, first.adresse as string);
-    const payload = { companyName: companyName || null, address: address || null };
-    const res = NextResponse.json(payload);
+    const suggestions = buildSuggestionsFromResults(data.results, digits);
+    const res = NextResponse.json({ suggestions });
     res.headers.set('Cache-Control', 'private, max-age=60');
     return res;
   } catch (err) {

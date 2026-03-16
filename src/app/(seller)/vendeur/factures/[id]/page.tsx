@@ -46,6 +46,10 @@ export default function FactureViewPage() {
       router.push('/connexion');
       return;
     }
+    if (!authLoading && user && (seller?.status === 'rejected' || seller?.status === 'banned')) {
+      router.replace('/profil');
+      return;
+    }
     if (authLoading || !id) {
       setLoading(false);
       return;

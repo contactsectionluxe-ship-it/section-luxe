@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     seller,
     loading,
     isAuthenticated: !!user,
-    isSeller: !!seller || user?.role === 'seller', // Vrai si une fiche seller existe OU si le rôle est 'seller'
+    isSeller: (!!seller && seller.status !== 'rejected' && seller.status !== 'banned') || (user?.role === 'seller' && seller?.status !== 'rejected' && seller?.status !== 'banned'), // Refusé / banni = visiteur
     isApprovedSeller: seller?.status === 'approved',
     isAdmin: user?.role === 'admin',
     isSupabaseConfigured: Boolean(isSupabaseConfigured),

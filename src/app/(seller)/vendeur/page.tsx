@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getSellerListings, deleteListing } from '@/lib/supabase/listings';
+import { getSellerListings, deleteListing, updateListing } from '@/lib/supabase/listings';
 import { recordListingDeletion } from '@/lib/supabase/sales';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -55,10 +55,16 @@ export default function SellerDashboardPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [listingToDelete, setListingToDelete] = useState<Listing | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [listingToToggle, setListingToToggle] = useState<Listing | null>(null);
+  const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
       router.push('/connexion');
+      return;
+    }
+    if (!authLoading && user && (seller?.status === 'rejected' || seller?.status === 'banned')) {
+      router.replace('/profil');
     }
   }, [authLoading, user, seller, router]);
 
@@ -153,6 +159,20 @@ export default function SellerDashboardPage() {
     }
   };
 
+  const handleConfirmToggleActive = async () => {
+    if (!listingToToggle) return;
+    setToggling(true);
+    try {
+      await updateListing(listingToToggle.id, { isActive: !listingToToggle.isActive });
+      setListings((prev) => prev.map((l) => (l.id === listingToToggle.id ? { ...l, isActive: !l.isActive } : l)));
+      setListingToToggle(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setToggling(false);
+    }
+  };
+
   if (!authLoading && (!user || !seller)) return null;
 
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
@@ -226,14 +246,30 @@ export default function SellerDashboardPage() {
 
         {/* Status alerts */}
         {!showSkeletons && seller?.status === 'pending' && (
-          <div style={{ padding: 20, backgroundColor: '#fef3c7', marginBottom: 32, display: 'flex', gap: 16 }}>
-            <AlertCircle size={24} color="#92400e" style={{ flexShrink: 0 }} />
-            <div>
-              <h3 style={{ fontSize: 15, fontWeight: 600, color: '#92400e', marginBottom: 4 }}>Demande en cours d'étude</h3>
-              <p style={{ fontSize: 14, color: '#a16207' }}>
-                Notre équipe examine vos documents. Vous ne pouvez pas encore publier d'annonces.
-              </p>
-            </div>
+          <div
+            style={{
+              marginBottom: 32,
+              padding: 16,
+              borderRadius: 12,
+              border: '1px solid #fde68a',
+              backgroundColor: '#fffbeb',
+              width: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+              <Clock size={14} /> En attente
+            </span>
+            <p style={{ fontSize: 14, color: '#92400e', margin: 0, lineHeight: 1.45, fontWeight: 500 }}>
+              Demande en cours d&apos;étude
+            </p>
+            <p style={{ fontSize: 13, color: '#a16207', margin: 0, lineHeight: 1.5 }}>
+              Notre équipe examine vos documents. Vous ne pouvez pas encore publier d&apos;annonces.
+            </p>
           </div>
         )}
 
@@ -246,6 +282,36 @@ export default function SellerDashboardPage() {
                 Votre demande n'a pas été acceptée. Contactez-nous pour plus d'informations.
               </p>
             </div>
+          </div>
+        )}
+
+        {!showSkeletons && seller?.status === 'suspended' && (
+          <div
+            style={{
+              marginBottom: 32,
+              padding: 16,
+              borderRadius: 12,
+              border: '1px solid #fdba74',
+              backgroundColor: '#fff7ed',
+              width: '100%',
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#ffedd5', color: '#c2410c', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+              <AlertCircle size={14} /> Compte suspendu
+            </span>
+            <p style={{ fontSize: 14, color: '#c2410c', margin: 0, lineHeight: 1.45, fontWeight: 500 }}>
+              Votre compte vendeur est temporairement suspendu. Vous ne pouvez pas déposer de nouvelles annonces.
+            </p>
+            <p style={{ fontSize: 13, color: '#9a3412', margin: 0, lineHeight: 1.5 }}>
+              {seller.suspendedUntil
+                ? `Suspension jusqu'au ${formatDate(seller.suspendedUntil)}. Contactez-nous pour plus d'informations.`
+                : 'Contactez-nous pour plus d\'informations.'}
+            </p>
           </div>
         )}
 
@@ -453,9 +519,29 @@ export default function SellerDashboardPage() {
                   <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
-                      <span style={{ position: 'absolute', top: 8, right: 8, padding: '4px 10px', backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5', color: listing.isActive ? '#166534' : '#666', fontSize: 11, fontWeight: 500, borderRadius: 4 }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setListingToToggle(listing);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          padding: '4px 10px',
+                          backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5',
+                          color: listing.isActive ? '#166534' : '#666',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          borderRadius: 4,
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
                         {listing.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </div>
                     <div style={{ padding: '16px 16px 12px' }}>
                       <div style={{ marginBottom: 8 }}>
@@ -592,6 +678,49 @@ export default function SellerDashboardPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {listingToToggle && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !toggling && setListingToToggle(null)} aria-hidden />
+          <div
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: 410,
+              backgroundColor: '#fff',
+              padding: '24px 20px',
+              borderRadius: 16,
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            }}
+          >
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+              {listingToToggle.isActive ? 'Désactiver l\'annonce' : 'Activer l\'annonce'}
+            </h2>
+            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
+              {listingToToggle.isActive
+                ? 'Voulez-vous désactiver cette annonce ? Elle ne sera plus visible dans le catalogue.'
+                : 'Voulez-vous activer cette annonce ? Elle sera à nouveau visible dans le catalogue.'}
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => !toggling && setListingToToggle(null)}
+                style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: toggling ? 'not-allowed' : 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmToggleActive}
+                disabled={toggling}
+                style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.7 : 1 }}
+              >
+                {toggling ? 'En cours...' : 'Confirmer'}
+              </button>
+            </div>
           </div>
         </div>
       )}

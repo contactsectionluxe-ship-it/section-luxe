@@ -1,32 +1,42 @@
 /**
- * Récupère les informations d'une entreprise à partir de son SIRET
+ * Récupère les suggestions d'entreprises à partir d'un SIRET ou SIREN (9 à 14 chiffres)
  * via la route API /api/siret (proxy vers API Recherche d'Entreprises).
  */
 
-export type CompanyInfo = {
+export type SiretSuggestion = {
   companyName: string;
   address: string;
+  siret?: string;
 };
 
+/** Ancien type conservé pour compatibilité (une suggestion = CompanyInfo) */
+export type CompanyInfo = SiretSuggestion;
+
 /**
- * Appel à la route API /api/siret pour récupérer nom et adresse.
- * Retourne null si SIRET invalide, non trouvé ou erreur réseau.
+ * Appel à l'API /api/siret pour récupérer la liste de suggestions.
+ * À appeler dès 9 chiffres (SIREN). Retourne un tableau vide si erreur ou aucun résultat.
  */
-export async function fetchCompanyBySiret(siret: string): Promise<CompanyInfo | null> {
-  const digits = siret.replace(/\D/g, '');
-  if (digits.length !== 14) return null;
+export async function fetchSiretSuggestions(digits: string): Promise<SiretSuggestion[]> {
+  const cleaned = digits.replace(/\D/g, '');
+  if (cleaned.length < 9 || cleaned.length > 14) return [];
 
   try {
-    const res = await fetch(`/api/siret?siret=${encodeURIComponent(digits)}`, {
+    const res = await fetch(`/api/siret?siret=${encodeURIComponent(cleaned)}`, {
       headers: { Accept: 'application/json' },
     });
-    if (!res.ok) return null;
+    if (!res.ok) return [];
     const data = await res.json();
-    const companyName = data.companyName ?? '';
-    const address = data.address ?? '';
-    if (!companyName && !address) return null;
-    return { companyName, address };
+    return Array.isArray(data.suggestions) ? data.suggestions : [];
   } catch {
-    return null;
+    return [];
   }
+}
+
+/**
+ * Récupère une seule entreprise pour un SIRET complet (14 chiffres).
+ * Utilise la première suggestion correspondant au SIRET exact.
+ */
+export async function fetchCompanyBySiret(siret: string): Promise<CompanyInfo | null> {
+  const suggestions = await fetchSiretSuggestions(siret);
+  return suggestions.length > 0 ? suggestions[0] : null;
 }
