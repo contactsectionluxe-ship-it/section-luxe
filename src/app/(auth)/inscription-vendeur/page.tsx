@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle, FileText, Upload, X } from 'lucide-react';
@@ -182,7 +182,7 @@ function FileUploadField({
   );
 }
 
-export default function SellerRegisterPage() {
+function SellerRegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isSeller, seller, loading: authLoading, refreshUser } = useAuth();
@@ -1073,5 +1073,13 @@ export default function SellerRegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SellerRegisterPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24, textAlign: 'center', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ fontSize: 14, color: '#6e6e73' }}>Chargement...</p></div>}>
+      <SellerRegisterContent />
+    </Suspense>
   );
 }
