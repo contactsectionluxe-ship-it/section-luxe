@@ -550,7 +550,7 @@ export default function AdminSellerDetailPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f' }}>
+                <h2 style={{ flex: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f', textAlign: 'center' }}>
                   Suspendre le vendeur
                 </h2>
                 <button

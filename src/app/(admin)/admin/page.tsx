@@ -23,6 +23,7 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [suspendModal, setSuspendModal] = useState<{ open: boolean; sellerId: string; sellerName: string; days: number }>({ open: false, sellerId: '', sellerName: '', days: 7 });
   const [suspendDaysDropdownOpen, setSuspendDaysDropdownOpen] = useState(false);
+  const [banModal, setBanModal] = useState<{ open: boolean; sellerId: string; sellerName: string }>({ open: false, sellerId: '', sellerName: '' });
 
   const SUSPEND_DAY_OPTIONS = [
     { value: 1, label: '1 jour' },
@@ -103,7 +104,13 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleBan = async (sellerId: string) => {
+  const openBanModal = (sellerId: string, sellerName: string) => {
+    setBanModal({ open: true, sellerId, sellerName });
+  };
+
+  const handleBanConfirm = async () => {
+    const { sellerId, sellerName } = banModal;
+    if (!sellerId) return;
     setActionLoading(true);
     try {
       await banSeller(sellerId);
@@ -116,6 +123,7 @@ export default function AdminDashboardPage() {
         ...(wasSuspended && { suspended: prev.suspended - 1 }),
         banned: prev.banned + 1,
       }));
+      setBanModal({ open: false, sellerId: '', sellerName: '' });
     } catch (error) {
       console.error('Error banning seller:', error);
     } finally {
@@ -447,7 +455,7 @@ export default function AdminDashboardPage() {
                           Suspendre
                         </button>
                         <button
-                          onClick={() => handleBan(seller.uid)}
+                          onClick={() => openBanModal(seller.uid, seller.companyName)}
                           disabled={actionLoading}
                           style={{
                             flex: 1,
@@ -493,7 +501,7 @@ export default function AdminDashboardPage() {
                           Réactiver
                         </button>
                         <button
-                          onClick={() => handleBan(seller.uid)}
+                          onClick={() => openBanModal(seller.uid, seller.companyName)}
                           disabled={actionLoading}
                           style={{
                             flex: 1,
@@ -573,7 +581,7 @@ export default function AdminDashboardPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f' }}>
+              <h2 style={{ flex: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f', textAlign: 'center' }}>
                 Suspendre le vendeur
               </h2>
               <button
@@ -673,11 +681,12 @@ export default function AdminDashboardPage() {
                 </div>
               )}
             </div>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 12, width: '100%' }}>
               <button
                 type="button"
                 onClick={() => !actionLoading && setSuspendModal((m) => ({ ...m, open: false }))}
                 style={{
+                  flex: 1,
                   padding: '10px 20px',
                   fontSize: 14,
                   fontWeight: 500,
@@ -695,6 +704,7 @@ export default function AdminDashboardPage() {
                 onClick={handleSuspendConfirm}
                 disabled={actionLoading}
                 style={{
+                  flex: 1,
                   padding: '10px 20px',
                   fontSize: 14,
                   fontWeight: 500,
@@ -706,7 +716,101 @@ export default function AdminDashboardPage() {
                   opacity: actionLoading ? 0.7 : 1,
                 }}
               >
-                {actionLoading ? 'Suspension...' : 'Confirmer la suspension'}
+                {actionLoading ? 'En cours...' : 'Confirmer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal bannir */}
+      {banModal.open && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            backgroundColor: 'rgba(0,0,0,0.4)',
+          }}
+          onClick={() => !actionLoading && setBanModal({ open: false, sellerId: '', sellerName: '' })}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: 400,
+              backgroundColor: '#fff',
+              borderRadius: 16,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+              padding: 24,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <h2 style={{ flex: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f', textAlign: 'center' }}>
+                Bannir le vendeur
+              </h2>
+              <button
+                type="button"
+                aria-label="Fermer"
+                onClick={() => !actionLoading && setBanModal({ open: false, sellerId: '', sellerName: '' })}
+                style={{
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: 'none',
+                  background: '#f5f5f7',
+                  borderRadius: 10,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5 }}>
+              <strong>{banModal.sellerName}</strong> ne pourra plus déposer d&apos;annonces. Ses annonces seront désactivées jusqu&apos;à réactivation du compte.
+            </p>
+            <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+              <button
+                type="button"
+                onClick={() => !actionLoading && setBanModal({ open: false, sellerId: '', sellerName: '' })}
+                style={{
+                  flex: 1,
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#1d1d1f',
+                  background: '#f5f5f7',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleBanConfirm}
+                disabled={actionLoading}
+                style={{
+                  flex: 1,
+                  padding: '10px 20px',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  color: '#fff',
+                  background: '#dc2626',
+                  border: 'none',
+                  borderRadius: 10,
+                  cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  opacity: actionLoading ? 0.7 : 1,
+                }}
+              >
+                {actionLoading ? 'En cours...' : 'Confirmer'}
               </button>
             </div>
           </div>
