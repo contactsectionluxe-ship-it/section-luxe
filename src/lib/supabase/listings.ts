@@ -124,8 +124,12 @@ export async function updateListing(
         .select('status')
         .eq('id', listingRow.seller_id)
         .single();
-      if ((sellerRow as { status?: string } | null)?.status === 'banned') {
+      const status = (sellerRow as { status?: string } | null)?.status;
+      if (status === 'banned') {
         throw new Error('Impossible de réactiver une annonce tant que le compte vendeur n\'est pas réactivé.');
+      }
+      if (status === 'suspended') {
+        throw new Error('Impossible de réactiver une annonce tant que le compte vendeur est suspendu.');
       }
     }
   }

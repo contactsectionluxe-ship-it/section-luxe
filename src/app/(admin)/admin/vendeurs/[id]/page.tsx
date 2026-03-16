@@ -198,8 +198,8 @@ export default function AdminSellerDetailPage() {
               fontSize: 12,
               fontWeight: 500,
               borderRadius: 6,
-              backgroundColor: seller.status === 'approved' ? '#dcfce7' : seller.status === 'pending' ? '#fef3c7' : seller.status === 'suspended' ? '#f3e8ff' : seller.status === 'banned' ? '#1f2937' : '#fee2e2',
-              color: seller.status === 'approved' ? '#166534' : seller.status === 'pending' ? '#92400e' : seller.status === 'suspended' ? '#6b21a8' : seller.status === 'banned' ? '#fff' : '#991b1b',
+              backgroundColor: seller.status === 'approved' ? '#dcfce7' : seller.status === 'pending' ? '#fef3c7' : seller.status === 'suspended' ? '#ffedd5' : seller.status === 'banned' ? '#1f2937' : '#fee2e2',
+              color: seller.status === 'approved' ? '#166534' : seller.status === 'pending' ? '#92400e' : seller.status === 'suspended' ? '#c2410c' : seller.status === 'banned' ? '#fff' : '#991b1b',
             }}
           >
             {seller.status === 'approved' ? 'Validé' : seller.status === 'pending' ? 'En attente' : seller.status === 'suspended' ? 'Suspendu' : seller.status === 'banned' ? 'Banni' : 'Refusé'}

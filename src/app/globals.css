@@ -714,10 +714,7 @@ a:focus-visible {
     padding-right: 24px !important;
     box-sizing: border-box !important;
   }
-  /* Page Admin : masquer « Tous » et mettre les 3 filtres sur une ligne pleine largeur */
-  .admin-filter-all {
-    display: none !important;
-  }
+  /* Page Admin : sur mobile, grille des filtres (Tous à droite de Bannis) */
   .admin-filters-row {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;

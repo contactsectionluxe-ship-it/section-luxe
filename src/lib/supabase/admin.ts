@@ -134,37 +134,23 @@ export async function rejectSeller(sellerId: string): Promise<void> {
   if (error) throw error;
 }
 
-// Suspend seller : ne peut plus déposer d'annonces pendant X jours (annonces existantes conservées)
+// Suspend seller : annonces désactivées + ne peut plus déposer pendant X jours (appel API pour bypass RLS)
 export async function suspendSeller(sellerId: string, days: number): Promise<void> {
-  const client = checkSupabase();
-  const until = new Date();
-  until.setDate(until.getDate() + days);
-  const payloadWithUntil = {
-    status: 'suspended',
-    suspended_until: until.toISOString(),
-    updated_at: new Date().toISOString(),
-  };
-  const { error } = await client
-    .from('sellers')
-    .update(payloadWithUntil)
-    .eq('id', sellerId);
-  if (error) {
-    const msg = error?.message ?? '';
-    const columnMissing = /suspended_until|schema cache|column.*does not exist/i.test(msg);
-    if (columnMissing) {
-      const { error: err2 } = await client
-        .from('sellers')
-        .update({
-          status: 'suspended',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sellerId);
-      if (err2) {
-        throw new Error(err2.message || 'Erreur lors de la suspension');
-      }
-      return;
-    }
-    throw new Error(msg || 'Erreur lors de la suspension');
+  const { getSession } = await import('@/lib/supabase/auth');
+  const session = await getSession();
+  if (!session?.access_token) throw new Error('Session expirée');
+  const res = await fetch('/api/admin/suspend-seller', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ sellerId, days }),
+    credentials: 'same-origin',
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
   }
 }
 

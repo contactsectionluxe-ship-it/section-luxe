@@ -186,6 +186,14 @@ export default function AdminDashboardPage() {
     banned: `Bannis (${stats.banned})`,
     all: 'Tous',
   } as const;
+  const filterLabelsShort = {
+    pending: 'En attente',
+    approved: 'Validés',
+    rejected: 'Refusés',
+    suspended: 'Suspendus',
+    banned: 'Bannis',
+    all: 'Tous',
+  } as const;
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
@@ -275,10 +283,11 @@ export default function AdminDashboardPage() {
                 transition: 'background-color 0.2s, color 0.2s, border-color 0.2s',
               }}
             >
-              {filterLabels[f]}
+              {f === 'all' ? 'Tous' : <>{filterLabelsShort[f]} <span className="admin-filter-count">({stats[f]})</span></>}
             </button>
           ))}
         </div>
+        <style dangerouslySetInnerHTML={{ __html: '@media (max-width: 767px) { .admin-filter-count { display: none; } }' }} />
 
         <div style={{ marginBottom: 20, position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
@@ -356,8 +365,8 @@ export default function AdminDashboardPage() {
                         fontWeight: 500,
                         borderRadius: 6,
                         flexShrink: 0,
-                        backgroundColor: seller.status === 'approved' ? '#dcfce7' : seller.status === 'pending' ? '#fef3c7' : seller.status === 'suspended' ? '#f3e8ff' : seller.status === 'banned' ? '#1f2937' : '#fee2e2',
-                        color: seller.status === 'approved' ? '#166534' : seller.status === 'pending' ? '#92400e' : seller.status === 'suspended' ? '#6b21a8' : seller.status === 'banned' ? '#fff' : '#991b1b',
+                        backgroundColor: seller.status === 'approved' ? '#dcfce7' : seller.status === 'pending' ? '#fef3c7' : seller.status === 'suspended' ? '#ffedd5' : seller.status === 'banned' ? '#1f2937' : '#fee2e2',
+                        color: seller.status === 'approved' ? '#166534' : seller.status === 'pending' ? '#92400e' : seller.status === 'suspended' ? '#c2410c' : seller.status === 'banned' ? '#fff' : '#991b1b',
                       }}
                     >
                       {seller.status === 'approved' ? 'Validé' : seller.status === 'pending' ? 'En attente' : seller.status === 'suspended' ? 'Suspendu' : seller.status === 'banned' ? 'Banni' : 'Refusé'}
@@ -603,8 +612,8 @@ export default function AdminDashboardPage() {
                 <X size={18} />
               </button>
             </div>
-            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16 }}>
-              <strong>{suspendModal.sellerName}</strong> ne pourra plus déposer d&apos;annonces pendant la période choisie.
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16, textAlign: 'justify' }}>
+              <strong>{suspendModal.sellerName}</strong> ne pourra plus déposer d&apos;annonces pendant la période choisie et ses annonces seront désactivées jusqu&apos;à réactivation du compte.
             </p>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
               Nombre de jours
@@ -772,8 +781,8 @@ export default function AdminDashboardPage() {
                 <X size={18} />
               </button>
             </div>
-            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5 }}>
-              <strong>{banModal.sellerName}</strong> ne pourra plus déposer d&apos;annonces. Ses annonces seront désactivées jusqu&apos;à réactivation du compte.
+            <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5, textAlign: 'justify' }}>
+              <strong>{banModal.sellerName}</strong> ne pourra plus déposer d&apos;annonces et ses annonces seront désactivées jusqu&apos;à nouvel ordre.
             </p>
             <div style={{ display: 'flex', gap: 12, width: '100%' }}>
               <button
