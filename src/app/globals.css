@@ -975,6 +975,15 @@ a:focus-visible {
   .connexion-form-box {
     padding: 24px !important;
   }
+  /* Page Mot de passe oublié : pleine largeur sur mobile (comme Connexion) */
+  .mot-de-passe-oublie-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .mot-de-passe-oublie-form-box {
+    padding: 24px !important;
+  }
 }
 
 /* Catalogue : squelettes de chargement premium (shimmer fluide) */
