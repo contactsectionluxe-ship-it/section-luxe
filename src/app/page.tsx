@@ -268,6 +268,7 @@ export default function HomePage() {
               aria-label="Catégories"
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
+                if ((e.target as HTMLElement).closest?.('.category-item-photo-link')) return;
                 hasDragged.current = false;
                 dragStartX.current = e.clientX;
                 dragStartScrollLeft.current = categoriesScrollRef.current?.scrollLeft ?? 0;
@@ -317,71 +318,79 @@ export default function HomePage() {
                 }}
               >
                 {categories.map((cat) => (
-                  <Link
+                  <div
                     key={cat.name}
-                    href={cat.href}
                     className="categories-scroll-item"
-                    onClick={(e) => {
-                      if (hasDragged.current) e.preventDefault();
-                    }}
                     style={{
                       flex: `0 0 calc((100cqw - ${(CATEGORIES_VISIBLE - 1) * CATEGORY_GAP}px) / ${CATEGORIES_VISIBLE})`,
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'stretch',
                       gap: 10,
-                      textDecoration: 'none',
-                      color: '#1d1d1f',
-                      transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isDragging) e.currentTarget.style.transform = 'scale(1.02)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
                     }}
                   >
-                    <div
+                    <Link
+                      href={cat.href}
+                      className="category-item-photo-link"
                       style={{
-                        aspectRatio: '1',
-                        borderRadius: 18,
-                        overflow: 'hidden',
-                        backgroundColor: '#f6f6f8',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        display: 'block',
+                        textDecoration: 'none',
+                        color: 'inherit',
+                        transition: 'transform 0.2s',
+                        cursor: 'pointer',
+                      }}
+                      onClick={(e) => {
+                        if (hasDragged.current) e.preventDefault();
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isDragging) e.currentTarget.style.transform = 'scale(1.02)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'scale(1)';
                       }}
                     >
-                      {cat.image ? (
-                        <img
-                          src={cat.image}
-                          alt={cat.name}
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: (cat.name === 'Sacs' || cat.name === 'Bijoux' || cat.name === 'Montres' || cat.name === 'Vêtements' || cat.name === 'Accessoires') ? 'contain' : 'cover',
-                            ...(cat.name === 'Sacs' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Bijoux' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                            ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
-                          }}
-                        />
-                      ) : (
-                        <span
-                          style={{
-                            fontFamily: 'var(--font-playfair), Georgia, serif',
-                            fontSize: 17,
-                            fontWeight: 500,
-                            letterSpacing: '-0.02em',
-                            color: '#1d1d1f',
-                          }}
-                        >
-                          {cat.name}
-                        </span>
-                      )}
-                    </div>
+                      <div
+                        style={{
+                          aspectRatio: '1',
+                          borderRadius: 18,
+                          overflow: 'hidden',
+                          backgroundColor: '#f6f6f8',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {cat.image ? (
+                          <img
+                            src={cat.image}
+                            alt={cat.name}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: (cat.name === 'Sacs' || cat.name === 'Bijoux' || cat.name === 'Montres' || cat.name === 'Vêtements' || cat.name === 'Accessoires') ? 'contain' : 'cover',
+                              ...(cat.name === 'Sacs' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                              ...(cat.name === 'Bijoux' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
+                              ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                              ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
+                              ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                              ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                            }}
+                          />
+                        ) : (
+                          <span
+                            style={{
+                              fontFamily: 'var(--font-playfair), Georgia, serif',
+                              fontSize: 17,
+                              fontWeight: 500,
+                              letterSpacing: '-0.02em',
+                              color: '#1d1d1f',
+                            }}
+                          >
+                            {cat.name}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
                     <span
                       className="category-item-label"
                       style={{
@@ -393,7 +402,7 @@ export default function HomePage() {
                     >
                       {cat.name}
                     </span>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>

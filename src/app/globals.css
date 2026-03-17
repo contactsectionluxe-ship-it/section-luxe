@@ -177,6 +177,11 @@ a:focus-visible {
   .hide-desktop {
     display: none !important;
   }
+  /* Page d'accueil section catégories : flèches au milieu de la carte (image), pas du texte */
+  .categories-scroll-wrap button[aria-label="Catégories précédentes"],
+  .categories-scroll-wrap button[aria-label="Catégories suivantes"] {
+    top: 46% !important;
+  }
 }
 
 @media (min-width: 1024px) {
@@ -230,6 +235,18 @@ a:focus-visible {
 /* Catalogue : espace au-dessus du premier article */
 .catalogue-results {
   margin-top: var(--catalogue-results-gap, calc(-4px + 0.5mm)) !important;
+}
+
+/* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
+@media (min-width: 1600px) {
+  .hero-section {
+    background-size: 52% !important;
+  }
+}
+@media (min-width: 2000px) {
+  .hero-section {
+    background-size: 42% !important;
+  }
 }
 
 /* Page d'accueil mobile : pas de photo derrière le titre, titre sur toute la largeur */
@@ -1174,7 +1191,7 @@ a:focus-visible {
   /* Flèches catégories : discrètes, centre de la flèche droite pile au milieu de la bordure droite de la dernière catégorie */
   button[aria-label="Catégories précédentes"] {
     left: 0 !important;
-    top: 42% !important;
+    top: calc(42% + 1mm) !important;
     transform: translate(-50%, -50%) !important;
     width: 28px !important;
     height: 28px !important;
@@ -1189,7 +1206,7 @@ a:focus-visible {
   }
   button[aria-label="Catégories suivantes"] {
     right: 0 !important;
-    top: 42% !important;
+    top: calc(42% + 1mm) !important;
     transform: translate(50%, -50%) !important;
     width: 28px !important;
     height: 28px !important;

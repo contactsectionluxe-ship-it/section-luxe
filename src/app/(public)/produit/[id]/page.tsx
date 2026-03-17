@@ -111,6 +111,13 @@ export default function ProductPage() {
   const [etatInfoHover, setEtatInfoHover] = useState(false);
   const etatInfoRefDesktop = useRef<HTMLDivElement>(null);
   const etatInfoRefMobile = useRef<HTMLDivElement>(null);
+  /** Mobile galerie : swipe pour changer de photo */
+  const mobilePhotoTouchStartX = useRef(0);
+  const mobilePhotoDidSwipe = useRef(false);
+  const mobilePhotoSwipedThisGesture = useRef(false);
+  /** Lightbox plein écran : swipe pour changer de photo (mobile) */
+  const lightboxTouchStartX = useRef(0);
+  const lightboxSwipedThisGesture = useRef(false);
 
   /** Afficher « Voir plus » seulement si la description a strictement plus de 5 lignes. Plusieurs vérifications (dont délais) pour que ça marche sur toutes les annonces quel que soit le chargement (polices, viewport). */
   useLayoutEffect(() => {
@@ -1262,14 +1269,35 @@ export default function ProductPage() {
 
           {/* Mobile: single column */}
           <div className="hide-desktop">
-            {/* Gallery */}
+            {/* Gallery — swipe horizontal pour faire défiler les photos (mobile uniquement) */}
             <div style={{ marginBottom: 24 }}>
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
+                onClick={() => {
+                  if (mobilePhotoDidSwipe.current) return;
+                  listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true);
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && listing.photos[currentPhotoIndex] && setShowPhotoLightbox(true)}
-                style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default' }}
+                onTouchStart={(e) => {
+                  mobilePhotoDidSwipe.current = false;
+                  mobilePhotoSwipedThisGesture.current = false;
+                  mobilePhotoTouchStartX.current = e.touches[0].clientX;
+                }}
+                onTouchMove={(e) => {
+                  if (listing.photos.length <= 1 || mobilePhotoSwipedThisGesture.current) return;
+                  const dx = e.touches[0].clientX - mobilePhotoTouchStartX.current;
+                  if (Math.abs(dx) > 50) {
+                    mobilePhotoDidSwipe.current = true;
+                    mobilePhotoSwipedThisGesture.current = true;
+                    if (dx > 0) {
+                      setCurrentPhotoIndex((i) => (i > 0 ? i - 1 : listing.photos.length - 1));
+                    } else {
+                      setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
+                    }
+                  }
+                }}
+                style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
               >
                 <ListingPhoto
                   src={listing.photos[currentPhotoIndex]}
@@ -2421,7 +2449,26 @@ Ces données sont utilisées pour :`}
               </button>
             </>
           )}
-          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.stopPropagation()}>
+          <div
+            style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'pan-y' }}
+            onClick={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              lightboxSwipedThisGesture.current = false;
+              lightboxTouchStartX.current = e.touches[0].clientX;
+            }}
+            onTouchMove={(e) => {
+              if (listing.photos.length <= 1 || lightboxSwipedThisGesture.current) return;
+              const dx = e.touches[0].clientX - lightboxTouchStartX.current;
+              if (Math.abs(dx) > 50) {
+                lightboxSwipedThisGesture.current = true;
+                if (dx > 0) {
+                  setCurrentPhotoIndex((i) => (i > 0 ? i - 1 : listing.photos.length - 1));
+                } else {
+                  setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
+                }
+              }
+            }}
+          >
             <img
               src={listing.photos[currentPhotoIndex]}
               alt={getListingDisplayTitle(listing)}
