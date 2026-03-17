@@ -46,14 +46,14 @@ export default function MotDePasseOubliePage() {
   };
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', backgroundColor: '#fbfbfb' }}>
-      <div className="mot-de-passe-oublie-page-inner" style={{ width: '100%', maxWidth: 420, padding: '30px 24px 80px', boxSizing: 'border-box' }}>
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24 }}>
+      <div className="mot-de-passe-oublie-page-inner" style={{ width: '100%', maxWidth: 420, paddingTop: 30, boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
             Mot de passe oublié
           </h1>
           <p style={{ fontSize: 15, color: '#6e6e73' }}>
-            {success ? 'Vérifiez votre boîte mail' : 'Indiquez votre email pour recevoir un lien de réinitialisation'}
+            {success ? 'Vérifiez votre boîte mail' : 'Réinitialisation de votre mot de passe'}
           </p>
         </div>
 
@@ -82,7 +82,7 @@ export default function MotDePasseOubliePage() {
                 </div>
               )}
 
-              <div style={{ marginBottom: 24 }}>
+              <div style={{ marginBottom: 20 }}>
                 <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>Email</label>
                 <input
                   type="email"
