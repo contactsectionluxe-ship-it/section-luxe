@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, CheckCircle, Clock, XCircle, Eye, Search, X } from 'lucide-react';
+import { Users, CheckCircle, Clock, XCircle, Eye, Search, X, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdminEmail } from '@/lib/constants';
 import { getAllSellers, getSellerStats, approveSeller, rejectSeller, suspendSeller, banSeller, unbanSeller } from '@/lib/supabase/admin';
@@ -24,6 +24,11 @@ export default function AdminDashboardPage() {
   const [suspendModal, setSuspendModal] = useState<{ open: boolean; sellerId: string; sellerName: string; days: number }>({ open: false, sellerId: '', sellerName: '', days: 7 });
   const [suspendDaysDropdownOpen, setSuspendDaysDropdownOpen] = useState(false);
   const [banModal, setBanModal] = useState<{ open: boolean; sellerId: string; sellerName: string }>({ open: false, sellerId: '', sellerName: '' });
+  const [adminSection, setAdminSection] = useState<'vendeurs' | 'newsletter'>('vendeurs');
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<{ id: string; email: string; status: 'subscribed' | 'unsubscribed'; subscribed_at: string; unsubscribed_at: string | null }[]>([]);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterError, setNewsletterError] = useState<string | null>(null);
+  const [newsletterFilter, setNewsletterFilter] = useState<'all' | 'subscribed' | 'unsubscribed'>('subscribed');
 
   const SUSPEND_DAY_OPTIONS = [
     { value: 1, label: '1 jour' },
@@ -53,6 +58,39 @@ export default function AdminDashboardPage() {
     }
     if (canAccessAdmin) loadData();
   }, [canAccessAdmin]);
+
+  useEffect(() => {
+    async function loadNewsletter() {
+      if (!canAccessAdmin || adminSection !== 'newsletter') return;
+      const { getSession } = await import('@/lib/supabase/auth');
+      const session = await getSession();
+      if (!session?.access_token) {
+        setNewsletterError('Session expirée');
+        setNewsletterLoading(false);
+        return;
+      }
+      setNewsletterLoading(true);
+      setNewsletterError(null);
+      try {
+        const res = await fetch('/api/admin/newsletter-subscribers', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setNewsletterError((data as { error?: string }).error || 'Erreur chargement');
+          setNewsletterSubscribers([]);
+        } else {
+          setNewsletterSubscribers((data as { subscribers: typeof newsletterSubscribers }).subscribers || []);
+        }
+      } catch {
+        setNewsletterError('Erreur réseau');
+        setNewsletterSubscribers([]);
+      } finally {
+        setNewsletterLoading(false);
+      }
+    }
+    loadNewsletter();
+  }, [canAccessAdmin, adminSection]);
 
   const handleApprove = async (sellerId: string) => {
     setActionLoading(true);
@@ -157,7 +195,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  if (authLoading || loading) {
+  if (authLoading) {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <p style={{ fontSize: 14, color: '#6e6e73' }}>Chargement...</p>
@@ -195,6 +233,13 @@ export default function AdminDashboardPage() {
     all: 'Tous',
   } as const;
 
+  const newsletterStats = {
+    total: newsletterSubscribers.length,
+    subscribed: newsletterSubscribers.filter((s) => s.status === 'subscribed').length,
+    unsubscribed: newsletterSubscribers.filter((s) => s.status === 'unsubscribed').length,
+  };
+  const filteredNewsletter = newsletterFilter === 'all' ? newsletterSubscribers : newsletterSubscribers.filter((s) => s.status === newsletterFilter);
+
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="admin-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
@@ -203,9 +248,50 @@ export default function AdminDashboardPage() {
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
             Admin
           </h1>
-          <p style={{ fontSize: 14, color: '#6e6e73' }}>Gestion des demandes vendeurs</p>
+          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16 }}>Gestion des demandes vendeurs</p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setAdminSection('vendeurs')}
+              style={{
+                padding: '10px 18px',
+                fontSize: 14,
+                fontWeight: 500,
+                backgroundColor: adminSection === 'vendeurs' ? '#1d1d1f' : '#fff',
+                color: adminSection === 'vendeurs' ? '#fff' : '#1d1d1f',
+                border: adminSection === 'vendeurs' ? 'none' : '1px solid #d2d2d7',
+                borderRadius: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Demande vendeur
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminSection('newsletter')}
+              style={{
+                padding: '10px 18px',
+                fontSize: 14,
+                fontWeight: 500,
+                backgroundColor: adminSection === 'newsletter' ? '#1d1d1f' : '#fff',
+                color: adminSection === 'newsletter' ? '#fff' : '#1d1d1f',
+                border: adminSection === 'newsletter' ? 'none' : '1px solid #d2d2d7',
+                borderRadius: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Newsletter
+            </button>
+          </div>
         </div>
 
+        {/* Section Demande vendeur */}
+        {adminSection === 'vendeurs' && (
+          <>
+        {loading ? (
+          <p style={{ color: '#6e6e73', marginBottom: 24 }}>Chargement...</p>
+        ) : (
+          <>
         {/* Stats — cartes comme Mes annonces */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 40 }}>
           <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -560,6 +646,123 @@ export default function AdminDashboardPage() {
               </div>
             ))}
           </div>
+        )}
+          </>
+        )}
+        </>
+        )}
+
+        {/* Section Newsletter */}
+        {adminSection === 'newsletter' && (
+          <>
+            {newsletterError && (
+              <div style={{ padding: 16, backgroundColor: '#fef2f2', borderRadius: 12, color: '#dc2626', marginBottom: 24 }}>
+                {newsletterError}
+              </div>
+            )}
+            {/* Stats — cartes comme Demande vendeur */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 40 }}>
+              <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 44, height: 44, backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                  <Mail size={22} color="#2563eb" />
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Total</p>
+                  <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>{newsletterLoading ? '—' : newsletterStats.total}</p>
+                </div>
+              </div>
+              <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 44, height: 44, backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                  <CheckCircle size={22} color="#166534" />
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Inscrit</p>
+                  <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>{newsletterLoading ? '—' : newsletterStats.subscribed}</p>
+                </div>
+              </div>
+              <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 44, height: 44, backgroundColor: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                  <XCircle size={22} color="#dc2626" />
+                </div>
+                <div>
+                  <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Désinscrit</p>
+                  <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>{newsletterLoading ? '—' : newsletterStats.unsubscribed}</p>
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+              {(['subscribed', 'unsubscribed', 'all'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => setNewsletterFilter(f)}
+                  style={{
+                    padding: '10px 18px',
+                    fontSize: 14,
+                    fontWeight: 500,
+                    backgroundColor: newsletterFilter === f ? '#1d1d1f' : '#fff',
+                    color: newsletterFilter === f ? '#fff' : '#1d1d1f',
+                    border: newsletterFilter === f ? 'none' : '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {f === 'subscribed' ? `Inscrits${newsletterFilter === 'subscribed' ? ` (${filteredNewsletter.length})` : ''}` : f === 'unsubscribed' ? `Désinscrits${newsletterFilter === 'unsubscribed' ? ` (${filteredNewsletter.length})` : ''}` : `Tous${newsletterFilter === 'all' ? ` (${filteredNewsletter.length})` : ''}`}
+                </button>
+              ))}
+            </div>
+            {newsletterLoading ? (
+              <p style={{ color: '#6e6e73' }}>Chargement...</p>
+            ) : filteredNewsletter.length === 0 ? (
+              <div style={{ padding: 60, border: '1px solid #e8e8ed', borderRadius: 12, textAlign: 'center', backgroundColor: '#fff' }}>
+                <Mail size={48} color="#d2d2d7" style={{ display: 'block', margin: '0 auto 16px' }} />
+                <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
+                  {newsletterFilter === 'subscribed' ? 'Aucun inscrit pour le moment.' : newsletterFilter === 'unsubscribed' ? 'Aucun désinscrit.' : 'Aucun enregistrement.'}
+                </h3>
+                <p style={{ fontSize: 14, color: '#6e6e73' }}>
+                  Les inscriptions du footer apparaîtront ici.
+                </p>
+              </div>
+            ) : (
+              <div style={{ border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #e8e8ed', backgroundColor: '#fbfbfb' }}>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600, color: '#1d1d1f' }}>Email</th>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600, color: '#1d1d1f' }}>Statut</th>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600, color: '#1d1d1f' }}>Inscrit le</th>
+                        <th style={{ textAlign: 'left', padding: '12px 16px', fontWeight: 600, color: '#1d1d1f' }}>Désinscrit le</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredNewsletter.map((s) => (
+                        <tr key={s.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '12px 16px', color: '#1d1d1f' }}>{s.email}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: 8,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                backgroundColor: s.status === 'subscribed' ? '#dcfce7' : '#f3f4f6',
+                                color: s.status === 'subscribed' ? '#166534' : '#6b7280',
+                              }}
+                            >
+                              {s.status === 'subscribed' ? 'Inscrit' : 'Désinscrit'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#6e6e73' }}>{formatDate(new Date(s.subscribed_at))}</td>
+                          <td style={{ padding: '12px 16px', color: '#6e6e73' }}>{s.unsubscribed_at ? formatDate(new Date(s.unsubscribed_at)) : '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

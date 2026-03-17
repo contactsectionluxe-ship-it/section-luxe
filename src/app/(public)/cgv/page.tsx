@@ -45,7 +45,7 @@ function ConditionsSidebar({ active }: { active: 'cgu' | 'cgv' | 'charte' | 'sig
     textDecoration: 'none' as const,
   });
   return (
-    <nav style={{ width: sidebarWidth, flexShrink: 0 }}>
+    <nav className="conditions-sidebar-nav" style={{ width: sidebarWidth, flexShrink: 0 }}>
       <div
         style={{
           position: 'sticky',
@@ -76,12 +76,12 @@ function ConditionsSidebar({ active }: { active: 'cgu' | 'cgv' | 'charte' | 'sig
 export default function CGVPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ padding: '0.5cm 24px 80px', display: 'grid', gridTemplateColumns: '1fr 720px 1fr', gap: 40, alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="conditions-page-layout" style={{ padding: '30px 24px 80px', display: 'grid', gridTemplateColumns: '1fr 720px 1fr', gap: 40, alignItems: 'flex-start' }}>
+        <div className="conditions-page-sidebar-col" style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <ConditionsSidebar active="cgv" />
         </div>
-        <div>
-          <div style={{ textAlign: 'center', marginBottom: 36 }}>
+        <div className="conditions-page-main">
+          <div className="conditions-page-title-wrap" style={{ textAlign: 'center', marginBottom: 36 }}>
             <h1
               style={{
                 fontFamily: 'var(--font-playfair), Georgia, serif',
@@ -98,7 +98,7 @@ export default function CGVPage() {
             <p style={{ fontSize: 13, color: '#86868b' }}>Dernière mise à jour : 22/02/2026</p>
           </div>
 
-          <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div className="conditions-page-card-wrap" style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <h2 style={{ ...sectionTitleStyle, marginTop: 0 }}>Article 1 – Identification de la société</h2>
             <p style={paragraphStyle}>
               Les présentes Conditions Générales de Vente (ci-après les « CGV ») régissent les relations contractuelles entre :
@@ -357,14 +357,14 @@ export default function CGVPage() {
             <p style={paragraphStyle}>
               Les présentes CGV sont régies par le droit français.
               Tout litige entre professionnels relève de la compétence exclusive des tribunaux du ressort du siège social de la Société, y compris en cas de pluralité de défendeurs ou d&apos;appel en garantie.
-            </p>
-          </div>
-
-          <p style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
-            <Link href="/" style={{ color: '#1d1d1f', fontWeight: 500 }}>Retour à l&apos;accueil</Link>
-          </p>
+</p>
         </div>
+
+        <p className="conditions-page-back-link" style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
+          <Link href="/" style={{ color: '#1d1d1f', fontWeight: 500 }}>Retour à l&apos;accueil</Link>
+        </p>
       </div>
     </div>
+  </div>
   );
 }

@@ -1046,6 +1046,55 @@ a:focus-visible {
     font-size: 16px !important;
   }
 
+  /* Pages CGU / CGV / Charte / Signalement : pleine largeur, nav au-dessus de la carte (sous le titre) */
+  .conditions-page-layout {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    padding-top: 16px !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    padding-bottom: 80px !important;
+    gap: 16px !important;
+    max-width: none !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .conditions-page-main {
+    display: contents !important;
+  }
+  .conditions-page-title-wrap {
+    order: 1 !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+  .conditions-page-sidebar-col {
+    display: block !important;
+    order: 2 !important;
+    justify-content: stretch !important;
+    width: 100% !important;
+  }
+  .conditions-sidebar-nav {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .conditions-sidebar-nav > div {
+    position: static !important;
+    margin-top: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 4px !important;
+  }
+  .conditions-page-card-wrap {
+    order: 3 !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0 !important;
+  }
+  .conditions-page-back-link {
+    order: 4 !important;
+    width: 100% !important;
+  }
+
   /* Page produit : Signaler / Conseils de sécurité sur la même ligne */
   .produit-buttons-signaler-conseils {
     flex-wrap: nowrap !important;

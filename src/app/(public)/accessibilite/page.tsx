@@ -35,7 +35,7 @@ const listItemStyle: React.CSSProperties = {
 export default function AccessibilitePage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ padding: '0.5cm 24px 80px' }}>
+      <div style={{ padding: '30px 24px 80px' }}>
         <div style={{ width: 720, maxWidth: '100%', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1

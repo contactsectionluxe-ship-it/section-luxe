@@ -62,7 +62,7 @@ function ConditionsSidebar({ active }: { active: 'cgu' | 'cgv' | 'charte' | 'sig
     textDecoration: 'none' as const,
   });
   return (
-    <nav style={{ width: sidebarWidth, flexShrink: 0 }}>
+    <nav className="conditions-sidebar-nav" style={{ width: sidebarWidth, flexShrink: 0 }}>
       <div
         style={{
           position: 'sticky',
@@ -93,29 +93,29 @@ function ConditionsSidebar({ active }: { active: 'cgu' | 'cgv' | 'charte' | 'sig
 export default function CGUPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
-      <div style={{ padding: '0.5cm 24px 80px', display: 'grid', gridTemplateColumns: '1fr 720px 1fr', gap: 40, alignItems: 'flex-start' }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+      <div className="conditions-page-layout" style={{ padding: '30px 24px 80px', display: 'grid', gridTemplateColumns: '1fr 720px 1fr', gap: 40, alignItems: 'flex-start' }}>
+        <div className="conditions-page-sidebar-col" style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <ConditionsSidebar active="cgu" />
         </div>
-        <div>
-        <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 28,
-              fontWeight: 500,
-              marginBottom: 8,
-              color: '#1d1d1f',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Conditions générales d&apos;utilisation
-          </h1>
-          <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 4 }}>Section Luxe</p>
-          <p style={{ fontSize: 13, color: '#86868b' }}>Dernière mise à jour : 22/06/2026</p>
-        </div>
+        <div className="conditions-page-main">
+          <div className="conditions-page-title-wrap" style={{ textAlign: 'center', marginBottom: 36 }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Conditions générales d&apos;utilisation
+            </h1>
+            <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 4 }}>Section Luxe</p>
+            <p style={{ fontSize: 13, color: '#86868b' }}>Dernière mise à jour : 22/06/2026</p>
+          </div>
 
-        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div className="conditions-page-card-wrap" style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <h2 style={{ ...sectionTitleStyle, marginTop: 0 }}>I. Dispositions générales communes</h2>
 
           <h3 style={articleTitleStyle}>Article 1 – Identification de l&apos;éditeur</h3>
@@ -498,11 +498,11 @@ export default function CGUPage() {
           </p>
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
+        <p className="conditions-page-back-link" style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
           <Link href="/" style={{ color: '#1d1d1f', fontWeight: 500 }}>Retour à l&apos;accueil</Link>
         </p>
-        </div>
       </div>
     </div>
+  </div>
   );
 }
