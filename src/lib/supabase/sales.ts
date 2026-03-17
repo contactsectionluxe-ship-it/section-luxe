@@ -32,6 +32,8 @@ export interface SellerSalesStats {
 
 /**
  * Enregistre une suppression d'annonce (à appeler avant deleteListing pour les stats "Mes ventes").
+ * Quand reason = 'vendu' (justificatif "Article vendu"), la suppression est comptabilisée comme vendu
+ * dans la page Mes ventes (bloc "Article vendu" + évolution des ventes).
  * amountCents: prix en centimes (vendu/réservé). listingTitle: titre pour affichage dans le popup "Voir".
  */
 export async function recordListingDeletion(
@@ -200,9 +202,9 @@ export async function getSellerSalesStats(
 export interface MonthEvolution {
   year: number;
   month: number;
-  /** Nombre d'articles vendus + réservés sur le mois. */
+  /** Nombre d'articles vendus sur le mois (hors réservés). */
   volume: number;
-  /** Montant total (vendu + réservé) en centimes. */
+  /** Montant total des ventes (vendu uniquement, hors réservé) en centimes. */
   amountCents: number;
 }
 
@@ -210,6 +212,7 @@ const MOIS_LABELS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 
 
 /**
  * Retourne l'évolution des ventes (volume + montant) pour chacun des 12 derniers mois.
+ * Seules les suppressions avec reason = 'vendu' sont comptées ; les articles réservés (reserve) ne sont pas inclus.
  */
 export async function getSellerSalesEvolution(sellerId: string): Promise<MonthEvolution[]> {
   const client = checkSupabase();
@@ -220,7 +223,7 @@ export async function getSellerSalesEvolution(sellerId: string): Promise<MonthEv
     .from('listing_deletions')
     .select('reason, amount_cents, deleted_at')
     .eq('seller_id', sellerId)
-    .in('reason', ['vendu', 'reserve'])
+    .eq('reason', 'vendu')
     .gte('deleted_at', start.toISOString());
 
   if (error) {

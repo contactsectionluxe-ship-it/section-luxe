@@ -33,9 +33,7 @@ const ANNONCES_SORT_OPTIONS = [
 const SUPPRESSION_RAISONS = [
   { value: 'vendu', label: 'Article vendu' },
   { value: 'reserve', label: 'Article réservé' },
-  { value: 'erreur', label: 'Erreur dans l\'annonce' },
   { value: 'retire', label: 'Article retiré de la vente' },
-  { value: 'autre', label: 'Autre' },
 ] as const;
 
 export default function SellerDashboardPage() {
@@ -319,8 +317,8 @@ export default function SellerDashboardPage() {
         {(showSkeletons || isApprovedSeller) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#666" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#3b82f6" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Annonces actives</span><span className="mes-annonces-stat-mobile">Annonces</span></p>
@@ -328,8 +326,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#666" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#dc2626" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total likes</span><span className="mes-annonces-stat-mobile">Likes</span></p>
@@ -337,8 +335,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#666" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#0ea5e9" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total messages</span><span className="mes-annonces-stat-mobile">Messages</span></p>
@@ -346,8 +344,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#666" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#16a34a" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total appels</span><span className="mes-annonces-stat-mobile">Appels</span></p>
