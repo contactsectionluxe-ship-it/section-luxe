@@ -3,12 +3,27 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle } from 'lucide-react';
+import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, type DeletionItem } from '@/lib/supabase/sales';
+import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
+import { updateListing, deleteListing } from '@/lib/supabase/listings';
 
 function formatAmountCents(cents: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(cents / 100);
+}
+
+function formatVenduLe(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `Vendu le ${day}/${month}/${year}`;
+}
+
+function formatReserveLe(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `Réservé le ${day}/${month}/${year}`;
 }
 
 function formatAmountChart(cents: number): string {
@@ -54,6 +69,10 @@ export default function MesVentesPage() {
   const [reserveList, setReserveList] = useState<DeletionItem[]>([]);
   const [reserveListLoading, setReserveListLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [reserveAction, setReserveAction] = useState<{ id: string; listingId: string; action: 'vendu' | 'annule' } | null>(null);
+  const [reserveActionLoading, setReserveActionLoading] = useState(false);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -264,8 +283,8 @@ export default function MesVentesPage() {
         {/* Stats période : mêmes cases que Mes annonces (filtrées par dates) — icônes toujours visibles, seul le chiffre change */}
         <div className="mes-ventes-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
           <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, backgroundColor: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
-              <Package size={22} color="#3b82f6" />
+            <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
+              <Package size={22} color="#6e6e73" />
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Annonces publiées</span><span className="mes-ventes-stat-mobile">Annonces</span></p>
@@ -275,8 +294,8 @@ export default function MesVentesPage() {
             </div>
           </div>
           <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
-              <Heart size={22} color="#dc2626" />
+            <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
+              <Heart size={22} color="#6e6e73" />
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total likes</span><span className="mes-ventes-stat-mobile">Likes</span></p>
@@ -286,8 +305,8 @@ export default function MesVentesPage() {
             </div>
           </div>
           <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
-              <MessageCircle size={22} color="#0ea5e9" />
+            <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
+              <MessageCircle size={22} color="#6e6e73" />
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total messages</span><span className="mes-ventes-stat-mobile">Messages</span></p>
@@ -297,8 +316,8 @@ export default function MesVentesPage() {
             </div>
           </div>
           <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 44, height: 44, backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
-              <Phone size={22} color="#16a34a" />
+            <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8, flexShrink: 0 }}>
+              <Phone size={22} color="#6e6e73" />
             </div>
             <div style={{ minWidth: 0 }}>
               <p style={{ fontSize: 11, color: '#888' }}><span className="mes-ventes-stat-desktop">Total appels</span><span className="mes-ventes-stat-mobile">Appels</span></p>
@@ -383,29 +402,77 @@ export default function MesVentesPage() {
           </div>
         </div>
 
-        {/* Popup Articles vendus sur la période */}
-        {showVenduPopup && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowVenduPopup(false)}>
-            <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', maxWidth: 480, width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #e8e6e3' }}>
-                <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f' }}>
-                  Articles vendus {dateFrom || dateTo ? 'sur la période' : ''}
-                </h3>
-                <button type="button" onClick={() => setShowVenduPopup(false)} style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#86868b', display: 'flex' }} aria-label="Fermer">
-                  <X size={22} />
-                </button>
+        {/* Popup Articles vendus — taille adaptative, survol type sous-menu header (masqué quand popup Supprimer la vente ouverte) */}
+        {showVenduPopup && !deleteConfirmId && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowVenduPopup(false)} aria-hidden />
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: 460,
+                maxHeight: '85vh',
+                minHeight: 200,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#fbfbfb',
+                borderRadius: 18,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
+                    Articles vendus {dateFrom || dateTo ? 'sur la période' : ''}
+                  </h2>
+                  <button type="button" onClick={() => setShowVenduPopup(false)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#e8e8ed', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d2d2d7'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} aria-label="Fermer">
+                    <X size={20} />
+                  </button>
+                </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, padding: 16 }}>
+              <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
                 {venduListLoading ? (
-                  <p style={{ fontSize: 14, color: '#86868b', textAlign: 'center', padding: 24 }}>Chargement...</p>
+                  <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Chargement...</p>
                 ) : venduList.length === 0 ? (
-                  <p style={{ fontSize: 14, color: '#86868b', textAlign: 'center', padding: 24 }}>Aucun article vendu sur cette période.</p>
+                  <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article vendu sur cette période.</p>
                 ) : (
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: '0 0 16px 0' }}>
                     {venduList.map((item) => (
-                      <li key={item.id} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 14, color: '#1d1d1f', flex: 1, minWidth: 0 }}>{item.listingTitle || 'Sans titre'}</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', flexShrink: 0 }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
+                      <li key={item.id}>
+                        <div
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            cursor: 'default',
+                            transition: 'background-color 0.15s',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, display: 'block' }}>{item.listingTitle || 'Sans titre'}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 14, color: '#86868b' }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
+                              <span style={{ fontSize: 13, color: '#86868b' }}>{formatVenduLe(item.deletedAt)}</span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(item.id); }}
+                            style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', flexShrink: 0, borderRadius: 8, transition: 'background-color 0.15s' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(220,38,38,0.1)'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                            aria-label="Supprimer cette vente"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -415,33 +482,228 @@ export default function MesVentesPage() {
           </div>
         )}
 
-        {/* Popup Articles réservés sur la période */}
-        {showReservePopup && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowReservePopup(false)}>
-            <div style={{ backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', maxWidth: 480, width: '100%', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={(e) => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid #e8e6e3' }}>
-                <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#1d1d1f' }}>
-                  Articles réservés {dateFrom || dateTo ? 'sur la période' : ''}
-                </h3>
-                <button type="button" onClick={() => setShowReservePopup(false)} style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#86868b', display: 'flex' }} aria-label="Fermer">
-                  <X size={22} />
-                </button>
+        {/* Popup de validation suppression vente — design Rendre visite au vendeur */}
+        {deleteConfirmId && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !deleteLoading && setDeleteConfirmId(null)} aria-hidden />
+            <div style={{ position: 'relative', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ padding: 20 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 12, borderBottom: '1px solid #e5e5e7' }}>
+                    Supprimer la vente
+                  </h2>
+                </div>
+                <p style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, lineHeight: 1.5, marginTop: 2, marginBottom: 12, textAlign: 'center' }}>
+                  Êtes-vous sûr de vouloir supprimer cette vente ?
+                </p>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 20, textAlign: 'center', padding: '0 4px' }}>
+                  Cette action est irréversible. Votre annonce est déjà supprimée ; elle ne sera plus considérée comme vendue.
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => !deleteLoading && setDeleteConfirmId(null)}
+                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1px solid #d2d2d7', borderRadius: 10, cursor: deleteLoading ? 'not-allowed' : 'pointer' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={deleteLoading || !user?.uid}
+                    onClick={async () => {
+                      if (!user?.uid || deleteLoading) return;
+                      setDeleteLoading(true);
+                      try {
+                        await deleteListingDeletion(user.uid, deleteConfirmId);
+                        setVenduList((prev) => prev.filter((i) => i.id !== deleteConfirmId));
+                        const [newStats, newEvolution] = await Promise.all([
+                          getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
+                          getSellerSalesEvolution(user.uid),
+                        ]);
+                        setStats(newStats);
+                        setEvolution(newEvolution);
+                        setDeleteConfirmId(null);
+                      } catch (e) {
+                        console.error('Suppression vente:', e);
+                      } finally {
+                        setDeleteLoading(false);
+                      }
+                    }}
+                    style={{ flex: 1, height: 44, backgroundColor: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 10, cursor: deleteLoading ? 'not-allowed' : 'pointer', opacity: deleteLoading ? 0.7 : 1 }}
+                  >
+                    {deleteLoading ? 'Suppression...' : 'Supprimer'}
+                  </button>
+                </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, padding: 16 }}>
+            </div>
+          </div>
+        )}
+
+        {/* Popup Articles réservés — même design que Articles vendus (masqué quand popup Vendu/Annulé ouverte) */}
+        {showReservePopup && !reserveAction && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowReservePopup(false)} aria-hidden />
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                maxWidth: 460,
+                maxHeight: '85vh',
+                minHeight: 200,
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#fbfbfb',
+                borderRadius: 18,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
+                    Articles réservés {dateFrom || dateTo ? 'sur la période' : ''}
+                  </h2>
+                  <button type="button" onClick={() => setShowReservePopup(false)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#e8e8ed', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d2d2d7'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} aria-label="Fermer">
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
                 {reserveListLoading ? (
-                  <p style={{ fontSize: 14, color: '#86868b', textAlign: 'center', padding: 24 }}>Chargement...</p>
+                  <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Chargement...</p>
                 ) : reserveList.length === 0 ? (
-                  <p style={{ fontSize: 14, color: '#86868b', textAlign: 'center', padding: 24 }}>Aucun article réservé sur cette période.</p>
+                  <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article réservé sur cette période.</p>
                 ) : (
-                  <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  <ul style={{ listStyle: 'none', margin: 0, padding: '0 0 16px 0' }}>
                     {reserveList.map((item) => (
-                      <li key={item.id} style={{ padding: '12px 0', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-                        <span style={{ fontSize: 14, color: '#1d1d1f', flex: 1, minWidth: 0 }}>{item.listingTitle || 'Sans titre'}</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', flexShrink: 0 }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
+                      <li key={item.id}>
+                        <div
+                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            cursor: 'default',
+                            transition: 'background-color 0.15s',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <span style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, display: 'block' }}>{item.listingTitle || 'Sans titre'}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 14, color: '#86868b' }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
+                              <span style={{ fontSize: 13, color: '#86868b' }}>{formatReserveLe(item.deletedAt)}</span>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setReserveAction({ id: item.id, listingId: item.listingId, action: 'vendu' }); }}
+                              style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#16a34a', display: 'flex', borderRadius: 8, transition: 'background-color 0.15s' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(22,163,74,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              title="Article vendu"
+                              aria-label="Article vendu"
+                            >
+                              <ShoppingBag size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setReserveAction({ id: item.id, listingId: item.listingId, action: 'annule' }); }}
+                              style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', borderRadius: 8, transition: 'background-color 0.15s' }}
+                              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(220,38,38,0.1)'; }}
+                              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                              title="Annuler la réservation"
+                              aria-label="Annuler la réservation"
+                            >
+                              <XCircle size={18} />
+                            </button>
+                          </div>
+                        </div>
                       </li>
                     ))}
                   </ul>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Popup confirmation action réservé : Vendu ou Annulé — même design que Supprimer la vente */}
+        {reserveAction && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !reserveActionLoading && setReserveAction(null)} aria-hidden />
+            <div style={{ position: 'relative', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+              <div style={{ padding: 20 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 12, borderBottom: '1px solid #e5e5e7' }}>
+                    {reserveAction.action === 'vendu' ? 'Article vendu' : 'Annuler la réservation'}
+                  </h2>
+                </div>
+                <p style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, lineHeight: 1.5, marginTop: 2, marginBottom: 12, textAlign: 'center' }}>
+                  {reserveAction.action === 'vendu'
+                    ? 'Êtes-vous sûr de passer cet article en vendu ?'
+                    : 'Êtes-vous sûr de vouloir annuler la réservation ?'}
+                </p>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 20, textAlign: 'center', padding: '0 4px' }}>
+                  {reserveAction.action === 'vendu'
+                    ? <>Cette action est irréversible. Vous pourrez le voir dans Articles vendu mais <strong>il sera supprimé de votre catalogue.</strong></>
+                    : 'L\'article sera retiré de la liste des articles réservés et l\'annonce réapparaîtra dans votre catalogue.'}
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={() => !reserveActionLoading && setReserveAction(null)}
+                    style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1px solid #d2d2d7', borderRadius: 10, cursor: reserveActionLoading ? 'not-allowed' : 'pointer' }}
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={reserveActionLoading || !user?.uid}
+                    onClick={async () => {
+                      if (!user?.uid || reserveActionLoading) return;
+                      setReserveActionLoading(true);
+                      try {
+                        if (reserveAction.action === 'vendu') {
+                          await updateListingDeletionReason(user.uid, reserveAction.id, 'vendu');
+                          await deleteListing(reserveAction.listingId);
+                          setReserveList((prev) => prev.filter((i) => i.id !== reserveAction.id));
+                          const [newVenduList, newStats, newEvolution] = await Promise.all([
+                            getSellerDeletionsByReason(user.uid, 'vendu', { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
+                            getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
+                            getSellerSalesEvolution(user.uid),
+                          ]);
+                          setVenduList(newVenduList);
+                          setStats(newStats);
+                          setEvolution(newEvolution);
+                        } else {
+                          await updateListing(reserveAction.listingId, { isActive: true });
+                          await deleteListingDeletion(user.uid, reserveAction.id);
+                          setReserveList((prev) => prev.filter((i) => i.id !== reserveAction.id));
+                          const [newStats, newEvolution] = await Promise.all([
+                            getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
+                            getSellerSalesEvolution(user.uid),
+                          ]);
+                          setStats(newStats);
+                          setEvolution(newEvolution);
+                        }
+                        setReserveAction(null);
+                      } catch (e) {
+                        console.error('Action réservation:', e);
+                      } finally {
+                        setReserveActionLoading(false);
+                      }
+                    }}
+                    style={{ flex: 1, height: 44, fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 10, cursor: reserveActionLoading ? 'not-allowed' : 'pointer', opacity: reserveActionLoading ? 0.7 : 1, backgroundColor: reserveAction.action === 'vendu' ? '#16a34a' : '#dc2626', color: '#fff' }}
+                  >
+                    {reserveActionLoading ? 'En cours...' : reserveAction.action === 'vendu' ? 'Article vendu' : 'Annuler la réservation'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -32,7 +32,6 @@ const ANNONCES_SORT_OPTIONS = [
 
 const SUPPRESSION_RAISONS = [
   { value: 'vendu', label: 'Article vendu' },
-  { value: 'reserve', label: 'Article réservé' },
   { value: 'retire', label: 'Article retiré de la vente' },
 ] as const;
 
@@ -55,6 +54,8 @@ export default function SellerDashboardPage() {
   const [deleting, setDeleting] = useState(false);
   const [listingToToggle, setListingToToggle] = useState<Listing | null>(null);
   const [toggling, setToggling] = useState(false);
+  const [listingToReserve, setListingToReserve] = useState<Listing | null>(null);
+  const [reserving, setReserving] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -140,7 +141,7 @@ export default function SellerDashboardPage() {
     if (!user?.uid || !listingToDelete) return;
     setDeleting(true);
     try {
-      const amountCents = (deleteReason === 'vendu' || deleteReason === 'reserve') && listingToDelete.price != null ? Math.round(Number(listingToDelete.price) * 100) : undefined;
+      const amountCents = deleteReason === 'vendu' && listingToDelete.price != null ? Math.round(Number(listingToDelete.price) * 100) : undefined;
       try {
         await recordListingDeletion(user.uid, listingToDelete.id, deleteReason || 'autre', amountCents, listingToDelete.title);
       } catch (e) {
@@ -168,6 +169,26 @@ export default function SellerDashboardPage() {
       console.error(err);
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleConfirmReserve = async () => {
+    if (!user?.uid || !listingToReserve) return;
+    setReserving(true);
+    try {
+      const amountCents = listingToReserve.price != null ? Math.round(Number(listingToReserve.price) * 100) : undefined;
+      try {
+        await recordListingDeletion(user.uid, listingToReserve.id, 'reserve', amountCents, listingToReserve.title);
+      } catch (e) {
+        console.warn('Enregistrement réservation ignoré:', e);
+      }
+      await updateListing(listingToReserve.id, { isActive: false });
+      setListings((prev) => prev.map((l) => (l.id === listingToReserve.id ? { ...l, isActive: false } : l)));
+      setListingToReserve(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setReserving(false);
     }
   };
 
@@ -317,8 +338,8 @@ export default function SellerDashboardPage() {
         {(showSkeletons || isApprovedSeller) && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#3b82f6" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Package size={22} color="#6e6e73" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Annonces actives</span><span className="mes-annonces-stat-mobile">Annonces</span></p>
@@ -326,8 +347,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#dc2626" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Heart size={22} color="#6e6e73" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total likes</span><span className="mes-annonces-stat-mobile">Likes</span></p>
@@ -335,8 +356,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#0ea5e9" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <MessageCircle size={22} color="#6e6e73" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total messages</span><span className="mes-annonces-stat-mobile">Messages</span></p>
@@ -344,8 +365,8 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#16a34a" />}
+              <div style={{ width: 44, height: 44, backgroundColor: showSkeletons ? 'transparent' : '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                {showSkeletons ? <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8 }} /> : <Phone size={22} color="#6e6e73" />}
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="mes-annonces-stat-desktop">Total appels</span><span className="mes-annonces-stat-mobile">Appels</span></p>
@@ -487,33 +508,53 @@ export default function SellerDashboardPage() {
             <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {filteredListings.map((listing) => (
                 <div key={listing.id} style={{ position: 'relative', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); openDeleteModal(listing); }}
-                    disabled={deleting && listingToDelete?.id === listing.id}
-                    aria-label="Supprimer l'annonce"
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      left: 8,
-                      zIndex: 10,
-                      padding: 4,
-                      width: 22,
-                      height: 22,
-                      boxSizing: 'border-box',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      borderRadius: 4,
-                      backgroundColor: '#f0f0f0',
-                      color: '#1d1d1f',
-                      cursor: deleting && listingToDelete?.id === listing.id ? 'not-allowed' : 'pointer',
-                      opacity: deleting && listingToDelete?.id === listing.id ? 0.7 : 1,
-                    }}
-                  >
-                    <X size={14} strokeWidth={2.5} />
-                  </button>
+                  <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openDeleteModal(listing); }}
+                      disabled={deleting && listingToDelete?.id === listing.id}
+                      aria-label="Supprimer l'annonce"
+                      style={{
+                        padding: 4,
+                        width: 22,
+                        height: 22,
+                        boxSizing: 'border-box',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        borderRadius: 4,
+                        backgroundColor: '#f0f0f0',
+                        color: '#1d1d1f',
+                        cursor: deleting && listingToDelete?.id === listing.id ? 'not-allowed' : 'pointer',
+                        opacity: deleting && listingToDelete?.id === listing.id ? 0.7 : 1,
+                      }}
+                    >
+                      <X size={14} strokeWidth={2.5} />
+                    </button>
+                    {listing.isActive && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setListingToReserve(listing);
+                        }}
+                        style={{
+                          padding: '4px 10px',
+                          backgroundColor: '#fff7ed',
+                          color: '#ea580c',
+                          fontSize: 11,
+                          fontWeight: 500,
+                          borderRadius: 4,
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Réserver
+                      </button>
+                    )}
+                  </div>
                   <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
@@ -717,6 +758,39 @@ export default function SellerDashboardPage() {
                 style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: toggling ? 'not-allowed' : 'pointer', opacity: toggling ? 0.7 : 1 }}
               >
                 {toggling ? 'En cours...' : 'Confirmer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {listingToReserve && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !reserving && setListingToReserve(null)} aria-hidden />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 410, backgroundColor: '#fff', padding: '24px 20px', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+              Marquer comme réservé
+            </h2>
+            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
+              Cet article sera retiré du catalogue et apparaîtra dans la page Mes ventes &gt; Articles réservés.
+              <br />
+              Vous pourrez l’annuler ou le marquer comme vendu.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => !reserving && setListingToReserve(null)}
+                style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: reserving ? 'not-allowed' : 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReserve}
+                disabled={reserving}
+                style={{ flex: 1, height: 44, backgroundColor: '#ea580c', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: reserving ? 'not-allowed' : 'pointer', opacity: reserving ? 0.7 : 1 }}
+              >
+                {reserving ? 'En cours...' : 'Réserver'}
               </button>
             </div>
           </div>

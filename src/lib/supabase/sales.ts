@@ -103,6 +103,38 @@ export async function getSellerDeletionsByReason(
 }
 
 /**
+ * Supprime un enregistrement de vente/réservation (listing_deletion) par son id.
+ * Le vendeur ne peut supprimer que ses propres enregistrements (vérifié côté client via sellerId).
+ */
+export async function deleteListingDeletion(sellerId: string, deletionId: string): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client
+    .from('listing_deletions')
+    .delete()
+    .eq('id', deletionId)
+    .eq('seller_id', sellerId);
+  if (error) throw error;
+}
+
+/**
+ * Met à jour la raison d'un enregistrement listing_deletion (ex. de 'reserve' à 'vendu').
+ * Permet de faire passer un article réservé en "vendu" depuis le popup Articles réservés.
+ */
+export async function updateListingDeletionReason(
+  sellerId: string,
+  deletionId: string,
+  newReason: SuppressionReason
+): Promise<void> {
+  const client = checkSupabase();
+  const { error } = await client
+    .from('listing_deletions')
+    .update({ reason: newReason })
+    .eq('id', deletionId)
+    .eq('seller_id', sellerId);
+  if (error) throw error;
+}
+
+/**
  * Retourne les stats ventes du vendeur sur une période optionnelle (filtres date comme Mes factures).
  */
 export async function getSellerSalesStats(

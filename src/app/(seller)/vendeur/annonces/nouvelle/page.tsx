@@ -1998,7 +1998,12 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       type="text"
                       inputMode="decimal"
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9,.]/g, '');
+                        const parts = v.split(/[,.]/);
+                        const filtered = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
+                        setPrice(filtered);
+                      }}
                       placeholder="Ex: 5000"
                       required
                       style={{ ...inputStyle, paddingRight: 44 }}

@@ -2223,7 +2223,19 @@ setMaterialSearchQuery('');
                 >
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Prix (€) <span style={{ color: '#1d1d1f' }}>*</span></label>
-              <input type="text" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Ex: 5000" style={inputStyle} />
+              <input
+                type="text"
+                inputMode="decimal"
+                value={price}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9,.]/g, '');
+                  const parts = v.split(/[,.]/);
+                  const filtered = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
+                  setPrice(filtered);
+                }}
+                placeholder="Ex: 5000"
+                style={inputStyle}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
               <input type="checkbox" id="isActive" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} style={{ width: 16, height: 16, accentColor: '#1d1d1f', marginLeft: 4 }} />

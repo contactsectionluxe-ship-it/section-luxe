@@ -94,8 +94,12 @@ export default function VoirAnnoncePage() {
       } catch (recordErr) {
         console.warn('Enregistrement Mes ventes (listing_deletions) ignoré:', recordErr);
       }
-      // Toujours supprimer l'annonce du catalogue
-      await deleteListing(listingId);
+      if (deleteReason === 'reserve') {
+        // Réservé : désactiver l'annonce (soft delete) pour pouvoir la réactiver si annulation
+        await updateListing(listingId, { isActive: false });
+      } else {
+        await deleteListing(listingId);
+      }
       router.push('/vendeur');
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'annonce:', error);
@@ -263,8 +267,8 @@ export default function VoirAnnoncePage() {
           {/* Stats — même design que Mes annonces */}
           <div className="voir-annonce-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
             <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <Heart size={22} color="#dc2626" />
+              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                <Heart size={22} color="#6e6e73" />
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total likes</span><span className="voir-annonce-stat-mobile">Likes</span></p>
@@ -272,8 +276,8 @@ export default function VoirAnnoncePage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <MessageCircle size={22} color="#0ea5e9" />
+              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                <MessageCircle size={22} color="#6e6e73" />
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total messages</span><span className="voir-annonce-stat-mobile">Messages</span></p>
@@ -281,8 +285,8 @@ export default function VoirAnnoncePage() {
               </div>
             </div>
             <div style={{ padding: 16, border: '1px solid #eee', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
-                <Phone size={22} color="#16a34a" />
+              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                <Phone size={22} color="#6e6e73" />
               </div>
               <div>
                 <p style={{ fontSize: 11, color: '#888' }}><span className="voir-annonce-stat-desktop">Total appels</span><span className="voir-annonce-stat-mobile">Appels</span></p>
