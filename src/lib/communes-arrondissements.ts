@@ -4,8 +4,12 @@
  * Format : { nom, codesPostaux } — chaque code à 5 chiffres donne une suggestion "CODE - Nom".
  */
 
-/** Arrondissements de Paris (75001–75020). */
-const PARIS_CODES = Array.from({ length: 20 }, (_, i) => String(75001 + i).padStart(5, '0'));
+/** Arrondissements de Paris (75001–75020), avec 75116 juste après 75016. */
+const PARIS_CODES = [
+  ...Array.from({ length: 16 }, (_, i) => String(75001 + i).padStart(5, '0')),
+  '75116',
+  ...Array.from({ length: 4 }, (_, i) => String(75017 + i).padStart(5, '0')),
+];
 
 /** Arrondissements de Lyon (69001–69009). */
 const LYON_CODES = Array.from({ length: 9 }, (_, i) => String(69001 + i).padStart(5, '0'));

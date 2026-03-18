@@ -193,30 +193,60 @@ function haversineKm(
 /** Rayons proposés (km) pour le filtre "autour de ma position" — 5 à 200 km, sélecteur glissant. */
 const RADIUS_KM_OPTIONS = [5, 10, 20, 50, 100, 200];
 
-/** Récupère les coordonnées du centre d'une commune par code postal (API geo.api.gouv.fr). */
+/** Normalise un code postal pour l'utiliser comme clé (coordsMap, cache). Toujours 5 caractères ou 2A/2B. */
+function normalizePostcodeKey(s: string | null | undefined): string {
+  const raw = (s ?? '').replace(/\s/g, '').trim();
+  if (!raw) return '';
+  if (raw === '2A' || raw === '2B') return raw;
+  return raw.length >= 5 ? raw.slice(0, 5) : raw;
+}
+
+/** Récupère les coordonnées du centre d'une commune par code postal (API geo.api.gouv.fr, puis fallback api-adresse). */
 async function fetchCoordsForPostcode(
   codePostal: string
 ): Promise<{ lat: number; lon: number } | null> {
-  const q = codePostal.replace(/\s/g, '').slice(0, 5);
+  let q = codePostal.replace(/\s/g, '').trim().slice(0, 5);
   if (!q) return null;
+  if (q === '2A' || q === '2B') q = '20';
+  // 1) geo.api.gouv.fr (centre de la commune)
   try {
     const res = await fetch(
       `https://geo.api.gouv.fr/communes?codePostal=${encodeURIComponent(q)}&limit=1`
     );
+    if (res.ok) {
+      const data = await res.json();
+      const first = Array.isArray(data) ? data[0] : null;
+      if (first && typeof first === 'object') {
+        const o = first as { centre?: { coordinates?: number[] }; geometry?: { type?: string; coordinates?: number[] } };
+        const centre =
+          o.centre?.coordinates ??
+          (o.geometry?.type === 'Point' ? o.geometry?.coordinates : null);
+        if (centre && Array.isArray(centre) && centre.length >= 2) {
+          const [lon, lat] = centre;
+          if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+        }
+      }
+    }
+  } catch {
+    // ignore, try fallback
+  }
+  // 2) Fallback: api-adresse.data.gouv.fr (première adresse trouvée pour ce code postal)
+  try {
+    const res = await fetch(
+      `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=1`
+    );
     if (!res.ok) return null;
     const data = await res.json();
-    const first = Array.isArray(data) ? data[0] : null;
-    if (!first || typeof first !== 'object') return null;
-    const o = first as { centre?: { coordinates?: number[] }; geometry?: { type?: string; coordinates?: number[] } };
-    const centre =
-      o.centre?.coordinates ??
-      (o.geometry?.type === 'Point' ? o.geometry?.coordinates : null);
-    if (!centre || !Array.isArray(centre) || centre.length < 2) return null;
-    const [lon, lat] = centre;
-    return Number.isFinite(lat) && Number.isFinite(lon) ? { lat, lon } : null;
+    const feat = data?.features?.[0];
+    const coords = feat?.geometry?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const [lon, lat] = coords;
+      if (Number.isFinite(lat) && Number.isFinite(lon)) return { lat, lon };
+    }
   } catch {
-    return null;
+    // ignore
   }
+  return null;
 }
 
 /** Récupère le code postal à partir de coordonnées (reverse geocoding, API adresse.data.gouv.fr). */
@@ -1034,7 +1064,7 @@ function CatalogueContent() {
       const articleTypes = filters.articleTypes?.length
         ? expandArticleTypesForFilter(selectedArticleTypeValues)
         : undefined;
-      const limitCount = radiusKm > 0 && userCoords ? 500 : 200;
+      const limitCount = radiusKm > 0 && userCoords ? 3000 : 200;
       const data = await getListings({ categories, brands, models, colors, materials, conditions, sizes, genres, articleTypes, sellerId: filters.sellerId, sortBy, limitCount });
 
       if (loadId !== loadListingsIdRef.current) return;
@@ -1095,42 +1125,50 @@ function CatalogueContent() {
         });
       }
 
-      /** Filtre rayon (km) autour de la position utilisateur — bonne alternative aux filtres localisation */
-      if (radiusKm > 0 && userCoords) {
-        const cache = postcodeCoordsCacheRef.current;
-        const uniquePostcodes = [
-          ...new Set(
-            filtered
-              .map((l) => l.sellerPostcode?.replace(/\s/g, '').trim())
-              .filter((pc): pc is string => Boolean(pc))
-          ),
-        ];
-        const coordsMap = new Map<string, { lat: number; lon: number }>();
-        for (const pc of uniquePostcodes) {
-          let c: { lat: number; lon: number } | undefined = cache.get(pc);
-          if (!c) {
-            const fetched = await fetchCoordsForPostcode(pc);
-            if (fetched) {
-              cache.set(pc, fetched);
-              c = fetched;
+      /**
+       * Filtre rayon (km) :
+       * - Pas de km sélectionné (0) → ne pas prendre en compte le filtre.
+       * - 5 / 10 / 20 / 50 / 100 / 200 km → n'afficher que les annonces des vendeurs situés à au plus cette distance de la position de l'utilisateur.
+       */
+      if (radiusKm > 0) {
+        if (!userCoords) {
+          filtered = [];
+        } else {
+          const isValidKey = (key: string) => key.length >= 5 || key === '2A' || key === '2B';
+          const cache = postcodeCoordsCacheRef.current;
+          const postcodesNorm = filtered
+            .map((l) => normalizePostcodeKey(l.sellerPostcode))
+            .filter((key) => isValidKey(key));
+          const uniquePostcodes = [...new Set(postcodesNorm)];
+          const coordsMap = new Map<string, { lat: number; lon: number }>();
+          for (const pcNorm of uniquePostcodes) {
+            let c: { lat: number; lon: number } | undefined = cache.get(pcNorm);
+            if (!c) {
+              const fetched = await fetchCoordsForPostcode(pcNorm);
+              if (fetched) {
+                cache.set(pcNorm, fetched);
+                c = fetched;
+              }
             }
+            if (c) coordsMap.set(pcNorm, c);
           }
-          if (c) coordsMap.set(pc, c);
+          const userPostcode = await fetchPostcodeFromCoords(userCoords.lat, userCoords.lon);
+          const userPostcodeNorm = userPostcode?.replace(/\s/g, '').trim() ?? '';
+          const userNorm5 = normalizePostcodeKey(userPostcodeNorm);
+          const epsilonKm = 0.2;
+          filtered = filtered.filter((l) => {
+            const pcNorm = normalizePostcodeKey(l.sellerPostcode);
+            if (!pcNorm || !isValidKey(pcNorm)) return false;
+            if (userNorm5 && (pcNorm === userNorm5 || (userPostcodeNorm && l.sellerPostcode?.replace(/\s/g, '').trim() === userPostcodeNorm))) return true;
+            if (userNorm5 && isValidKey(userNorm5) && pcNorm.slice(0, 2) === '75' && userNorm5.slice(0, 2) === '75' && pcNorm.slice(-2) === userNorm5.slice(-2)) return true;
+            const c = coordsMap.get(pcNorm);
+            if (!c) return false;
+            const d = haversineKm(userCoords, c);
+            return d <= radiusKm + epsilonKm;
+          });
+          // Avec filtre rayon : tri par plus récent (pas par distance)
+          filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
         }
-        const userPostcode = await fetchPostcodeFromCoords(userCoords.lat, userCoords.lon);
-        const userPostcodeNorm = userPostcode?.replace(/\s/g, '').trim() ?? '';
-        const norm5 = (s: string) => s.replace(/\s/g, '').trim().slice(0, 5);
-        const epsilonKm = 2;
-        filtered = filtered.filter((l) => {
-          const pc = l.sellerPostcode?.replace(/\s/g, '').trim();
-          if (!pc) return false;
-          if (userPostcodeNorm && (pc === userPostcodeNorm || norm5(pc) === norm5(userPostcodeNorm))) return true;
-          const c = coordsMap.get(pc);
-          if (!c) return false;
-          const d = haversineKm(userCoords, c);
-          if (d < 1) return true;
-          return d <= radiusKm + epsilonKm;
-        });
       }
 
       if (loadId !== loadListingsIdRef.current) return;
@@ -1198,17 +1236,17 @@ function CatalogueContent() {
     loadListings();
   }, [loadListings]);
 
-  /** Demander la position (appelée automatiquement quand l’utilisateur sélectionne un rayon > 0). */
+  /** Demander la position (appelée quand l'utilisateur sélectionne un rayon > 0). */
   const requestPosition = useCallback(() => {
     setGeoError(null);
     setGeoLoading(true);
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      setGeoError('La géolocalisation n’est pas supportée par votre navigateur.');
+      setGeoError("La géolocalisation n'est pas supportée par votre navigateur.");
       setGeoLoading(false);
       return;
     }
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      setGeoError('La localisation nécessite une connexion sécurisée (HTTPS). Ouvrez le site en https.');
+      setGeoError("La géolocalisation n'est disponible qu'en HTTPS. Ouvrez le site avec une adresse commençant par https:// (ou utilisez localhost en développement).");
       setGeoLoading(false);
       return;
     }
@@ -1225,14 +1263,17 @@ function CatalogueContent() {
       },
       (err: GeolocationPositionError) => {
         const code = err?.code ?? 0;
+        const isSecure = typeof window !== 'undefined' && window.isSecureContext;
         const message =
           code === 1
-            ? 'Localisation refusée.'
+            ? !isSecure
+              ? "La géolocalisation n'est disponible qu'en HTTPS. Ouvrez le site avec une adresse sécurisée (https://) pour utiliser le filtre par rayon."
+              : "Localisation refusée. Vérifiez les autorisations du site : cliquez sur l'icône (cadenas ou i) à gauche de l'adresse et autorisez la localisation."
             : code === 2
               ? 'Position indisponible. Vérifiez que la localisation est activée sur votre appareil.'
               : code === 3
                 ? 'Délai dépassé. Réessayez dans un endroit avec meilleur signal.'
-                : 'Impossible d’obtenir votre position. Vérifiez les autorisations du navigateur et réessayez.';
+                : "Impossible d'obtenir votre position. Vérifiez les autorisations du navigateur et réessayez.";
         setGeoError(message);
         setGeoLoading(false);
       },
@@ -1240,10 +1281,7 @@ function CatalogueContent() {
     );
   }, []);
 
-  /** Dès qu’un rayon > 0 est choisi, demander la position pour filtrer par distance. */
-  useEffect(() => {
-    if (radiusKm > 0 && !userCoords && !geoLoading && !geoError) requestPosition();
-  }, [radiusKm, userCoords, geoLoading, geoError, requestPosition]);
+  /** Ne pas demander la position depuis un useEffect : le navigateur exige un geste utilisateur (clic). */
 
   /** Fermer le tooltip État (i) au clic ailleurs sur la page */
   useEffect(() => {
@@ -1652,13 +1690,14 @@ function CatalogueContent() {
     return () => clearTimeout(t);
   }, [locationQuery]);
 
+
   /** Fusion suggestions statiques + villes API. Format d’en-tête unifié : "CODE - Ville" (ex. 75 - Paris, 75017 - Paris). */
   const locationSuggestions = useMemo(() => {
     const fromLocal: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
     const localCommunes = searchCommuneArrondissement(locationQuery, normalizeForSearch);
     for (const c of localCommunes) {
       for (const code of c.codesPostaux) {
-        fromLocal.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: [code] });
+        fromLocal.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: (code === '75016' || code === '75116') ? ['75016', '75116'] : [code] });
       }
     }
     const fromCities: { type: 'region' | 'postal' | 'city'; label: string; prefixes: string[] }[] = [];
@@ -1670,10 +1709,10 @@ function CatalogueContent() {
         .filter(Boolean);
       if (codes.length === 0) continue;
       if (codes.length === 1) {
-        fromCities.push({ type: 'city', label: `${codes[0]} - ${c.nom}`, prefixes: [codes[0]] });
+        fromCities.push({ type: 'city', label: `${codes[0]} - ${c.nom}`, prefixes: (codes[0] === '75016' || codes[0] === '75116') ? ['75016', '75116'] : [codes[0]] });
       } else {
         for (const code of codes) {
-          fromCities.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: [code] });
+          fromCities.push({ type: 'city', label: `${code} - ${c.nom}`, prefixes: (code === '75016' || code === '75116') ? ['75016', '75116'] : [code] });
         }
       }
     }
@@ -3489,9 +3528,6 @@ function CatalogueContent() {
               {radiusKm === 0 ? '— —' : `${radiusKm} km`}
             </span>
           </div>
-          {geoError && radiusKm > 0 && (
-            <p style={{ fontSize: 13, color: '#1d1d1f', marginTop: 8, marginBottom: 0 }}>{geoError}</p>
-          )}
         </div>
       </FilterSection>
       </div>
@@ -4211,10 +4247,10 @@ function CatalogueContent() {
                         />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                        <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                          <span className="listing-grid-vendeur-nom" title={listing.sellerName}>{listing.sellerName}</span>
+                        <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                          <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
                           {listing.sellerPostcode && (
-                            <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
+                            <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
                               <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
                               {listing.sellerPostcode}
                             </span>

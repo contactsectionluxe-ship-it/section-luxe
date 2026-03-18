@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag } from 'lucide-react';
+import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
 import { updateListing, deleteListing } from '@/lib/supabase/listings';
@@ -60,7 +60,36 @@ function MesVentesPageContent() {
   const [stats, setStats] = useState<SellerSalesStats | null>(null);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [datePresetOpen, setDatePresetOpen] = useState(false);
   const [evolution, setEvolution] = useState<MonthEvolution[]>([]);
+
+  const toYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const setPresetCeMois = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    setDateFrom(toYMD(start));
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
+  const setPresetCeTrimestre = () => {
+    const now = new Date();
+    const q = Math.floor(now.getMonth() / 3) + 1;
+    const start = new Date(now.getFullYear(), (q - 1) * 3, 1);
+    setDateFrom(toYMD(start));
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
+  const setPresetCetteAnnee = () => {
+    const now = new Date();
+    setDateFrom(`${now.getFullYear()}-01-01`);
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
   const [evolutionLoading, setEvolutionLoading] = useState(true);
   const [chartMode, setChartMode] = useState<'volume' | 'montant'>('volume');
   const [showVenduPopup, setShowVenduPopup] = useState(false);
@@ -248,50 +277,123 @@ function MesVentesPageContent() {
               : undefined
           }
         >
-        {/* Filtres dates (même style que Mes factures) */}
+        {/* Filtres dates : Date (Ce mois / Ce trimestre / Cette année) + Entre … et … */}
         <div className="mes-ventes-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-          <div className="mes-ventes-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
-            <input
-              type="date"
-              className="mes-ventes-date-input"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              style={{
-                height: 44,
-                padding: '0 12px',
-                border: '1px solid #d2d2d7',
-                borderRadius: 12,
-                fontSize: 14,
-                color: '#1d1d1f',
-              }}
-            />
-            <label style={{ fontSize: 14, color: '#6e6e73' }}>et</label>
-            <input
-              type="date"
-              className="mes-ventes-date-input"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              style={{
-                height: 44,
-                padding: '0 12px',
-                border: '1px solid #d2d2d7',
-                borderRadius: 12,
-                fontSize: 14,
-                color: '#1d1d1f',
-              }}
-            />
+          <div className="mes-ventes-filtres-left" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
+            <div className="mes-ventes-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => setDatePresetOpen((o) => !o)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    height: 44,
+                    padding: '0 12px',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    backgroundColor: '#fff',
+                    fontSize: 14,
+                    color: '#1d1d1f',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ color: '#6e6e73' }}>Date</span>
+                  <ChevronDown size={16} style={{ opacity: datePresetOpen ? 0.7 : 0.5 }} />
+                </button>
+                {datePresetOpen && (
+                  <>
+                    <div
+                      role="button"
+                      tabIndex={-1}
+                      style={{ position: 'fixed', inset: 0, zIndex: 10 }}
+                      onClick={() => setDatePresetOpen(false)}
+                      onKeyDown={() => {}}
+                      aria-label="Fermer"
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: 4,
+                        zIndex: 11,
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 12,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                        minWidth: 160,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={setPresetCeMois}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        Ce mois
+                      </button>
+                      <button
+                        type="button"
+                        onClick={setPresetCeTrimestre}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid #e8e8ed' }}
+                      >
+                        Ce trimestre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={setPresetCetteAnnee}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid #e8e8ed' }}
+                      >
+                        Cette année
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+              <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
+              <input
+                type="date"
+                className="mes-ventes-date-input"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                style={{
+                  height: 44,
+                  padding: '0 12px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                }}
+              />
+              <label style={{ fontSize: 14, color: '#6e6e73' }}>et</label>
+              <input
+                type="date"
+                className="mes-ventes-date-input"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                style={{
+                  height: 44,
+                  padding: '0 12px',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  color: '#1d1d1f',
+                }}
+              />
+            </div>
+            <span className="mes-ventes-filtres-reset-wrap">
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); setDateFrom(''); setDateTo(''); setDatePresetOpen(false); }}
+                style={{ fontSize: 14, color: '#6e6e73', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-inter), var(--font-sans)' }}
+              >
+                <span className="mes-ventes-reset-desktop">Réinitialiser les filtres</span>
+                <span className="mes-ventes-reset-mobile">Réinitialiser</span>
+              </button>
+            </span>
           </div>
-          <span className="mes-ventes-filtres-reset-wrap">
-            <button
-              type="button"
-              onClick={(e) => { e.preventDefault(); setDateFrom(''); setDateTo(''); }}
-              style={{ fontSize: 14, color: '#6e6e73', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, fontFamily: 'var(--font-inter), var(--font-sans)' }}
-            >
-              <span className="mes-ventes-reset-desktop">Réinitialiser les filtres</span>
-              <span className="mes-ventes-reset-mobile">Réinitialiser</span>
-            </button>
-          </span>
         </div>
 
         {/* Stats période : mêmes cases que Mes annonces (filtrées par dates) — icônes toujours visibles, seul le chiffre change */}

@@ -230,7 +230,14 @@ export default function ProfilVendeurPage() {
           <p style={{ fontSize: 14, color: '#888' }}>Modifier les informations du profil</p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ backgroundColor: '#fff', borderRadius: 18, padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <form onSubmit={handleSubmit} style={{ position: 'relative', backgroundColor: '#fff', borderRadius: 18, padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          {seller.status === 'approved' && (
+            <div style={{ position: 'absolute', top: 20, left: 28, zIndex: 1 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
+                <CheckCircle size={14} /> Validé
+              </span>
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
             <input
               ref={fileInputRef}
@@ -319,13 +326,6 @@ export default function ProfilVendeurPage() {
             </div>
           )}
 
-          {seller.status === 'approved' && (
-            <div style={{ marginBottom: 16 }}>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 600, borderRadius: 8 }}>
-                <CheckCircle size={14} /> Validé
-              </span>
-            </div>
-          )}
           {seller.status === 'suspended' && (
             <div
               style={{

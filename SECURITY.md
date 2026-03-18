@@ -9,7 +9,7 @@ Ce document décrit les mesures de sécurité en place pour un déploiement prof
 - **X-Content-Type-Options: nosniff** : empêche le MIME sniffing.
 - **Content-Security-Policy (CSP)** : limite les sources de scripts, styles, images et connexions (XSS).
 - **Referrer-Policy** : limite les informations envoyées en referrer.
-- **Permissions-Policy** : désactive caméra, micro, géolocalisation.
+- **Permissions-Policy** : désactive caméra et micro ; autorise la géolocalisation pour le site (filtre « rayon » du catalogue).
 - **X-Powered-By** : désactivé (next.config) pour ne pas exposer la stack.
 
 ## Rate limiting (middleware)

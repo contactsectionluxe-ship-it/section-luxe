@@ -46,7 +46,40 @@ export default function FacturesPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
+  const [datePresetOpen, setDatePresetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  /** Format YYYY-MM-DD en heure locale (évite le décalage UTC de toISOString qui donnait le jour précédent). */
+  const toYMD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  /** Ce mois : du 1er du mois à la date du jour. */
+  const setPresetCeMois = () => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    setDateFrom(toYMD(start));
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
+  /** Ce trimestre : du 1er du trimestre à la date du jour. */
+  const setPresetCeTrimestre = () => {
+    const now = new Date();
+    const q = Math.floor(now.getMonth() / 3) + 1;
+    const start = new Date(now.getFullYear(), (q - 1) * 3, 1);
+    setDateFrom(toYMD(start));
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
+  /** Cette année : du 1er janvier à la date du jour. */
+  const setPresetCetteAnnee = () => {
+    const now = new Date();
+    setDateFrom(`${now.getFullYear()}-01-01`);
+    setDateTo(toYMD(now));
+    setDatePresetOpen(false);
+  };
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -166,6 +199,77 @@ export default function FacturesPage() {
         <div className="mes-factures-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
             <div className="mes-factures-filtres-left" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, flex: 1, minWidth: 0 }}>
             <div className="mes-factures-filtres-dates" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => { setDatePresetOpen((o) => !o); setSortDropdownOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    height: 44,
+                    padding: '0 12px',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    backgroundColor: '#fff',
+                    fontSize: 14,
+                    color: '#1d1d1f',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ color: '#6e6e73' }}>Date</span>
+                  <ChevronDown size={16} style={{ opacity: datePresetOpen ? 0.7 : 0.5 }} />
+                </button>
+                {datePresetOpen && (
+                  <>
+                    <div
+                      role="button"
+                      tabIndex={-1}
+                      style={{ position: 'fixed', inset: 0, zIndex: 10 }}
+                      onClick={() => setDatePresetOpen(false)}
+                      onKeyDown={() => {}}
+                      aria-label="Fermer"
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        marginTop: 4,
+                        zIndex: 11,
+                        backgroundColor: '#fff',
+                        border: '1px solid #d2d2d7',
+                        borderRadius: 12,
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                        minWidth: 160,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={setPresetCeMois}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        Ce mois
+                      </button>
+                      <button
+                        type="button"
+                        onClick={setPresetCeTrimestre}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid #e8e8ed' }}
+                      >
+                        Ce trimestre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={setPresetCetteAnnee}
+                        style={{ display: 'block', width: '100%', padding: '10px 14px', textAlign: 'left', fontSize: 14, color: '#1d1d1f', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid #e8e8ed' }}
+                      >
+                        Cette année
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
               <label style={{ fontSize: 14, color: '#6e6e73' }}>Entre</label>
               <input
                 type="date"
@@ -201,8 +305,8 @@ export default function FacturesPage() {
               className="mes-factures-filtres-reset-wrap"
               role="button"
               tabIndex={0}
-              onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); } }}
+              onClick={() => { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); setDatePresetOpen(false); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setDateFrom(''); setDateTo(''); setSearchQuery(''); setSortOrder('newest'); setSortDropdownOpen(false); setDatePresetOpen(false); } }}
               style={{
                 fontSize: 14,
                 color: '#6e6e73',

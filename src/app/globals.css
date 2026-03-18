@@ -651,29 +651,59 @@ a:focus-visible {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
-  /* Page Mes ventes : deux sélecteurs de date sur la même ligne, Réinitialiser à la ligne sur mobile */
+  /* Page Mes ventes : une ligne (Date + Entre + dates) sauf Réinitialiser ; pas d’icône calendrier dans les champs date */
   .mes-ventes-filtres-row {
-    gap: 8px 16px !important;
+    gap: 6px 0 !important;
     margin-bottom: 20px !important;
+    align-items: flex-start !important;
+  }
+  .mes-ventes-filtres-left {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px 8px !important;
   }
   .mes-ventes-filtres-dates {
     flex-wrap: nowrap !important;
-    width: 100% !important;
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 6px !important;
     box-sizing: border-box !important;
   }
+  .mes-ventes-filtres-dates .mes-ventes-date-input {
+    width: 110px !important;
+    min-width: 0 !important;
+  }
   .mes-ventes-date-input {
-    height: 38px !important;
-    padding: 0 10px !important;
+    height: 36px !important;
+    padding: 0 8px !important;
     font-size: 13px !important;
     border-radius: 10px !important;
-    flex: 1 !important;
-    min-width: 0 !important;
+    position: relative !important;
     box-sizing: border-box !important;
+  }
+  .mes-ventes-date-input::-webkit-calendar-picker-indicator {
+    opacity: 0 !important;
+    position: absolute !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    cursor: pointer !important;
+  }
+  .mes-ventes-filtres-dates > div:first-child button {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+  }
+  .mes-ventes-filtres-dates label {
+    font-size: 13px !important;
   }
   .mes-ventes-filtres-reset-wrap {
     flex-basis: 100% !important;
     width: 100% !important;
-    margin-top: -4px !important;
+    margin-top: 2px !important;
   }
   .mes-ventes-filtres-reset-wrap button {
     font-size: 12px !important;
@@ -763,25 +793,57 @@ a:focus-visible {
   .mes-facture-detail-table-wrap td {
     padding: 12px 10px !important;
   }
-  /* Page Mes factures : sélecteur de dates comme Mes ventes sur mobile */
+  /* Page Mes factures : une ligne (Date + Entre + dates) sauf Réinitialiser ; pas d’icône calendrier dans les champs date */
   .mes-factures-filtres-row {
-    gap: 8px 16px !important;
+    gap: 6px 0 !important;
     margin-bottom: 20px !important;
+    align-items: flex-start !important;
+  }
+  .mes-factures-filtres-left {
+    flex: 1 1 100% !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px 8px !important;
   }
   .mes-factures-filtres-dates {
     flex-wrap: nowrap !important;
-    width: 100% !important;
+    width: auto !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    gap: 6px !important;
     box-sizing: border-box !important;
   }
+  .mes-factures-filtres-dates .mes-factures-date-input {
+    width: 110px !important;
+    min-width: 0 !important;
+  }
   .mes-factures-date-input {
-    height: 38px !important;
-    padding: 0 10px !important;
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+    position: relative !important;
+  }
+  .mes-factures-date-input::-webkit-calendar-picker-indicator {
+    opacity: 0 !important;
+    position: absolute !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    cursor: pointer !important;
+  }
+  .mes-factures-filtres-dates > div:first-child button {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 13px !important;
+  }
+  .mes-factures-filtres-dates label {
     font-size: 13px !important;
   }
   .mes-factures-filtres-reset-wrap {
     flex-basis: 100% !important;
     width: 100% !important;
-    margin-top: -4px !important;
+    margin-top: 2px !important;
   }
   .mes-factures-filtres-reset-wrap {
     font-size: 12px !important;
