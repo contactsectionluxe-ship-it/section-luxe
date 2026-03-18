@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, deleteListing, updateListing } from '@/lib/supabase/listings';
-import { recordListingDeletion } from '@/lib/supabase/sales';
+import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
@@ -16,7 +16,6 @@ const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certifica
 
 const SUPPRESSION_RAISONS = [
   { value: 'vendu', label: 'Article vendu' },
-  { value: 'reserve', label: 'Article réservé' },
   { value: 'retire', label: 'Article retiré de la vente' },
 ] as const;
 
@@ -38,6 +37,7 @@ export default function VoirAnnoncePage() {
   const [showToggleModal, setShowToggleModal] = useState(false);
   const [toggleToActive, setToggleToActive] = useState<boolean | null>(null);
   const [toggling, setToggling] = useState(false);
+  const [isReserved, setIsReserved] = useState(false);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -53,9 +53,10 @@ export default function VoirAnnoncePage() {
     async function load() {
       if (!user || !listingId) return;
       try {
-        const [data, count] = await Promise.all([
+        const [data, count, reserveDeletions] = await Promise.all([
           getListing(listingId),
           getConversationsCountForListing(listingId),
+          getSellerDeletionsByReason(user.uid, 'reserve'),
         ]);
         if (data && data.sellerId !== user.uid) {
           router.replace('/vendeur');
@@ -64,6 +65,7 @@ export default function VoirAnnoncePage() {
         setListing(data || null);
         setMessagesCount(count);
         setPhotoIndex(0);
+        setIsReserved(reserveDeletions.some((d) => d.listingId === listingId));
       } catch (e) {
         console.error(e);
         router.replace('/vendeur');
@@ -87,19 +89,14 @@ export default function VoirAnnoncePage() {
     setDeleting(true);
     try {
       // Enregistrer pour Mes ventes (vendu, réservé, etc.) — ne pas bloquer la suppression si erreur
-      const amountCents = (deleteReason === 'vendu' || deleteReason === 'reserve') && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
+      const amountCents = deleteReason === 'vendu' && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
       const listingTitle = listing?.title;
       try {
         await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
       } catch (recordErr) {
         console.warn('Enregistrement Mes ventes (listing_deletions) ignoré:', recordErr);
       }
-      if (deleteReason === 'reserve') {
-        // Réservé : désactiver l'annonce (soft delete) pour pouvoir la réactiver si annulation
-        await updateListing(listingId, { isActive: false });
-      } else {
-        await deleteListing(listingId);
-      }
+      await deleteListing(listingId);
       router.push('/vendeur');
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'annonce:', error);
@@ -218,7 +215,13 @@ export default function VoirAnnoncePage() {
                   <>
                     <button
                       type="button"
-                      onClick={() => openToggleModal(true)}
+                      onClick={() => {
+                        if (!listing.isActive && isReserved) {
+                          router.push(`/vendeur/ventes?reserve=${listingId}`);
+                        } else {
+                          openToggleModal(true);
+                        }
+                      }}
                       disabled={listing.isActive}
                       style={{
                         padding: '6px 14px',
@@ -232,7 +235,7 @@ export default function VoirAnnoncePage() {
                         cursor: listing.isActive ? 'default' : 'pointer',
                       }}
                     >
-                      Activer
+                      Active
                     </button>
                     <button
                       type="button"
@@ -245,12 +248,12 @@ export default function VoirAnnoncePage() {
                         borderRadius: 8,
                         minWidth: 96,
                         border: !listing.isActive ? '1px solid #dc2626' : '1px solid #d2d2d7',
-                        backgroundColor: !listing.isActive ? '#fee2e2' : '#fff',
+                        backgroundColor: !listing.isActive ? 'transparent' : '#fff',
                         color: !listing.isActive ? '#dc2626' : '#1d1d1f',
-                        cursor: !listing.isActive ? 'default' : 'pointer',
+                        cursor: !listing.isActive && !isReserved ? 'default' : 'pointer',
                       }}
                     >
-                      Désactiver
+                      Inactive
                     </button>
                   </>
                 )}
@@ -483,13 +486,14 @@ export default function VoirAnnoncePage() {
                   borderRadius: 16,
                   boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
                 }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, marginBottom: 16, color: '#0a0a0a', textAlign: 'center' }}>
+                <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
                   Supprimer l&apos;annonce
                 </h2>
                 {deleteModalStep === 1 ? (
                   <>
-                    <p style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500, marginBottom: 10 }}>
+                    <p style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500, marginTop: 16, marginBottom: 10 }}>
                       Pour quelle raison souhaitez-vous retirer cette annonce ?
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
@@ -541,7 +545,7 @@ export default function VoirAnnoncePage() {
                   </>
                 ) : (
                   <>
-                    <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 20, textAlign: 'center' }}>
+                    <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
                       Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                     </p>
                     {deleteError && (

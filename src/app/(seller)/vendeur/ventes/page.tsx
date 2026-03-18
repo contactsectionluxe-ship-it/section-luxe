@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -53,6 +53,7 @@ function buildFakeEvolution(): MonthEvolution[] {
 
 export default function MesVentesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, seller, loading: authLoading, isApprovedSeller } = useAuth();
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
@@ -73,6 +74,7 @@ export default function MesVentesPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [reserveAction, setReserveAction] = useState<{ id: string; listingId: string; action: 'vendu' | 'annule' } | null>(null);
   const [reserveActionLoading, setReserveActionLoading] = useState(false);
+  const [reserveHighlightId, setReserveHighlightId] = useState<string | null>(null);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -95,6 +97,18 @@ export default function MesVentesPage() {
       setLoading(false);
     }
   }, [authLoading, user, seller, router]);
+
+  useEffect(() => {
+    const reserveId = searchParams.get('reserve');
+    if (!reserveId || !user?.uid) return;
+    setReserveHighlightId(reserveId);
+    setShowReservePopup(true);
+    setReserveListLoading(true);
+    getSellerDeletionsByReason(user.uid, 'reserve', { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined })
+      .then(setReserveList)
+      .finally(() => setReserveListLoading(false));
+    router.replace('/vendeur/ventes', { scroll: false });
+  }, [searchParams, user?.uid, dateFrom, dateTo, router]);
 
   useEffect(() => {
     if (!user?.uid) {
@@ -425,11 +439,11 @@ export default function MesVentesPage() {
               <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
-                    Articles vendus {dateFrom || dateTo ? 'sur la période' : ''}
+                  Articles vendus {dateFrom || dateTo ? 'sur la période' : ''}
                   </h2>
                   <button type="button" onClick={() => setShowVenduPopup(false)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#e8e8ed', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d2d2d7'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} aria-label="Fermer">
                     <X size={20} />
-                  </button>
+                </button>
                 </div>
               </div>
               <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
@@ -542,7 +556,7 @@ export default function MesVentesPage() {
         {/* Popup Articles réservés — même design que Articles vendus (masqué quand popup Vendu/Annulé ouverte) */}
         {showReservePopup && !reserveAction && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowReservePopup(false)} aria-hidden />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setShowReservePopup(false); setReserveHighlightId(null); }} aria-hidden />
             <div
               style={{
                 position: 'relative',
@@ -562,21 +576,23 @@ export default function MesVentesPage() {
               <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
-                    Articles réservés {dateFrom || dateTo ? 'sur la période' : ''}
+                  Articles réservés {dateFrom || dateTo ? 'sur la période' : ''}
                   </h2>
-                  <button type="button" onClick={() => setShowReservePopup(false)} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#e8e8ed', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d2d2d7'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} aria-label="Fermer">
+                  <button type="button" onClick={() => { setShowReservePopup(false); setReserveHighlightId(null); }} style={{ position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#e8e8ed', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#d2d2d7'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} aria-label="Fermer">
                     <X size={20} />
-                  </button>
+                </button>
                 </div>
               </div>
               <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
                 {reserveListLoading ? (
                   <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Chargement...</p>
-                ) : reserveList.length === 0 ? (
-                  <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article réservé sur cette période.</p>
-                ) : (
+                ) : (() => {
+                  const listToShow = reserveHighlightId ? reserveList.filter((i) => i.listingId === reserveHighlightId) : reserveList;
+                  return listToShow.length === 0 ? (
+                    <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article réservé sur cette période.</p>
+                  ) : (
                   <ul style={{ listStyle: 'none', margin: 0, padding: '0 0 16px 0' }}>
-                    {reserveList.map((item) => (
+                    {listToShow.map((item) => (
                       <li key={item.id}>
                         <div
                           onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
@@ -627,7 +643,8 @@ export default function MesVentesPage() {
                       </li>
                     ))}
                   </ul>
-                )}
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -717,38 +734,38 @@ export default function MesVentesPage() {
               <span className="mes-ventes-evolution-title-mobile">Évolution des ventes</span>
             </h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => setChartMode('volume')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 10,
-                  background: chartMode === 'volume' ? '#1d1d1f' : '#fff',
-                  color: chartMode === 'volume' ? '#fff' : '#1d1d1f',
-                  cursor: 'pointer',
-                }}
-              >
-                Volume
-              </button>
-              <button
-                type="button"
-                onClick={() => setChartMode('montant')}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 10,
-                  background: chartMode === 'montant' ? '#1d1d1f' : '#fff',
-                  color: chartMode === 'montant' ? '#fff' : '#1d1d1f',
-                  cursor: 'pointer',
-                }}
-              >
-                Montant
-              </button>
+            <button
+              type="button"
+              onClick={() => setChartMode('volume')}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 500,
+                border: '1px solid #d2d2d7',
+                borderRadius: 10,
+                background: chartMode === 'volume' ? '#1d1d1f' : '#fff',
+                color: chartMode === 'volume' ? '#fff' : '#1d1d1f',
+                cursor: 'pointer',
+              }}
+            >
+              Volume
+            </button>
+            <button
+              type="button"
+              onClick={() => setChartMode('montant')}
+              style={{
+                padding: '8px 16px',
+                fontSize: 14,
+                fontWeight: 500,
+                border: '1px solid #d2d2d7',
+                borderRadius: 10,
+                background: chartMode === 'montant' ? '#1d1d1f' : '#fff',
+                color: chartMode === 'montant' ? '#fff' : '#1d1d1f',
+                cursor: 'pointer',
+              }}
+            >
+              Montant
+            </button>
             </div>
           </div>
           {evolutionLoading ? (
@@ -878,12 +895,12 @@ export default function MesVentesPage() {
                     {svgYForTicks.map((y, i) => (
                       <line key={i} x1="0" y1={y} x2="100" y2={y} stroke="rgba(0,0,0,0.06)" strokeWidth="0.4" />
                     ))}
-                    <defs>
+                  <defs>
                       <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#1d1d1f" stopOpacity="0.2" />
-                        <stop offset="100%" stopColor="#1d1d1f" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
+                      <stop offset="100%" stopColor="#1d1d1f" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
                     {/* Zone dégradée sous la courbe (s'arrête au dernier mois avec données) */}
                     {points.length > 0 && (
                       <path

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerListings, deleteListing, updateListing } from '@/lib/supabase/listings';
-import { recordListingDeletion } from '@/lib/supabase/sales';
+import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
@@ -56,6 +56,9 @@ export default function SellerDashboardPage() {
   const [toggling, setToggling] = useState(false);
   const [listingToReserve, setListingToReserve] = useState<Listing | null>(null);
   const [reserving, setReserving] = useState(false);
+  const [listingToSell, setListingToSell] = useState<Listing | null>(null);
+  const [selling, setSelling] = useState(false);
+  const [reservedListingIds, setReservedListingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -90,12 +93,14 @@ export default function SellerDashboardPage() {
     async function loadListings() {
       if (!user) return;
       try {
-        const [sellerListings, count] = await Promise.all([
+        const [sellerListings, count, reserveDeletions] = await Promise.all([
           getSellerListings(user.uid),
           getSellerConversationsCount(user.uid),
+          getSellerDeletionsByReason(user.uid, 'reserve'),
         ]);
         setListings(sellerListings);
         setTotalMessages(count);
+        setReservedListingIds(new Set(reserveDeletions.map((d) => d.listingId)));
       } catch (error) {
         console.error('Error loading listings:', error);
       } finally {
@@ -184,11 +189,32 @@ export default function SellerDashboardPage() {
       }
       await updateListing(listingToReserve.id, { isActive: false });
       setListings((prev) => prev.map((l) => (l.id === listingToReserve.id ? { ...l, isActive: false } : l)));
+      setReservedListingIds((prev) => new Set([...prev, listingToReserve.id]));
       setListingToReserve(null);
     } catch (err) {
       console.error(err);
     } finally {
       setReserving(false);
+    }
+  };
+
+  const handleConfirmSell = async () => {
+    if (!user?.uid || !listingToSell) return;
+    setSelling(true);
+    try {
+      const amountCents = listingToSell.price != null ? Math.round(Number(listingToSell.price) * 100) : undefined;
+      try {
+        await recordListingDeletion(user.uid, listingToSell.id, 'vendu', amountCents, listingToSell.title);
+      } catch (e) {
+        console.warn('Enregistrement vente ignoré:', e);
+      }
+      await deleteListing(listingToSell.id);
+      setListings((prev) => prev.filter((l) => l.id !== listingToSell.id));
+      setListingToSell(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSelling(false);
     }
   };
 
@@ -508,7 +534,7 @@ export default function SellerDashboardPage() {
             <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {filteredListings.map((listing) => (
                 <div key={listing.id} style={{ position: 'relative', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
-                  <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 10 }}>
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); openDeleteModal(listing); }}
@@ -532,55 +558,59 @@ export default function SellerDashboardPage() {
                     >
                       <X size={14} strokeWidth={2.5} />
                     </button>
-                    {listing.isActive && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setListingToReserve(listing);
-                        }}
-                        style={{
-                          padding: '4px 10px',
-                          backgroundColor: '#fff7ed',
-                          color: '#ea580c',
-                          fontSize: 11,
-                          fontWeight: 500,
-                          borderRadius: 4,
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Réserver
-                      </button>
-                    )}
                   </div>
                   <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setListingToToggle(listing);
-                        }}
-                        style={{
-                          position: 'absolute',
-                          top: 8,
-                          right: 8,
-                          padding: '4px 10px',
-                          backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5',
-                          color: listing.isActive ? '#166534' : '#666',
-                          fontSize: 11,
-                          fontWeight: 500,
-                          borderRadius: 4,
-                          border: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {listing.isActive ? 'Active' : 'Inactive'}
-                      </button>
+                      {!listing.isActive && reservedListingIds.has(listing.id) ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(`/vendeur/ventes?reserve=${listing.id}`);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            padding: '4px 10px',
+                            backgroundColor: '#f5f5f5',
+                            color: '#666',
+                            fontSize: 11,
+                            fontWeight: 500,
+                            borderRadius: 4,
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Inactive
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setListingToToggle(listing);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: 8,
+                            right: 8,
+                            padding: '4px 10px',
+                            backgroundColor: listing.isActive ? '#dcfce7' : '#f5f5f5',
+                            color: listing.isActive ? '#166534' : '#666',
+                            fontSize: 11,
+                            fontWeight: 500,
+                            borderRadius: 4,
+                            border: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {listing.isActive ? 'Active' : 'Inactive'}
+                        </button>
+                      )}
                     </div>
                     <div style={{ padding: '16px 16px 12px' }}>
                       <div style={{ marginBottom: 8 }}>
@@ -600,15 +630,45 @@ export default function SellerDashboardPage() {
                       </div>
                     </div>
                   </Link>
-                  <div className="mes-annonces-card-actions" style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
-                    {isApprovedSeller && (
-                      <Link href={`/vendeur/annonces/${listing.id}`} style={{ flex: 1, padding: '8px 14px', border: '1px solid #ddd', fontSize: 13, textAlign: 'center', borderRadius: 6, color: '#1d1d1f' }}>
-                        Modifier
+                  <div className="mes-annonces-card-actions" style={{ padding: '0 16px 16px' }}>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      {isApprovedSeller && (
+                        <Link href={`/vendeur/annonces/${listing.id}`} style={{ flex: 1, padding: '8px 14px', border: '1px solid #ddd', fontSize: 13, textAlign: 'center', borderRadius: 6, color: '#1d1d1f' }}>
+                          Modifier
+                        </Link>
+                      )}
+                      <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ flex: 1, padding: '8px 14px', backgroundColor: '#000', color: '#fff', fontSize: 13, textAlign: 'center', borderRadius: 6 }}>
+                        Détails
                       </Link>
+                    </div>
+                    {listing.isActive && isApprovedSeller && (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setListingToReserve(listing); }}
+                          style={{ flex: 1, padding: '8px 14px', border: '0.5px solid #ea580c', backgroundColor: 'transparent', color: '#ea580c', fontSize: 13, textAlign: 'center', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          Réserver
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setListingToSell(listing); }}
+                          style={{ flex: 1, padding: '8px 14px', border: '0.5px solid #16a34a', backgroundColor: 'transparent', color: '#16a34a', fontSize: 13, textAlign: 'center', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          Vendu
+                        </button>
+                      </div>
                     )}
-                    <Link href={`/vendeur/annonces/${listing.id}/voir`} style={{ flex: 1, padding: '8px 14px', backgroundColor: '#000', color: '#fff', fontSize: 13, textAlign: 'center', borderRadius: 6 }}>
-                      Détails
-                    </Link>
+                    {!listing.isActive && reservedListingIds.has(listing.id) && isApprovedSeller && (
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <Link
+                          href={`/vendeur/ventes?reserve=${listing.id}`}
+                          style={{ flex: 1, padding: '8px 14px', border: '0.5px solid #ea580c', backgroundColor: 'transparent', color: '#ea580c', fontSize: 13, textAlign: 'center', borderRadius: 6, textDecoration: 'none' }}
+                        >
+                          Article réservé
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -791,6 +851,40 @@ export default function SellerDashboardPage() {
                 style={{ flex: 1, height: 44, backgroundColor: '#ea580c', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: reserving ? 'not-allowed' : 'pointer', opacity: reserving ? 0.7 : 1 }}
               >
                 {reserving ? 'En cours...' : 'Réserver'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {listingToSell && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !selling && setListingToSell(null)} aria-hidden />
+          <div style={{ position: 'relative', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 20, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
+              Article vendu
+            </h2>
+            <p style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, lineHeight: 1.5, marginTop: 16, marginBottom: 12, textAlign: 'center' }}>
+              Êtes-vous sûr de passer cet article en vendu ?
+            </p>
+            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 20, textAlign: 'center', padding: '0 4px' }}>
+              Cette action est irréversible. Vous pourrez le voir dans Articles vendu mais <strong>il sera supprimé de votre catalogue.</strong>
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                onClick={() => !selling && setListingToSell(null)}
+                style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: selling ? 'not-allowed' : 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmSell}
+                disabled={selling}
+                style={{ flex: 1, height: 44, backgroundColor: '#16a34a', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: selling ? 'not-allowed' : 'pointer', opacity: selling ? 0.7 : 1 }}
+              >
+                {selling ? 'En cours...' : 'Vendu'}
               </button>
             </div>
           </div>
