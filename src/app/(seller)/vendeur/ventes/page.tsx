@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag } from 'lucide-react';
@@ -51,7 +51,7 @@ function buildFakeEvolution(): MonthEvolution[] {
   return result;
 }
 
-export default function MesVentesPage() {
+function MesVentesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, seller, loading: authLoading, isApprovedSeller } = useAuth();
@@ -1003,5 +1003,17 @@ export default function MesVentesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MesVentesPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
+      </div>
+    }>
+      <MesVentesPageContent />
+    </Suspense>
   );
 }
