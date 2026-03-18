@@ -327,6 +327,11 @@ a:focus-visible {
   .home-section-categories .category-item-label {
     font-size: 12px !important;
   }
+  /* Premier clic immédiat sur mobile : pas d’attente double-tap */
+  .home-section-categories .category-item-photo-link {
+    touch-action: manipulation !important;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
+  }
   .home-section-featured {
     padding-top: 0 !important;
     margin-top: -12px !important;

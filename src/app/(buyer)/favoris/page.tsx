@@ -412,7 +412,7 @@ export default function FavoritesPage() {
                         position: 'relative',
                         width: '100%',
                         aspectRatio: '1',
-                        background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                        backgroundColor: '#fff',
                         overflow: 'hidden',
                       }}
                     >

@@ -560,7 +560,7 @@ export default function SellerDashboardPage() {
                     </button>
                   </div>
                   <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
-                    <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'relative' }}>
+                    <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#fff', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
                       {!listing.isActive && reservedListingIds.has(listing.id) ? (
                         <button

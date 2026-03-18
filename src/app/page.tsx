@@ -279,19 +279,21 @@ export default function HomePage() {
               onPointerMove={(e) => {
                 if (!isDraggingRef.current || !categoriesScrollRef.current) return;
                 const dx = e.clientX - dragStartX.current;
-                if (Math.abs(dx) > 5) hasDragged.current = true;
+                if (Math.abs(dx) > 10) hasDragged.current = true;
                 categoriesScrollRef.current.scrollLeft = dragStartScrollLeft.current - dx;
               }}
               onPointerUp={(e) => {
                 if (e.button !== 0) return;
                 isDraggingRef.current = false;
                 setIsDragging(false);
+                hasDragged.current = false;
                 (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
               }}
               onPointerLeave={(e) => {
                 if (isDraggingRef.current) {
                   isDraggingRef.current = false;
                   setIsDragging(false);
+                  hasDragged.current = false;
                   (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
                 }
               }}
@@ -331,6 +333,7 @@ export default function HomePage() {
                   >
                     <Link
                       href={cat.href}
+                      prefetch={true}
                       className="category-item-photo-link"
                       style={{
                         display: 'block',
@@ -338,6 +341,7 @@ export default function HomePage() {
                         color: 'inherit',
                         transition: 'transform 0.2s',
                         cursor: 'pointer',
+                        touchAction: 'manipulation',
                       }}
                       onClick={(e) => {
                         if (hasDragged.current) e.preventDefault();
@@ -565,7 +569,7 @@ export default function HomePage() {
                         position: 'relative',
                         width: '100%',
                         aspectRatio: '1',
-                        background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                        backgroundColor: '#fff',
                         overflow: 'hidden',
                       }}
                     >

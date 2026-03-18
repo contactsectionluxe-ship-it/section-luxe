@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronRight, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronRight, ChevronLeft, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings, getDistinctSizesForCategory, getDistinctSizesForCategoryAndArticleTypes } from '@/lib/supabase/listings';
 import { getSellerData } from '@/lib/supabase/auth';
@@ -786,6 +786,8 @@ function CatalogueContent() {
   const justSetFiltersFromConditionRef = useRef(false);
   /** Dernière chaîne URL qu'on a écrite nous-mêmes (évite boucle synchro URL ↔ filtres). */
   const lastSyncedUrlRef = useRef<string | null>(null);
+  /** Changement de page uniquement (pagination Neuf/Occasion) : ne pas refaire setFilters pour garder la même animation qu'au catalogue. */
+  const navigatingPageOnlyRef = useRef(false);
   /** Ignorer les réponses de loadListings périmées (ex. retour au catalogue avec filtres). */
   const loadListingsIdRef = useRef(0);
   /** Localisation : saisie pour suggestions (code postal ou région) */
@@ -845,14 +847,21 @@ function CatalogueContent() {
   const goToPage = useCallback(
     (nextPage: number) => {
       const clamped = Math.min(Math.max(nextPage, 1), totalPages);
+      if (searchParams.get('condition')) navigatingPageOnlyRef.current = true;
       setPage(clamped);
       navigateToPage(clamped, false);
-      requestAnimationFrame(() => {
-        resultsTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
     },
-    [navigateToPage, totalPages]
+    [navigateToPage, totalPages, searchParams]
   );
+
+  // Remonter en haut à chaque changement de page (pagination, retour arrière, changement de filtres)
+  const prevEffectivePageRef = useRef(effectivePage);
+  useEffect(() => {
+    if (prevEffectivePageRef.current !== effectivePage) {
+      prevEffectivePageRef.current = effectivePage;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [effectivePage]);
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => {
@@ -908,11 +917,15 @@ function CatalogueContent() {
     else if (condition === 'occasion') nextConditions = OCCASION_CONDITIONS;
     else nextConditions = undefined;
     if (nextConditions !== undefined) {
+      if (navigatingPageOnlyRef.current) {
+        navigatingPageOnlyRef.current = false;
+        return;
+      }
       justSyncedConditionFromUrlRef.current = true;
       justSetFiltersFromConditionRef.current = true;
       const fromUrl = paramsToFilters(searchParams);
       setFilters({ ...fromUrl, conditions: nextConditions, sellerId: sellerId || undefined });
-      setPage(1);
+      setPage(parsePositiveInt(searchParams.get('page'), 1));
       setLocalPriceMin(fromUrl.priceMin != null ? String(fromUrl.priceMin) : '');
       setLocalPriceMax(fromUrl.priceMax != null ? String(fromUrl.priceMax) : '');
       setLocalYearMin(fromUrl.yearMin != null ? String(fromUrl.yearMin) : '');
@@ -1140,21 +1153,27 @@ function CatalogueContent() {
               brand: p.brand ?? undefined,
               articleTypes: p.articleType ? [p.articleType] : undefined,
               condition: p.condition ?? undefined,
-              limitCount: 50,
+              limitCount: 100,
             })
           )
         );
-        const similarByKey = new Map<string, { id: string; price: number }[]>();
+        const similarByKey = new Map<string, { id: string; price: number; model?: string | null; year?: number | null }[]>();
         pairs.forEach(([k], i) => {
           similarByKey.set(
             k,
-            similarLists[i].filter((l) => l.price > 0).map((l) => ({ id: l.id, price: l.price }))
+            similarLists[i].filter((l) => l.price > 0).map((l) => ({ id: l.id, price: l.price, model: l.model, year: l.year }))
           );
         });
         const next: Record<string, { label: string; color: string }> = {};
         filtered.forEach((listing) => {
           const k = `${listing.category}_${listing.brand ?? 'all'}_${listing.articleType ?? 'all'}_${listing.condition ?? 'all'}`;
-          const others = (similarByKey.get(k) ?? []).filter((x) => x.id !== listing.id);
+          const listingYear = listing.year ?? null;
+          const others = (similarByKey.get(k) ?? []).filter(
+            (x) =>
+              x.id !== listing.id &&
+              (listing.model == null ? x.model == null : x.model === listing.model) &&
+              (listingYear == null || (x.year != null && Math.abs(x.year - listingYear) <= 2))
+          );
           if (others.length === 0) return;
           const average = others.reduce((s, x) => s + x.price, 0) / others.length;
           const deal = getDealLevel(listing.price, average);
@@ -4181,7 +4200,7 @@ function CatalogueContent() {
                           position: 'relative',
                           width: '100%',
                           aspectRatio: '1',
-                          background: 'radial-gradient(circle at center, #f8f8f3 0%, #f3f3ed 50%, #f1f1ea 100%)',
+                          backgroundColor: '#fff',
                           overflow: 'hidden',
                         }}
                       >
@@ -4286,7 +4305,7 @@ function CatalogueContent() {
                           width: '28%',
                           minWidth: 64,
                           aspectRatio: '1',
-                          backgroundColor: '#f5f5f7',
+                          backgroundColor: '#fff',
                           overflow: 'hidden',
                           flexShrink: 0,
                           borderRight: '1px solid #e8e6e3',
@@ -4376,7 +4395,7 @@ function CatalogueContent() {
 
           </div>
 
-            {/* Pagination : sous les articles pour que la ligne verticale s'arrête au dernier article */}
+            {/* Pagination : Précédent, Page, Suivant — centrés, éléments proches */}
             {!loading && listings.length > 0 && (
               <div style={{ padding: '0 calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
                 <div
@@ -4384,70 +4403,107 @@ function CatalogueContent() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: 12,
+                    gap: 8,
                     flexWrap: 'wrap',
-                    marginTop: 24,
+                    marginTop: 48,
                     marginBottom: 80,
+                    width: '100%',
                   }}
                 >
-                  <span style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500 }}>Page</span>
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 32,
-                      height: 32,
-                      padding: '0 10px',
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: '#1d1d1f',
-                      border: '1px solid #d2d2d7',
-                      borderRadius: 8,
-                      backgroundColor: '#fff',
-                    }}
-                  >
-                    {effectivePage}
-                  </span>
-                  {totalPages > 1 && (
-                    <>
+                  {totalPages > 1 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500 }}>Page</span>
                       <button
                         type="button"
                         onClick={() => goToPage(effectivePage - 1)}
                         disabled={effectivePage <= 1}
+                        aria-label="Page précédente"
                         style={{
-                          height: 40,
-                          padding: '0 14px',
-                          borderRadius: 10,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: 32,
+                          width: 32,
+                          height: 32,
+                          padding: 0,
+                          borderRadius: 8,
                           border: '1px solid #d2d2d7',
                           backgroundColor: effectivePage <= 1 ? '#f5f5f7' : '#fff',
                           color: effectivePage <= 1 ? '#9b9ba0' : '#1d1d1f',
                           cursor: effectivePage <= 1 ? 'not-allowed' : 'pointer',
-                          fontSize: 14,
-                          fontWeight: 500,
                         }}
                       >
-                        Précédent
+                        <ChevronLeft size={18} strokeWidth={2.5} />
                       </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => goToPage(p)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: 32,
+                            height: 32,
+                            padding: '0 10px',
+                            fontSize: 13,
+                            fontWeight: p === effectivePage ? 600 : 500,
+                            color: p === effectivePage ? '#1d1d1f' : '#6e6e73',
+                            border: p === effectivePage ? '1px solid #1d1d1f' : '1px solid #d2d2d7',
+                            borderRadius: 8,
+                            backgroundColor: '#fff',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      ))}
                       <button
                         type="button"
                         onClick={() => goToPage(effectivePage + 1)}
                         disabled={effectivePage >= totalPages}
+                        aria-label="Page suivante"
                         style={{
-                          height: 40,
-                          padding: '0 14px',
-                          borderRadius: 10,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: 32,
+                          width: 32,
+                          height: 32,
+                          padding: 0,
+                          borderRadius: 8,
                           border: '1px solid #d2d2d7',
                           backgroundColor: effectivePage >= totalPages ? '#f5f5f7' : '#fff',
                           color: effectivePage >= totalPages ? '#9b9ba0' : '#1d1d1f',
                           cursor: effectivePage >= totalPages ? 'not-allowed' : 'pointer',
-                          fontSize: 14,
-                          fontWeight: 500,
                         }}
                       >
-                        Suivant
+                        <ChevronRight size={18} strokeWidth={2.5} />
                       </button>
-                    </>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '0 auto' }}>
+                      <span style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500 }}>Page</span>
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: 32,
+                          height: 32,
+                          padding: '0 10px',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          color: '#1d1d1f',
+                          border: '1px solid #d2d2d7',
+                          borderRadius: 8,
+                          backgroundColor: '#fff',
+                        }}
+                      >
+                        {effectivePage}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>

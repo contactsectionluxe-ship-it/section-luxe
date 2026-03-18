@@ -353,9 +353,17 @@ export default function ProductPage() {
           brand: listingData.brand ?? undefined,
           articleTypes: listingData.articleType ? [listingData.articleType] : undefined,
           condition: listingData.condition ?? undefined,
-          limitCount: 100,
+          model: listingData.model ?? undefined,
+          limitCount: 150,
         });
-        const others = similar.filter((l) => l.id !== listingData.id && l.price > 0);
+        const listingYear = listingData.year ?? null;
+        const others = similar.filter(
+          (l) =>
+            l.id !== listingData.id &&
+            l.price > 0 &&
+            (listingData.model == null ? l.model == null : l.model === listingData.model) &&
+            (listingYear == null || (l.year != null && Math.abs(l.year - listingYear) <= 2))
+        );
         if (others.length > 0) {
           const prices = others.map((l) => l.price);
           const sum = prices.reduce((a, b) => a + b, 0);
@@ -1145,7 +1153,7 @@ export default function ProductPage() {
                 </p>
                 {priceStats && (
                   <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
+                    Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état, même modèle, même année à 2 ans près).
                   </p>
                 )}
                 <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
@@ -1701,7 +1709,7 @@ export default function ProductPage() {
                   </p>
                   {priceStats && (
                     <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
+                      Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état, même modèle, même année à 2 ans près).
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: '#86868b', lineHeight: 1.5, margin: '10px 0 0', marginTop: 10, marginBottom: 0 }}>
@@ -2275,7 +2283,7 @@ Ces données sont utilisées pour :`}
             </p>
             {priceStats && (
               <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '4px 0 0', marginTop: 4, marginBottom: 0 }}>
-                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état).
+                Par rapport à {priceStats.count} annonce{priceStats.count > 1 ? 's' : ''} similaire{priceStats.count > 1 ? 's' : ''} (même marque, même type, même état, même modèle, même année à 2 ans près).
               </p>
             )}
             <p style={{ fontSize: 13, color: '#86868b', lineHeight: 1.5, margin: '12px 0 0', marginTop: 12, marginBottom: 0 }}>
