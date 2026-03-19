@@ -178,15 +178,30 @@ export async function deleteListing(listingId: string): Promise<void> {
   if (error) throw error;
 }
 
-// Get a single listing
-export async function getListing(listingId: string): Promise<Listing | null> {
+/** UUID v4 (paramètre historique / favoris / messagerie). */
+const LISTING_UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Charge une annonce par segment d’URL public : UUID ou `listing_number` (ex. 10K2001).
+ */
+export async function getListing(publicId: string): Promise<Listing | null> {
   if (!isSupabaseConfigured || !supabase) return null;
-  
+
+  const raw = decodeURIComponent((publicId || '').trim());
+  if (!raw) return null;
+
+  if (LISTING_UUID_REGEX.test(raw)) {
+    const { data, error } = await supabase.from('listings').select(LISTING_SELECT).eq('id', raw).single();
+    if (error || !data) return null;
+    return rowToListing(data);
+  }
+
   const { data, error } = await supabase
     .from('listings')
     .select(LISTING_SELECT)
-    .eq('id', listingId)
-    .single();
+    .eq('listing_number', raw)
+    .maybeSingle();
 
   if (error || !data) return null;
   return rowToListing(data);

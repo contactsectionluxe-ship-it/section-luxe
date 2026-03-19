@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerListings, deleteListing, updateListing } from '@/lib/supabase/listings';
+import { listingAnnoncePath } from '@/lib/listingPaths';
 import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -59,6 +60,7 @@ export default function SellerDashboardPage() {
   const [listingToSell, setListingToSell] = useState<Listing | null>(null);
   const [selling, setSelling] = useState(false);
   const [reservedListingIds, setReservedListingIds] = useState<Set<string>>(new Set());
+  const mesAnnoncesGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -218,8 +220,6 @@ export default function SellerDashboardPage() {
     }
   };
 
-  if (!authLoading && (!user || !seller)) return null;
-
   const totalLikes = listings.reduce((sum, l) => sum + l.likesCount, 0);
   const activeListings = listings.filter((l) => l.isActive).length;
   const totalAppels = listings.reduce((sum, l) => sum + (l.phoneRevealsCount ?? 0), 0);
@@ -249,6 +249,62 @@ export default function SellerDashboardPage() {
   });
 
   const showSkeletons = authLoading || loading;
+
+  /** Inclut l’ordre + titres pour resynchroniser après tri / édition sans dépendre d’une nouvelle référence tableau à chaque render. */
+  const mesAnnoncesTitleSyncKey = filteredListings.map((l) => `${l.id}:${l.title}`).join('\n');
+
+  /** Titres : même hauteur seulement entre cartes d’une même ligne (max des hauteurs naturelles de la ligne). */
+  useLayoutEffect(() => {
+    if (showSkeletons || filteredListings.length === 0) return;
+
+    const grid = mesAnnoncesGridRef.current;
+    if (!grid) return;
+
+    const sync = () => {
+      const cards = grid.querySelectorAll<HTMLElement>('.mes-annonces-card');
+      if (!cards.length) return;
+
+      const titles: HTMLElement[] = [];
+      cards.forEach((card) => {
+        const t = card.querySelector<HTMLElement>('.mes-annonces-grid-title');
+        if (t) titles.push(t);
+      });
+      titles.forEach((t) => {
+        t.style.minHeight = '';
+      });
+
+      const rowMap = new Map<number, HTMLElement[]>();
+      cards.forEach((card) => {
+        const title = card.querySelector<HTMLElement>('.mes-annonces-grid-title');
+        if (!title) return;
+        const rowKey = Math.round(card.getBoundingClientRect().top);
+        if (!rowMap.has(rowKey)) rowMap.set(rowKey, []);
+        rowMap.get(rowKey)!.push(title);
+      });
+
+      rowMap.forEach((rowTitles) => {
+        const maxH = Math.max(...rowTitles.map((el) => el.getBoundingClientRect().height));
+        const px = Math.ceil(maxH);
+        rowTitles.forEach((el) => {
+          el.style.minHeight = `${px}px`;
+        });
+      });
+    };
+
+    sync();
+
+    const ro = new ResizeObserver(() => {
+      sync();
+    });
+    ro.observe(grid);
+    window.addEventListener('resize', sync);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', sync);
+    };
+  }, [showSkeletons, mesAnnoncesTitleSyncKey, filteredListings.length]);
+
+  if (!authLoading && (!user || !seller)) return null;
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
@@ -531,9 +587,23 @@ export default function SellerDashboardPage() {
               )}
             </div>
           ) : filteredListings.length > 0 ? (
-            <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
+            <div
+              ref={mesAnnoncesGridRef}
+              className="mes-annonces-list-grid"
+              style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}
+            >
               {filteredListings.map((listing) => (
-                <div key={listing.id} style={{ position: 'relative', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'; }} onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}>
+                <div
+                  key={listing.id}
+                  className="mes-annonces-card"
+                  style={{ position: 'relative', border: '1px solid #eee', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', transition: 'box-shadow 0.2s' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
                   <div style={{ position: 'absolute', top: 8, left: 8, zIndex: 10 }}>
                     <button
                       type="button"
@@ -559,7 +629,7 @@ export default function SellerDashboardPage() {
                       <X size={14} strokeWidth={2.5} />
                     </button>
                   </div>
-                  <Link href={`/produit/${listing.id}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+                  <Link href={`${listingAnnoncePath(listing)}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#fff', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
                       {!listing.isActive && reservedListingIds.has(listing.id) ? (
@@ -618,7 +688,24 @@ export default function SellerDashboardPage() {
                           {(() => {
                             const lineText = listing.title || '';
                             return (
-                              <h3 title={lineText} style={{ fontSize: 15, fontWeight: 500, marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lineText}</h3>
+                              <h3
+                                className="listing-grid-title mes-annonces-grid-title"
+                                title={lineText}
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: 500,
+                                  color: '#1d1d1f',
+                                  margin: '0 0 4px 0',
+                                  minWidth: 0,
+                                  overflow: 'hidden',
+                                  lineHeight: 1.3,
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                }}
+                              >
+                                {lineText}
+                              </h3>
                             );
                           })()}
                           <p style={{ fontSize: 18, fontWeight: 600, color: '#000' }}>{formatPrice(listing.price)}</p>

@@ -85,6 +85,36 @@ function NewListingContent() {
   const [loading, setLoading] = useState(false);
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+
+  // Paiement non mené à terme : supprimer l'annonce brouillon et afficher un message (une seule fois)
+  const cancelHandledRef = useRef(false);
+  useEffect(() => {
+    if (authLoading || !user || cancelHandledRef.current) return;
+    const cancel = searchParams.get('cancel');
+    const listingIdParam = searchParams.get('listingId');
+    if (cancel !== '1' || !listingIdParam?.trim()) return;
+    cancelHandledRef.current = true;
+
+    const run = async () => {
+      const { getSession } = await import('@/lib/supabase/auth');
+      const session = await getSession();
+      if (!session?.access_token) {
+        setCancelMessage('Paiement annulé. Reconnectez-vous pour déposer une annonce.');
+        router.replace(fromVentes ? '/vendeur/annonces/nouvelle?from=ventes' : '/vendeur/annonces/nouvelle', { scroll: false });
+        return;
+      }
+      const res = await fetch('/api/annonces/cancel-deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ listingId: listingIdParam.trim() }),
+      });
+      const base = fromVentes ? '/vendeur/annonces/nouvelle?from=ventes' : '/vendeur/annonces/nouvelle';
+      router.replace(base, { scroll: false });
+      setCancelMessage(res.ok ? 'Paiement annulé. L\'annonce n\'a pas été conservée.' : 'Paiement annulé.');
+    };
+    run();
+  }, [authLoading, user, searchParams, fromVentes, router]);
 
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
@@ -515,7 +545,8 @@ if (modelOptions.length > 0) {
       const finalTitle = brandToSave ? `${brandToSave} - ${(titleSuffix.trim() || suggestedSuffix).trim()}` : (titleSuffix.trim() || suggestedSuffix).trim();
       const priceNum = parseFloat(price.replace(',', '.'));
 
-      // Créer l'annonce d'abord (sans photos) pour obtenir un id existant en base
+      const publishNow = isActive;
+
       const listingId = await createListing({
         sellerId: user!.uid,
         sellerName: seller!.companyName,
@@ -536,7 +567,7 @@ if (modelOptions.length > 0) {
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
         articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? (articleType.includes('::') ? articleType.split('::')[0] : articleType) : null,
-        isActive,
+        isActive: publishNow,
       });
 
       let photoUrls: string[] = [];
@@ -547,7 +578,7 @@ if (modelOptions.length > 0) {
         }
       }
 
-      if (isActive) {
+      if (publishNow) {
         try {
           await ensureInvoiceForListing(listingId);
         } catch (e) {
@@ -568,6 +599,7 @@ if (modelOptions.length > 0) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user!.uid, context: 'publication_annonce' }),
       });
+
       router.push(fromVentes ? '/vendeur/ventes' : '/vendeur');
     } catch (err: unknown) {
       const message =
@@ -693,6 +725,11 @@ if (modelOptions.length > 0) {
           {error && (
             <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 20 }}>
               {error}
+            </div>
+          )}
+          {cancelMessage && (
+            <div style={{ padding: 14, backgroundColor: '#f0f9ff', color: '#0369a1', fontSize: 13, marginBottom: 20 }}>
+              {cancelMessage}
             </div>
           )}
 

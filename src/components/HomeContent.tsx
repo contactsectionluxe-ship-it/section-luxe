@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
+import { listingAnnoncePath } from '@/lib/listingPaths';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
@@ -548,7 +550,12 @@ export default function HomeContent() {
           ) : listings.length > 0 ? (
             <div className="home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24 }}>
               {listings.map((listing) => (
-                <Link key={listing.id} href={`/produit/${listing.id}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+                <Link
+                  key={listing.id}
+                  href={listingAnnoncePath(listing)}
+                  onClick={() => setAnnonceReturnUrlForNextNavigation('/catalogue')}
+                  style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}
+                >
                   <article
                     style={{
                       position: 'relative',
@@ -586,7 +593,22 @@ export default function HomeContent() {
                       {(() => {
                         const lineText = listing.title || '';
                         return (
-                          <h3 className="listing-grid-title" title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                          <h3
+                            className="listing-grid-title"
+                            title={lineText}
+                            style={{
+                              fontSize: 16,
+                              fontWeight: 500,
+                              color: '#1d1d1f',
+                              margin: 0,
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              lineHeight: 1.3,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
                             {lineText}
                           </h3>
                         );

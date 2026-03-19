@@ -12,7 +12,7 @@ SELECT s.id, s.company_name,
   '{}',
   'new',
   'TEST-N-' || n.n,
-  true
+  false
 FROM (SELECT id, company_name FROM public.sellers WHERE status = 'approved' AND company_name ILIKE '%section luxe%' LIMIT 1) s
 CROSS JOIN generate_series(1, 20) AS n(n)
 ON CONFLICT (listing_number) DO NOTHING;
@@ -27,7 +27,7 @@ SELECT s.id, s.company_name,
   '{}',
   'very_good',
   'TEST-O-' || n.n,
-  true
+  false
 FROM (SELECT id, company_name FROM public.sellers WHERE status = 'approved' AND company_name ILIKE '%section luxe%' LIMIT 1) s
 CROSS JOIN generate_series(1, 20) AS n(n)
 ON CONFLICT (listing_number) DO NOTHING;

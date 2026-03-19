@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
+import { Conversation } from '@/types';
 const navigation = [
   { name: 'Catalogue', href: '/catalogue?reset=1', icon: LayoutGrid },
   { name: 'Occasion', href: '/catalogue?condition=occasion', icon: Tag },
@@ -85,30 +86,60 @@ export function Header() {
   }, [mobileMenuOpen]);
 
   const updateUnreadCount = useCallback(
-    (conversations: { unreadBuyer: number; unreadSeller: number }[]) => {
+    (conversations: Conversation[]) => {
       if (!user || !isAuthenticated) return;
-      const role = isSeller ? 'seller' : 'buyer';
-      const total = conversations.reduce((sum, c) => sum + (role === 'seller' ? c.unreadSeller : c.unreadBuyer), 0);
+      const uid = user.uid;
+      const total = conversations.reduce((sum, c) => {
+        const unreadForMe = c.sellerId === uid ? c.unreadSeller : c.unreadBuyer;
+        return sum + (unreadForMe || 0);
+      }, 0);
       setUnreadMessages(total);
     },
-    [user?.uid, isAuthenticated, isSeller]
+    [user?.uid, isAuthenticated]
   );
+
+  const mergeConversations = useCallback((buyer: Conversation[], seller: Conversation[]) => {
+    const byId = new Map<string, Conversation>();
+    [...buyer, ...seller].forEach((c) => byId.set(c.id, c));
+    return Array.from(byId.values());
+  }, []);
 
   useEffect(() => {
     if (!user || !isAuthenticated) {
       setUnreadMessages(0);
       return;
     }
-    const role = isSeller ? 'seller' : 'buyer';
-    const unsubscribe = subscribeToConversations(user.uid, role, updateUnreadCount);
-    return () => unsubscribe();
-  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount]);
+    let buyerConversations: Conversation[] = [];
+    let sellerConversations: Conversation[] = [];
+
+    const unsubscribeBuyer = subscribeToConversations(user.uid, 'buyer', (convos) => {
+      buyerConversations = convos;
+      updateUnreadCount(mergeConversations(buyerConversations, sellerConversations));
+    });
+
+    let unsubscribeSeller = () => {};
+    if (isSeller) {
+      unsubscribeSeller = subscribeToConversations(user.uid, 'seller', (convos) => {
+        sellerConversations = convos;
+        updateUnreadCount(mergeConversations(buyerConversations, sellerConversations));
+      });
+    }
+
+    return () => {
+      unsubscribeBuyer();
+      unsubscribeSeller();
+    };
+  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount, mergeConversations]);
 
   const refreshUnread = useCallback(() => {
     if (!user || !isAuthenticated) return;
-    const role = isSeller ? 'seller' : 'buyer';
-    getUserConversations(user.uid, role).then(updateUnreadCount);
-  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount]);
+    Promise.all([
+      getUserConversations(user.uid, 'buyer'),
+      isSeller ? getUserConversations(user.uid, 'seller') : Promise.resolve([] as Conversation[]),
+    ]).then(([buyer, seller]) => {
+      updateUnreadCount(mergeConversations(buyer, seller));
+    });
+  }, [user?.uid, isAuthenticated, isSeller, updateUnreadCount, mergeConversations]);
 
   // Rafraîchir le compteur quand l'onglet redevient visible (autre onglet, autre appareil)
   useEffect(() => {

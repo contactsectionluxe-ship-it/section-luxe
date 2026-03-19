@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Heart } from 'lucide-react';
+import { listingAnnoncePath } from '@/lib/listingPaths';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { cn, formatPrice } from '@/lib/utils';
 import { Listing } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,7 +59,11 @@ export function ProductCard({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <Link href={`/produit/${listing.id}`} className="group block">
+      <Link
+        href={listingAnnoncePath(listing)}
+        onClick={() => setAnnonceReturnUrlForNextNavigation('/catalogue')}
+        className="group block"
+      >
         {/* Image */}
         <div className="relative aspect-[3/4] bg-[#f5f5f5] overflow-hidden">
           {listing.photos[0] ? (

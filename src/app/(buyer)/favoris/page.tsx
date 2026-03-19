@@ -8,6 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { getUserFavorites } from '@/lib/supabase/favorites';
 import { removeFavorite } from '@/lib/supabase/favorites';
 import { getListing } from '@/lib/supabase/listings';
+import { listingAnnoncePath } from '@/lib/listingPaths';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
@@ -368,7 +370,12 @@ export default function FavoritesPage() {
         {filteredListings.length > 0 ? (
           <div className="favoris-list-grid home-featured-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 24, minWidth: 0 }}>
             {filteredListings.map((listing) => (
-              <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent('/favoris')}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+              <Link
+                key={listing.id}
+                href={listingAnnoncePath(listing)}
+                onClick={() => setAnnonceReturnUrlForNextNavigation('/favoris')}
+                style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}
+              >
                   <article
                     style={{
                       position: 'relative',

@@ -1,6 +1,7 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './client';
 import { User, Seller } from '@/types';
+import { slugifyCompanyName } from '@/lib/sellerCatalogueUrl';
 
 function checkSupabase(): SupabaseClient {
   if (!isSupabaseConfigured || !supabase) {
@@ -268,6 +269,30 @@ export async function updatePassword(newPassword: string): Promise<void> {
   if (error) throw error;
 }
 
+/**
+ * Après confirmation du nouvel e-mail côté Supabase Auth, aligne `public.users` (et `sellers` si présent).
+ */
+export async function syncProfileEmailFromAuth(supabaseUser: SupabaseAuthUser): Promise<void> {
+  if (!supabaseUser.email) return;
+  const client = checkSupabase();
+  const { data: row, error } = await client.from('users').select('email').eq('id', supabaseUser.id).maybeSingle();
+  if (error || !row) return;
+  const dbEmail = String((row as { email?: string }).email ?? '').trim().toLowerCase();
+  const authEmail = supabaseUser.email.trim().toLowerCase();
+  if (dbEmail === authEmail) return;
+
+  await updateUserProfile(supabaseUser.id, { email: supabaseUser.email });
+
+  const { data: sellerRow } = await client.from('sellers').select('id').eq('id', supabaseUser.id).maybeSingle();
+  if (sellerRow) {
+    const { error: sellerErr } = await client
+      .from('sellers')
+      .update({ email: supabaseUser.email, updated_at: new Date().toISOString() })
+      .eq('id', supabaseUser.id);
+    if (sellerErr) console.warn('sync sellers.email:', sellerErr);
+  }
+}
+
 // Get user data
 export async function getUserData(uid: string): Promise<User | null> {
   if (!isSupabaseConfigured || !supabase) return null;
@@ -289,6 +314,26 @@ export async function getUserData(uid: string): Promise<User | null> {
     createdAt: new Date(data.created_at),
     phone: (row.phone as string) || null,
   };
+}
+
+/**
+ * Résout l’UUID vendeur depuis l’URL /catalogue/vendeur/{nameSlug}-{uuidPrefix8}
+ * (nom slugifié + préfixe UUID pour unicité).
+ */
+export async function getSellerIdByVendeurSlug(nameSlug: string, uuidPrefix: string): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+
+  const { data, error } = await supabase.rpc('sellers_by_id_prefix', { p_prefix: uuidPrefix });
+
+  if (error) {
+    console.warn('getSellerIdByVendeurSlug:', error);
+    return null;
+  }
+  const rows = (data ?? []) as { id: string; company_name: string }[];
+  if (rows.length === 0) return null;
+
+  const match = rows.find((row) => slugifyCompanyName(row.company_name) === nameSlug);
+  return match?.id ?? null;
 }
 
 // Get seller data

@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const { getUserData, getSellerData } = await import('@/lib/supabase/auth');
+    const { getUserData, getSellerData, syncProfileEmailFromAuth } = await import('@/lib/supabase/auth');
+    await syncProfileEmailFromAuth(supabaseUser);
     const userData = await getUserData(supabaseUser.id);
     setUser(userData);
 
@@ -60,6 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSupabaseUser(sbUser);
 
         if (sbUser) {
+          const { syncProfileEmailFromAuth } = await import('@/lib/supabase/auth');
+          await syncProfileEmailFromAuth(sbUser);
           const userData = await getUserData(sbUser.id);
           setUser(userData);
 

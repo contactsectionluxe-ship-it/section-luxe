@@ -58,7 +58,7 @@ export function ProductCard({ listing, isFavorited = false, onAuthRequired }: Pr
   };
 
   return (
-    <Link href={`/produit/${listing.id}`} style={{ display: 'block' }}>
+    <Link href={`/p/${listing.id}`} style={{ display: 'block' }}>
       <article style={{ position: 'relative' }}>
         {/* Image */}
         <div style={{

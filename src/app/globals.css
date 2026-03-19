@@ -230,11 +230,40 @@ a:focus-visible {
   .catalogue-barre-tri {
     justify-content: flex-end !important;
   }
+  .catalogue-page-main--seller {
+    padding-top: calc(16px + 1mm) !important;
+  }
+  /* Vue vendeur (desktop): même espace ligne->bannière et bannière->annonces */
+  .catalogue-page-main--seller .catalogue-results {
+    margin-top: 0 !important;
+  }
 }
 
 /* Catalogue : espace au-dessus du premier article */
 .catalogue-results {
   margin-top: var(--catalogue-results-gap, calc(-4px + 0.5mm)) !important;
+}
+
+/* Catalogue vue liste (ligne) : vignette carrée (côté = ancienne hauteur 28cqw − 1cm, largeur réduite vs 28 %) */
+.catalogue-line-card {
+  container-type: inline-size;
+  container-name: catalogue-line;
+}
+.catalogue-line-card .catalogue-line-photo {
+  --catalogue-line-thumb-side: max(48px, calc(28cqw - 1cm));
+  width: var(--catalogue-line-thumb-side) !important;
+  min-width: 48px !important;
+  max-width: var(--catalogue-line-thumb-side) !important;
+  height: var(--catalogue-line-thumb-side) !important;
+  max-height: var(--catalogue-line-thumb-side) !important;
+  aspect-ratio: 1 !important;
+  flex-shrink: 0 !important;
+  align-self: center;
+}
+
+/* Vue liste : titre aligné sur la hauteur du bouton cœur (top 10px, Ø 36px → centre 28px), −0,5 mm vs centre */
+.catalogue-line-card .catalogue-line-title-block {
+  padding-top: calc(10px + 18px - (22px * 1.4 / 2) - 0.5mm);
 }
 
 /* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
@@ -364,6 +393,10 @@ a:focus-visible {
     text-overflow: ellipsis !important;
     min-height: 2.6em !important;
     line-height: 1.3 !important;
+    /* Remplir les 2 lignes puis … uniquement en fin ; couper les mots longs si besoin */
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+    hyphens: auto !important;
   }
   .listing-grid-vendeur {
     flex-wrap: nowrap !important;
@@ -508,6 +541,37 @@ a:focus-visible {
   }
   .catalogue-mobile-filters-panel .catalogue-filters-recherche-block {
     padding-top: 14px !important;
+  }
+  /* Bannière vendeur (catalogue): garder le code postal à droite du bloc nom + nombre */
+  .catalogue-seller-banner {
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  .catalogue-seller-main-info {
+    min-width: 0 !important;
+    flex: 1 !important;
+    gap: 8px !important;
+  }
+  .catalogue-seller-logo-wrap {
+    width: 52px !important;
+    height: 52px !important;
+  }
+  .catalogue-seller-location-btn {
+    min-width: auto !important;
+    height: 36px !important;
+    padding: 0 10px !important;
+    gap: 4px !important;
+    flex-shrink: 0 !important;
+  }
+  /* Vue vendeur (mobile): harmoniser les espaces bannière / filtres / annonces */
+  .catalogue-page-main--seller .catalogue-seller-banner {
+    margin-bottom: 12px !important;
+  }
+  .catalogue-page-main--seller .catalogue-barre-tri--seller {
+    margin-bottom: 12px !important;
   }
   /* Masquer les caractéristiques (catégorie, année, état, etc.) sous le titre dans la liste catalogue */
   .catalogue-listing-caracteristiques {
@@ -889,10 +953,18 @@ a:focus-visible {
     gap: 6px !important;
     min-width: 0 !important;
   }
-  .mes-annonces-card-actions a {
+  .mes-annonces-card-actions > div {
+    min-width: 0 !important;
+    gap: 6px !important;
+  }
+  /* Même taille pour liens et boutons (Réserver / Vendu) pour tenir sur la largeur */
+  .mes-annonces-card-actions a,
+  .mes-annonces-card-actions button {
     padding: 6px 8px !important;
     font-size: 12px !important;
     min-width: 0 !important;
+    flex: 1 1 0 !important;
+    box-sizing: border-box !important;
   }
   /* Page Détails mon annonce : titre en dessous de Activer/Désactiver, boutons centrés, titre à gauche sur mobile */
   .voir-annonce-title-row {
@@ -1067,6 +1139,41 @@ a:focus-visible {
   }
   .mot-de-passe-oublie-form-box {
     padding: 24px !important;
+  }
+
+  /* Popup « Changer d’adresse e-mail » (profil) : étapes compactes comme Déposer une annonce (sans modifier la taille du panneau) */
+  .changer-email-modal-title-row--back {
+    padding-left: 48px !important;
+    padding-right: 48px !important;
+  }
+  .changer-email-modal-title-row--back .changer-email-modal-back {
+    left: 24px !important;
+  }
+  .changer-email-steps-row {
+    width: 100% !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 0 !important;
+  }
+  .changer-email-steps-row > div {
+    display: flex !important;
+    align-items: center !important;
+  }
+  .changer-email-steps-connector {
+    flex: 0 0 auto !important;
+    width: 22px !important;
+    min-width: 22px !important;
+    max-width: 22px !important;
+    margin: 0 8px !important;
+  }
+  .changer-email-step-circle {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 14px !important;
+  }
+  .changer-email-step-circle svg {
+    width: 16px !important;
+    height: 16px !important;
   }
 }
 

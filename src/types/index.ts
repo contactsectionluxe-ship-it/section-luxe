@@ -40,6 +40,8 @@ export interface Seller {
   idRectoType?: 'passeport' | 'cni_recto' | null;
   kbisUrl: string;
   avatarUrl?: string | null;
+  /** Slug URL du catalogue public (/catalogue/{slug}), si défini */
+  catalogueSlug?: string | null;
   /** Date de fin de suspension (null si non suspendu) */
   suspendedUntil?: Date | null;
   createdAt: Date;

@@ -43,11 +43,20 @@ export default function MessagesPage() {
       return;
     }
     setLoading(true);
-    const role = isSeller ? 'seller' : 'buyer';
-    const unsubscribe = subscribeToConversations(user.uid, role, (convos) => {
-      setConversations(convos);
+    let buyerConversations: Conversation[] = [];
+    let sellerConversations: Conversation[] = [];
+
+    const applyMergedConversations = () => {
+      const mergedById = new Map<string, Conversation>();
+      [...buyerConversations, ...sellerConversations].forEach((c) => {
+        mergedById.set(c.id, c);
+      });
+      const merged = Array.from(mergedById.values()).sort(
+        (a, b) => b.lastMessageAt.getTime() - a.lastMessageAt.getTime()
+      );
+      setConversations(merged);
       setLoading(false);
-      if (convos.length > 0) {
+      if (merged.length > 0) {
         if (emptyDelayRef.current) {
           clearTimeout(emptyDelayRef.current);
           emptyDelayRef.current = null;
@@ -60,14 +69,28 @@ export default function MessagesPage() {
           setHasLoadedOnce(true);
         }, 500);
       }
+    };
+
+    const unsubscribeBuyer = subscribeToConversations(user.uid, 'buyer', (convos) => {
+      buyerConversations = convos;
+      applyMergedConversations();
     });
+
+    let unsubscribeSeller = () => {};
+    if (isSeller) {
+      unsubscribeSeller = subscribeToConversations(user.uid, 'seller', (convos) => {
+        sellerConversations = convos;
+        applyMergedConversations();
+      });
+    }
 
     return () => {
       if (emptyDelayRef.current) {
         clearTimeout(emptyDelayRef.current);
         emptyDelayRef.current = null;
       }
-      unsubscribe();
+      unsubscribeBuyer();
+      unsubscribeSeller();
     };
   }, [user, isSeller]);
 
@@ -84,9 +107,15 @@ export default function MessagesPage() {
 
   if (!authLoading && !isAuthenticated) return null;
 
-  const getUnreadCount = (c: Conversation) => (isSeller ? c.unreadSeller : c.unreadBuyer);
+  const getUnreadCount = (c: Conversation) => {
+    if (!user) return 0;
+    return c.sellerId === user.uid ? c.unreadSeller : c.unreadBuyer;
+  };
   const hasUnread = (c: Conversation) => getUnreadCount(c) > 0;
-  const getOtherPartyName = (c: Conversation) => (isSeller ? c.buyerName : c.sellerName);
+  const getOtherPartyName = (c: Conversation) => {
+    if (!user) return c.sellerName;
+    return c.sellerId === user.uid ? c.buyerName : c.sellerName;
+  };
 
   const filteredByTab = conversations.filter((c) => {
     if (filter === 'unread') return hasUnread(c);
@@ -107,7 +136,9 @@ export default function MessagesPage() {
     if (!conversationId || deleting) return;
     setDeleting(true);
     try {
-      const role = isSeller ? 'seller' : 'buyer';
+      const conv = conversations.find((c) => c.id === conversationId);
+      if (!conv || !user) throw new Error('Conversation introuvable.');
+      const role: 'buyer' | 'seller' = conv.sellerId === user.uid ? 'seller' : 'buyer';
       await deleteConversation(conversationId, role);
       setConversations((prev) => prev.filter((c) => c.id !== conversationId));
       setDeleteTargetId(null);
@@ -349,7 +380,7 @@ export default function MessagesPage() {
                     }}
                   >
                     <Link
-                      href={`/produit/${conversation.listingId}`}
+                      href={`/annonce/${conversation.listingId}`}
                       style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
                       onClick={(e) => e.stopPropagation()}
                     >

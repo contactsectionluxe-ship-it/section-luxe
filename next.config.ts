@@ -40,6 +40,16 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  /** Anciens liens /produit/… → /annonce/… */
+  async redirects() {
+    return [
+      {
+        source: '/produit/:id',
+        destination: '/annonce/:id',
+        permanent: true,
+      },
+    ];
+  },
   poweredByHeader: false,
   compress: true,
 };

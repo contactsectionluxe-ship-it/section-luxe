@@ -1,12 +1,15 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { useSearchParams, useRouter, usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { Search, SlidersHorizontal, X, ChevronRight, ChevronLeft, ChevronDown, Heart, Store, MapPin, Plus, Minus, ArrowLeft, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings, getDistinctSizesForCategory, getDistinctSizesForCategoryAndArticleTypes } from '@/lib/supabase/listings';
-import { getSellerData } from '@/lib/supabase/auth';
+import { listingAnnoncePath } from '@/lib/listingPaths';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
+import { sellerCataloguePath, parseVendeurCatalogueSlug } from '@/lib/sellerCatalogueUrl';
+import { getSellerData, getSellerIdByVendeurSlug } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
 import { getDealLevel } from '@/lib/deal';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,7 +52,9 @@ import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
-const PAGE_SIZE = 21;
+/** Annonces par page : 20 en grille sur téléphone (≤767px), 21 sinon. */
+const PAGE_SIZE_DEFAULT = 21;
+const PAGE_SIZE_MOBILE_GRID = 20;
 
 const SORT_OPTIONS = [
   { value: 'date_desc', label: 'Plus récents' },
@@ -356,7 +361,7 @@ function normalizeQueryString(params: URLSearchParams): string {
 }
 
 /** Construit les paramètres URL à partir des filtres (pour conserver les filtres au retour depuis la page produit). */
-function filtersToParams(filters: Filters, page: number): URLSearchParams {
+function filtersToParams(filters: Filters, page: number, opts?: { omitSellerId?: boolean }): URLSearchParams {
   const params = new URLSearchParams();
   (filters.genre ?? []).forEach((g) => params.append('genre', g));
   const categories = filters.categories ?? (filters.category ? [filters.category] : []);
@@ -375,7 +380,7 @@ function filtersToParams(filters: Filters, page: number): URLSearchParams {
   else if (filters.conditions?.length === OCCASION_CONDITIONS.length && OCCASION_CONDITIONS.every((c, i) => filters.conditions![i] === c)) params.set('condition', 'occasion');
   if (filters.query) params.set('query', filters.query);
   if (filters.sortBy && filters.sortBy !== 'date_desc') params.set('sortBy', filters.sortBy);
-  if (filters.sellerId) params.set('sellerId', filters.sellerId);
+  if (filters.sellerId && !opts?.omitSellerId) params.set('sellerId', filters.sellerId);
   if (filters.priceMin != null) params.set('priceMin', String(filters.priceMin));
   if (filters.priceMax != null) params.set('priceMax', String(filters.priceMax));
   if (filters.yearMin != null) params.set('yearMin', String(filters.yearMin));
@@ -444,6 +449,12 @@ function paramsToFilters(params: URLSearchParams): Filters {
 function CatalogueContent() {
   const router = useRouter();
   const pathname = usePathname();
+  const paramsRoute = useParams();
+  const slugParam = typeof paramsRoute?.slug === 'string' ? paramsRoute.slug : undefined;
+  const isVendeurCataloguePath = Boolean(pathname?.startsWith('/catalogue/vendeur/'));
+  const parsedVendeurSlug = useMemo(() => (slugParam ? parseVendeurCatalogueSlug(slugParam) : null), [slugParam]);
+  const vendeurParseInvalid = isVendeurCataloguePath && Boolean(slugParam) && !parsedVendeurSlug;
+  const [vendeurSlugError, setVendeurSlugError] = useState(false);
   const searchParams = useSearchParams();
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''))}` : '';
 
@@ -455,6 +466,35 @@ function CatalogueContent() {
     if (condition === 'occasion') return { ...defaultFilters, conditions: [...OCCASION_CONDITIONS], sellerId: searchParams.get('sellerId') || undefined };
     return paramsToFilters(searchParams);
   });
+
+  // Résoudre /catalogue/vendeur/{slug} → sellerId (Supabase)
+  useEffect(() => {
+    if (!isVendeurCataloguePath) {
+      setVendeurSlugError(false);
+      return;
+    }
+    if (!parsedVendeurSlug) {
+      setVendeurSlugError(Boolean(slugParam));
+      return;
+    }
+    setVendeurSlugError(false);
+    let cancelled = false;
+    getSellerIdByVendeurSlug(parsedVendeurSlug.nameSlug, parsedVendeurSlug.uuidPrefix)
+      .then((id) => {
+        if (cancelled) return;
+        if (!id) {
+          setVendeurSlugError(true);
+          return;
+        }
+        setFilters((prev) => ({ ...prev, sellerId: id }));
+      })
+      .catch(() => {
+        if (!cancelled) setVendeurSlugError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isVendeurCataloguePath, parsedVendeurSlug, slugParam]);
 
   /** Un seul menu déroulant ouvert à la fois. */
   type DropdownId = 'type' | 'articleType' | 'marque' | 'modele' | 'color' | 'material' | 'taille' | 'tailleMontres' | 'pointure';
@@ -801,6 +841,16 @@ function CatalogueContent() {
     const saved = localStorage.getItem('catalogue-view-mode');
     if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
   }, []);
+  /** Largeur téléphone (alignée sur globals.css / barre filtres). */
+  const [isMobile, setIsMobile] = useState(false);
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsMobile(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [showAuthModalFavoris, setShowAuthModalFavoris] = useState(false);
   /** Tailles de montres présentes dans les annonces (rempli quand catégorie montres est sélectionnée). */
@@ -842,7 +892,8 @@ function CatalogueContent() {
 
   const navigateToPage = useCallback(
     (nextPage: number, replace = false) => {
-      const params = filtersToParams(filters, nextPage);
+      const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
+      const params = filtersToParams(filters, nextPage, { omitSellerId: omitSellerInQuery });
       const q = params.toString();
       lastSyncedUrlRef.current = q ? normalizeQueryString(params) : '';
       const url = q ? `${pathname}?${q}` : pathname;
@@ -857,22 +908,41 @@ function CatalogueContent() {
     setPage(parsePositiveInt(searchParams.get('page'), 1));
   }, [searchParams]);
 
-  const totalPages = Math.max(1, Math.ceil(listings.length / PAGE_SIZE));
+  const pageSize =
+    isMobile && viewMode === 'grid' ? PAGE_SIZE_MOBILE_GRID : PAGE_SIZE_DEFAULT;
+  const totalPages = Math.max(1, Math.ceil(listings.length / pageSize));
   const effectivePage = Math.min(Math.max(page, 1), totalPages);
   const paginatedListings = useMemo(() => {
-    const start = (effectivePage - 1) * PAGE_SIZE;
-    return listings.slice(start, start + PAGE_SIZE);
-  }, [listings, effectivePage]);
+    const start = (effectivePage - 1) * pageSize;
+    return listings.slice(start, start + pageSize);
+  }, [listings, effectivePage, pageSize]);
 
   /** URL du catalogue avec les filtres actuels (passée à la page produit pour "Retour au catalogue"). */
   const catalogueReturnUrl = useMemo(() => {
-    const p = filtersToParams(filters, effectivePage);
+    const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
+    const p = filtersToParams(filters, effectivePage, { omitSellerId: omitSellerInQuery });
     const q = p.toString();
     return pathname + (q ? '?' + q : '');
   }, [pathname, filters, effectivePage]);
 
-  const rangeStart = listings.length === 0 ? 0 : (effectivePage - 1) * PAGE_SIZE + 1;
-  const rangeEnd = Math.min(effectivePage * PAGE_SIZE, listings.length);
+  // Ancienne URL ?sellerId= → /catalogue/vendeur/{slug} (plus lisible, sellerId hors query)
+  useEffect(() => {
+    if (!filters.sellerId || sellerLoading) return;
+    if (!seller) return;
+    if (!pathname?.startsWith('/catalogue')) return;
+    if (pathname.startsWith('/catalogue/vendeur/')) return;
+    const q = searchParams.get('sellerId');
+    if (!q || q !== filters.sellerId) return;
+    const pretty = sellerCataloguePath(seller);
+    const p = filtersToParams(filters, effectivePage, { omitSellerId: true });
+    const qs = p.toString();
+    lastSyncedUrlRef.current = qs ? normalizeQueryString(p) : '';
+    router.replace(qs ? `${pretty}?${qs}` : pretty, { scroll: false });
+  }, [filters.sellerId, seller, sellerLoading, pathname, searchParams, router, filters, effectivePage]);
+
+  const rangeStart =
+    listings.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(effectivePage * pageSize, listings.length);
 
   const goToPage = useCallback(
     (nextPage: number) => {
@@ -954,7 +1024,15 @@ function CatalogueContent() {
       justSyncedConditionFromUrlRef.current = true;
       justSetFiltersFromConditionRef.current = true;
       const fromUrl = paramsToFilters(searchParams);
-      setFilters({ ...fromUrl, conditions: nextConditions, sellerId: sellerId || undefined });
+      if (pathname.startsWith('/catalogue/vendeur/')) {
+        setFilters((prev) => ({
+          ...fromUrl,
+          conditions: nextConditions,
+          sellerId: prev.sellerId ?? (sellerId || undefined),
+        }));
+      } else {
+        setFilters({ ...fromUrl, conditions: nextConditions, sellerId: sellerId || undefined });
+      }
       setPage(parsePositiveInt(searchParams.get('page'), 1));
       setLocalPriceMin(fromUrl.priceMin != null ? String(fromUrl.priceMin) : '');
       setLocalPriceMax(fromUrl.priceMax != null ? String(fromUrl.priceMax) : '');
@@ -976,14 +1054,18 @@ function CatalogueContent() {
     lastSyncedUrlRef.current = null;
     // Retour depuis page produit ou autre : restaurer filtres et page depuis l'URL
     const fromUrl = paramsToFilters(searchParams);
-    setFilters(fromUrl);
+    if (pathname.startsWith('/catalogue/vendeur/')) {
+      setFilters((prev) => ({ ...fromUrl, sellerId: prev.sellerId ?? fromUrl.sellerId }));
+    } else {
+      setFilters(fromUrl);
+    }
     setPage(parsePositiveInt(searchParams.get('page'), 1));
     setLocalPriceMin(fromUrl.priceMin != null ? String(fromUrl.priceMin) : '');
     setLocalPriceMax(fromUrl.priceMax != null ? String(fromUrl.priceMax) : '');
     setLocalYearMin(fromUrl.yearMin != null ? String(fromUrl.yearMin) : '');
     setLocalYearMax(fromUrl.yearMax != null ? String(fromUrl.yearMax) : '');
     setSearchQuery(fromUrl.query ?? '');
-  }, [searchParams]);
+  }, [searchParams, pathname]);
 
   // Si on était sur Neuf ou Occasion (lien header) et que l'utilisateur change le filtre état, repasser l'URL en /catalogue pour garder « Catalogue » actif. Ne pas retirer condition juste après un clic Neuf/Occasion (synchro URL → filtres).
   useEffect(() => {
@@ -1001,8 +1083,9 @@ function CatalogueContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.delete('condition');
     const q = params.toString();
-    router.replace(q ? `/catalogue?${q}` : '/catalogue', { scroll: false });
-  }, [filters.conditions, searchParams, router]);
+    const basePath = pathname.startsWith('/catalogue/vendeur/') ? pathname : '/catalogue';
+    router.replace(q ? `${basePath}?${q}` : basePath, { scroll: false });
+  }, [filters.conditions, searchParams, router, pathname]);
 
   // Charger des titres d'annonces sans filtre pour les suggestions de la barre de recherche (toujours les mêmes qu'il y ait des filtres ou non)
   useEffect(() => {
@@ -1046,6 +1129,22 @@ function CatalogueContent() {
     setLoading(true);
     setDealByListingId({});
     try {
+      if (vendeurParseInvalid) {
+        setListings([]);
+        setLoading(false);
+        return;
+      }
+      if (isVendeurCataloguePath && parsedVendeurSlug) {
+        if (vendeurSlugError) {
+          setListings([]);
+          setLoading(false);
+          return;
+        }
+        if (!filters.sellerId) {
+          setLoading(true);
+          return;
+        }
+      }
       let sortBy: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes' = 'newest';
       if (filters.sortBy === 'date_asc') sortBy = 'oldest';
       else if (filters.sortBy === 'price_asc') sortBy = 'price_asc';
@@ -1230,7 +1329,7 @@ function CatalogueContent() {
     } finally {
       if (loadId === loadListingsIdRef.current) setLoading(false);
     }
-  }, [filters, radiusKm, userCoords]);
+  }, [filters, radiusKm, userCoords, isVendeurCataloguePath, parsedVendeurSlug, vendeurParseInvalid, vendeurSlugError]);
 
   useEffect(() => {
     loadListings();
@@ -1798,11 +1897,11 @@ function CatalogueContent() {
     const baseFilters = { ...defaultFilters };
     if (urlCondition === 'new') {
       baseFilters.conditions = ['new'];
-      const sid = searchParams.get('sellerId');
+      const sid = searchParams.get('sellerId') ?? (pathname.startsWith('/catalogue/vendeur/') ? filters.sellerId : undefined);
       if (sid) baseFilters.sellerId = sid;
     } else if (urlCondition === 'occasion') {
       baseFilters.conditions = [...OCCASION_CONDITIONS];
-      const sid = searchParams.get('sellerId');
+      const sid = searchParams.get('sellerId') ?? (pathname.startsWith('/catalogue/vendeur/') ? filters.sellerId : undefined);
       if (sid) baseFilters.sellerId = sid;
     }
     setFilters(baseFilters);
@@ -1822,10 +1921,11 @@ function CatalogueContent() {
     setGeoError(null);
     const params = new URLSearchParams();
     if (urlCondition) params.set('condition', urlCondition);
-    const sid = searchParams.get('sellerId');
-    if (sid) params.set('sellerId', sid);
+    const sid = searchParams.get('sellerId') ?? (pathname.startsWith('/catalogue/vendeur/') ? filters.sellerId : undefined);
+    if (sid && !pathname.startsWith('/catalogue/vendeur/')) params.set('sellerId', sid);
     const q = params.toString();
-    router.replace(q ? `/catalogue?${q}` : '/catalogue', { scroll: false });
+    const basePath = pathname.startsWith('/catalogue/vendeur/') ? pathname : '/catalogue';
+    router.replace(q ? `${basePath}?${q}` : basePath, { scroll: false });
   };
 
   /** Recherche automatique à la frappe (comme Mes favoris) : appliquer le filtre query après debounce 300 ms */
@@ -1926,15 +2026,37 @@ function CatalogueContent() {
           fontSize: 14,
           fontWeight: 600,
           color: '#1d1d1f',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 10,
         }}
       >
-        Recherche
+        <span>Recherche</span>
+        <button
+          type="button"
+          className="hide-desktop"
+          onClick={handleReset}
+          style={{
+            fontSize: 12,
+            fontWeight: 500,
+            color: '#6e6e73',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            padding: 0,
+          }}
+        >
+          Réinitialiser
+        </button>
       </div>
       {/* Femme / Homme — même largeur et hauteur que la case Catégorie (même wrapper) */}
       <div>
         <FilterSection title="" defaultOpen collapsible={false} noBorder>
           <div style={{ position: 'relative' }}>
             <div
+              className="catalogue-seller-banner"
               style={{
                 display: 'flex',
                 width: 'calc(100% - 0.5mm)',
@@ -3370,6 +3492,7 @@ function CatalogueContent() {
           </div>
           {locationSuggestionsOpen && (locationSuggestions.length > 0 || locationCityLoading) && (
             <div
+              className="catalogue-seller-banner"
               style={{
                 position: 'absolute',
                 left: 0,
@@ -3856,10 +3979,11 @@ function CatalogueContent() {
           </aside>
 
           {/* Main */}
-            <main className="catalogue-page-main" style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
+            <main className={`catalogue-page-main${filters.sellerId ? ' catalogue-page-main--seller' : ''}`} style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
             {/* Bloc vendeur : nom, logo, annonces */}
             {filters.sellerId && (
             <div
+              className="catalogue-seller-banner"
               style={{
                   marginBottom: 24,
                   padding: 12,
@@ -3883,8 +4007,9 @@ function CatalogueContent() {
                   </div>
                 ) : seller ? (
                   <>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div className="catalogue-seller-main-info" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
+                        className="catalogue-seller-logo-wrap"
                   style={{
                           width: 64,
                           height: 64,
@@ -3903,14 +4028,14 @@ function CatalogueContent() {
                           <Store size={32} color="#888" />
                         )}
                       </div>
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         {filters.sellerId ? (
-                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
+                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {seller.companyName}
                           </h2>
                         ) : (
-                        <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4 }}>
+                        <Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {seller.companyName}
                           </h2>
                         </Link>
@@ -3922,13 +4047,14 @@ function CatalogueContent() {
                     </div>
                     {(seller.address || seller.city || seller.postcode) && (
                           <button
+                            className="catalogue-seller-location-btn"
                             type="button"
                             onClick={() => setShowMapPopup(true)}
                         style={{ height: 44, minWidth: 180, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
                           >
                         <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
                         {seller.postcode && <span style={{ fontSize: 16 }}>{seller.postcode}</span>}
-                        {seller.city && <span style={{ fontSize: 16 }}>{seller.city}</span>}
+                        {seller.city && <span className="hide-mobile" style={{ fontSize: 16 }}>{seller.city}</span>}
                           </button>
                     )}
                   </>
@@ -3940,7 +4066,7 @@ function CatalogueContent() {
 
             {/* Barre tri + filtre : même espace en dessous qu'entre "Plus récents" et la ligne au-dessus */}
             <div
-              className="catalogue-barre-tri"
+              className={`catalogue-barre-tri${filters.sellerId ? ' catalogue-barre-tri--seller' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -4090,7 +4216,7 @@ function CatalogueContent() {
                     {Array.from({ length: count }, (_, i) => (
                       <div
                         key={i}
-                        className="catalogue-skeleton-card"
+                        className={viewMode === 'grid' ? 'catalogue-skeleton-card' : 'catalogue-skeleton-card catalogue-line-card'}
                         style={{
                           display: 'flex',
                           flexDirection: viewMode === 'grid' ? 'column' : 'row',
@@ -4106,11 +4232,10 @@ function CatalogueContent() {
                         }}
                       >
                         <div
-                          className="catalogue-skeleton"
+                          className={viewMode === 'grid' ? 'catalogue-skeleton' : 'catalogue-skeleton catalogue-line-photo'}
                           style={{
-                            width: viewMode === 'grid' ? '100%' : '28%',
-                            minWidth: viewMode === 'grid' ? undefined : 64,
-                            aspectRatio: '1',
+                            width: viewMode === 'grid' ? '100%' : undefined,
+                            aspectRatio: viewMode === 'grid' ? '1' : undefined,
                             flexShrink: 0,
                             borderRadius: viewMode === 'grid' ? 0 : 4,
                             borderRight: viewMode === 'grid' ? undefined : '1px solid #e8e6e3',
@@ -4192,7 +4317,12 @@ function CatalogueContent() {
                 return (
               <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
-                  <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent(catalogueReturnUrl)}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+                  <Link
+                    key={listing.id}
+                    href={listingAnnoncePath(listing)}
+                    onClick={() => setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl)}
+                    style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
+                  >
                     <article
                       style={{
                         position: 'relative',
@@ -4259,7 +4389,7 @@ function CatalogueContent() {
                         {(() => {
                           const lineText = listing.title || '';
                           return (
-                            <h3 className="listing-grid-title" title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
+                            <h3 className="listing-grid-title" title={lineText} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', lineHeight: 1.3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                               {highlightSearchTerms(lineText, filters.query)}
                         </h3>
                           );
@@ -4289,8 +4419,14 @@ function CatalogueContent() {
               return (
               <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
-                  <Link key={listing.id} href={`/produit/${listing.id}?returnTo=${encodeURIComponent(catalogueReturnUrl)}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
+                  <Link
+                    key={listing.id}
+                    href={listingAnnoncePath(listing)}
+                    onClick={() => setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl)}
+                    style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
+                  >
                     <article
+                className="catalogue-line-card"
                 style={{
                         position: 'relative',
                         display: 'flex',
@@ -4336,14 +4472,11 @@ function CatalogueContent() {
                         />
                       </button>
                       <div
+                        className="catalogue-line-photo"
                         style={{
                           position: 'relative',
-                          width: '28%',
-                          minWidth: 64,
-                          aspectRatio: '1',
                           backgroundColor: '#fff',
                           overflow: 'hidden',
-                          flexShrink: 0,
                           borderRight: '1px solid #e8e6e3',
                         }}
                       >
@@ -4354,21 +4487,22 @@ function CatalogueContent() {
                         />
                       </div>
                             <div
+                            className="catalogue-line-content"
                             style={{
                           flex: 1,
                               display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
-                          padding: '6px 48px 6px 14px',
+                          padding: '0 48px 4px 14px',
                           minWidth: 0,
                           overflow: 'hidden',
                         }}
                       >
-                        <div style={{ paddingBottom: 4, minWidth: 0, overflow: 'hidden' }}>
+                        <div className="catalogue-line-title-block" style={{ paddingBottom: 4, minWidth: 0, overflow: 'hidden' }}>
                           {(() => {
                             const lineText = listing.title || '';
                             return (
-                              <h3 title={lineText} style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                              <h3 title={lineText} className="catalogue-line-title" style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
                                 {highlightSearchTerms(lineText, filters.query)}
                           </h3>
                             );
@@ -4407,7 +4541,7 @@ function CatalogueContent() {
                             })()}
                           </div>
                         </div>
-                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 12, paddingBottom: 6, marginTop: 4, display: 'flex', alignItems: 'center', minHeight: 40 }}>
+                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, paddingBottom: 4, marginTop: 2, display: 'flex', alignItems: 'center', minHeight: 36 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 500, color: '#86868b', lineHeight: 1.4, minWidth: 0, width: '100%', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                             <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {listing.sellerName}
@@ -4563,7 +4697,7 @@ function CatalogueContent() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe

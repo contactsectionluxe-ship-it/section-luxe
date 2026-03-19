@@ -6,8 +6,16 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X, LineChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, getSellerListings, getListings, incrementPhoneReveals, getVisitorId } from '@/lib/supabase/listings';
+import { listingAnnoncePath } from '@/lib/listingPaths';
+import {
+  ANNONCE_RETURN_URL_STORAGE_KEY,
+  isSafeInternalReturnUrl,
+  normalizeInternalPath,
+  readAnnonceReturnUrlFromStorage,
+} from '@/lib/annonceReturnUrl';
 import { getFavorite, addFavorite, removeFavorite } from '@/lib/supabase/favorites';
 import { getOrCreateConversation, sendMessage } from '@/lib/supabase/messaging';
+import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
@@ -46,17 +54,52 @@ export default function ProductPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const listingId = params.id as string;
-  /** URL de retour au catalogue avec filtres (si on vient du catalogue). */
-  const returnToCatalogue = (() => {
-    const returnTo = searchParams.get('returnTo');
-    if (!returnTo || typeof returnTo !== 'string') return '/catalogue';
-    const path = returnTo.startsWith('/') ? returnTo : `/${returnTo}`;
-    return path.startsWith('/catalogue') ? path : '/catalogue';
-  })();
+  /** Venu de Mes annonces (clic sur la case) → retour à mes annonces, sinon retour catalogue / favoris. */
+  const fromVendeurParam = searchParams.get('from') === 'vendeur';
+
+  /** Retour catalogue / favoris : session + ancien param `returnTo` (sans polluer l’URL partagée). */
+  const [returnBackHref, setReturnBackHref] = useState('/catalogue');
+
+  useEffect(() => {
+    const legacy = searchParams.get('returnTo');
+    if (legacy && typeof legacy === 'string') {
+      try {
+        const decoded = decodeURIComponent(legacy);
+        const n = normalizeInternalPath(decoded);
+        if (isSafeInternalReturnUrl(n)) {
+          setReturnBackHref(n);
+          try {
+            sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, n);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    const stored = readAnnonceReturnUrlFromStorage();
+    if (stored) setReturnBackHref(stored);
+  }, [searchParams]);
+
+  /** Retire `returnTo` de la barre d’adresse (anciens liens) une fois la cible lue. */
+  useEffect(() => {
+    if (!searchParams.get('returnTo')) return;
+    const q = new URLSearchParams(searchParams.toString());
+    q.delete('returnTo');
+    const qs = q.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}`, { scroll: false });
+  }, [searchParams, pathname, router]);
+
+  const returnBackLabel = fromVendeurParam
+    ? 'Retour à mes annonces'
+    : returnBackHref.startsWith('/favoris')
+      ? 'Retour aux favoris'
+      : 'Retour au catalogue';
+
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
   const { user, isAuthenticated } = useAuth();
-  /** Venu de Mes annonces (clic sur la case) → retour à mes annonces, sinon retour au catalogue */
-  const fromVendeurParam = searchParams.get('from') === 'vendeur';
 
   const [listing, setListing] = useState<Listing | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -378,7 +421,7 @@ export default function ProductPage() {
         }
 
         if (isAuthenticated && user) {
-          const favorite = await getFavorite(user.uid, listingId);
+          const favorite = await getFavorite(user.uid, listingData.id);
           setIsFavorited(!!favorite);
         }
       } catch (error) {
@@ -390,6 +433,19 @@ export default function ProductPage() {
 
     loadData();
   }, [listingId, isAuthenticated, user, router]);
+
+  /** Remplace /annonce/<uuid> par /annonce/<numéro court> dans la barre d’adresse (partage plus lisible). */
+  const listingUuidInPathRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  useEffect(() => {
+    if (!listing?.listingNumber || loading) return;
+    const seg = decodeURIComponent(String(listingId));
+    if (!listingUuidInPathRegex.test(seg) || seg !== listing.id) return;
+    const q = new URLSearchParams(searchParams.toString());
+    q.delete('returnTo');
+    const qs = q.toString();
+    router.replace(`${listingAnnoncePath(listing)}${qs ? `?${qs}` : ''}`, { scroll: false });
+  }, [listing, loading, listingId, router, searchParams]);
 
   useEffect(() => {
     if (!showPhotoLightbox) return;
@@ -408,12 +464,13 @@ export default function ProductPage() {
 
     setFavoriteLoading(true);
     try {
-      if (isFavorited) {
-        await removeFavorite(user!.uid, listingId);
+      if (!listing?.id) return;
+    if (isFavorited) {
+        await removeFavorite(user!.uid, listing.id);
         setIsFavorited(false);
         setLikesCount((prev) => Math.max(0, prev - 1));
       } else {
-        await addFavorite(user!.uid, listingId);
+        await addFavorite(user!.uid, listing.id);
         setIsFavorited(true);
         setLikesCount((prev) => prev + 1);
       }
@@ -425,7 +482,8 @@ export default function ProductPage() {
   };
 
   const handleShare = async () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/produit/${listingId}` : '';
+    const path = listing ? listingAnnoncePath(listing) : `/annonce/${listingId}`;
+    const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : '';
     const title = listing ? `${getListingDisplayTitle(listing)} - Section Luxe` : 'Section Luxe';
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
@@ -541,9 +599,9 @@ export default function ProductPage() {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
-          <Link href={fromVendeurParam ? '/vendeur' : returnToCatalogue} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
+          <Link href={fromVendeurParam ? '/vendeur' : returnBackHref} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
             <ArrowLeft size={16} />
-            {fromVendeurParam ? 'Retour à mes annonces' : 'Retour au catalogue'}
+            {returnBackLabel}
           </Link>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
             {/* Desktop skeleton — même structure que la page produit */}
@@ -673,11 +731,11 @@ export default function ProductPage() {
       <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
-          href={fromVendeurParam ? '/vendeur' : returnToCatalogue}
+          href={fromVendeurParam ? '/vendeur' : returnBackHref}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}
         >
           <ArrowLeft size={16} />
-          {fromVendeurParam ? 'Retour à mes annonces' : 'Retour au catalogue'}
+          {returnBackLabel}
         </Link>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
@@ -847,7 +905,7 @@ export default function ProductPage() {
                       )}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                         <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>{seller.companyName}</h3>
                       </Link>
                       <p style={{ fontSize: 14, color: '#888', margin: 0 }}>Vendeur professionnel</p>
@@ -1047,23 +1105,19 @@ export default function ProductPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                           <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                          <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
+                          <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
+                        <span title={(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : String(listing.size)} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : listing.size}</span>
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (listing.widthCm != null || listing.heightCm != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>
-                          {listing.category === 'montres' ? 'Dimension' : 'Dimensions'}
-                        </span>
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
                       </div>
-                      <span title={listing.category === 'montres' ? `${(listing.widthCm != null || listing.heightCm != null) ? Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10) : ''} mm` : `L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.category === 'montres'
-                          ? (listing.widthCm != null || listing.heightCm != null) ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : ' '
-                          : `L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
+                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {`L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
                       </span>
                     </div>
                     )}
@@ -1075,7 +1129,7 @@ export default function ProductPage() {
                   <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
+                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
                 <div ref={descriptionRefDesktop} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                   <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                 </div>
@@ -1193,7 +1247,7 @@ export default function ProductPage() {
                     )}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                    <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                       <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
                     </Link>
                     {seller.description && (
@@ -1228,7 +1282,7 @@ export default function ProductPage() {
               {/* Voir les annonces + carte : même largeur que la ligne au-dessus (100 % section) */}
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
                 <Link
-                  href={`/catalogue?sellerId=${seller.uid}`}
+                  href={`${sellerCataloguePath(seller)}`}
                   style={{ display: 'block', width: '100%', padding: '14px 20px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 15, fontWeight: 500, textAlign: 'center' }}
                 >
                   Voir les annonces du vendeur ({sellerListingsCount})
@@ -1444,7 +1498,7 @@ export default function ProductPage() {
                         )}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
                           <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
                         </Link>
                         <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
@@ -1603,23 +1657,19 @@ export default function ProductPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                           <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                          <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
+                          <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
-                        <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
+                        <span title={(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : String(listing.size)} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : listing.size}</span>
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null) && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (listing.widthCm != null || listing.heightCm != null) && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>
-                          {listing.category === 'montres' ? 'Dimension' : 'Dimensions'}
-                        </span>
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dim</span>
                       </div>
-                      <span title={listing.category === 'montres' ? `${(listing.widthCm != null || listing.heightCm != null) ? Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10) : ''} mm` : `L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.category === 'montres'
-                          ? (listing.widthCm != null || listing.heightCm != null) ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : ' '
-                          : `L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
+                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {`L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
                       </span>
                     </div>
                     )}
@@ -1631,7 +1681,7 @@ export default function ProductPage() {
                   <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
+                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
                   <div ref={descriptionRefMobile} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                     <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                   </div>
@@ -1730,6 +1780,54 @@ export default function ProductPage() {
                     </>
                   )}
                 </div>
+
+                {/* Section Vendeur professionnel (mobile) — sous Indicateur de marché */}
+                {seller && (
+                  <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 10 }}>
+                      <Store size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
+                      Vendeur professionnel
+                    </h2>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+                      <div style={{ width: 58, height: 58, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {seller.avatarUrl ? (
+                          <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <Store size={34} color="#888" />
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
+                          <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 4, color: '#1d1d1f' }}>{seller.companyName}</h3>
+                        </Link>
+                        {seller.description && (
+                          <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line' }}>
+                            {seller.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`${sellerCataloguePath(seller)}`}
+                      style={{ display: 'block', width: '100%', padding: '12px 16px', backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textAlign: 'center', textDecoration: 'none' }}
+                    >
+                      Voir les annonces du vendeur ({sellerListingsCount})
+                    </Link>
+
+                    {(seller.address || seller.postcode || seller.city) && (
+                      <button
+                        type="button"
+                        onClick={() => { setMapZoom(13); setShowMapPopup(true); }}
+                        style={{ width: '100%', marginTop: 12, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+                      >
+                        <MapPin size={18} color="#1d1d1f" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: 16 }}>{seller.postcode}</span>
+                        <span style={{ fontSize: 16 }}>{seller.city}</span>
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1800,7 +1898,7 @@ export default function ProductPage() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`/catalogue?sellerId=${seller.uid}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
+              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
                 <iframe

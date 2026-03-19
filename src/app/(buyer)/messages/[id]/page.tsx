@@ -12,6 +12,7 @@ import {
   sendMessage,
   markConversationAsRead,
 } from '@/lib/supabase/messaging';
+import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
 import { formatRelativeTime, formatDate, formatDateShort, getSellerAvatarUrl } from '@/lib/utils';
@@ -36,6 +37,7 @@ export default function ConversationPage() {
   const [mapZoom, setMapZoom] = useState(13);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lastAutoReadMessageIdRef = useRef<string | null>(null);
 
   const adjustTextareaHeight = () => {
     const ta = textareaRef.current;
@@ -111,6 +113,21 @@ export default function ConversationPage() {
     const unsubscribe = subscribeToMessages(conversationId, (msgs) => {
       setMessages(msgs);
       setLoading(false);
+
+      // Si l'utilisateur est déjà sur cette conversation et reçoit un nouveau message,
+      // marquer immédiatement comme lu pour éviter la bulle rouge.
+      const last = msgs.length ? msgs[msgs.length - 1] : null;
+      if (!last) return;
+      if (last.senderId === user.uid) return;
+      if (lastAutoReadMessageIdRef.current === last.id) return;
+      lastAutoReadMessageIdRef.current = last.id;
+      markConversationAsRead(conversationId, isBuyer)
+        .then(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('messages:refresh-unread'));
+          }
+        })
+        .catch((err) => console.error('markConversationAsRead (auto)', err));
     }, { since: since ?? undefined });
     return () => unsubscribe();
   }, [conversationId, conversation, user?.uid]);
@@ -208,7 +225,7 @@ export default function ConversationPage() {
         </div>
 
         {/* Carte principale (même contour et ombre que Annonces mises en ligne / Mes ventes) */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438 }}>
+        <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438, marginTop: '-0.5cm' }}>
           {/* Barre supérieure : retour + annonce + interlocuteur */}
           <div
             style={{
@@ -227,7 +244,7 @@ export default function ConversationPage() {
                 <ArrowLeft size={20} />
             </Link>
             <Link
-              href={`/produit/${conversation.listingId}`}
+              href={`/annonce/${conversation.listingId}`}
               style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
             >
               <div
@@ -513,7 +530,7 @@ export default function ConversationPage() {
                   </div>
                 </div>
                 <Link
-                  href={`/catalogue?sellerId=${popupSeller.uid}`}
+                  href={sellerCataloguePath(popupSeller)}
                   onClick={() => setShowPartyPopup(false)}
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: 44, backgroundColor: '#1d1d1f', color: '#fff', borderRadius: 10, fontSize: 16, fontWeight: 500, fontFamily: 'inherit', textAlign: 'center', marginBottom: 12, textDecoration: 'none' }}
                 >
