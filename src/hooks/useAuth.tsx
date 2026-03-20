@@ -33,19 +33,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshUser = async () => {
-    if (!isSupabaseConfigured || !supabaseUser) {
+    if (!isSupabaseConfigured) {
       setUser(null);
       setSeller(null);
       return;
     }
 
+    const { supabase } = await import('@/lib/supabase/client');
+    if (!supabase) {
+      setUser(null);
+      setSeller(null);
+      return;
+    }
+
+    // Toujours lire l’utilisateur depuis la session (JWT à jour après refreshSession / changement d’e-mail)
+    const {
+      data: { user: freshUser },
+    } = await supabase.auth.getUser();
+    if (!freshUser) {
+      setSupabaseUser(null);
+      setUser(null);
+      setSeller(null);
+      return;
+    }
+
+    setSupabaseUser(freshUser);
+
     const { getUserData, getSellerData, syncProfileEmailFromAuth } = await import('@/lib/supabase/auth');
-    await syncProfileEmailFromAuth(supabaseUser);
-    const userData = await getUserData(supabaseUser.id);
+    await syncProfileEmailFromAuth(freshUser);
+    const userData = await getUserData(freshUser.id);
     setUser(userData);
 
-    // Charger seller si une fiche existe (même pour admin)
-    const sellerData = await getSellerData(supabaseUser.id);
+    const sellerData = await getSellerData(freshUser.id);
     setSeller(sellerData);
   };
 

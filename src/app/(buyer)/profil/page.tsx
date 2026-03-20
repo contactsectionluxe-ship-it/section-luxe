@@ -661,7 +661,7 @@ export default function ProfilPage() {
               ) : emailStep === 2 ? (
                 <form onSubmit={handleVerifyEmailCode}>
                   <div style={{ marginBottom: 18 }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>
+                    <p style={{ fontSize: 12, fontWeight: 400, color: '#86868b', lineHeight: 1.5, marginBottom: 12, marginTop: 0 }}>
                       Saisissez le code à 6 chiffres reçu sur votre adresse e-mail actuelle (valide 5 min). *
                     </p>
                     <p style={{ fontSize: 13, color: '#86868b', marginBottom: 10, marginTop: 0, lineHeight: 1.5 }}>
@@ -750,10 +750,10 @@ export default function ProfilPage() {
               ) : (
                 <form onSubmit={handleConfirmNewEmail}>
                   <div style={{ marginBottom: 18 }}>
-                    <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginBottom: 10 }}>
-                      Indiquez votre nouvelle adresse e-mail. *
+                    <p style={{ fontSize: 12, fontWeight: 400, color: '#86868b', lineHeight: 1.5, marginBottom: 12, marginTop: 0 }}>
+                      Indiquez votre nouvelle adresse e-mail.
                     </p>
-                    <label style={reportFieldLabelStyle}>Email *</label>
+                    <label style={reportFieldLabelStyle}>Nouvel E-mail *</label>
                     <input
                       type="email"
                       value={newEmail}

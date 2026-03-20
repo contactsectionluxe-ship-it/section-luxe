@@ -5,10 +5,24 @@ import { getSupabaseServer } from '@/lib/supabase/server';
 import { generateSixDigitCode, hashEmailChangeCode } from '@/lib/email-change-code';
 import { getSmtpTransporter } from '@/lib/email/smtpTransporter';
 
+export const runtime = 'nodejs';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const OTP_TTL_MS = 5 * 60 * 1000;
+
+function isMissingTableError(err: { message?: string; code?: string } | null): boolean {
+  if (!err) return false;
+  const m = (err.message || '').toLowerCase();
+  return (
+    m.includes('does not exist') ||
+    m.includes('schema cache') ||
+    m.includes('could not find the table') ||
+    err.code === '42P01' ||
+    err.code === 'PGRST205'
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -58,6 +72,15 @@ export async function POST(request: NextRequest) {
     });
     if (insErr) {
       console.error('email-change send-code insert:', insErr);
+      if (isMissingTableError(insErr)) {
+        return NextResponse.json(
+          {
+            error:
+              'Tables OTP non créées. Exécutez la migration Supabase `email_change_otp.sql` (SQL Editor ou CLI).',
+          },
+          { status: 503 }
+        );
+      }
       return NextResponse.json({ error: 'Impossible d’enregistrer le code.' }, { status: 500 });
     }
 
@@ -65,26 +88,44 @@ export async function POST(request: NextRequest) {
     if (!transporter) {
       console.error('SMTP non configuré (email-change send-code)');
       await server.from('email_change_otp').delete().eq('user_id', auth.user.id);
-      return NextResponse.json({ error: 'Envoi email indisponible.' }, { status: 503 });
+      return NextResponse.json(
+        {
+          error:
+            'Envoi e-mail indisponible : configurez SMTP_HOST, SMTP_USER et SMTP_PASS sur Vercel (ou un relais SMTP autorisé).',
+        },
+        { status: 503 }
+      );
     }
 
     const from = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@sectionluxe.com';
-    await transporter.sendMail({
-      from: `"Section Luxe" <${from}>`,
-      to: auth.user.email,
-      subject: 'Votre code Section Luxe',
-      text: [
-        'Bonjour,',
-        '',
-        `Votre code de vérification est : ${code}`,
-        '',
-        'Il est valable 5 minutes.',
-        '',
-        'Si vous n’avez pas demandé ce code, ignorez ce message.',
-        '',
-        '— Section Luxe',
-      ].join('\n'),
-    });
+    try {
+      await transporter.sendMail({
+        from: `"Section Luxe" <${from}>`,
+        to: auth.user.email,
+        subject: 'Votre code Section Luxe',
+        text: [
+          'Bonjour,',
+          '',
+          `Votre code de vérification est : ${code}`,
+          '',
+          'Il est valable 5 minutes.',
+          '',
+          'Si vous n’avez pas demandé ce code, ignorez ce message.',
+          '',
+          '— Section Luxe',
+        ].join('\n'),
+      });
+    } catch (mailErr) {
+      console.error('email-change send-code sendMail:', mailErr);
+      await server.from('email_change_otp').delete().eq('user_id', auth.user.id);
+      return NextResponse.json(
+        {
+          error:
+            'L’e-mail n’a pas pu être envoyé. Vérifiez les identifiants SMTP sur Vercel et que le fournisseur autorise l’envoi.',
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
