@@ -1,16 +1,48 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { CheckCircle, Loader2, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
+const pageWrap: React.CSSProperties = {
+  paddingTop: 'var(--header-height)',
+  minHeight: '100vh',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 24,
+  background: 'linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%)',
+};
+
+const cardStyle: React.CSSProperties = {
+  backgroundColor: '#fff',
+  borderRadius: 20,
+  boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
+  padding: '48px 40px',
+  maxWidth: 420,
+  width: '100%',
+  textAlign: 'center',
+};
+
+function SuccessPageFallback() {
+  return (
+    <div style={pageWrap}>
+      <div style={cardStyle}>
+        <Loader2 size={28} className="animate-spin" style={{ color: '#1d1d1f', marginBottom: 16 }} />
+        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Page de retour après paiement Stripe réussi.
  * Affiche un succès et redirige vers Mes annonces.
  */
-export default function NewListingSuccessPage() {
+function NewListingSuccessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionId = searchParams.get('session_id');
@@ -46,27 +78,6 @@ export default function NewListingSuccessPage() {
     }, 1000);
     return () => clearInterval(t);
   }, [status, router]);
-
-  const pageWrap: React.CSSProperties = {
-    paddingTop: 'var(--header-height)',
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-    background: 'linear-gradient(180deg, #fafafa 0%, #f5f5f7 100%)',
-  };
-
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04)',
-    padding: '48px 40px',
-    maxWidth: 420,
-    width: '100%',
-    textAlign: 'center',
-  };
 
   if (authLoading || !user || !seller) {
     return (
@@ -186,5 +197,13 @@ export default function NewListingSuccessPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function NewListingSuccessPage() {
+  return (
+    <Suspense fallback={<SuccessPageFallback />}>
+      <NewListingSuccessContent />
+    </Suspense>
   );
 }
