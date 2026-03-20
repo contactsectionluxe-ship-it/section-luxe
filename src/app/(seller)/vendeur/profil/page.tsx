@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Mail, FileText, Camera, Image as ImageIcon, AlertTriangle, X, CheckCircle, Clock, XCircle, BadgeCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { EmailChangeModal } from '@/components/profile/EmailChangeModal';
 import { formatDate } from '@/lib/utils';
 import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
@@ -32,6 +33,7 @@ const inputStyle: React.CSSProperties = {
 export default function ProfilVendeurPage() {
   const router = useRouter();
   const { user, seller, isSeller, loading: authLoading, refreshUser } = useAuth();
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -420,15 +422,29 @@ export default function ProfilVendeurPage() {
               <label style={labelStyle}>Email professionnel</label>
               <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', gap: 8, color: '#86868b', backgroundColor: '#f5f5f7' }}>
                 <Mail size={16} />
-                <span>{seller.email}</span>
+                <span>{user?.email ?? seller.email}</span>
               </div>
-              <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
-                L&apos;email ne peut pas être modifié ici.{' '}
-                <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}>Contact</Link>
-              </p>
+              <div style={{ marginTop: 2, marginBottom: 0, textAlign: 'right' }}>
+                <button
+                  type="button"
+                  onClick={() => setEmailModalOpen(true)}
+                  style={{
+                    fontSize: 13,
+                    color: '#1d1d1f',
+                    fontWeight: 500,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  Modifier l’email
+                </button>
+              </div>
             </div>
 
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginBottom: 18, marginTop: -24 }}>
               <label style={labelStyle}>Téléphone <span style={{ color: '#1d1d1f' }}>*</span></label>
               <input
                 type="tel"
@@ -500,6 +516,13 @@ export default function ProfilVendeurPage() {
           </button>
         </div>
       </div>
+
+      <EmailChangeModal
+        open={emailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        currentEmail={user?.email ?? seller.email}
+        refreshUser={refreshUser}
+      />
 
       {deleteModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
