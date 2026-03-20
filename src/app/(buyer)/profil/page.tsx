@@ -68,6 +68,8 @@ const reportInputStyle: React.CSSProperties = {
   backgroundColor: '#fff',
 };
 
+const EMAIL_OTP_RESEND_COOLDOWN_SEC = 60;
+
 export default function ProfilPage() {
   const router = useRouter();
   const { user, seller, isSeller, loading: authLoading, refreshUser } = useAuth();
@@ -90,6 +92,8 @@ export default function ProfilPage() {
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState(false);
   const [showEmailPassword, setShowEmailPassword] = useState(false);
+  /** 0 = renvoi autorisé ; >0 = décompte avant prochain renvoi */
+  const [emailOtpResendSecondsLeft, setEmailOtpResendSecondsLeft] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -111,6 +115,14 @@ export default function ProfilPage() {
       setPhone(user.phone ?? '');
     }
   }, [user]);
+
+  useEffect(() => {
+    if (emailOtpResendSecondsLeft <= 0) return;
+    const id = window.setInterval(() => {
+      setEmailOtpResendSecondsLeft((s) => (s <= 1 ? 0 : s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [emailOtpResendSecondsLeft]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,6 +167,7 @@ export default function ProfilPage() {
     setEmailError('');
     setEmailSuccess(false);
     setShowEmailPassword(false);
+    setEmailOtpResendSecondsLeft(0);
     setEmailModalOpen(true);
   };
 
@@ -167,6 +180,7 @@ export default function ProfilPage() {
     setNewEmail('');
     setEmailError('');
     setEmailSuccess(false);
+    setEmailOtpResendSecondsLeft(0);
   };
 
   const goEmailStepBack = () => {
@@ -175,6 +189,7 @@ export default function ProfilPage() {
     if (emailStep === 2) {
       setEmailStep(1);
       setEmailOtpCode('');
+      setEmailOtpResendSecondsLeft(0);
     } else if (emailStep === 3) {
       setEmailStep(2);
       setNewEmail('');
@@ -203,6 +218,7 @@ export default function ProfilPage() {
       await postEmailChangeApi('/api/email-change/send-code', { password: emailPassword });
       setEmailStep(2);
       setEmailOtpCode('');
+      setEmailOtpResendSecondsLeft(EMAIL_OTP_RESEND_COOLDOWN_SEC);
     } catch (err: unknown) {
       setEmailError(err instanceof Error ? err.message : 'Impossible d’envoyer le code.');
     } finally {
@@ -684,10 +700,11 @@ export default function ProfilPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (emailOtpResendSecondsLeft > 0 || emailSaving) return;
                       setEmailError('');
                       handleSendEmailCode();
                     }}
-                    disabled={emailSaving}
+                    disabled={emailSaving || emailOtpResendSecondsLeft > 0}
                     style={{
                       display: 'block',
                       width: '100%',
@@ -696,14 +713,16 @@ export default function ProfilPage() {
                       border: 'none',
                       background: 'none',
                       fontSize: 13,
-                      color: '#1d1d1f',
+                      color: emailOtpResendSecondsLeft > 0 || emailSaving ? '#86868b' : '#1d1d1f',
                       fontWeight: 600,
-                      cursor: emailSaving ? 'not-allowed' : 'pointer',
+                      cursor: emailSaving || emailOtpResendSecondsLeft > 0 ? 'not-allowed' : 'pointer',
                       textAlign: 'center',
-                      textDecoration: 'underline',
+                      textDecoration: emailOtpResendSecondsLeft > 0 || emailSaving ? 'none' : 'underline',
                     }}
                   >
-                    Renvoyer le code
+                    {emailOtpResendSecondsLeft > 0
+                      ? `Renvoyer le code (${emailOtpResendSecondsLeft} s)`
+                      : 'Renvoyer le code'}
                   </button>
                   <div style={{ display: 'flex', flexDirection: 'row', gap: 12, alignItems: 'stretch' }}>
                     <button
@@ -753,7 +772,7 @@ export default function ProfilPage() {
                     <p style={{ fontSize: 12, fontWeight: 400, color: '#86868b', lineHeight: 1.5, marginBottom: 12, marginTop: 0 }}>
                       Indiquez votre nouvelle adresse e-mail.
                     </p>
-                    <label style={reportFieldLabelStyle}>Nouvel E-mail *</label>
+                    <label style={reportFieldLabelStyle}>Nouvelle adresse e-mail *</label>
                     <input
                       type="email"
                       value={newEmail}
