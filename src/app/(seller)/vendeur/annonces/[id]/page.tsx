@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader, CguCgvCheckbox } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
-import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
@@ -757,13 +756,6 @@ export default function EditListingPage() {
       });
 
       setError('');
-      if (isActive) {
-        try {
-          await ensureInvoiceForListing(listingId);
-        } catch (e) {
-          console.error('Création facture après activation annonce', e);
-        }
-      }
 
       try {
         if (typeof window !== 'undefined') {
