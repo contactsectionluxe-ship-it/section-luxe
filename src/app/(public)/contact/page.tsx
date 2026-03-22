@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
 const inputStyle: React.CSSProperties = {
@@ -23,12 +24,24 @@ const labelStyle: React.CSSProperties = {
   color: '#333',
 };
 
-export default function ContactPage() {
+function ContactPageInner() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [subjectLocked, setSubjectLocked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const subjectParam = searchParams.get('subject');
+    if (subjectParam?.trim()) {
+      setForm((prev) => ({ ...prev, subject: subjectParam.trim() }));
+      setSubjectLocked(true);
+    } else {
+      setSubjectLocked(false);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user) return;
@@ -72,6 +85,7 @@ export default function ContactPage() {
       }
       setSuccess(true);
       setForm({ name: '', email: '', subject: '', message: '' });
+      setSubjectLocked(false);
     } catch {
       setError('Une erreur est survenue. Réessayez plus tard.');
     } finally {
@@ -161,9 +175,17 @@ export default function ContactPage() {
                   id="contact-subject"
                   type="text"
                   value={form.subject}
+                  readOnly={subjectLocked}
                   onChange={(e) => setForm((p) => ({ ...p, subject: e.target.value }))}
                   placeholder="Ex. Partenariat, Support..."
-                  style={inputStyle}
+                  style={{
+                    ...inputStyle,
+                    ...(subjectLocked
+                      ? { backgroundColor: '#f5f5f7', color: '#86868b', cursor: 'not-allowed' }
+                      : {}),
+                  }}
+                  aria-readonly={subjectLocked || undefined}
+                  title={subjectLocked ? 'Objet défini pour cette demande' : undefined}
                 />
               </div>
               <div style={{ marginBottom: 24 }}>
@@ -213,5 +235,17 @@ export default function ContactPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }} />
+      }
+    >
+      <ContactPageInner />
+    </Suspense>
   );
 }

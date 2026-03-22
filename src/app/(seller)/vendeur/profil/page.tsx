@@ -377,7 +377,12 @@ export default function ProfilVendeurPage() {
                 </div>
                 <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
                   Le SIRET ne peut pas être modifié ici.{' '}
-                  <Link href="/contact" style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}>Contact</Link>
+                  <Link
+                    href={`/contact?subject=${encodeURIComponent(`Demande de modification de Siret - ${(seller.companyName || '').trim() || 'Vendeur'}`)}`}
+                    style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}
+                  >
+                    Contact
+                  </Link>
                 </p>
               </div>
             )}

@@ -39,7 +39,11 @@ export async function POST(request: NextRequest) {
 
     if (existing) {
       if (existing.status === 'subscribed') {
-        return NextResponse.json({ ok: true, message: 'Déjà inscrit' });
+        return NextResponse.json({
+          ok: true,
+          alreadySubscribed: true,
+          message: 'Déjà inscrit',
+        });
       }
       await server
         .from('newsletter_subscribers')
