@@ -978,7 +978,7 @@ function MesVentesPageContent() {
         {/* Graphique évolution des ventes — 12 derniers mois */}
         <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e8e6e3', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', padding: 28, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, margin: 0, color: '#1d1d1f' }}>
+            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 400, margin: 0, color: '#1d1d1f' }}>
               <span className="mes-ventes-evolution-title-desktop">Évolution des ventes des 12 derniers mois</span>
               <span className="mes-ventes-evolution-title-mobile">Évolution des ventes</span>
             </h2>
