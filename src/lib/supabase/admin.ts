@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './client';
 import { Seller, SellerStatus } from '@/types';
+import { normalizeSubscriptionTier } from '@/lib/subscription';
 
 function checkSupabase() {
   if (!isSupabaseConfigured || !supabase) {
@@ -26,6 +27,14 @@ function rowToSeller(row: any): Seller {
     kbisUrl: row.kbis_url,
     avatarUrl: row.avatar_url ?? null,
     suspendedUntil: row.suspended_until ? new Date(row.suspended_until) : null,
+    subscriptionTier: normalizeSubscriptionTier(row.subscription_tier),
+    stripeCustomerRegistered: Boolean(
+      row.stripe_customer_id && String(row.stripe_customer_id).startsWith('cus_'),
+    ),
+    stripeSubscriptionId:
+      row.stripe_subscription_id && String(row.stripe_subscription_id).startsWith('sub_')
+        ? String(row.stripe_subscription_id)
+        : null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };

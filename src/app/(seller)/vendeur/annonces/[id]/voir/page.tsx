@@ -9,6 +9,7 @@ import { getListing, deleteListing, updateListing } from '@/lib/supabase/listing
 import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
+import { isSubscriptionLimitError } from '@/lib/subscription';
 import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
@@ -135,7 +136,12 @@ export default function VoirAnnoncePage() {
       setListing((prev) => (prev ? { ...prev, isActive: toggleToActive } : null));
       closeToggleModal();
     } catch (e) {
-      console.error(e);
+      if (isSubscriptionLimitError(e)) {
+        router.push('/vendeur/abonnement?limite=1');
+        closeToggleModal();
+      } else {
+        console.error(e);
+      }
     } finally {
       setToggling(false);
     }

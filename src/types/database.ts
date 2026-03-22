@@ -45,6 +45,9 @@ export interface Database {
           id_card_back_url: string
           kbis_url: string
           suspended_until: string | null
+          subscription_tier: 'start' | 'plus' | 'pro'
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
           created_at: string
           updated_at: string
         }
@@ -60,6 +63,9 @@ export interface Database {
           id_card_back_url: string
           kbis_url: string
           suspended_until?: string | null
+          subscription_tier?: 'start' | 'plus' | 'pro'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -75,6 +81,9 @@ export interface Database {
           id_card_back_url?: string
           kbis_url?: string
           suspended_until?: string | null
+          subscription_tier?: 'start' | 'plus' | 'pro'
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
           created_at?: string
           updated_at?: string
         }

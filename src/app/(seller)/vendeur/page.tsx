@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { isSubscriptionLimitError } from '@/lib/subscription';
 import { getSellerListings, deleteListing, updateListing } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
 import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
@@ -61,6 +62,18 @@ export default function SellerDashboardPage() {
   const [selling, setSelling] = useState(false);
   const [reservedListingIds, setReservedListingIds] = useState<Set<string>>(new Set());
   const mesAnnoncesGridRef = useRef<HTMLDivElement>(null);
+  const [depotInactiveLimiteBanner, setDepotInactiveLimiteBanner] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('listingDepotInactiveLimite') === '1') {
+        sessionStorage.removeItem('listingDepotInactiveLimite');
+        setDepotInactiveLimiteBanner(true);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -173,7 +186,12 @@ export default function SellerDashboardPage() {
       setListings((prev) => prev.map((l) => (l.id === listingToToggle.id ? { ...l, isActive: !l.isActive } : l)));
       setListingToToggle(null);
     } catch (err) {
-      console.error(err);
+      if (isSubscriptionLimitError(err)) {
+        router.push('/vendeur/abonnement?limite=1');
+        setListingToToggle(null);
+      } else {
+        console.error(err);
+      }
     } finally {
       setToggling(false);
     }
@@ -344,6 +362,49 @@ export default function SellerDashboardPage() {
             </Link>
           )}
         </div>
+
+        {depotInactiveLimiteBanner ? (
+          <div
+            role="status"
+            style={{
+              marginBottom: 20,
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1px solid #bfdbfe',
+              backgroundColor: '#eff6ff',
+              color: '#1e3a5f',
+              fontSize: 14,
+              lineHeight: 1.5,
+              fontFamily: 'var(--font-inter), var(--font-sans)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              boxSizing: 'border-box',
+            }}
+          >
+            <span>
+              Votre annonce a été enregistrée <strong>inactive</strong> : vous aviez déjà atteint le nombre maximal
+              d&apos;annonces actives pour votre formule. Désactivez une annonce en ligne pour pouvoir activer celle-ci.
+            </span>
+            <button
+              type="button"
+              onClick={() => setDepotInactiveLimiteBanner(false)}
+              aria-label="Fermer"
+              style={{
+                flexShrink: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                padding: 4,
+                color: '#1e3a5f',
+                lineHeight: 1,
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ) : null}
 
         {/* Status alerts */}
         {!showSkeletons && seller?.status === 'pending' && (

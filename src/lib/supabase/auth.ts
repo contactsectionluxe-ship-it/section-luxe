@@ -2,6 +2,7 @@ import type { SupabaseClient, User as SupabaseAuthUser } from '@supabase/supabas
 import { supabase, isSupabaseConfigured } from './client';
 import { User, Seller } from '@/types';
 import { slugifyCompanyName } from '@/lib/sellerCatalogueUrl';
+import { normalizeSubscriptionTier } from '@/lib/subscription';
 
 function checkSupabase(): SupabaseClient {
   if (!isSupabaseConfigured || !supabase) {
@@ -124,6 +125,7 @@ export async function signUpSeller(
       id_card_back_url: sellerData.idCardBackUrl ?? null,
       id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
       kbis_url: sellerData.kbisUrl,
+      subscription_tier: 'start',
     });
 
   if (sellerError) {
@@ -145,6 +147,8 @@ export async function signUpSeller(
     idCardBackUrl: sellerData.idCardBackUrl,
     idRectoType: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
     kbisUrl: sellerData.kbisUrl,
+    subscriptionTier: 'start',
+    stripeCustomerRegistered: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -207,6 +211,7 @@ export async function upgradeToSeller(uid: string, sellerData: UpgradeToSellerDa
       id_card_back_url: sellerData.idCardBackUrl ?? null,
       id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
       kbis_url: sellerData.kbisUrl,
+      subscription_tier: 'start',
     });
 
   if (sellerError) {
@@ -227,6 +232,8 @@ export async function upgradeToSeller(uid: string, sellerData: UpgradeToSellerDa
     idCardBackUrl: sellerData.idCardBackUrl,
     idRectoType: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
     kbisUrl: sellerData.kbisUrl,
+    subscriptionTier: 'start',
+    stripeCustomerRegistered: false,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -369,6 +376,14 @@ export async function getSellerData(uid: string): Promise<Seller | null> {
     kbisUrl: data.kbis_url,
     avatarUrl: (row.avatar_url as string | null) ?? null,
     suspendedUntil: row.suspended_until ? new Date(row.suspended_until as string) : null,
+    subscriptionTier: normalizeSubscriptionTier(row.subscription_tier as string | null | undefined),
+    stripeCustomerRegistered: Boolean(
+      row.stripe_customer_id && String(row.stripe_customer_id).startsWith('cus_'),
+    ),
+    stripeSubscriptionId:
+      row.stripe_subscription_id && String(row.stripe_subscription_id).startsWith('sub_')
+        ? String(row.stripe_subscription_id)
+        : null,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
   };
@@ -418,6 +433,18 @@ export async function getSession() {
   
   const { data: { session } } = await supabase.auth.getSession();
   return session;
+}
+
+/**
+ * JWT pour les routes API (Authorization: Bearer …).
+ * Rafraîchit la session si besoin : getSession() seul peut renvoyer un access_token expiré → 401 côté serveur.
+ */
+export async function getValidAccessTokenForFetch(): Promise<string | null> {
+  if (!isSupabaseConfigured || !supabase) return null;
+  const { data: refreshed } = await supabase.auth.refreshSession();
+  if (refreshed.session?.access_token) return refreshed.session.access_token;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token ?? null;
 }
 
 // Auth state change listener

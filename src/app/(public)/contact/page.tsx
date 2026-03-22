@@ -102,18 +102,7 @@ export default function ContactPage() {
         </div>
 
         {/* Carte blanche — même style que le formulaire Déposer une annonce */}
-        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
-          <p className="contact-intro-text" style={{ fontSize: 15, color: '#6e6e73', lineHeight: 1.6, marginBottom: 24 }}>
-            Pour toute demande, utilisez le formulaire ci-dessous ou écrivez-nous à{' '}
-            <a
-              href="mailto:contact.sectionluxe@gmail.com"
-              style={{ color: '#6e6e73', textDecoration: 'none' }}
-            >
-              contact.sectionluxe@gmail.com
-            </a>
-            .
-          </p>
-
+        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)', marginTop: '-1mm' }}>
           {success ? (
             <div
               style={{

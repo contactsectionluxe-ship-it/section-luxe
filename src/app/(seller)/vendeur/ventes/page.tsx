@@ -7,6 +7,7 @@ import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCir
 import { useAuth } from '@/hooks/useAuth';
 import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
 import { updateListing, deleteListing } from '@/lib/supabase/listings';
+import { isSubscriptionLimitError } from '@/lib/subscription';
 
 function formatAmountCents(cents: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(cents / 100);
@@ -97,6 +98,7 @@ function MesVentesPageContent() {
   const [venduListLoading, setVenduListLoading] = useState(false);
   const [showReservePopup, setShowReservePopup] = useState(false);
   const [reserveList, setReserveList] = useState<DeletionItem[]>([]);
+  const [depotInactiveLimiteBanner, setDepotInactiveLimiteBanner] = useState(false);
   const [reserveListLoading, setReserveListLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -111,6 +113,17 @@ function MesVentesPageContent() {
     setIsMobile(mq.matches);
     mq.addEventListener('change', onMatch);
     return () => mq.removeEventListener('change', onMatch);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined' && sessionStorage.getItem('listingDepotInactiveLimite') === '1') {
+        sessionStorage.removeItem('listingDepotInactiveLimite');
+        setDepotInactiveLimiteBanner(true);
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   useEffect(() => {
@@ -211,6 +224,48 @@ function MesVentesPageContent() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff' }}>
       <div className="mes-ventes-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        {depotInactiveLimiteBanner ? (
+          <div
+            role="status"
+            style={{
+              marginBottom: 20,
+              padding: '14px 16px',
+              borderRadius: 12,
+              border: '1px solid #bfdbfe',
+              backgroundColor: '#eff6ff',
+              color: '#1e3a5f',
+              fontSize: 14,
+              lineHeight: 1.5,
+              fontFamily: 'var(--font-inter), var(--font-sans)',
+              display: 'flex',
+              alignItems: 'flex-start',
+              justifyContent: 'space-between',
+              gap: 12,
+              boxSizing: 'border-box',
+            }}
+          >
+            <span>
+              Votre annonce a été enregistrée <strong>inactive</strong> : vous aviez déjà atteint le nombre maximal
+              d&apos;annonces actives pour votre formule. Désactivez une annonce en ligne pour pouvoir activer celle-ci.
+            </span>
+            <button
+              type="button"
+              onClick={() => setDepotInactiveLimiteBanner(false)}
+              aria-label="Fermer"
+              style={{
+                flexShrink: 0,
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                padding: 4,
+                color: '#1e3a5f',
+                lineHeight: 1,
+              }}
+            >
+              <X size={18} />
+            </button>
+          </div>
+        ) : null}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
@@ -813,7 +868,11 @@ function MesVentesPageContent() {
                         }
                         setReserveAction(null);
                       } catch (e) {
-                        console.error('Action réservation:', e);
+                        if (isSubscriptionLimitError(e)) {
+                          router.push('/vendeur/abonnement?limite=1');
+                        } else {
+                          console.error('Action réservation:', e);
+                        }
                       } finally {
                         setReserveActionLoading(false);
                       }

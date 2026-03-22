@@ -1,5 +1,8 @@
 // Types pour la marketplace luxe
 
+import type { SubscriptionTier } from '@/lib/subscription';
+
+export type { SubscriptionTier } from '@/lib/subscription';
 export type UserRole = 'buyer' | 'seller' | 'admin';
 
 export type SellerStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'banned';
@@ -44,6 +47,12 @@ export interface Seller {
   catalogueSlug?: string | null;
   /** Date de fin de suspension (null si non suspendu) */
   suspendedUntil?: Date | null;
+  /** Formule d’abonnement annonces (défaut start / gratuit) */
+  subscriptionTier: SubscriptionTier;
+  /** Au moins un paiement Stripe : portail facturation disponible */
+  stripeCustomerRegistered?: boolean;
+  /** Abonnement Stripe enregistré (ex. sub_xxx), si présent */
+  stripeSubscriptionId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

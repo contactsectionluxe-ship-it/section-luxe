@@ -7,15 +7,13 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function getAuthUserFromBearer(request: NextRequest): Promise<{ user: User; token: string } | null> {
   const authHeader = request.headers.get('authorization');
-  const token = authHeader?.replace(/^Bearer\s+/i, '');
+  const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
   if (!token || !supabaseUrl || !supabaseAnonKey) return null;
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
+  const client = createClient(supabaseUrl, supabaseAnonKey);
   const {
     data: { user },
     error,
-  } = await client.auth.getUser();
+  } = await client.auth.getUser(token);
   if (error || !user) return null;
   return { user, token };
 }

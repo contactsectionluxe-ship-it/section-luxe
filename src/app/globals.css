@@ -445,6 +445,339 @@ a:focus-visible {
   }
 }
 
+/* ——— Mon abonnement (vendeur) ——— */
+.abonnement-page-bg {
+  background-color: #f5f5f7;
+}
+
+.abonnement-section-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-family: var(--font-inter), var(--font-sans);
+}
+
+.abonnement-section-tab {
+  padding: 12px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid #d2d2d7;
+  background: #fff;
+  color: #424245;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.abonnement-section-tab:hover {
+  background: #f5f5f7;
+}
+
+.abonnement-section-tab--active {
+  background: #1d1d1f;
+  border-color: #1d1d1f;
+  color: #fff;
+}
+
+.abonnement-section-tab--active:hover {
+  background: #2d2d2f;
+}
+
+.abonnement-factures-embed {
+  width: 100%;
+}
+
+.abonnement-shell {
+  background: #fff;
+  padding: 24px 32px 32px;
+  border-radius: 20px;
+  border: 1px solid #e8e8ed;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+  margin-top: -1mm;
+}
+
+.abonnement-shell-footnote {
+  font-size: 13px;
+  color: #86868b;
+  text-align: center;
+  margin-top: 28px;
+  line-height: 1.5;
+  margin-bottom: 0;
+  font-family: var(--font-inter), var(--font-sans);
+}
+
+.abonnement-billing-portal {
+  margin-top: 0;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.abonnement-billing-portal .abonnement-plan-cta-btn--outline {
+  max-width: none;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.abonnement-plans-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.abonnement-plan-card {
+  flex: 1 1 0;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  padding: 26px 22px 24px;
+  border-radius: 16px;
+  border: 1px solid #e5e5ea;
+  background: #fff;
+  box-sizing: border-box;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.abonnement-plan-card:hover {
+  border-color: #d2d2d7;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.05);
+}
+
+.abonnement-plan-card--featured {
+  border-color: #1d1d1f;
+  background: linear-gradient(180deg, #fafafa 0%, #ffffff 45%);
+  box-shadow: 0 12px 40px rgba(29, 29, 31, 0.07);
+}
+
+.abonnement-plan-card--featured:hover {
+  border-color: #1d1d1f;
+  box-shadow: 0 16px 44px rgba(29, 29, 31, 0.09);
+}
+
+.abonnement-plan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 36px;
+  padding-bottom: 16px;
+  margin-bottom: 0;
+  border-bottom: 1px solid #f0f0f5;
+}
+
+h2.abonnement-plan-name {
+  font-family: var(--font-playfair), var(--font-serif);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #1d1d1f;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.abonnement-plan-badge {
+  flex-shrink: 0;
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background-color: #1d1d1f;
+  padding: 5px 10px;
+  border-radius: 999px;
+  line-height: 1;
+}
+
+.abonnement-plan-badge--placeholder {
+  visibility: hidden;
+  color: transparent;
+  background-color: transparent;
+}
+
+.abonnement-plan-price-block {
+  font-family: var(--font-inter), var(--font-sans);
+  min-height: 52px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding-top: 20px;
+  padding-bottom: 0;
+}
+
+.abonnement-plan-price {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #1d1d1f;
+  line-height: 1.1;
+}
+
+.abonnement-plan-price-suffix {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6e6e73;
+  line-height: 1.2;
+}
+
+/* Écart sous le prix (top) ; un peu plus sous le paragraphe avant les puces */
+.abonnement-plan-desc {
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 14px;
+  color: #6e6e73;
+  line-height: 1.55;
+  margin: 12px 0 18px;
+}
+
+.abonnement-plan-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.abonnement-plan-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 13px;
+  color: #3a3a3c;
+  line-height: 1.45;
+  margin-bottom: 10px;
+}
+
+.abonnement-plan-features li:last-child {
+  margin-bottom: 0;
+}
+
+.abonnement-plan-check-wrap {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Même taille d’icône partout → rond 22px */
+.abonnement-plan-check-wrap svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #15803d;
+}
+
+.abonnement-plan-check-wrap--red {
+  background: #fef2f2;
+}
+
+.abonnement-plan-check-wrap--red svg {
+  color: #dc2626;
+}
+
+.abonnement-plan-cta {
+  margin-top: auto;
+  padding-top: 22px;
+}
+
+.abonnement-plan-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 48px;
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  cursor: default;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: opacity 0.15s ease;
+}
+
+.abonnement-plan-cta-btn--muted {
+  color: #6e6e73;
+  background: #f5f5f7;
+  border: 1px solid #e5e5ea;
+}
+
+.abonnement-plan-cta-btn--primary {
+  color: #fff;
+  background: #1d1d1f;
+  cursor: pointer;
+}
+
+a.abonnement-plan-cta-btn--primary:hover {
+  opacity: 0.92;
+}
+
+button.abonnement-plan-cta-btn--primary {
+  cursor: pointer;
+}
+
+button.abonnement-plan-cta-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.abonnement-plan-cta-btn--outline {
+  color: #1d1d1f;
+  background: #fff;
+  border: 1px solid #d2d2d7;
+  cursor: pointer;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.abonnement-plan-cta-btn--outline:hover:not(:disabled) {
+  background: #fafafa;
+}
+
+button.abonnement-plan-cta-btn--outline:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@media (max-width: 900px) {
+  .abonnement-plans-row {
+    gap: 12px;
+  }
+  .abonnement-plan-card {
+    padding: 22px 16px 20px;
+  }
+  .abonnement-plan-price {
+    font-size: 25px;
+  }
+  h2.abonnement-plan-name {
+    font-size: 25px;
+  }
+}
+
 /* Catalogue mobile : mêmes marges latérales que la page produit (24px), liste pleine largeur */
 @media (max-width: 767px) {
   .catalogue-page-wrap {
@@ -681,9 +1014,31 @@ a:focus-visible {
     padding-right: 24px !important;
     box-sizing: border-box !important;
   }
-  /* Page Contact : masquer l'intro « Pour toute demande... » sur mobile */
-  .contact-intro-text {
-    display: none !important;
+  /* Page Mon abonnement (vendeur) : pleine largeur sur mobile */
+  .abonnement-page-inner {
+    max-width: none !important;
+    width: 100% !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    box-sizing: border-box !important;
+  }
+  .abonnement-plans-row {
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+  }
+  .abonnement-plan-card {
+    flex: none !important;
+    min-width: 0 !important;
+  }
+  .abonnement-shell {
+    padding: 22px 16px 20px !important;
+    border-radius: 16px !important;
+  }
+  .abonnement-shell .abonnement-section-tabs {
+    padding-bottom: 22px !important;
+  }
+  .abonnement-shell-footnote {
+    margin-top: 22px !important;
   }
   /* Page Mes ventes : pleine largeur sur mobile */
   .mes-ventes-page-inner {

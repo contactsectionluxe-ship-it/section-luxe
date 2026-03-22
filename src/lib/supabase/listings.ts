@@ -1,11 +1,61 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured } from './client';
 import { Listing, ListingCategory } from '@/types';
+import {
+  normalizeSubscriptionTier,
+  maxActiveListingsForTier,
+  SubscriptionLimitError,
+} from '@/lib/subscription';
 
 function checkSupabase() {
   if (!isSupabaseConfigured || !supabase) {
     throw new Error('Supabase non configuré');
   }
   return supabase;
+}
+
+async function assertSellerActiveCapacity(
+  client: SupabaseClient,
+  sellerId: string,
+  opts: { excludeListingId?: string; adding: number },
+): Promise<void> {
+  if (opts.adding <= 0) return;
+
+  const { data: sellerRow, error: sErr } = await client
+    .from('sellers')
+    .select('subscription_tier')
+    .eq('id', sellerId)
+    .maybeSingle();
+
+  if (sErr || !sellerRow) {
+    throw new Error('Vendeur introuvable.');
+  }
+
+  const tier = normalizeSubscriptionTier(
+    (sellerRow as { subscription_tier?: string | null }).subscription_tier,
+  );
+  const max = maxActiveListingsForTier(tier);
+
+  let q = client
+    .from('listings')
+    .select('id', { count: 'exact', head: true })
+    .eq('seller_id', sellerId)
+    .eq('is_active', true);
+
+  if (opts.excludeListingId) {
+    q = q.neq('id', opts.excludeListingId);
+  }
+
+  const { count, error: cErr } = await q;
+  if (cErr) {
+    throw new Error(cErr.message || 'Impossible de compter les annonces actives.');
+  }
+
+  const others = count ?? 0;
+  const after = others + opts.adding;
+  if (after > max) {
+    throw new SubscriptionLimitError(tier, max, after);
+  }
 }
 
 /** Échappe % et _ pour usage dans un pattern ILIKE (ex. "Sandales" → matche "Sandales Mules"). */
@@ -63,12 +113,35 @@ export async function getNextListingNumber(): Promise<string> {
   return String(data);
 }
 
+export type CreateListingResult = {
+  id: string;
+  /** True si publication demandée mais enregistrée inactive (plafond d’annonces actives atteint). */
+  savedAsInactiveDueToLimit: boolean;
+};
+
 // Create a new listing
 export async function createListing(
   data: Omit<Listing, 'id' | 'likesCount' | 'listingNumber' | 'createdAt' | 'updatedAt'> & { isActive?: boolean }
-): Promise<string> {
+): Promise<CreateListingResult> {
   const client = checkSupabase();
   const listingNumber = await getNextListingNumber();
+
+  const requestedActive = data.isActive !== undefined ? data.isActive : true;
+  let effectiveActive = requestedActive;
+  let savedAsInactiveDueToLimit = false;
+
+  if (requestedActive) {
+    try {
+      await assertSellerActiveCapacity(client, data.sellerId, { adding: 1 });
+    } catch (e) {
+      if (e instanceof SubscriptionLimitError) {
+        effectiveActive = false;
+        savedAsInactiveDueToLimit = true;
+      } else {
+        throw e;
+      }
+    }
+  }
 
   const insertData: Record<string, unknown> = {
     seller_id: data.sellerId,
@@ -80,7 +153,7 @@ export async function createListing(
     photos: data.photos,
     likes_count: 0,
     listing_number: listingNumber,
-    is_active: data.isActive !== undefined ? data.isActive : true,
+    is_active: effectiveActive,
   };
   if (data.brand != null) insertData.brand = data.brand;
   if (data.model != null) insertData.model = data.model;
@@ -102,7 +175,7 @@ export async function createListing(
     .single();
 
   if (error) throw error;
-  return listing.id;
+  return { id: listing.id as string, savedAsInactiveDueToLimit };
 }
 
 // Update a listing
@@ -113,24 +186,37 @@ export async function updateListing(
   const client = checkSupabase();
 
   if (data.isActive === true) {
-    const { data: listingRow } = await client
+    const { data: listingRow, error: lrErr } = await client
       .from('listings')
-      .select('seller_id')
+      .select('seller_id, is_active')
       .eq('id', listingId)
       .single();
-    if (listingRow?.seller_id) {
-      const { data: sellerRow } = await client
-        .from('sellers')
-        .select('status')
-        .eq('id', listingRow.seller_id)
-        .single();
-      const status = (sellerRow as { status?: string } | null)?.status;
-      if (status === 'banned') {
-        throw new Error('Impossible de réactiver une annonce tant que le compte vendeur n\'est pas réactivé.');
-      }
-      if (status === 'suspended') {
-        throw new Error('Impossible de réactiver une annonce tant que le compte vendeur est suspendu.');
-      }
+
+    if (lrErr || !listingRow?.seller_id) {
+      throw new Error('Annonce introuvable.');
+    }
+
+    const sellerId = listingRow.seller_id as string;
+    const wasActive = listingRow.is_active === true;
+
+    const { data: sellerRow } = await client
+      .from('sellers')
+      .select('status')
+      .eq('id', sellerId)
+      .single();
+    const status = (sellerRow as { status?: string } | null)?.status;
+    if (status === 'banned') {
+      throw new Error('Impossible de réactiver une annonce tant que le compte vendeur n\'est pas réactivé.');
+    }
+    if (status === 'suspended') {
+      throw new Error('Impossible de réactiver une annonce tant que le compte vendeur est suspendu.');
+    }
+
+    if (!wasActive) {
+      await assertSellerActiveCapacity(client, sellerId, {
+        excludeListingId: listingId,
+        adding: 1,
+      });
     }
   }
 

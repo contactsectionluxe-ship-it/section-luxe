@@ -11,10 +11,11 @@ import { PageLoader, CguCgvCheckbox } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
 import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
-import { CATEGORIES } from '@/lib/utils';
+import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
+import { isSubscriptionLimitError } from '@/lib/subscription';
 
 /** Contenu inclus : chaque clé (box, certificat, facture) présente dans packaging = Oui */
 const CONTENU_INCLUS_OPTIONS = [
@@ -710,8 +711,8 @@ export default function EditListingPage() {
       setError('Veuillez ajouter au moins une photo');
       return;
     }
-    const priceNum = parseFloat(price.replace(',', '.'));
-    if (isNaN(priceNum) || priceNum <= 0) {
+    const priceNum = parsePriceInputToNumber(price);
+    if (priceNum == null) {
       setError('Veuillez entrer un prix valide');
       return;
     }
@@ -783,6 +784,10 @@ export default function EditListingPage() {
       }
       router.push('/vendeur');
     } catch (err: unknown) {
+      if (isSubscriptionLimitError(err)) {
+        router.push('/vendeur/abonnement?limite=1');
+        return;
+      }
       const message =
         err instanceof Error
           ? err.message
@@ -2227,12 +2232,7 @@ setMaterialSearchQuery('');
                 type="text"
                 inputMode="decimal"
                 value={price}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9,.]/g, '');
-                  const parts = v.split(/[,.]/);
-                  const filtered = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
-                  setPrice(filtered);
-                }}
+                onChange={(e) => setPrice(sanitizePriceInputWhileTyping(e.target.value))}
                 placeholder="Ex: 5000"
                 style={inputStyle}
               />

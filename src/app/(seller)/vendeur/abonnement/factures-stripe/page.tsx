@@ -2,6 +2,6 @@
 
 import { StripeSubscriptionInvoicesPanel } from '@/components/seller/StripeSubscriptionInvoicesPanel';
 
-export default function FacturesPage() {
+export default function FacturesStripeAbonnementPage() {
   return <StripeSubscriptionInvoicesPanel variant="page" />;
 }

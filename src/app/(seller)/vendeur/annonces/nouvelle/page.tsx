@@ -13,10 +13,11 @@ import { createListing, updateListing } from '@/lib/supabase/listings';
 import { ensureInvoiceForListing } from '@/lib/supabase/invoices';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
-import { CATEGORIES } from '@/lib/utils';
+import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
+import { isSubscriptionLimitError } from '@/lib/subscription';
 
 const ETAT_OPTIONS = [
   { value: 'new', label: 'Neuf' },
@@ -500,8 +501,8 @@ if (modelOptions.length > 0) {
   };
 
   const validateStep4 = () => {
-    const priceNum = parseFloat(price.replace(',', '.'));
-    if (isNaN(priceNum) || priceNum <= 0) {
+    const priceNum = parsePriceInputToNumber(price);
+    if (priceNum == null) {
       setError('Entrez un prix valide');
       return false;
     }
@@ -543,11 +544,16 @@ if (modelOptions.length > 0) {
       const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
       const suggestedSuffix = [typeLabelForTitle, modelToSave].filter(Boolean).join(' ').trim() || categoryLabel || '';
       const finalTitle = brandToSave ? `${brandToSave} - ${(titleSuffix.trim() || suggestedSuffix).trim()}` : (titleSuffix.trim() || suggestedSuffix).trim();
-      const priceNum = parseFloat(price.replace(',', '.'));
+      const priceNum = parsePriceInputToNumber(price);
+      if (priceNum == null) {
+        setError('Entrez un prix valide');
+        setLoading(false);
+        return;
+      }
 
       const publishNow = isActive;
 
-      const listingId = await createListing({
+      const { id: listingId, savedAsInactiveDueToLimit } = await createListing({
         sellerId: user!.uid,
         sellerName: seller!.companyName,
         title: finalTitle,
@@ -570,6 +576,16 @@ if (modelOptions.length > 0) {
         isActive: publishNow,
       });
 
+      if (savedAsInactiveDueToLimit) {
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('listingDepotInactiveLimite', '1');
+          }
+        } catch {
+          // ignore
+        }
+      }
+
       let photoUrls: string[] = [];
       if (photos.length > 0) {
         photoUrls = await uploadListingPhotos(user!.uid, listingId, photos);
@@ -578,7 +594,7 @@ if (modelOptions.length > 0) {
         }
       }
 
-      if (publishNow) {
+      if (publishNow && !savedAsInactiveDueToLimit) {
         try {
           await ensureInvoiceForListing(listingId);
         } catch (e) {
@@ -602,6 +618,10 @@ if (modelOptions.length > 0) {
 
       router.push(fromVentes ? '/vendeur/ventes' : '/vendeur');
     } catch (err: unknown) {
+      if (isSubscriptionLimitError(err)) {
+        router.push('/vendeur/abonnement?limite=1');
+        return;
+      }
       const message =
         err instanceof Error
           ? err.message
@@ -2035,12 +2055,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       type="text"
                       inputMode="decimal"
                       value={price}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9,.]/g, '');
-                        const parts = v.split(/[,.]/);
-                        const filtered = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v;
-                        setPrice(filtered);
-                      }}
+                      onChange={(e) => setPrice(sanitizePriceInputWhileTyping(e.target.value))}
                       placeholder="Ex: 5000"
                       required
                       style={{ ...inputStyle, paddingRight: 44 }}
