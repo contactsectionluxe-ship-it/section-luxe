@@ -118,17 +118,22 @@ export async function deleteListingDeletion(sellerId: string, deletionId: string
 
 /**
  * Met à jour la raison d'un enregistrement listing_deletion (ex. de 'reserve' à 'vendu').
- * Permet de faire passer un article réservé en "vendu" depuis le popup Articles réservés.
+ * `amountCents` : à fournir lors du passage en vendu pour figer le prix dans Mes ventes.
  */
 export async function updateListingDeletionReason(
   sellerId: string,
   deletionId: string,
-  newReason: SuppressionReason
+  newReason: SuppressionReason,
+  options?: { amountCents?: number | null }
 ): Promise<void> {
   const client = checkSupabase();
+  const payload: Record<string, unknown> = { reason: newReason };
+  if (options?.amountCents != null && Number.isFinite(options.amountCents)) {
+    payload.amount_cents = Math.round(options.amountCents);
+  }
   const { error } = await client
     .from('listing_deletions')
-    .update({ reason: newReason })
+    .update(payload)
     .eq('id', deletionId)
     .eq('seller_id', sellerId);
   if (error) throw error;

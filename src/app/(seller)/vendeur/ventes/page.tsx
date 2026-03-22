@@ -8,6 +8,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
 import { updateListing, deleteListing } from '@/lib/supabase/listings';
 import { isSubscriptionLimitError } from '@/lib/subscription';
+import { formatEurosForPriceInput, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
+
+type ReserveConfirmAction =
+  | { id: string; listingId: string; action: 'annule' }
+  | { id: string; listingId: string; action: 'vendu'; prefilledAmountCents: number | null };
 
 function formatAmountCents(cents: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(cents / 100);
@@ -103,9 +108,26 @@ function MesVentesPageContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [reserveAction, setReserveAction] = useState<{ id: string; listingId: string; action: 'vendu' | 'annule' } | null>(null);
+  const [reserveAction, setReserveAction] = useState<ReserveConfirmAction | null>(null);
   const [reserveActionLoading, setReserveActionLoading] = useState(false);
   const [reserveHighlightId, setReserveHighlightId] = useState<string | null>(null);
+  const [reserveVenduPriceInput, setReserveVenduPriceInput] = useState('');
+  const [reserveVenduPriceError, setReserveVenduPriceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!reserveAction || reserveAction.action !== 'vendu') {
+      setReserveVenduPriceInput('');
+      setReserveVenduPriceError(null);
+      return;
+    }
+    const c = reserveAction.prefilledAmountCents;
+    if (c != null && c >= 0) {
+      setReserveVenduPriceInput(formatEurosForPriceInput(c / 100));
+    } else {
+      setReserveVenduPriceInput('');
+    }
+    setReserveVenduPriceError(null);
+  }, [reserveAction]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
@@ -781,7 +803,7 @@ function MesVentesPageContent() {
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: isMobile ? 'flex-end' : 'flex-start', gap: 6, flexShrink: 0 }}>
                             <button
                               type="button"
-                              onClick={(e) => { e.stopPropagation(); setReserveAction({ id: item.id, listingId: item.listingId, action: 'vendu' }); }}
+                              onClick={(e) => { e.stopPropagation(); setReserveAction({ id: item.id, listingId: item.listingId, action: 'vendu', prefilledAmountCents: item.amountCents }); }}
                               style={{ padding: 8, border: 'none', background: 'none', cursor: 'pointer', color: '#16a34a', display: 'flex', borderRadius: 8, transition: 'background-color 0.15s' }}
                               onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(22,163,74,0.1)'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
@@ -817,7 +839,7 @@ function MesVentesPageContent() {
         {/* Popup confirmation action réservé : Vendu ou Annulé — même design que Supprimer la vente */}
         {reserveAction && (
           <div style={{ position: 'fixed', inset: 0, zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !reserveActionLoading && setReserveAction(null)} aria-hidden />
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { if (!reserveActionLoading) { setReserveAction(null); setReserveVenduPriceError(null); } }} aria-hidden />
             <div style={{ position: 'relative', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
               <div style={{ padding: 20 }}>
                 <div style={{ marginBottom: 12 }}>
@@ -830,15 +852,38 @@ function MesVentesPageContent() {
                     ? 'Êtes-vous sûr de passer cet article en vendu ?'
                     : 'Êtes-vous sûr de vouloir annuler la réservation ?'}
                 </p>
-                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 20, textAlign: 'center', padding: '0 4px' }}>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: reserveAction.action === 'vendu' ? 14 : 20, textAlign: 'center', padding: '0 4px' }}>
                   {reserveAction.action === 'vendu'
                     ? <>Cette action est irréversible. Vous pourrez le voir dans Articles vendu mais <strong>il sera supprimé de votre catalogue.</strong></>
                     : 'L\'article sera retiré de la liste des articles réservés et l\'annonce réapparaîtra dans votre catalogue.'}
                 </p>
+                {reserveAction.action === 'vendu' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <label htmlFor="reserve-vendu-price" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>
+                      Prix de vente (€)
+                    </label>
+                    <input
+                      id="reserve-vendu-price"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={reserveVenduPriceInput}
+                      onChange={(e) => setReserveVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                      placeholder="0,00"
+                      style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
+                    />
+                    <p style={{ fontSize: 12, color: '#86868b', margin: '8px 0 0', lineHeight: 1.4 }}>
+                      Prérempli avec le prix de l’annonce au moment de la réservation. Ajustez si le prix réel de vente est différent — utilisé pour Mes ventes.
+                    </p>
+                    {reserveVenduPriceError && (
+                      <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0' }}>{reserveVenduPriceError}</p>
+                    )}
+                  </div>
+                )}
                 <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     type="button"
-                    onClick={() => !reserveActionLoading && setReserveAction(null)}
+                    onClick={() => { if (!reserveActionLoading) { setReserveAction(null); setReserveVenduPriceError(null); } }}
                     style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1px solid #d2d2d7', borderRadius: 10, cursor: reserveActionLoading ? 'not-allowed' : 'pointer' }}
                   >
                     Annuler
@@ -848,10 +893,19 @@ function MesVentesPageContent() {
                     disabled={reserveActionLoading || !user?.uid}
                     onClick={async () => {
                       if (!user?.uid || reserveActionLoading) return;
+                      if (reserveAction.action === 'vendu') {
+                        const euros = parsePriceInputToNumber(reserveVenduPriceInput);
+                        if (euros == null) {
+                          setReserveVenduPriceError('Indiquez un prix de vente valide (supérieur à 0).');
+                          return;
+                        }
+                      }
                       setReserveActionLoading(true);
+                      setReserveVenduPriceError(null);
                       try {
                         if (reserveAction.action === 'vendu') {
-                          await updateListingDeletionReason(user.uid, reserveAction.id, 'vendu');
+                          const euros = parsePriceInputToNumber(reserveVenduPriceInput)!;
+                          await updateListingDeletionReason(user.uid, reserveAction.id, 'vendu', { amountCents: Math.round(euros * 100) });
                           await deleteListing(reserveAction.listingId);
                           setReserveList((prev) => prev.filter((i) => i.id !== reserveAction.id));
                           const [newVenduList, newStats, newEvolution] = await Promise.all([

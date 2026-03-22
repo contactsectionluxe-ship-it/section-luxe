@@ -49,6 +49,11 @@ export function parsePriceInputToNumber(raw: string): number | null {
 }
 
 /** Pendant la saisie : garde chiffres + séparateurs, max 2 chiffres après le dernier . ou ,. */
+/** Préremplissage champs « prix de vente » (fr-FR, 2 décimales). */
+export function formatEurosForPriceInput(euros: number): string {
+  return new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(euros);
+}
+
 export function sanitizePriceInputWhileTyping(raw: string): string {
   let v = raw.replace(WEIRD_COMMAS, ',').replace(/[^0-9,.]/g, '');
   const lastComma = v.lastIndexOf(',');

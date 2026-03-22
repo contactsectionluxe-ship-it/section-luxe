@@ -10,7 +10,7 @@ import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabas
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
 import { isSubscriptionLimitError } from '@/lib/subscription';
-import { formatPrice, formatDate, CATEGORIES } from '@/lib/utils';
+import { formatPrice, formatDate, CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
 const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
@@ -35,6 +35,7 @@ export default function VoirAnnoncePage() {
   const [deleteReason, setDeleteReason] = useState<string>('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteVenduPriceInput, setDeleteVenduPriceInput] = useState('');
   const [showToggleModal, setShowToggleModal] = useState(false);
   const [toggleToActive, setToggleToActive] = useState<boolean | null>(null);
   const [toggling, setToggling] = useState(false);
@@ -87,10 +88,20 @@ export default function VoirAnnoncePage() {
 
   const handleDelete = async () => {
     if (!user?.uid) return;
+    if (deleteReason === 'vendu') {
+      const euros = parsePriceInputToNumber(deleteVenduPriceInput);
+      if (euros == null) {
+        setDeleteError('Indiquez un prix de vente valide (supérieur à 0).');
+        return;
+      }
+    }
     setDeleting(true);
+    setDeleteError(null);
     try {
-      // Enregistrer pour Mes ventes (vendu, réservé, etc.) — ne pas bloquer la suppression si erreur
-      const amountCents = deleteReason === 'vendu' && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
+      let amountCents: number | undefined;
+      if (deleteReason === 'vendu') {
+        amountCents = Math.round(parsePriceInputToNumber(deleteVenduPriceInput)! * 100);
+      }
       const listingTitle = listing?.title;
       try {
         await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
@@ -108,6 +119,7 @@ export default function VoirAnnoncePage() {
       setDeleteModalStep(1);
       setDeleteReason('');
       setDeleteError(null);
+      setDeleteVenduPriceInput('');
     }
   };
 
@@ -116,6 +128,7 @@ export default function VoirAnnoncePage() {
     setDeleteModalStep(1);
     setDeleteReason('');
     setDeleteError(null);
+    setDeleteVenduPriceInput('');
   };
 
   const openToggleModal = (activate: boolean) => {
@@ -454,7 +467,7 @@ export default function VoirAnnoncePage() {
               </Link>
               <button
                 type="button"
-                onClick={() => { setShowDeleteModal(true); setDeleteModalStep(1); setDeleteReason(''); setDeleteError(null); }}
+                onClick={() => { setShowDeleteModal(true); setDeleteModalStep(1); setDeleteReason(''); setDeleteError(null); setDeleteVenduPriceInput(''); }}
                 style={{
                   flex: 1,
                   minWidth: 160,
@@ -541,7 +554,16 @@ export default function VoirAnnoncePage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setDeleteModalStep(2)}
+                        onClick={() => {
+                          if (deleteReason === 'vendu' && listing?.price != null && Number.isFinite(Number(listing.price))) {
+                            setDeleteVenduPriceInput(formatEurosForPriceInput(Number(listing.price)));
+                          } else if (deleteReason === 'vendu') {
+                            setDeleteVenduPriceInput('');
+                          } else {
+                            setDeleteVenduPriceInput('');
+                          }
+                          setDeleteModalStep(2);
+                        }}
                         disabled={!deleteReason}
                         style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: !deleteReason ? 'not-allowed' : 'pointer', opacity: !deleteReason ? 0.7 : 1 }}
                       >
@@ -551,9 +573,29 @@ export default function VoirAnnoncePage() {
                   </>
                 ) : (
                   <>
-                    <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
+                    <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: deleteReason === 'vendu' ? 12 : 20, textAlign: 'center' }}>
                       Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                     </p>
+                    {deleteReason === 'vendu' && (
+                      <div style={{ marginBottom: 16 }}>
+                        <label htmlFor="voir-delete-vendu-price" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>
+                          Prix de vente (€)
+                        </label>
+                        <input
+                          id="voir-delete-vendu-price"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          value={deleteVenduPriceInput}
+                          onChange={(e) => setDeleteVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                          placeholder="0,00"
+                          style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
+                        />
+                        <p style={{ fontSize: 12, color: '#86868b', margin: '8px 0 0', lineHeight: 1.4 }}>
+                          Prérempli avec le prix affiché sur l’annonce. Corrigez si besoin pour le suivi Mes ventes.
+                        </p>
+                      </div>
+                    )}
                     {deleteError && (
                       <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteError}</p>
                     )}

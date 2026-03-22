@@ -12,8 +12,7 @@ import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabas
 import { getSellerConversationsCount } from '@/lib/supabase/messaging';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
-import { formatPrice, formatDate } from '@/lib/utils';
-import { CATEGORIES } from '@/lib/utils';
+import { formatPrice, formatDate, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput, CATEGORIES } from '@/lib/utils';
 import { ListingPhoto } from '@/components/ListingPhoto';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
@@ -60,6 +59,9 @@ export default function SellerDashboardPage() {
   const [reserving, setReserving] = useState(false);
   const [listingToSell, setListingToSell] = useState<Listing | null>(null);
   const [selling, setSelling] = useState(false);
+  const [deleteVenduPriceInput, setDeleteVenduPriceInput] = useState('');
+  const [sellPriceInput, setSellPriceInput] = useState('');
+  const [sellPriceError, setSellPriceError] = useState<string | null>(null);
   const [reservedListingIds, setReservedListingIds] = useState<Set<string>>(new Set());
   const mesAnnoncesGridRef = useRef<HTMLDivElement>(null);
   const [depotInactiveLimiteBanner, setDepotInactiveLimiteBanner] = useState(false);
@@ -131,6 +133,15 @@ export default function SellerDashboardPage() {
   }, [user]);
 
   useEffect(() => {
+    if (listingToSell?.price != null && Number.isFinite(Number(listingToSell.price))) {
+      setSellPriceInput(formatEurosForPriceInput(Number(listingToSell.price)));
+    } else {
+      setSellPriceInput('');
+    }
+    setSellPriceError(null);
+  }, [listingToSell]);
+
+  useEffect(() => {
     if (!sortDropdownOpen) return;
     const onMouseDown = (e: MouseEvent) => {
       if (sortDropdownRef.current && !sortDropdownRef.current.contains(e.target as Node)) {
@@ -147,6 +158,7 @@ export default function SellerDashboardPage() {
     setDeleteModalStep(1);
     setDeleteReason('');
     setDeleteError(null);
+    setDeleteVenduPriceInput('');
   };
 
   const closeDeleteModal = () => {
@@ -155,13 +167,25 @@ export default function SellerDashboardPage() {
     setDeleteReason('');
     setDeleteError(null);
     setListingToDelete(null);
+    setDeleteVenduPriceInput('');
   };
 
   const handleDeleteListing = async () => {
     if (!user?.uid || !listingToDelete) return;
+    if (deleteReason === 'vendu') {
+      const euros = parsePriceInputToNumber(deleteVenduPriceInput);
+      if (euros == null) {
+        setDeleteError('Indiquez un prix de vente valide (supérieur à 0).');
+        return;
+      }
+    }
     setDeleting(true);
+    setDeleteError(null);
     try {
-      const amountCents = deleteReason === 'vendu' && listingToDelete.price != null ? Math.round(Number(listingToDelete.price) * 100) : undefined;
+      let amountCents: number | undefined;
+      if (deleteReason === 'vendu') {
+        amountCents = Math.round(parsePriceInputToNumber(deleteVenduPriceInput)! * 100);
+      }
       try {
         await recordListingDeletion(user.uid, listingToDelete.id, deleteReason || 'autre', amountCents, listingToDelete.title);
       } catch (e) {
@@ -220,9 +244,15 @@ export default function SellerDashboardPage() {
 
   const handleConfirmSell = async () => {
     if (!user?.uid || !listingToSell) return;
+    const euros = parsePriceInputToNumber(sellPriceInput);
+    if (euros == null) {
+      setSellPriceError('Indiquez un prix de vente valide (supérieur à 0).');
+      return;
+    }
     setSelling(true);
+    setSellPriceError(null);
     try {
-      const amountCents = listingToSell.price != null ? Math.round(Number(listingToSell.price) * 100) : undefined;
+      const amountCents = Math.round(euros * 100);
       try {
         await recordListingDeletion(user.uid, listingToSell.id, 'vendu', amountCents, listingToSell.title);
       } catch (e) {
@@ -890,7 +920,16 @@ export default function SellerDashboardPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDeleteModalStep(2)}
+                    onClick={() => {
+                      if (deleteReason === 'vendu' && listingToDelete?.price != null && Number.isFinite(Number(listingToDelete.price))) {
+                        setDeleteVenduPriceInput(formatEurosForPriceInput(Number(listingToDelete.price)));
+                      } else if (deleteReason === 'vendu') {
+                        setDeleteVenduPriceInput('');
+                      } else {
+                        setDeleteVenduPriceInput('');
+                      }
+                      setDeleteModalStep(2);
+                    }}
                     disabled={!deleteReason}
                     style={{ flex: 1, height: 44, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 14, fontWeight: 500, border: 'none', borderRadius: 980, cursor: !deleteReason ? 'not-allowed' : 'pointer', opacity: !deleteReason ? 0.7 : 1 }}
                   >
@@ -900,9 +939,29 @@ export default function SellerDashboardPage() {
               </>
             ) : (
               <>
-                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
+                <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: deleteReason === 'vendu' ? 12 : 20, textAlign: 'center' }}>
                   Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                 </p>
+                {deleteReason === 'vendu' && (
+                  <div style={{ marginBottom: 16 }}>
+                    <label htmlFor="delete-vendu-price" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>
+                      Prix de vente (€)
+                    </label>
+                    <input
+                      id="delete-vendu-price"
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={deleteVenduPriceInput}
+                      onChange={(e) => setDeleteVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                      placeholder="0,00"
+                      style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
+                    />
+                    <p style={{ fontSize: 12, color: '#86868b', margin: '8px 0 0', lineHeight: 1.4 }}>
+                      Prérempli avec le prix affiché sur l’annonce. Corrigez si besoin pour le suivi Mes ventes.
+                    </p>
+                  </div>
+                )}
                 {deleteError && (
                   <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteError}</p>
                 )}
@@ -1007,7 +1066,7 @@ export default function SellerDashboardPage() {
 
       {listingToSell && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => !selling && setListingToSell(null)} aria-hidden />
+          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { if (!selling) { setListingToSell(null); setSellPriceError(null); } }} aria-hidden />
           <div style={{ position: 'relative', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', padding: 20, borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }} onClick={(e) => e.stopPropagation()}>
             <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>
               Article vendu
@@ -1015,13 +1074,34 @@ export default function SellerDashboardPage() {
             <p style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, lineHeight: 1.5, marginTop: 16, marginBottom: 12, textAlign: 'center' }}>
               Êtes-vous sûr de passer cet article en vendu ?
             </p>
-            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 20, textAlign: 'center', padding: '0 4px' }}>
+            <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 0, marginBottom: 12, textAlign: 'center', padding: '0 4px' }}>
               Cette action est irréversible. Vous pourrez le voir dans Articles vendu mais <strong>il sera supprimé de votre catalogue.</strong>
             </p>
+            <div style={{ marginBottom: 16 }}>
+              <label htmlFor="sell-price-confirm" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>
+                Prix de vente (€)
+              </label>
+              <input
+                id="sell-price-confirm"
+                type="text"
+                inputMode="decimal"
+                autoComplete="off"
+                value={sellPriceInput}
+                onChange={(e) => setSellPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                placeholder="0,00"
+                style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
+              />
+              <p style={{ fontSize: 12, color: '#86868b', margin: '8px 0 0', lineHeight: 1.4 }}>
+                Prérempli avec le prix de l’annonce. Ajustez si le montant réel est différent (Mes ventes).
+              </p>
+              {sellPriceError && (
+                <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0' }}>{sellPriceError}</p>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
-                onClick={() => !selling && setListingToSell(null)}
+                onClick={() => { if (!selling) { setListingToSell(null); setSellPriceError(null); } }}
                 style={{ flex: 1, height: 44, backgroundColor: '#fff', color: '#1d1d1f', fontSize: 14, fontWeight: 500, border: '1.5px solid #d2d2d7', borderRadius: 980, cursor: selling ? 'not-allowed' : 'pointer' }}
               >
                 Annuler
