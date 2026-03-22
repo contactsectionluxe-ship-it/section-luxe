@@ -859,46 +859,48 @@ function MesVentesPageContent() {
                 </p>
                 {reserveAction.action === 'vendu' && (
                   <div style={{ marginBottom: 16 }}>
-                    <label htmlFor="reserve-vendu-price" style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                      Prix de vente
-                    </label>
-                    <div style={{ position: 'relative', maxWidth: 220, width: '100%' }}>
-                      <input
-                        id="reserve-vendu-price"
-                        type="text"
-                        inputMode="decimal"
-                        autoComplete="off"
-                        value={reserveVenduPriceInput}
-                        onChange={(e) => setReserveVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
-                        placeholder="0,00"
-                        style={{
-                          width: '100%',
-                          height: 50,
-                          padding: '0 16px',
-                          paddingRight: 44,
-                          fontSize: 15,
-                          border: '1px solid #d2d2d7',
-                          borderRadius: 12,
-                          boxSizing: 'border-box',
-                          outline: 'none',
-                          backgroundColor: '#fff',
-                        }}
-                      />
-                      <span
-                        style={{
-                          position: 'absolute',
-                          right: 14,
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          pointerEvents: 'none',
-                          color: '#86868b',
-                          display: 'flex',
-                          alignItems: 'center',
-                        }}
-                        aria-hidden
-                      >
-                        <Euro size={17} strokeWidth={2} />
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <label htmlFor="reserve-vendu-price" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
+                        Prix de vente
+                      </label>
+                      <div style={{ position: 'relative', width: 142, flexShrink: 0 }}>
+                        <input
+                          id="reserve-vendu-price"
+                          type="text"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          value={reserveVenduPriceInput}
+                          onChange={(e) => setReserveVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                          placeholder="0,00"
+                          style={{
+                            width: '100%',
+                            height: 34,
+                            padding: '0 10px',
+                            paddingRight: 32,
+                            fontSize: 14,
+                            border: '1px solid #d2d2d7',
+                            borderRadius: 10,
+                            boxSizing: 'border-box',
+                            outline: 'none',
+                            backgroundColor: '#fff',
+                          }}
+                        />
+                        <span
+                          style={{
+                            position: 'absolute',
+                            right: 9,
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            pointerEvents: 'none',
+                            color: '#86868b',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                          aria-hidden
+                        >
+                          <Euro size={15} strokeWidth={2} />
+                        </span>
+                      </div>
                     </div>
                     {reserveVenduPriceError && (
                       <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0' }}>{reserveVenduPriceError}</p>

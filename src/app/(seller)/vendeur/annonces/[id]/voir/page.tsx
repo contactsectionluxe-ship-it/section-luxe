@@ -577,11 +577,11 @@ export default function VoirAnnoncePage() {
                       Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                     </p>
                     {deleteReason === 'vendu' && (
-                      <div style={{ marginBottom: 16 }}>
-                        <label htmlFor="voir-delete-vendu-price" style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                        <label htmlFor="voir-delete-vendu-price" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
                           Prix de vente
                         </label>
-                        <div style={{ position: 'relative', maxWidth: 220, width: '100%' }}>
+                        <div style={{ position: 'relative', width: 142, flexShrink: 0 }}>
                           <input
                             id="voir-delete-vendu-price"
                             type="text"
@@ -592,12 +592,12 @@ export default function VoirAnnoncePage() {
                             placeholder="0,00"
                             style={{
                               width: '100%',
-                              height: 50,
-                              padding: '0 16px',
-                              paddingRight: 44,
-                              fontSize: 15,
+                              height: 34,
+                              padding: '0 10px',
+                              paddingRight: 32,
+                              fontSize: 14,
                               border: '1px solid #d2d2d7',
-                              borderRadius: 12,
+                              borderRadius: 10,
                               boxSizing: 'border-box',
                               outline: 'none',
                               backgroundColor: '#fff',
@@ -606,7 +606,7 @@ export default function VoirAnnoncePage() {
                           <span
                             style={{
                               position: 'absolute',
-                              right: 14,
+                              right: 9,
                               top: '50%',
                               transform: 'translateY(-50%)',
                               pointerEvents: 'none',
@@ -616,7 +616,7 @@ export default function VoirAnnoncePage() {
                             }}
                             aria-hidden
                           >
-                            <Euro size={17} strokeWidth={2} />
+                            <Euro size={15} strokeWidth={2} />
                           </span>
                         </div>
                       </div>

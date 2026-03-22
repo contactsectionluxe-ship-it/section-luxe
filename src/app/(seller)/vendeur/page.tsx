@@ -943,11 +943,11 @@ export default function SellerDashboardPage() {
                   Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                 </p>
                 {deleteReason === 'vendu' && (
-                  <div style={{ marginBottom: 16 }}>
-                    <label htmlFor="delete-vendu-price" style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                  <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <label htmlFor="delete-vendu-price" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
                       Prix de vente
                     </label>
-                    <div style={{ position: 'relative', maxWidth: 220, width: '100%' }}>
+                    <div style={{ position: 'relative', width: 142, flexShrink: 0 }}>
                       <input
                         id="delete-vendu-price"
                         type="text"
@@ -958,12 +958,12 @@ export default function SellerDashboardPage() {
                         placeholder="0,00"
                         style={{
                           width: '100%',
-                          height: 50,
-                          padding: '0 16px',
-                          paddingRight: 44,
-                          fontSize: 15,
+                          height: 34,
+                          padding: '0 10px',
+                          paddingRight: 32,
+                          fontSize: 14,
                           border: '1px solid #d2d2d7',
-                          borderRadius: 12,
+                          borderRadius: 10,
                           boxSizing: 'border-box',
                           outline: 'none',
                           backgroundColor: '#fff',
@@ -972,7 +972,7 @@ export default function SellerDashboardPage() {
                       <span
                         style={{
                           position: 'absolute',
-                          right: 14,
+                          right: 9,
                           top: '50%',
                           transform: 'translateY(-50%)',
                           pointerEvents: 'none',
@@ -982,7 +982,7 @@ export default function SellerDashboardPage() {
                         }}
                         aria-hidden
                       >
-                        <Euro size={17} strokeWidth={2} />
+                        <Euro size={15} strokeWidth={2} />
                       </span>
                     </div>
                   </div>
@@ -1103,46 +1103,48 @@ export default function SellerDashboardPage() {
               Cette action est irréversible. Vous pourrez le voir dans Articles vendu mais <strong>il sera supprimé de votre catalogue.</strong>
             </p>
             <div style={{ marginBottom: 16 }}>
-              <label htmlFor="sell-price-confirm" style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                Prix de vente
-              </label>
-              <div style={{ position: 'relative', maxWidth: 220, width: '100%' }}>
-                <input
-                  id="sell-price-confirm"
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  value={sellPriceInput}
-                  onChange={(e) => setSellPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
-                  placeholder="0,00"
-                  style={{
-                    width: '100%',
-                    height: 50,
-                    padding: '0 16px',
-                    paddingRight: 44,
-                    fontSize: 15,
-                    border: '1px solid #d2d2d7',
-                    borderRadius: 12,
-                    boxSizing: 'border-box',
-                    outline: 'none',
-                    backgroundColor: '#fff',
-                  }}
-                />
-                <span
-                  style={{
-                    position: 'absolute',
-                    right: 14,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    pointerEvents: 'none',
-                    color: '#86868b',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  aria-hidden
-                >
-                  <Euro size={17} strokeWidth={2} />
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <label htmlFor="sell-price-confirm" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
+                  Prix de vente
+                </label>
+                <div style={{ position: 'relative', width: 142, flexShrink: 0 }}>
+                  <input
+                    id="sell-price-confirm"
+                    type="text"
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={sellPriceInput}
+                    onChange={(e) => setSellPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                    placeholder="0,00"
+                    style={{
+                      width: '100%',
+                      height: 34,
+                      padding: '0 10px',
+                      paddingRight: 32,
+                      fontSize: 14,
+                      border: '1px solid #d2d2d7',
+                      borderRadius: 10,
+                      boxSizing: 'border-box',
+                      outline: 'none',
+                      backgroundColor: '#fff',
+                    }}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      right: 9,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: '#86868b',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    aria-hidden
+                  >
+                    <Euro size={15} strokeWidth={2} />
+                  </span>
+                </div>
               </div>
               {sellPriceError && (
                 <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0' }}>{sellPriceError}</p>
