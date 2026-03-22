@@ -47,6 +47,7 @@ import {
 } from '@/lib/constants';
 import { searchCommuneArrondissement } from '@/lib/communes-arrondissements';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
 
@@ -4378,10 +4379,13 @@ function CatalogueContent() {
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                         <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
-                          <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
+                          <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
+                            <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
+                            <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="catalogueGrid" />
+                          </span>
                           {listing.sellerPostcode && (
                             <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
-                              <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                              <MapPin size={13} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
                               {listing.sellerPostcode}
                             </span>
                           )}
@@ -4543,12 +4547,15 @@ function CatalogueContent() {
                         </div>
                         <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, paddingBottom: 4, marginTop: 2, display: 'flex', alignItems: 'center', minHeight: 36 }}>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 500, color: '#86868b', lineHeight: 1.4, minWidth: 0, width: '100%', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                            <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {listing.sellerName}
+                            <span className="catalogue-listing-vendeur-nom-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
+                              <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {listing.sellerName}
+                              </span>
+                              <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="catalogueLine" />
                             </span>
                           {listing.sellerPostcode && (
                               <span className="catalogue-listing-codepostal" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                              <MapPin size={18} strokeWidth={2} /> {listing.sellerPostcode}
+                              <MapPin size={18} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} /> {listing.sellerPostcode}
                               </span>
                           )}
                           </div>

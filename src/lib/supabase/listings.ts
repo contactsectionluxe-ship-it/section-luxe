@@ -5,6 +5,7 @@ import {
   normalizeSubscriptionTier,
   maxActiveListingsForTier,
   SubscriptionLimitError,
+  type SubscriptionTier,
 } from '@/lib/subscription';
 
 function checkSupabase() {
@@ -61,6 +62,40 @@ async function assertSellerActiveCapacity(
 /** Échappe % et _ pour usage dans un pattern ILIKE (ex. "Sandales" → matche "Sandales Mules"). */
 function escapeIlike(s: string): string {
   return (s || '').replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
+
+/**
+ * Enrichit les annonces avec les champs vendeur à jour (profil public) :
+ * code postal, abonnement, nom d’entreprise — la colonne listings.seller_name peut être ancienne.
+ */
+async function mergeSellerPublicFieldsIntoListings(listings: Listing[]): Promise<Listing[]> {
+  if (!isSupabaseConfigured || !supabase || listings.length === 0) return listings;
+
+  const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
+  const { data: sellersData } = await supabase
+    .from('sellers')
+    .select('id, postcode, subscription_tier, company_name')
+    .in('id', sellerIds);
+
+  const postcodeBySeller: Record<string, string> = {};
+  const tierBySeller: Record<string, SubscriptionTier> = {};
+  const companyBySeller: Record<string, string> = {};
+
+  (sellersData || []).forEach(
+    (s: { id: string; postcode?: string | null; subscription_tier?: string | null; company_name?: string | null }) => {
+      if (s.postcode) postcodeBySeller[s.id] = s.postcode;
+      tierBySeller[s.id] = normalizeSubscriptionTier(s.subscription_tier);
+      const cn = typeof s.company_name === 'string' ? s.company_name.trim() : '';
+      if (cn) companyBySeller[s.id] = cn;
+    },
+  );
+
+  return listings.map((l) => ({
+    ...l,
+    sellerName: companyBySeller[l.sellerId] ?? l.sellerName,
+    sellerPostcode: postcodeBySeller[l.sellerId] ?? null,
+    sellerSubscriptionTier: tierBySeller[l.sellerId] ?? 'start',
+  }));
 }
 
 function rowToListing(row: any): Listing {
@@ -280,7 +315,8 @@ export async function getListing(publicId: string): Promise<Listing | null> {
   if (LISTING_UUID_REGEX.test(raw)) {
     const { data, error } = await supabase.from('listings').select(LISTING_SELECT).eq('id', raw).single();
     if (error || !data) return null;
-    return rowToListing(data);
+    const merged = await mergeSellerPublicFieldsIntoListings([rowToListing(data)]);
+    return merged[0] ?? null;
   }
 
   const { data, error } = await supabase
@@ -290,7 +326,8 @@ export async function getListing(publicId: string): Promise<Listing | null> {
     .maybeSingle();
 
   if (error || !data) return null;
-  return rowToListing(data);
+  const merged = await mergeSellerPublicFieldsIntoListings([rowToListing(data)]);
+  return merged[0] ?? null;
 }
 
 // Get all active listings with optional filters
@@ -481,15 +518,7 @@ export async function getListings(options?: {
 
   if (error) throw error;
   const listings = (data || []).map(rowToListing);
-  if (listings.length === 0) return listings;
-
-  const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
-  const { data: sellersData } = await supabase.from('sellers').select('id, postcode').in('id', sellerIds);
-  const postcodeBySeller: Record<string, string> = {};
-  (sellersData || []).forEach((s: { id: string; postcode?: string }) => {
-    if (s.postcode) postcodeBySeller[s.id] = s.postcode;
-  });
-  return listings.map((l) => ({ ...l, sellerPostcode: postcodeBySeller[l.sellerId] ?? null }));
+  return mergeSellerPublicFieldsIntoListings(listings);
 }
 
 /** Liste des marques présentes sur les annonces actives (en stock). */
@@ -564,7 +593,8 @@ export async function getSellerListings(sellerId: string): Promise<Listing[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map(rowToListing);
+  const listings = (data || []).map(rowToListing);
+  return mergeSellerPublicFieldsIntoListings(listings);
 }
 
 // Increment likes count
@@ -655,13 +685,5 @@ export async function getFeaturedListings(limitCount = 8): Promise<Listing[]> {
 
   if (error) throw error;
   const listings = (data || []).map(rowToListing);
-  if (listings.length === 0) return listings;
-
-  const sellerIds = [...new Set(listings.map((l) => l.sellerId))];
-  const { data: sellersData } = await supabase.from('sellers').select('id, postcode').in('id', sellerIds);
-  const postcodeBySeller: Record<string, string> = {};
-  (sellersData || []).forEach((s: { id: string; postcode?: string }) => {
-    if (s.postcode) postcodeBySeller[s.id] = s.postcode;
-  });
-  return listings.map((l) => ({ ...l, sellerPostcode: postcodeBySeller[l.sellerId] ?? null }));
+  return mergeSellerPublicFieldsIntoListings(listings);
 }

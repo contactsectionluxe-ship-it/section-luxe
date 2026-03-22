@@ -63,6 +63,8 @@ export interface Listing {
   sellerName: string;
   /** Code postal du vendeur (récupéré depuis sellers si disponible) */
   sellerPostcode?: string | null;
+  /** Abonnement vendeur (listings catalogue via jointure sellers), absent si non chargé */
+  sellerSubscriptionTier?: SubscriptionTier;
   title: string;
   description: string;
   price: number;

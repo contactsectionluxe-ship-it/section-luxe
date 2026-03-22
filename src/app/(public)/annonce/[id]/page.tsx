@@ -23,6 +23,7 @@ import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } fr
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 
 /** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
 function getListingDisplayTitle(listing: Listing): string {
@@ -904,10 +905,13 @@ export default function ProductPage() {
                         <Store size={40} color="#888" />
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                        <h3 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>{seller.companyName}</h3>
-                      </Link>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 6, marginBottom: 4, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 24, fontWeight: 600, color: '#1d1d1f' }}>
+                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
+                          <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                        </Link>
+                        <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                      </div>
                       <p style={{ fontSize: 14, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                     </div>
                   </div>
@@ -1129,7 +1133,12 @@ export default function ProductPage() {
                   <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                {seller && <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
+                {seller && (
+                  <p style={{ fontSize: 13, fontWeight: 400, color: '#6e6e73', marginBottom: 20, marginTop: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
+                    <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+                    <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                  </p>
+                )}
                 <div ref={descriptionRefDesktop} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                   <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                 </div>
@@ -1246,10 +1255,13 @@ export default function ProductPage() {
                       <Store size={40} color="#888" />
                     )}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                      <h3 style={{ fontSize: 20, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 6 }}>{seller.companyName}</h3>
-                    </Link>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 6, marginBottom: 6, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 20, fontWeight: 600, color: '#1d1d1f' }}>
+                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
+                        <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                      </Link>
+                      <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                    </div>
                     {seller.description && (
                       <>
                         <p
@@ -1497,10 +1509,13 @@ export default function ProductPage() {
                           <Store size={34} color="#888" />
                         )}
                       </div>
-                      <div style={{ flex: 1 }}>
-                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                          <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 2 }}>{seller.companyName}</h3>
-                        </Link>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 4, marginBottom: 2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                          <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
+                            <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                          </Link>
+                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                        </div>
                         <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
                       </div>
                     </div>
@@ -1681,7 +1696,12 @@ export default function ProductPage() {
                   <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Description
                 </h2>
-                  {seller && <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>}
+                  {seller && (
+                    <p style={{ fontSize: 12, fontWeight: 400, color: '#6e6e73', marginBottom: 14, marginTop: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
+                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+                      <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                    </p>
+                  )}
                   <div ref={descriptionRefMobile} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                     <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                   </div>
@@ -1797,9 +1817,12 @@ export default function ProductPage() {
                         )}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>
-                          <h3 style={{ fontSize: 22, fontWeight: 600, margin: 0, marginBottom: 4, color: '#1d1d1f' }}>{seller.companyName}</h3>
-                        </Link>
+                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 4, marginBottom: 4, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                          <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
+                            <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                          </Link>
+                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                        </div>
                         {seller.description && (
                           <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line' }}>
                             {seller.description}
@@ -1898,7 +1921,10 @@ export default function ProductPage() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
+              <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
+                <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+              </p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
                 <iframe

@@ -430,7 +430,7 @@ export default function FavoritesPage() {
                         <span className="listing-grid-vendeur-nom" title={listing.sellerName}>{listing.sellerName}</span>
                         {listing.sellerPostcode && (
                           <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b' }}>
-                            <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0 }} />
+                            <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
                             {listing.sellerPostcode}
                           </span>
                         )}
