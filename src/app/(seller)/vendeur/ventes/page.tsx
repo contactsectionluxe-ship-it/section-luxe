@@ -525,8 +525,8 @@ function MesVentesPageContent() {
         <div className="mes-ventes-stats-deux-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}>
           <div style={{ padding: 20, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
-                <CheckCircle size={22} color="#16a34a" />
+              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                <CheckCircle size={22} color="#6e6e73" />
               </div>
               <button
                 type="button"
@@ -560,8 +560,8 @@ function MesVentesPageContent() {
           </div>
           <div style={{ padding: 20, border: '1px solid #e8e6e3', borderRadius: 12, backgroundColor: '#fff', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ width: 44, height: 44, backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
-                <Clock size={22} color="#ea580c" />
+              <div style={{ width: 44, height: 44, backgroundColor: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                <Clock size={22} color="#6e6e73" />
               </div>
               <button
                 type="button"
