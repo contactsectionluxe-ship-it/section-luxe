@@ -34,14 +34,15 @@ export interface SellerSalesStats {
  * Enregistre une suppression d'annonce (à appeler avant deleteListing pour les stats "Mes ventes").
  * Quand reason = 'vendu' (justificatif "Article vendu"), la suppression est comptabilisée comme vendu
  * dans la page Mes ventes (bloc "Article vendu" + évolution des ventes).
- * amountCents: prix en centimes (vendu/réservé). listingTitle: titre pour affichage dans le popup "Voir".
+ * amountCents: prix en centimes (vendu/réservé). listingTitle / listingPhotoUrl: snapshot affichage Mes ventes (grille catalogue).
  */
 export async function recordListingDeletion(
   sellerId: string,
   listingId: string,
   reason: string,
   amountCents?: number,
-  listingTitle?: string
+  listingTitle?: string,
+  listingPhotoUrl?: string | null
 ): Promise<void> {
   const client = checkSupabase();
   const normalizedReason = SUPPRESSION_REASONS.includes(reason as SuppressionReason)
@@ -58,6 +59,9 @@ export async function recordListingDeletion(
   if (listingTitle != null && listingTitle !== '') {
     row.listing_title = listingTitle;
   }
+  if (listingPhotoUrl != null && listingPhotoUrl !== '') {
+    row.listing_photo_url = listingPhotoUrl;
+  }
   const { error } = await client.from('listing_deletions').insert(row);
   if (error) throw error;
 }
@@ -66,6 +70,7 @@ export interface DeletionItem {
   id: string;
   listingId: string;
   listingTitle: string | null;
+  listingPhotoUrl: string | null;
   amountCents: number | null;
   deletedAt: Date;
 }
@@ -81,7 +86,7 @@ export async function getSellerDeletionsByReason(
   const client = checkSupabase();
   let q = client
     .from('listing_deletions')
-    .select('id, listing_id, listing_title, amount_cents, deleted_at')
+    .select('id, listing_id, listing_title, listing_photo_url, amount_cents, deleted_at')
     .eq('seller_id', sellerId)
     .eq('reason', reason)
     .order('deleted_at', { ascending: false });
@@ -93,10 +98,11 @@ export async function getSellerDeletionsByReason(
   }
   const { data, error } = await q;
   if (error) return [];
-  return (data || []).map((row: { id: string; listing_id: string; listing_title?: string | null; amount_cents?: number | null; deleted_at: string }) => ({
+  return (data || []).map((row: { id: string; listing_id: string; listing_title?: string | null; listing_photo_url?: string | null; amount_cents?: number | null; deleted_at: string }) => ({
     id: row.id,
     listingId: row.listing_id,
     listingTitle: row.listing_title ?? null,
+    listingPhotoUrl: row.listing_photo_url ?? null,
     amountCents: row.amount_cents != null ? Number(row.amount_cents) : null,
     deletedAt: new Date(row.deleted_at),
   }));

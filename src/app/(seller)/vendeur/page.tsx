@@ -163,7 +163,7 @@ export default function SellerDashboardPage() {
     try {
       const amountCents = deleteReason === 'vendu' && listingToDelete.price != null ? Math.round(Number(listingToDelete.price) * 100) : undefined;
       try {
-        await recordListingDeletion(user.uid, listingToDelete.id, deleteReason || 'autre', amountCents, listingToDelete.title);
+        await recordListingDeletion(user.uid, listingToDelete.id, deleteReason || 'autre', amountCents, listingToDelete.title, listingToDelete.photos?.[0]);
       } catch (e) {
         console.warn('Enregistrement suppression ignoré:', e);
       }
@@ -203,7 +203,7 @@ export default function SellerDashboardPage() {
     try {
       const amountCents = listingToReserve.price != null ? Math.round(Number(listingToReserve.price) * 100) : undefined;
       try {
-        await recordListingDeletion(user.uid, listingToReserve.id, 'reserve', amountCents, listingToReserve.title);
+        await recordListingDeletion(user.uid, listingToReserve.id, 'reserve', amountCents, listingToReserve.title, listingToReserve.photos?.[0]);
       } catch (e) {
         console.warn('Enregistrement réservation ignoré:', e);
       }
@@ -224,7 +224,7 @@ export default function SellerDashboardPage() {
     try {
       const amountCents = listingToSell.price != null ? Math.round(Number(listingToSell.price) * 100) : undefined;
       try {
-        await recordListingDeletion(user.uid, listingToSell.id, 'vendu', amountCents, listingToSell.title);
+        await recordListingDeletion(user.uid, listingToSell.id, 'vendu', amountCents, listingToSell.title, listingToSell.photos?.[0]);
       } catch (e) {
         console.warn('Enregistrement vente ignoré:', e);
       }

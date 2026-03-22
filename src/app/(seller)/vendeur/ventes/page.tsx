@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag, ChevronDown } from 'lucide-react';
@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
 import { updateListing, deleteListing } from '@/lib/supabase/listings';
 import { isSubscriptionLimitError } from '@/lib/subscription';
+import { ListingPhoto } from '@/components/ListingPhoto';
 
 function formatAmountCents(cents: number): string {
   return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2 }).format(cents / 100);
@@ -30,6 +31,82 @@ function formatReserveLe(d: Date): string {
 function formatAmountChart(cents: number): string {
   const euros = Math.round(cents / 100);
   return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(euros)} €`;
+}
+
+/** Carte type grille catalogue (Mes ventes — popups vendu / réservé). */
+function MesVentesListingCard({
+  item,
+  metaLine,
+  highlighted,
+  footer,
+}: {
+  item: DeletionItem;
+  metaLine: string;
+  highlighted?: boolean;
+  footer: ReactNode;
+}) {
+  return (
+    <article
+      style={{
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        overflow: 'hidden',
+        border: highlighted ? '2px solid #ea580c' : '1px solid #e8e6e3',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          aspectRatio: '1',
+          backgroundColor: '#fff',
+          overflow: 'hidden',
+        }}
+      >
+        <ListingPhoto
+          src={item.listingPhotoUrl}
+          alt={item.listingTitle || 'Annonce'}
+          sizes="(max-width: 767px) 100vw, 33vw"
+        />
+      </div>
+      <div
+        style={{
+          borderTop: '1px solid #e8e6e3',
+          padding: '14px 14px 10px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 6,
+          minWidth: 0,
+        }}
+      >
+        <p
+          style={{
+            fontSize: 14,
+            fontWeight: 500,
+            color: '#1d1d1f',
+            margin: 0,
+            lineHeight: 1.35,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}
+        >
+          {item.listingTitle || 'Sans titre'}
+        </p>
+        <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', margin: 0 }}>
+          {item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}
+        </p>
+        <p style={{ fontSize: 12, color: '#86868b', margin: 0 }}>{metaLine}</p>
+        <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>{footer}</div>
+      </div>
+    </article>
+  );
 }
 
 /** Fausses données aléatoires sur 12 mois pour tester le graphique (mettre à false en prod). */
@@ -575,25 +652,25 @@ function MesVentesPageContent() {
 
         {/* Popup Articles vendus — taille adaptative, survol type sous-menu header (masqué quand popup Supprimer la vente ouverte) */}
         {showVenduPopup && !deleteConfirmId && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 12 : 24 }}>
             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowVenduPopup(false)} aria-hidden />
             <div
               style={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: 460,
-                maxHeight: '85vh',
+                maxWidth: 1120,
+                maxHeight: 'min(90vh, 920px)',
                 minHeight: 200,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#fbfbfb',
+                backgroundColor: '#f5f5f7',
                 borderRadius: 18,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)', backgroundColor: '#fbfbfb' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
                   Articles vendus {dateFrom || dateTo ? 'sur la période' : ''}
@@ -603,36 +680,25 @@ function MesVentesPageContent() {
                 </button>
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 20px', minHeight: 0 }}>
                 {venduListLoading ? (
                   <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Chargement...</p>
                 ) : venduList.length === 0 ? (
                   <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article vendu sur cette période.</p>
                 ) : (
-                  <ul style={{ listStyle: 'none', margin: 0, padding: '0 0 16px 0' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+                      gap: 24,
+                    }}
+                  >
                     {venduList.map((item) => (
-                      <li key={item.id}>
-                        <div
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '12px 14px',
-                            borderRadius: 10,
-                            cursor: 'default',
-                            transition: 'background-color 0.15s',
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, display: 'block' }}>{item.listingTitle || 'Sans titre'}</span>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: 14, color: '#86868b' }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
-                              <span style={{ fontSize: 13, color: '#86868b' }}>{formatVenduLe(item.deletedAt)}</span>
-                            </div>
-                          </div>
+                      <MesVentesListingCard
+                        key={item.id}
+                        item={item}
+                        metaLine={formatVenduLe(item.deletedAt)}
+                        footer={(
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(item.id); }}
@@ -643,10 +709,10 @@ function MesVentesPageContent() {
                           >
                             <Trash2 size={18} />
                           </button>
-                        </div>
-                      </li>
+                        )}
+                      />
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             </div>
@@ -712,25 +778,25 @@ function MesVentesPageContent() {
 
         {/* Popup Articles réservés — même design que Articles vendus (masqué quand popup Vendu/Annulé ouverte) */}
         {showReservePopup && !reserveAction && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? 12 : 24 }}>
             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => { setShowReservePopup(false); setReserveHighlightId(null); }} aria-hidden />
             <div
               style={{
                 position: 'relative',
                 width: '100%',
-                maxWidth: 460,
-                maxHeight: '85vh',
+                maxWidth: 1120,
+                maxHeight: 'min(90vh, 920px)',
                 minHeight: 200,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#fbfbfb',
+                backgroundColor: '#f5f5f7',
                 borderRadius: 18,
                 boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
               }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ flexShrink: 0, padding: '20px 24px', borderBottom: '1px solid rgba(0,0,0,0.06)', backgroundColor: '#fbfbfb' }}>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingRight: 36 }}>
                   Articles réservés {dateFrom || dateTo ? 'sur la période' : ''}
@@ -740,7 +806,7 @@ function MesVentesPageContent() {
                 </button>
                 </div>
               </div>
-              <div style={{ overflowY: 'auto', flex: 1, padding: 8, minHeight: 0 }}>
+              <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 20px', minHeight: 0 }}>
                 {reserveListLoading ? (
                   <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Chargement...</p>
                 ) : (() => {
@@ -748,31 +814,21 @@ function MesVentesPageContent() {
                   return listToShow.length === 0 ? (
                     <p style={{ fontSize: 15, color: '#6e6e73', textAlign: 'center', padding: 32 }}>Aucun article réservé sur cette période.</p>
                   ) : (
-                  <ul style={{ listStyle: 'none', margin: 0, padding: '0 0 16px 0' }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+                      gap: 24,
+                    }}
+                  >
                     {listToShow.map((item) => (
-                      <li key={item.id}>
-                        <div
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '12px 14px',
-                            borderRadius: 10,
-                            cursor: 'default',
-                            transition: 'background-color 0.15s',
-                          }}
-                        >
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <span style={{ fontSize: 15, color: '#1d1d1f', fontWeight: 500, display: 'block' }}>{item.listingTitle || 'Sans titre'}</span>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-                              <span style={{ fontSize: 14, color: '#86868b' }}>{item.amountCents != null ? formatAmountCents(item.amountCents) : '—'}</span>
-                              <span style={{ fontSize: 13, color: '#86868b' }}>{formatReserveLe(item.deletedAt)}</span>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                      <MesVentesListingCard
+                        key={item.id}
+                        item={item}
+                        metaLine={formatReserveLe(item.deletedAt)}
+                        highlighted={reserveHighlightId === item.listingId}
+                        footer={(
+                          <>
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); setReserveAction({ id: item.id, listingId: item.listingId, action: 'vendu' }); }}
@@ -795,11 +851,11 @@ function MesVentesPageContent() {
                             >
                               <XCircle size={18} />
                             </button>
-                          </div>
-                        </div>
-                      </li>
+                          </>
+                        )}
+                      />
                     ))}
-                  </ul>
+                  </div>
                   );
                 })()}
               </div>
