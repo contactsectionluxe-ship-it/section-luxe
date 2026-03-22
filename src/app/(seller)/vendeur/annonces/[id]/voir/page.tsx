@@ -93,7 +93,7 @@ export default function VoirAnnoncePage() {
       const amountCents = deleteReason === 'vendu' && listing?.price != null ? Math.round(Number(listing.price) * 100) : undefined;
       const listingTitle = listing?.title;
       try {
-        await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle, listing?.photos?.[0]);
+        await recordListingDeletion(user.uid, listingId, deleteReason || 'autre', amountCents, listingTitle);
       } catch (recordErr) {
         console.warn('Enregistrement Mes ventes (listing_deletions) ignoré:', recordErr);
       }

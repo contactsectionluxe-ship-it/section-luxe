@@ -34,15 +34,14 @@ export interface SellerSalesStats {
  * Enregistre une suppression d'annonce (à appeler avant deleteListing pour les stats "Mes ventes").
  * Quand reason = 'vendu' (justificatif "Article vendu"), la suppression est comptabilisée comme vendu
  * dans la page Mes ventes (bloc "Article vendu" + évolution des ventes).
- * amountCents: prix en centimes (vendu/réservé). listingTitle / listingPhotoUrl: snapshot affichage Mes ventes (grille catalogue).
+ * amountCents: prix en centimes (vendu/réservé). listingTitle: titre au moment de la suppression (affichage Mes ventes, sans photo).
  */
 export async function recordListingDeletion(
   sellerId: string,
   listingId: string,
   reason: string,
   amountCents?: number,
-  listingTitle?: string,
-  listingPhotoUrl?: string | null
+  listingTitle?: string
 ): Promise<void> {
   const client = checkSupabase();
   const normalizedReason = SUPPRESSION_REASONS.includes(reason as SuppressionReason)
@@ -59,16 +58,7 @@ export async function recordListingDeletion(
   if (listingTitle != null && listingTitle !== '') {
     row.listing_title = listingTitle;
   }
-  if (listingPhotoUrl != null && listingPhotoUrl !== '') {
-    row.listing_photo_url = listingPhotoUrl;
-  }
-  let { error } = await client.from('listing_deletions').insert(row);
-  if (error && row.listing_photo_url) {
-    const retry = { ...row };
-    delete retry.listing_photo_url;
-    const r2 = await client.from('listing_deletions').insert(retry);
-    error = r2.error;
-  }
+  const { error } = await client.from('listing_deletions').insert(row);
   if (error) throw error;
 }
 
@@ -76,7 +66,6 @@ export interface DeletionItem {
   id: string;
   listingId: string;
   listingTitle: string | null;
-  listingPhotoUrl: string | null;
   amountCents: number | null;
   deletedAt: Date;
 }
@@ -90,10 +79,9 @@ export async function getSellerDeletionsByReason(
   options?: { dateFrom?: string; dateTo?: string }
 ): Promise<DeletionItem[]> {
   const client = checkSupabase();
-  // '*' évite l’erreur PostgREST si listing_photo_url n’existe pas encore en base (select explicite → liste vide).
   let q = client
     .from('listing_deletions')
-    .select('*')
+    .select('id, listing_id, listing_title, amount_cents, deleted_at')
     .eq('seller_id', sellerId)
     .eq('reason', reason)
     .order('deleted_at', { ascending: false });
@@ -105,11 +93,10 @@ export async function getSellerDeletionsByReason(
   }
   const { data, error } = await q;
   if (error) return [];
-  return (data || []).map((row: { id: string; listing_id: string; listing_title?: string | null; listing_photo_url?: string | null; amount_cents?: number | null; deleted_at: string }) => ({
+  return (data || []).map((row: { id: string; listing_id: string; listing_title?: string | null; amount_cents?: number | null; deleted_at: string }) => ({
     id: row.id,
     listingId: row.listing_id,
     listingTitle: row.listing_title ?? null,
-    listingPhotoUrl: row.listing_photo_url ?? null,
     amountCents: row.amount_cents != null ? Number(row.amount_cents) : null,
     deletedAt: new Date(row.deleted_at),
   }));
