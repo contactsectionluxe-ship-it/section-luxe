@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift, Euro } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, deleteListing, updateListing } from '@/lib/supabase/listings';
 import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
@@ -578,19 +578,47 @@ export default function VoirAnnoncePage() {
                     </p>
                     {deleteReason === 'vendu' && (
                       <div style={{ marginBottom: 16 }}>
-                        <label htmlFor="voir-delete-vendu-price" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>
-                          Prix de vente (€)
+                        <label htmlFor="voir-delete-vendu-price" style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8, color: '#333' }}>
+                          Prix de vente
                         </label>
-                        <input
-                          id="voir-delete-vendu-price"
-                          type="text"
-                          inputMode="decimal"
-                          autoComplete="off"
-                          value={deleteVenduPriceInput}
-                          onChange={(e) => setDeleteVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
-                          placeholder="0,00"
-                          style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
-                        />
+                        <div style={{ position: 'relative', maxWidth: 220, width: '100%' }}>
+                          <input
+                            id="voir-delete-vendu-price"
+                            type="text"
+                            inputMode="decimal"
+                            autoComplete="off"
+                            value={deleteVenduPriceInput}
+                            onChange={(e) => setDeleteVenduPriceInput(sanitizePriceInputWhileTyping(e.target.value))}
+                            placeholder="0,00"
+                            style={{
+                              width: '100%',
+                              height: 50,
+                              padding: '0 16px',
+                              paddingRight: 44,
+                              fontSize: 15,
+                              border: '1px solid #d2d2d7',
+                              borderRadius: 12,
+                              boxSizing: 'border-box',
+                              outline: 'none',
+                              backgroundColor: '#fff',
+                            }}
+                          />
+                          <span
+                            style={{
+                              position: 'absolute',
+                              right: 14,
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              pointerEvents: 'none',
+                              color: '#86868b',
+                              display: 'flex',
+                              alignItems: 'center',
+                            }}
+                            aria-hidden
+                          >
+                            <Euro size={17} strokeWidth={2} />
+                          </span>
+                        </div>
                       </div>
                     )}
                     {deleteError && (
