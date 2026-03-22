@@ -591,9 +591,6 @@ export default function VoirAnnoncePage() {
                           placeholder="0,00"
                           style={{ width: '100%', boxSizing: 'border-box', height: 44, padding: '0 12px', fontSize: 16, border: '1px solid #d2d2d7', borderRadius: 10, backgroundColor: '#fff' }}
                         />
-                        <p style={{ fontSize: 12, color: '#86868b', margin: '8px 0 0', lineHeight: 1.4 }}>
-                          Prérempli avec le prix affiché sur l’annonce. Corrigez si besoin pour le suivi Mes ventes.
-                        </p>
                       </div>
                     )}
                     {deleteError && (
