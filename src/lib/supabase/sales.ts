@@ -62,7 +62,13 @@ export async function recordListingDeletion(
   if (listingPhotoUrl != null && listingPhotoUrl !== '') {
     row.listing_photo_url = listingPhotoUrl;
   }
-  const { error } = await client.from('listing_deletions').insert(row);
+  let { error } = await client.from('listing_deletions').insert(row);
+  if (error && row.listing_photo_url) {
+    const retry = { ...row };
+    delete retry.listing_photo_url;
+    const r2 = await client.from('listing_deletions').insert(retry);
+    error = r2.error;
+  }
   if (error) throw error;
 }
 
@@ -84,9 +90,10 @@ export async function getSellerDeletionsByReason(
   options?: { dateFrom?: string; dateTo?: string }
 ): Promise<DeletionItem[]> {
   const client = checkSupabase();
+  // '*' évite l’erreur PostgREST si listing_photo_url n’existe pas encore en base (select explicite → liste vide).
   let q = client
     .from('listing_deletions')
-    .select('id, listing_id, listing_title, listing_photo_url, amount_cents, deleted_at')
+    .select('*')
     .eq('seller_id', sellerId)
     .eq('reason', reason)
     .order('deleted_at', { ascending: false });
