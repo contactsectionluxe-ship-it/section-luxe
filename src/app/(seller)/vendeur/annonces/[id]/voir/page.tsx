@@ -577,7 +577,7 @@ export default function VoirAnnoncePage() {
                       Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.
                     </p>
                     {deleteReason === 'vendu' && (
-                      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
                         <label htmlFor="voir-delete-vendu-price" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
                           Prix de vente
                         </label>

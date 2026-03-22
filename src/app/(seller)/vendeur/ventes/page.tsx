@@ -859,7 +859,7 @@ function MesVentesPageContent() {
                 </p>
                 {reserveAction.action === 'vendu' && (
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap', width: '100%' }}>
                       <label htmlFor="reserve-vendu-price" style={{ fontSize: 14, fontWeight: 500, color: '#333', margin: 0, flexShrink: 0 }}>
                         Prix de vente
                       </label>
@@ -903,7 +903,7 @@ function MesVentesPageContent() {
                       </div>
                     </div>
                     {reserveVenduPriceError && (
-                      <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0' }}>{reserveVenduPriceError}</p>
+                      <p style={{ fontSize: 13, color: '#dc2626', margin: '8px 0 0', textAlign: 'center', width: '100%' }}>{reserveVenduPriceError}</p>
                     )}
                   </div>
                 )}
