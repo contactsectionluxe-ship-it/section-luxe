@@ -7,7 +7,6 @@ import { Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
 import { getSession } from '@/lib/supabase/auth';
-import { AbonnementEmbeddedCheckout } from '@/components/AbonnementEmbeddedCheckout';
 
 type PlanFeatureLine = string | { readonly text: string; readonly tone: 'red' };
 
@@ -86,10 +85,11 @@ function AbonnementVendeurContent() {
   const [subscriptionsEnabled, setSubscriptionsEnabled] = useState<boolean | null>(null);
   const [managePortalLoading, setManagePortalLoading] = useState(false);
   const [startPlanPortalLoading, setStartPlanPortalLoading] = useState(false);
-  const [flowMessage, setFlowMessage] = useState<{ kind: 'canceled' | 'error'; text?: string } | null>(null);
-  const [embeddedCheckoutTier, setEmbeddedCheckoutTier] = useState<'plus' | 'pro' | null>(null);
-  /** idle → zone paiement (checkout monté dès le clic pour l’API en parallèle). */
-  const [checkoutPhase, setCheckoutPhase] = useState<'idle' | 'payment'>('idle');
+  const [flowMessage, setFlowMessage] = useState<{ kind: 'error'; text: string } | null>(null);
+  /** Pendant la création de la session Stripe avant redirection. */
+  const [checkoutLoadingTier, setCheckoutLoadingTier] = useState<'plus' | 'pro' | null>(null);
+  /** Tier confirmé par l’API après paiement / sync, tant que le contexte auth n’a pas encore la même valeur. */
+  const [checkoutSyncedTier, setCheckoutSyncedTier] = useState<'plus' | 'pro' | null>(null);
   const verifyStartedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -122,23 +122,28 @@ function AbonnementVendeurContent() {
     };
   }, []);
 
-  /** Lien avec ?tier=plus|pro (ex. ancienne page paiement) → ouvre le checkout sous les cartes. */
+  /** Ancien lien ?tier=plus|pro : nettoyage de l’URL (paiement = même onglet, page Stripe). */
   useEffect(() => {
     if (subscriptionsEnabled !== true) return;
     const t = searchParams.get('tier');
     if (t === 'plus' || t === 'pro') {
-      setEmbeddedCheckoutTier(t);
-      setCheckoutPhase('payment');
       setFlowMessage(null);
       router.replace(abonnementPathPreservingLimit(searchParams));
     }
   }, [subscriptionsEnabled, searchParams, router]);
 
+  /** Retour Stripe « Annuler » : enlever ?canceled=1 de l’URL (sans bannière). */
   useEffect(() => {
-    if (searchParams.get('canceled') === '1') {
-      setFlowMessage({ kind: 'canceled' });
+    if (searchParams.get('canceled') !== '1') return;
+    router.replace(abonnementPathPreservingLimit(searchParams));
+  }, [searchParams, router]);
+
+  useEffect(() => {
+    if (!checkoutSyncedTier || !seller) return;
+    if (normalizeSubscriptionTier(seller.subscriptionTier) === checkoutSyncedTier) {
+      setCheckoutSyncedTier(null);
     }
-  }, [searchParams]);
+  }, [seller, checkoutSyncedTier]);
 
   const clearStripeQueryAndRefreshPath = useCallback(() => {
     router.replace(abonnementPathPreservingLimit(searchParams));
@@ -161,10 +166,13 @@ function AbonnementVendeurContent() {
           `/api/vendeur/abonnement/verify-session?session_id=${encodeURIComponent(sessionId)}`,
           { headers: { Authorization: `Bearer ${session.access_token}` } },
         );
+        const j = (await r.json().catch(() => ({}))) as { ok?: boolean; tier?: string; error?: string };
         if (r.ok) {
+          const t = normalizeSubscriptionTier(j.tier);
+          if (t === 'plus' || t === 'pro') setCheckoutSyncedTier(t);
           await refreshUser();
+          router.refresh();
         } else {
-          const j = (await r.json().catch(() => ({}))) as { error?: string };
           setFlowMessage({ kind: 'error', text: j.error || 'Impossible de finaliser l’abonnement.' });
         }
       } catch {
@@ -173,17 +181,57 @@ function AbonnementVendeurContent() {
         clearStripeQueryAndRefreshPath();
       }
     })();
-  }, [searchParams, seller, authLoading, refreshUser, clearStripeQueryAndRefreshPath]);
+  }, [searchParams, seller, authLoading, refreshUser, clearStripeQueryAndRefreshPath, router]);
 
-  const openEmbeddedCheckout = useCallback((tier: 'plus' | 'pro') => {
-    setFlowMessage(null);
-    setCheckoutPhase('payment');
-    setEmbeddedCheckoutTier(tier);
-  }, []);
+  const openHostedStripeCheckout = useCallback(
+    async (tier: 'plus' | 'pro') => {
+      setFlowMessage(null);
+      setCheckoutLoadingTier(tier);
+      try {
+        const session = await getSession();
+        if (!session?.access_token) {
+          router.push('/connexion');
+          return;
+        }
+        const r = await fetch('/api/vendeur/abonnement/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ tier }),
+        });
+        const data = (await r.json().catch(() => ({}))) as {
+          url?: string;
+          upgraded?: boolean;
+          tier?: string;
+          error?: string;
+        };
+        if (r.ok && data.upgraded && data.tier) {
+          const t = normalizeSubscriptionTier(data.tier);
+          if (t === 'plus' || t === 'pro') setCheckoutSyncedTier(t);
+          await refreshUser();
+          router.refresh();
+          return;
+        }
+        if (r.ok && typeof data.url === 'string' && data.url) {
+          window.location.assign(data.url);
+          return;
+        }
+        setFlowMessage({
+          kind: 'error',
+          text: typeof data.error === 'string' ? data.error : 'Impossible d’ouvrir le paiement.',
+        });
+      } catch {
+        setFlowMessage({ kind: 'error', text: 'Erreur réseau.' });
+      } finally {
+        setCheckoutLoadingTier(null);
+      }
+    },
+    [router, refreshUser],
+  );
 
   const stripeReady = subscriptionsEnabled === true;
-  const checkoutPaymentVisible = checkoutPhase === 'payment' && Boolean(embeddedCheckoutTier && stripeReady);
-  const checkoutPrefetchActive = Boolean(embeddedCheckoutTier && stripeReady);
 
   const openBillingPortal = async (source: 'manage' | 'startPlan') => {
     setFlowMessage(null);
@@ -230,7 +278,7 @@ function AbonnementVendeurContent() {
 
   if (!user || !seller) return null;
 
-  const subTier = normalizeSubscriptionTier(seller.subscriptionTier);
+  const subTier = checkoutSyncedTier ?? normalizeSubscriptionTier(seller.subscriptionTier);
   const showLimitBanner = searchParams.get('limite') === '1' || searchParams.get('depassement') === '1';
   /** Portail Stripe : client connu + formule Plus/Pro + abonnement enregistré côté Stripe */
   const showPortal =
@@ -289,21 +337,7 @@ function AbonnementVendeurContent() {
             </div>
           ) : null}
 
-          {flowMessage?.kind === 'canceled' ? (
-            <div
-              role="status"
-              style={{
-                ...alertBase,
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                color: '#475569',
-              }}
-            >
-              Paiement annulé. Vous pouvez choisir une formule quand vous le souhaitez.
-            </div>
-          ) : null}
-
-          {flowMessage?.kind === 'error' && flowMessage.text ? (
+          {flowMessage ? (
             <div
               role="alert"
               style={{
@@ -347,11 +381,7 @@ function AbonnementVendeurContent() {
               </button>
             </div>
           ) : null}
-          <div
-            className={`abonnement-checkout-slot${checkoutPaymentVisible ? ' abonnement-checkout-slot--payment' : ''}`}
-          >
-            <div className="abonnement-checkout-slot-plans" aria-hidden={checkoutPaymentVisible}>
-              <div className="abonnement-plans-row">
+          <div className="abonnement-plans-row">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -417,9 +447,11 @@ function AbonnementVendeurContent() {
                     <button
                       type="button"
                       className="abonnement-plan-cta-btn abonnement-plan-cta-btn--primary"
-                      onClick={() => openEmbeddedCheckout(plan.id as 'plus' | 'pro')}
+                      disabled={checkoutLoadingTier !== null}
+                      aria-busy={checkoutLoadingTier === plan.id}
+                      onClick={() => void openHostedStripeCheckout(plan.id as 'plus' | 'pro')}
                     >
-                      {plan.id === 'plus' ? 'Passer à Plus' : 'Passer à Pro'}
+                      {checkoutLoadingTier === plan.id ? 'Chargement' : plan.id === 'plus' ? 'Passer à Plus' : 'Passer à Pro'}
                     </button>
                   ) : subscriptionsEnabled === null ? (
                     <div className="abonnement-plan-cta-btn abonnement-plan-cta-btn--muted">…</div>
@@ -431,22 +463,6 @@ function AbonnementVendeurContent() {
                 </div>
               </div>
             ))}
-              </div>
-            </div>
-
-            {checkoutPrefetchActive && embeddedCheckoutTier ? (
-              <div className="abonnement-checkout-slot-payment" aria-hidden={!checkoutPaymentVisible}>
-                <AbonnementEmbeddedCheckout
-                  key={embeddedCheckoutTier}
-                  tier={embeddedCheckoutTier}
-                  replacementLayout
-                  onDismiss={() => {
-                    setEmbeddedCheckoutTier(null);
-                    setCheckoutPhase('idle');
-                  }}
-                />
-              </div>
-            ) : null}
           </div>
         </div>
         </div>

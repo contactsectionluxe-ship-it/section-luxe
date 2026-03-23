@@ -24,10 +24,10 @@ type SellerRow = {
 };
 
 /**
- * Checkout intégré (Embedded) : session `ui_mode: embedded` + `client_secret` pour Stripe.js,
+ * Checkout Stripe hébergé (redirection navigateur vers `session.url`),
  * ou mise à jour d’abonnement existant sans nouveau Checkout.
  * Body: { tier: "plus" | "pro" }
- * Retourne { clientSecret, tier } | { ok: true, upgraded: true, tier }.
+ * Retourne { url, tier } | { ok: true, upgraded: true, tier }.
  */
 export async function POST(request: NextRequest) {
   if (
@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
 
   const session = await stripeServer.checkout.sessions.create({
-    ui_mode: 'embedded',
     mode: 'subscription',
     customer: row.stripe_customer_id || undefined,
     customer_email: row.stripe_customer_id ? undefined : row.email,
     line_items: [{ price: newPriceId, quantity: 1 }],
-    return_url: `${baseUrl}/vendeur/abonnement?session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${baseUrl}/vendeur/abonnement?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${baseUrl}/vendeur/abonnement?canceled=1`,
     client_reference_id: row.id,
     metadata: {
       seller_id: row.id,
@@ -136,9 +136,9 @@ export async function POST(request: NextRequest) {
     allow_promotion_codes: true,
   });
 
-  if (!session.client_secret) {
-    return NextResponse.json({ error: 'Impossible de créer la session Stripe (client_secret manquant)' }, { status: 500 });
+  if (!session.url) {
+    return NextResponse.json({ error: 'Impossible de créer la session Stripe (URL manquante)' }, { status: 500 });
   }
 
-  return NextResponse.json({ clientSecret: session.client_secret, tier });
+  return NextResponse.json({ url: session.url, tier });
 }

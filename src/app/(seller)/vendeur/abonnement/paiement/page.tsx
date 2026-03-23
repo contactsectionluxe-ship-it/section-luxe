@@ -1,21 +1,15 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
-/** Redirection : le paiement s’affiche désormais sous les cartes sur /vendeur/abonnement */
+/** Redirection : le paiement Stripe part depuis /vendeur/abonnement (même onglet). */
 function AbonnementPaiementRedirect() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const tier = searchParams.get('tier');
-    if (tier === 'plus' || tier === 'pro') {
-      router.replace(`/vendeur/abonnement?tier=${tier}`);
-    } else {
-      router.replace('/vendeur/abonnement');
-    }
-  }, [router, searchParams]);
+    router.replace('/vendeur/abonnement');
+  }, [router]);
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '50vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
