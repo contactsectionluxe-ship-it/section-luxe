@@ -79,17 +79,19 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const invoices = list.data.map((inv) => ({
-    id: inv.id,
-    number: inv.number,
-    status: inv.status,
-    created: inv.created,
-    total: inv.total,
-    currency: inv.currency,
-    hostedInvoiceUrl: inv.hosted_invoice_url,
-    invoicePdf: inv.invoice_pdf,
-    productTitle: productTitleFromStripeInvoice(inv),
-  }));
+  const invoices = list.data
+    .filter((inv) => inv.status !== 'draft')
+    .map((inv) => ({
+      id: inv.id,
+      number: inv.number,
+      status: inv.status,
+      created: inv.created,
+      total: inv.total,
+      currency: inv.currency,
+      hostedInvoiceUrl: inv.hosted_invoice_url,
+      invoicePdf: inv.invoice_pdf,
+      productTitle: productTitleFromStripeInvoice(inv),
+    }));
 
   return NextResponse.json({ invoices });
 }

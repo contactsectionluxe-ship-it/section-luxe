@@ -140,6 +140,94 @@ a:focus-visible {
   display: none;
 }
 
+/* Page Mes factures : le titre de ligne ouvre la facture (plus de bouton œil « Voir ») */
+.mes-factures-title-link {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+.mes-factures-title-link:hover {
+  text-decoration: underline;
+  opacity: 0.88;
+}
+
+/* Mes factures : ligne liste — desktop flex, mobile grille (télécharger sous le prix à droite) */
+.mes-factures-invoice-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #e8e6e3;
+}
+.mes-factures-invoice-row__download {
+  flex-shrink: 0;
+}
+.mes-factures-invoice-row__main {
+  flex: 1;
+  min-width: 0;
+}
+.mes-factures-invoice-row__price {
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .mes-factures-invoice-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    align-items: start;
+    column-gap: 16px;
+    row-gap: 6px;
+  }
+  .mes-factures-invoice-row__main {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: stretch;
+  }
+  .mes-factures-invoice-row__price {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end;
+    text-align: right;
+  }
+  .mes-factures-invoice-row__download {
+    grid-column: 2;
+    grid-row: 2;
+    justify-self: end;
+    width: auto !important;
+  }
+  .mes-factures-invoice-row--no-pdf .mes-factures-invoice-row__download {
+    display: none;
+  }
+  .mes-factures-invoice-row--no-pdf .mes-factures-invoice-row__main {
+    grid-row: 1;
+  }
+  /* Libellé « Télécharger » : taille proche du sous-titre de ligne, épouse la colonne prix */
+  .mes-factures-download-btn {
+    width: max-content !important;
+    max-width: 100%;
+    height: auto !important;
+    min-height: 0;
+    padding: 6px 12px !important;
+    box-sizing: border-box;
+    line-height: 1.25;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    font-family: var(--font-inter), var(--font-sans);
+  }
+  .mes-factures-download-btn .mes-factures-download-btn__icon {
+    display: none !important;
+  }
+  .mes-factures-download-btn .mes-factures-download-btn__label {
+    display: inline;
+  }
+}
+
+/* Desktop : texte masqué, icône visible */
+.mes-factures-download-btn__label {
+  display: none;
+}
+
 /* Hero : libellé court « Voir le catalogue » masqué par défaut (affiché uniquement sur mobile) */
 .hero-catalogue-label-mobile {
   display: none;
@@ -267,16 +355,15 @@ a:focus-visible {
 }
 
 /* Grille / liste : badge Plus/Pro immédiatement après le nom (éviter flex:1 sur le nom = vide avant le badge) */
-.listing-grid-vendeur-nom-badge-row {
+.listing-grid-vendeur-nom-badge-row,
+.catalogue-listing-vendeur-nom-row {
+  align-items: center;
   justify-content: flex-start;
 }
 .listing-grid-vendeur-nom-badge-row > .listing-grid-vendeur-nom {
   flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
-}
-.catalogue-listing-vendeur-nom-row {
-  justify-content: flex-start;
 }
 .catalogue-listing-vendeur-nom-row > .catalogue-listing-vendeur-nom {
   flex: 0 1 auto;
@@ -471,8 +558,18 @@ a:focus-visible {
 }
 
 /* ——— Mon abonnement (vendeur) ——— */
+/* Même fond page que Contact */
 .abonnement-page-bg {
-  background-color: #f5f5f7;
+  background-color: #fff;
+}
+
+/* Même rythme vertical / horizontal que .contact-page-inner */
+.abonnement-page-inner {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 30px 24px 80px;
+  box-sizing: border-box;
 }
 
 .abonnement-section-tabs {
@@ -514,12 +611,12 @@ a:focus-visible {
   width: 100%;
 }
 
+/* Carte principale : même style que la carte formulaire Contact */
 .abonnement-shell {
   background: #fff;
-  padding: 24px 32px 32px;
-  border-radius: 20px;
-  border: 1px solid #e8e8ed;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.04);
+  padding: 32px 28px;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   margin-top: -1mm;
 }
 
@@ -564,7 +661,7 @@ a:focus-visible {
   align-self: stretch;
   display: flex;
   flex-direction: column;
-  padding: 26px 22px 24px;
+  padding: 26px 22px 18px;
   border-radius: 16px;
   border: 1px solid #e5e5ea;
   background: #fff;
@@ -725,6 +822,40 @@ h2.abonnement-plan-name {
 .abonnement-plan-cta {
   margin-top: auto;
   padding-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.abonnement-plan-cta-btn-row {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Desktop : réserve sous le bouton seulement si au moins une carte affiche un détail (alignement des boutons). */
+@media (min-width: 901px) {
+  .abonnement-plan-cta-meta {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .abonnement-plans-row--has-cta-meta .abonnement-plan-cta-meta {
+    min-height: 38px;
+  }
+}
+
+.abonnement-plan-actuel-detail {
+  margin: 0;
+  padding: 12px 4px 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: #6e6e73;
+  font-family: var(--font-inter), var(--font-sans);
+  text-align: center;
 }
 
 .abonnement-plan-cta-btn {
@@ -750,6 +881,24 @@ h2.abonnement-plan-name {
   border: 1px solid #e5e5ea;
 }
 
+button.abonnement-plan-cta-btn--muted {
+  cursor: pointer;
+}
+
+button.abonnement-plan-cta-btn--muted:disabled:not(.abonnement-plan-cta-btn--muted-busy) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button.abonnement-plan-cta-btn--muted.abonnement-plan-cta-btn--muted-busy:disabled {
+  opacity: 1;
+  color: #6e6e73;
+  background: #e8e8ed;
+  border-color: #d2d2d7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .abonnement-plan-cta-btn--primary {
   color: #fff;
   background: #1d1d1f;
@@ -767,6 +916,16 @@ button.abonnement-plan-cta-btn--primary {
 button.abonnement-plan-cta-btn--primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Chargement : même rendu gris pour Passer à gratuit, Plus et Pro. */
+button.abonnement-plan-cta-btn--primary.abonnement-plan-cta-btn--primary-busy:disabled {
+  opacity: 1;
+  color: #6e6e73;
+  background: #e8e8ed;
+  border: 1px solid #d2d2d7;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .abonnement-plan-cta-btn--outline {
@@ -788,12 +947,21 @@ button.abonnement-plan-cta-btn--outline:disabled {
   cursor: not-allowed;
 }
 
+button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:disabled {
+  opacity: 1;
+  color: #6e6e73;
+  background: #e8e8ed;
+  border-color: #d2d2d7;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 @media (max-width: 900px) {
   .abonnement-plans-row {
     gap: 12px;
   }
   .abonnement-plan-card {
-    padding: 22px 16px 20px;
+    padding: 22px 16px 16px;
   }
   .abonnement-plan-price {
     font-size: 25px;
@@ -1043,8 +1211,7 @@ button.abonnement-plan-cta-btn--outline:disabled {
   .abonnement-page-inner {
     max-width: none !important;
     width: 100% !important;
-    padding-left: 24px !important;
-    padding-right: 24px !important;
+    padding: 30px 24px 80px !important;
     box-sizing: border-box !important;
   }
   .abonnement-plans-row {
@@ -1056,8 +1223,8 @@ button.abonnement-plan-cta-btn--outline:disabled {
     min-width: 0 !important;
   }
   .abonnement-shell {
-    padding: 22px 16px 20px !important;
-    border-radius: 16px !important;
+    padding: 32px 28px !important;
+    border-radius: 18px !important;
   }
   .abonnement-shell .abonnement-section-tabs {
     padding-bottom: 22px !important;
@@ -1210,12 +1377,95 @@ button.abonnement-plan-cta-btn--outline:disabled {
     padding-right: 24px !important;
     box-sizing: border-box !important;
   }
+  /* Page Admin — Comptes : cartes stats Visiteurs / Vendeurs / … deux par ligne (téléphone) */
+  .admin-account-stats-scroll {
+    overflow-x: visible !important;
+    -webkit-overflow-scrolling: auto !important;
+  }
+  .admin-account-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+  /* Page Admin : Demandes / Comptes / Newsletters sur une seule ligne (téléphone uniquement) */
+  .admin-section-tabs {
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+  .admin-section-tabs button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
   /* Page Admin : sur mobile, grille des filtres (Tous à droite de Bannis) */
   .admin-filters-row {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
     width: 100% !important;
     gap: 8px !important;
+  }
+  /* Page Admin — Comptes : ligne 1 Visiteurs / Vendeurs, ligne 2 Start / Plus / Pro (téléphone) */
+  .admin-filters-row.admin-account-filters-row {
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    width: 100% !important;
+    grid-template-columns: none !important;
+  }
+  .admin-account-filters-row .admin-account-filters-group {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    width: 100% !important;
+    flex: none !important;
+    min-width: 0 !important;
+  }
+  .admin-account-filters-row .admin-account-filters-group button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    padding: 10px 8px !important;
+    line-height: 1.2 !important;
+  }
+  /* Page Admin : filtres Demandes vendeur (téléphone) — grille 3×2, style proche des onglets principaux */
+  .admin-filters-row.admin-vendeur-filters-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .admin-filters-row.admin-vendeur-filters-row button {
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+  /* Page Admin : filtres Newsletters (téléphone) — même ligne / style que Demandes / Comptes */
+  .admin-filters-row.admin-newsletter-filters-row {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: 100% !important;
+    gap: 6px !important;
+    grid-template-columns: none !important;
+  }
+  .admin-filters-row.admin-newsletter-filters-row button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 10px 8px !important;
+    font-size: 12px !important;
+    line-height: 1.25 !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
   }
   .mes-facture-detail-invoice-card {
     padding: 24px !important;
@@ -1892,5 +2142,22 @@ button.abonnement-plan-cta-btn--outline:disabled {
   footer {
     padding-left: 16px !important;
     padding-right: 16px !important;
+  }
+}
+
+/* Desktop : onglets Comptes (admin) — largeur selon le texte, pas toute la ligne */
+@media (min-width: 768px) {
+  .admin-filters-row.admin-account-filters-row {
+    width: fit-content !important;
+    max-width: 100% !important;
+    justify-content: flex-start !important;
+  }
+  .admin-account-filters-row .admin-account-filters-group {
+    flex: 0 0 auto !important;
+    width: auto !important;
+  }
+  .admin-account-filters-row .admin-account-filters-group button {
+    flex: 0 0 auto !important;
+    width: auto !important;
   }
 }

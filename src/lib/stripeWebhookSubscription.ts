@@ -7,6 +7,36 @@ import {
   subscriptionTierFromStripeSubscription,
 } from '@/lib/stripeSellerSync';
 
+/**
+ * Résout le vendeur lié à un abonnement Stripe (metadata → id abonnement → id client).
+ * Évite les désynchronisations si une seule des colonnes Supabase est correcte.
+ */
+export async function resolveSellerIdForSubscription(
+  sub: Stripe.Subscription,
+  supabase: SupabaseClient,
+): Promise<string | undefined> {
+  const fromMeta = sub.metadata?.seller_id?.trim();
+  if (fromMeta) return fromMeta;
+
+  const { data: bySub } = await supabase
+    .from('sellers')
+    .select('id')
+    .eq('stripe_subscription_id', sub.id)
+    .maybeSingle();
+  if (bySub?.id) return bySub.id as string;
+
+  const cust = sub.customer;
+  const customerId = typeof cust === 'string' ? cust : cust?.id;
+  if (!customerId) return undefined;
+
+  const { data: byCustomer } = await supabase
+    .from('sellers')
+    .select('id')
+    .eq('stripe_customer_id', customerId)
+    .maybeSingle();
+  return (byCustomer?.id as string | undefined) || undefined;
+}
+
 export async function handleCheckoutSessionSubscriptionCompleted(
   session: Stripe.Checkout.Session,
   supabase: SupabaseClient,
@@ -33,15 +63,7 @@ export async function handleCustomerSubscriptionUpdated(
   sub: Stripe.Subscription,
   supabase: SupabaseClient,
 ): Promise<void> {
-  let sellerId = sub.metadata?.seller_id as string | undefined;
-  if (!sellerId) {
-    const { data } = await supabase
-      .from('sellers')
-      .select('id')
-      .eq('stripe_subscription_id', sub.id)
-      .maybeSingle();
-    sellerId = data?.id as string | undefined;
-  }
+  const sellerId = await resolveSellerIdForSubscription(sub, supabase);
   if (!sellerId) return;
 
   const cust = sub.customer;
@@ -58,14 +80,14 @@ export async function handleCustomerSubscriptionDeleted(
   sub: Stripe.Subscription,
   supabase: SupabaseClient,
 ): Promise<void> {
+  const sellerId = await resolveSellerIdForSubscription(sub, supabase);
+  if (!sellerId) return;
+
   const { data: row } = await supabase
     .from('sellers')
-    .select('id, stripe_customer_id')
-    .eq('stripe_subscription_id', sub.id)
+    .select('stripe_customer_id')
+    .eq('id', sellerId)
     .maybeSingle();
-
-  const sellerId = (row?.id as string | undefined) || (sub.metadata?.seller_id as string | undefined);
-  if (!sellerId) return;
 
   const cust = sub.customer;
   const customerFromSub = typeof cust === 'string' ? cust : cust.id;

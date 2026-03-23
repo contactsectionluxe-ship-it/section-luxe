@@ -78,7 +78,7 @@ export default function AdminNewsletterPage() {
             <ArrowLeft size={18} /> Retour Admin
           </Link>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
-            Newsletter
+            Newsletters
           </h1>
           <p style={{ fontSize: 14, color: '#6e6e73' }}>
             Inscrits et désinscrits pour l’envoi des actualités Section Luxe.

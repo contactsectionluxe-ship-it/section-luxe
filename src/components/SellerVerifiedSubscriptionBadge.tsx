@@ -14,38 +14,41 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
   if (tier !== 'plus' && tier !== 'pro') return null;
 
   const isCatalogue = variant === 'catalogueGrid' || variant === 'catalogueLine';
-  const iconPx = isCatalogue ? 15 : null;
+  const catalogueIconEm = variant === 'catalogueLine' ? '1.16em' : '1.22em';
 
+  /**
+   * Catalogue : même échelle que le libellé vendeur (hérite du font-size du parent).
+   * translateY uniquement sur le badge : n’influence pas la boîte flex du nom (le nom ne bouge pas).
+   * Léger décalage vers le haut pour l’alignement optique avec du texte en capitales.
+   */
   const wrapStyle: CSSProperties = {
     display: 'inline-flex',
     alignItems: 'center',
+    justifyContent: 'center',
     margin: 0,
     padding: 0,
-    lineHeight: 1,
-    verticalAlign: 'middle',
+    lineHeight: 0,
     flexShrink: 0,
-    marginTop: 0,
     ...(isCatalogue
-      ? { transform: 'translateY(-0.95px)' }
-      : { transform: 'translateY(0.75px)' }),
+      ? { transform: 'translateY(-0.07em)' }
+      : { transform: 'translateY(0.05em)' }),
   };
 
-  const svgStyle: CSSProperties =
-    iconPx != null
-      ? {
-          width: iconPx,
-          height: iconPx,
-          flexShrink: 0,
-          color: 'currentColor',
-          display: 'block',
-        }
-      : {
-          width: '0.88em',
-          height: '0.88em',
-          flexShrink: 0,
-          color: '#86868b',
-          display: 'block',
-        };
+  const svgStyle: CSSProperties = isCatalogue
+    ? {
+        width: catalogueIconEm,
+        height: catalogueIconEm,
+        flexShrink: 0,
+        color: 'currentColor',
+        display: 'block',
+      }
+    : {
+        width: '0.88em',
+        height: '0.88em',
+        flexShrink: 0,
+        color: '#86868b',
+        display: 'block',
+      };
 
   return (
     <span

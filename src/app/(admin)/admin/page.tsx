@@ -3,12 +3,52 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, CheckCircle, Clock, XCircle, Eye, Search, X, Mail } from 'lucide-react';
+import {
+  Users,
+  CheckCircle,
+  Clock,
+  XCircle,
+  Eye,
+  Search,
+  X,
+  Mail,
+  User,
+  Store,
+  Rocket,
+  PlusCircle,
+  Crown,
+} from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdminEmail } from '@/lib/constants';
 import { getAllSellers, getSellerStats, approveSeller, rejectSeller, suspendSeller, banSeller, unbanSeller } from '@/lib/supabase/admin';
 import { Seller } from '@/types';
 import { formatDate } from '@/lib/utils';
+
+type AdminAccountStats = {
+  visitorAccounts: number;
+  sellerAccounts: number;
+  subscriptionByTier: { start: number; plus: number; pro: number; other: number };
+};
+
+type AccountTab = 'visitors' | 'sellers' | 'start' | 'plus' | 'pro';
+
+type VisitorAccountRow = {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  created_at: string;
+};
+
+type SellerAccountRow = {
+  id: string;
+  email: string;
+  company_name: string;
+  phone: string;
+  status: string;
+  subscription_tier: string | null;
+  created_at: string;
+};
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -24,11 +64,19 @@ export default function AdminDashboardPage() {
   const [suspendModal, setSuspendModal] = useState<{ open: boolean; sellerId: string; sellerName: string; days: number }>({ open: false, sellerId: '', sellerName: '', days: 7 });
   const [suspendDaysDropdownOpen, setSuspendDaysDropdownOpen] = useState(false);
   const [banModal, setBanModal] = useState<{ open: boolean; sellerId: string; sellerName: string }>({ open: false, sellerId: '', sellerName: '' });
-  const [adminSection, setAdminSection] = useState<'vendeurs' | 'newsletter'>('vendeurs');
+  const [adminSection, setAdminSection] = useState<'vendeurs' | 'comptes' | 'newsletter'>('vendeurs');
+  const [accountStats, setAccountStats] = useState<AdminAccountStats | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
+  const [accountTab, setAccountTab] = useState<AccountTab>('visitors');
+  const [accountListSearch, setAccountListSearch] = useState('');
+  const [accountListItems, setAccountListItems] = useState<VisitorAccountRow[] | SellerAccountRow[]>([]);
+  const [accountListLoading, setAccountListLoading] = useState(false);
   const [newsletterSubscribers, setNewsletterSubscribers] = useState<{ id: string; email: string; status: 'subscribed' | 'unsubscribed'; subscribed_at: string; unsubscribed_at: string | null }[]>([]);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterError, setNewsletterError] = useState<string | null>(null);
   const [newsletterFilter, setNewsletterFilter] = useState<'all' | 'subscribed' | 'unsubscribed'>('subscribed');
+  const [newsletterListSearch, setNewsletterListSearch] = useState('');
 
   const SUSPEND_DAY_OPTIONS = [
     { value: 1, label: '1 jour' },
@@ -91,6 +139,92 @@ export default function AdminDashboardPage() {
     }
     loadNewsletter();
   }, [canAccessAdmin, adminSection]);
+
+  useEffect(() => {
+    async function loadAccountStats() {
+      if (!canAccessAdmin || adminSection !== 'comptes') return;
+      const { getSession } = await import('@/lib/supabase/auth');
+      const session = await getSession();
+      if (!session?.access_token) {
+        setAccountError('Session expirée');
+        setAccountLoading(false);
+        return;
+      }
+      setAccountLoading(true);
+      setAccountError(null);
+      try {
+        const res = await fetch('/api/admin/account-stats', {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setAccountError((data as { error?: string }).error || 'Erreur chargement');
+          setAccountStats(null);
+        } else {
+          setAccountStats(data as AdminAccountStats);
+        }
+      } catch {
+        setAccountError('Erreur réseau');
+        setAccountStats(null);
+      } finally {
+        setAccountLoading(false);
+      }
+    }
+    void loadAccountStats();
+  }, [canAccessAdmin, adminSection]);
+
+  useEffect(() => {
+    if (!canAccessAdmin || adminSection !== 'comptes') return;
+
+    const controller = new AbortController();
+    const t = setTimeout(() => {
+      void (async () => {
+        setAccountListLoading(true);
+        try {
+          const { getSession } = await import('@/lib/supabase/auth');
+          const session = await getSession();
+          if (!session?.access_token) {
+            if (!controller.signal.aborted) setAccountListItems([]);
+            return;
+          }
+          const res = await fetch(
+            `/api/admin/account-list?category=${accountTab}&q=${encodeURIComponent(accountListSearch.trim())}`,
+            {
+              headers: { Authorization: `Bearer ${session.access_token}` },
+              signal: controller.signal,
+            }
+          );
+          const data = (await res.json().catch(() => ({}))) as { items?: unknown[] };
+          if (!res.ok || controller.signal.aborted) {
+            if (!controller.signal.aborted) setAccountListItems([]);
+            return;
+          }
+          const items = Array.isArray(data.items) ? data.items : [];
+          if (!controller.signal.aborted) {
+            setAccountListItems(items as VisitorAccountRow[] | SellerAccountRow[]);
+          }
+        } catch {
+          if (!controller.signal.aborted) setAccountListItems([]);
+        } finally {
+          if (!controller.signal.aborted) setAccountListLoading(false);
+        }
+      })();
+    }, 280);
+
+    return () => {
+      clearTimeout(t);
+      controller.abort();
+    };
+  }, [canAccessAdmin, adminSection, accountTab, accountListSearch]);
+
+  useEffect(() => {
+    if (adminSection === 'comptes') {
+      setAccountListLoading(true);
+    } else {
+      setAccountListLoading(false);
+      setAccountListItems([]);
+    }
+  }, [adminSection]);
 
   const handleApprove = async (sellerId: string) => {
     setActionLoading(true);
@@ -238,7 +372,23 @@ export default function AdminDashboardPage() {
     subscribed: newsletterSubscribers.filter((s) => s.status === 'subscribed').length,
     unsubscribed: newsletterSubscribers.filter((s) => s.status === 'unsubscribed').length,
   };
-  const filteredNewsletter = newsletterFilter === 'all' ? newsletterSubscribers : newsletterSubscribers.filter((s) => s.status === newsletterFilter);
+  const newsletterRowsForTab =
+    newsletterFilter === 'all' ? newsletterSubscribers : newsletterSubscribers.filter((s) => s.status === newsletterFilter);
+  const newsletterSearchQ = newsletterListSearch.trim().toLowerCase();
+  const filteredNewsletter = newsletterSearchQ
+    ? newsletterRowsForTab.filter(
+        (s) =>
+          s.email.toLowerCase().includes(newsletterSearchQ) ||
+          s.id.toLowerCase().includes(newsletterSearchQ)
+      )
+    : newsletterRowsForTab;
+
+  const adminSubtitle =
+    adminSection === 'vendeurs'
+      ? 'Gestion des demandes vendeurs'
+      : adminSection === 'comptes'
+        ? 'Suivi des comptes visiteurs et vendeurs'
+        : 'Inscriptions et désinscriptions newsletter';
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
@@ -248,8 +398,8 @@ export default function AdminDashboardPage() {
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
             Admin
           </h1>
-          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16 }}>Gestion des demandes vendeurs</p>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16 }}>{adminSubtitle}</p>
+          <div className="admin-section-tabs" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => setAdminSection('vendeurs')}
@@ -264,7 +414,23 @@ export default function AdminDashboardPage() {
                 cursor: 'pointer',
               }}
             >
-              Demande vendeur
+              Demandes
+            </button>
+            <button
+              type="button"
+              onClick={() => setAdminSection('comptes')}
+              style={{
+                padding: '10px 18px',
+                fontSize: 14,
+                fontWeight: 500,
+                backgroundColor: adminSection === 'comptes' ? '#1d1d1f' : '#fff',
+                color: adminSection === 'comptes' ? '#fff' : '#1d1d1f',
+                border: adminSection === 'comptes' ? 'none' : '1px solid #d2d2d7',
+                borderRadius: 12,
+                cursor: 'pointer',
+              }}
+            >
+              Comptes
             </button>
             <button
               type="button"
@@ -280,12 +446,12 @@ export default function AdminDashboardPage() {
                 cursor: 'pointer',
               }}
             >
-              Newsletter
+              Newsletters
             </button>
           </div>
         </div>
 
-        {/* Section Demande vendeur */}
+        {/* Section Demandes */}
         {adminSection === 'vendeurs' && (
           <>
         {loading ? (
@@ -293,7 +459,7 @@ export default function AdminDashboardPage() {
         ) : (
           <>
         {/* Stats — cartes comme Mes annonces */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 40 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 32 }}>
           <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 44, height: 44, backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
               <Users size={22} color="#2563eb" />
@@ -351,7 +517,7 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Filtres — boutons style vendeur */}
-        <div className="admin-filters-row" style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div className="admin-filters-row admin-vendeur-filters-row" style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
           {(['pending', 'approved', 'suspended', 'rejected', 'banned', 'all'] as const).map((f) => (
             <button
               key={f}
@@ -373,7 +539,6 @@ export default function AdminDashboardPage() {
             </button>
           ))}
         </div>
-        <style dangerouslySetInnerHTML={{ __html: '@media (max-width: 767px) { .admin-filter-count { display: none; } }' }} />
 
         <div style={{ marginBottom: 20, position: 'relative' }}>
           <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
@@ -652,7 +817,335 @@ export default function AdminDashboardPage() {
         </>
         )}
 
-        {/* Section Newsletter */}
+        {/* Section Comptes */}
+        {adminSection === 'comptes' && (
+          <>
+            {accountError && (
+              <div style={{ padding: 16, backgroundColor: '#fef2f2', borderRadius: 12, color: '#dc2626', marginBottom: 24 }}>
+                {accountError}
+              </div>
+            )}
+            {accountLoading && !accountStats && <p style={{ color: '#6e6e73', marginBottom: 16 }}>Chargement des statistiques…</p>}
+
+            <div
+              className="admin-account-stats-scroll"
+              style={{
+                marginBottom: 32,
+                width: '100%',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              <div
+                className="admin-account-stats-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns:
+                    (accountStats?.subscriptionByTier.other ?? 0) > 0
+                      ? 'repeat(6, minmax(120px, 1fr))'
+                      : 'repeat(5, minmax(120px, 1fr))',
+                  gap: 12,
+                  minWidth:
+                    (accountStats?.subscriptionByTier.other ?? 0) > 0 ? 720 : 600,
+                }}
+              >
+                <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, backgroundColor: '#e0f2fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <User size={22} color="#0369a1" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Visiteurs</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                      {accountLoading ? '—' : (accountStats?.visitorAccounts ?? '—')}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, backgroundColor: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <Store size={22} color="#5b21b6" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Vendeurs</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                      {accountLoading ? '—' : (accountStats?.sellerAccounts ?? '—')}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, backgroundColor: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <Rocket size={22} color="#c2410c" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Start</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                      {accountLoading ? '—' : (accountStats?.subscriptionByTier.start ?? '—')}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, backgroundColor: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <PlusCircle size={22} color="#15803d" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Plus</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                      {accountLoading ? '—' : (accountStats?.subscriptionByTier.plus ?? '—')}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, backgroundColor: '#f3e8ff', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
+                    <Crown size={22} color="#7c3aed" />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 2 }}>Pro</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
+                      {accountLoading ? '—' : (accountStats?.subscriptionByTier.pro ?? '—')}
+                    </p>
+                  </div>
+                </div>
+                {(accountStats?.subscriptionByTier.other ?? 0) > 0 && (
+                  <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff' }}>
+                    <p style={{ fontSize: 11, color: '#86868b', marginBottom: 4 }}>Autre</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>{accountStats!.subscriptionByTier.other}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div
+              className="admin-filters-row admin-account-filters-row"
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 8,
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                marginBottom: 24,
+              }}
+            >
+              {(
+                [
+                  [
+                    { key: 'visitors' as const, label: 'Visiteurs', count: accountStats?.visitorAccounts },
+                    { key: 'sellers' as const, label: 'Vendeurs', count: accountStats?.sellerAccounts },
+                  ],
+                  [
+                    { key: 'start' as const, label: 'Start', count: accountStats?.subscriptionByTier.start },
+                    { key: 'plus' as const, label: 'Plus', count: accountStats?.subscriptionByTier.plus },
+                    { key: 'pro' as const, label: 'Pro', count: accountStats?.subscriptionByTier.pro },
+                  ],
+                ] as const
+              ).map((group, groupIndex) => (
+                <div
+                  key={groupIndex}
+                  className="admin-account-filters-group"
+                  style={{ display: 'flex', flexWrap: 'nowrap', gap: 8 }}
+                >
+                  {group.map(({ key, label, count }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setAccountTab(key);
+                        setAccountListItems([]);
+                        setAccountListLoading(true);
+                      }}
+                      style={{
+                        padding: '10px 18px',
+                        fontSize: 14,
+                        fontWeight: 500,
+                        backgroundColor: accountTab === key ? '#1d1d1f' : '#fff',
+                        color: accountTab === key ? '#fff' : '#1d1d1f',
+                        border: accountTab === key ? 'none' : '1px solid #d2d2d7',
+                        borderRadius: 12,
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s, color 0.2s, border-color 0.2s',
+                      }}
+                    >
+                      {label}{' '}
+                      <span className="admin-filter-count">
+                        ({accountLoading && count === undefined ? '—' : count ?? '—'})
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginBottom: 20, position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={accountListSearch}
+                onChange={(e) => setAccountListSearch(e.target.value)}
+                placeholder="Rechercher..."
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  fontSize: 15,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            {accountListLoading && accountListItems.length === 0 ? (
+              <p style={{ color: '#6e6e73', marginBottom: 24 }}>Chargement…</p>
+            ) : accountTab === 'visitors' ? (
+              accountListItems.length === 0 ? (
+                <div style={{ padding: 60, border: '1px solid #e8e8ed', borderRadius: 12, textAlign: 'center', backgroundColor: '#fff' }}>
+                  <User size={48} color="#d2d2d7" style={{ display: 'block', margin: '0 auto 16px' }} />
+                  <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
+                    {accountListSearch.trim()
+                      ? `Aucun résultat pour « ${accountListSearch.trim()} »`
+                      : 'Aucun visiteur'}
+                  </h3>
+                  <p style={{ fontSize: 14, color: '#6e6e73' }}>
+                    {accountListSearch.trim() ? 'Modifiez votre recherche.' : 'Tous les utilisateurs ont une fiche vendeur.'}
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+                  {(accountListItems as VisitorAccountRow[]).map((row) => (
+                    <div
+                      key={row.id}
+                      style={{
+                        border: '1px solid #e8e8ed',
+                        borderRadius: 12,
+                        padding: '20px',
+                        backgroundColor: '#fff',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 8 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', marginBottom: 6 }}>{row.display_name || '—'}</p>
+                          <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 4 }}>{row.email}</p>
+                          <p style={{ fontSize: 12, color: '#86868b' }}>Inscrit le {formatDate(new Date(row.created_at))}</p>
+                        </div>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: 12,
+                            fontWeight: 500,
+                            borderRadius: 6,
+                            flexShrink: 0,
+                            backgroundColor: '#f5f5f7',
+                            color: '#424245',
+                          }}
+                        >
+                          {row.role === 'admin' ? 'Admin' : row.role === 'seller' ? 'Vendeur' : 'Acheteur'}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 11, color: '#86868b', fontFamily: 'ui-monospace, monospace', wordBreak: 'break-all' }}>{row.id}</p>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : accountListItems.length === 0 ? (
+              <div style={{ padding: 60, border: '1px solid #e8e8ed', borderRadius: 12, textAlign: 'center', backgroundColor: '#fff' }}>
+                <Store size={48} color="#d2d2d7" style={{ display: 'block', margin: '0 auto 16px' }} />
+                <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
+                  {accountListSearch.trim()
+                    ? `Aucun résultat pour « ${accountListSearch.trim()} »`
+                    : 'Aucune fiche vendeur dans cette catégorie'}
+                </h3>
+                <p style={{ fontSize: 14, color: '#6e6e73' }}>
+                  {accountListSearch.trim() ? 'Modifiez votre recherche.' : 'Les vendeurs correspondants apparaîtront ici.'}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+                {(accountListItems as SellerAccountRow[]).map((row) => {
+                  const st = row.status;
+                  const tierLabel =
+                    row.subscription_tier === 'plus'
+                      ? 'Plus'
+                      : row.subscription_tier === 'pro'
+                        ? 'Pro'
+                        : row.subscription_tier === 'start' || row.subscription_tier == null
+                          ? 'Start'
+                          : String(row.subscription_tier);
+                  return (
+                    <div
+                      key={row.id}
+                      style={{
+                        border: '1px solid #e8e8ed',
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                        backgroundColor: '#fff',
+                      }}
+                    >
+                      <div style={{ padding: '20px 20px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 6, color: '#1d1d1f' }}>
+                              {row.company_name}
+                            </h3>
+                            <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 4 }}>{row.email}</p>
+                            {row.phone ? <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 4 }}>{row.phone}</p> : null}
+                            <p style={{ fontSize: 12, color: '#86868b' }}>Fiche le {formatDate(new Date(row.created_at))}</p>
+                          </div>
+                          <span
+                            style={{
+                              padding: '4px 10px',
+                              fontSize: 12,
+                              fontWeight: 500,
+                              borderRadius: 6,
+                              flexShrink: 0,
+                              backgroundColor:
+                                st === 'approved' ? '#dcfce7' : st === 'pending' ? '#fef3c7' : st === 'suspended' ? '#ffedd5' : st === 'banned' ? '#1f2937' : '#fee2e2',
+                              color:
+                                st === 'approved' ? '#166534' : st === 'pending' ? '#92400e' : st === 'suspended' ? '#c2410c' : st === 'banned' ? '#fff' : '#991b1b',
+                            }}
+                          >
+                            {st === 'approved'
+                              ? 'Validé'
+                              : st === 'pending'
+                                ? 'En attente'
+                                : st === 'suspended'
+                                  ? 'Suspendu'
+                                  : st === 'banned'
+                                    ? 'Banni'
+                                    : 'Refusé'}
+                          </span>
+                        </div>
+                        <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>
+                          Abonnement : <strong style={{ color: '#1d1d1f' }}>{tierLabel}</strong>
+                        </p>
+                        <Link
+                          href={`/admin/vendeurs/${row.id}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 6,
+                            padding: '8px 14px',
+                            border: '1px solid #d2d2d7',
+                            backgroundColor: '#fff',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            borderRadius: 8,
+                            color: '#1d1d1f',
+                            textDecoration: 'none',
+                          }}
+                        >
+                          <Eye size={14} /> Détails vendeur
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Section Newsletters */}
         {adminSection === 'newsletter' && (
           <>
             {newsletterError && (
@@ -660,8 +1153,8 @@ export default function AdminDashboardPage() {
                 {newsletterError}
               </div>
             )}
-            {/* Stats — cartes comme Demande vendeur */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 40 }}>
+            {/* Stats — cartes comme section Compte */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 32 }}>
               <div style={{ padding: 16, border: '1px solid #e8e8ed', borderRadius: 12, backgroundColor: '#fff', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ width: 44, height: 44, backgroundColor: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 10 }}>
                   <Mail size={22} color="#2563eb" />
@@ -690,7 +1183,7 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+            <div className="admin-filters-row admin-newsletter-filters-row" style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
               {(['subscribed', 'unsubscribed', 'all'] as const).map((f) => (
                 <button
                   key={f}
@@ -707,9 +1200,32 @@ export default function AdminDashboardPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  {f === 'subscribed' ? `Inscrits${newsletterFilter === 'subscribed' ? ` (${filteredNewsletter.length})` : ''}` : f === 'unsubscribed' ? `Désinscrits${newsletterFilter === 'unsubscribed' ? ` (${filteredNewsletter.length})` : ''}` : `Tous${newsletterFilter === 'all' ? ` (${filteredNewsletter.length})` : ''}`}
+                  {f === 'subscribed'
+                    ? `Inscrits${newsletterFilter === 'subscribed' ? ` (${newsletterRowsForTab.length})` : ''}`
+                    : f === 'unsubscribed'
+                      ? `Désinscrits${newsletterFilter === 'unsubscribed' ? ` (${newsletterRowsForTab.length})` : ''}`
+                      : `Tous${newsletterFilter === 'all' ? ` (${newsletterRowsForTab.length})` : ''}`}
                 </button>
               ))}
+            </div>
+            <div style={{ marginBottom: 20, position: 'relative' }}>
+              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+              <input
+                type="text"
+                value={newsletterListSearch}
+                onChange={(e) => setNewsletterListSearch(e.target.value)}
+                placeholder="Rechercher..."
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px 12px 44px',
+                  fontSize: 15,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 10,
+                  backgroundColor: '#fff',
+                  outline: 'none',
+                }}
+              />
             </div>
             {newsletterLoading ? (
               <p style={{ color: '#6e6e73' }}>Chargement...</p>
@@ -717,10 +1233,18 @@ export default function AdminDashboardPage() {
               <div style={{ padding: 60, border: '1px solid #e8e8ed', borderRadius: 12, textAlign: 'center', backgroundColor: '#fff' }}>
                 <Mail size={48} color="#d2d2d7" style={{ display: 'block', margin: '0 auto 16px' }} />
                 <h3 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 600, marginBottom: 8, color: '#1d1d1f' }}>
-                  {newsletterFilter === 'subscribed' ? 'Aucun inscrit pour le moment.' : newsletterFilter === 'unsubscribed' ? 'Aucun désinscrit.' : 'Aucun enregistrement.'}
+                  {newsletterSearchQ && newsletterRowsForTab.length > 0
+                    ? `Aucun résultat pour « ${newsletterListSearch.trim()} »`
+                    : newsletterFilter === 'subscribed'
+                      ? 'Aucun inscrit pour le moment.'
+                      : newsletterFilter === 'unsubscribed'
+                        ? 'Aucun désinscrit.'
+                        : 'Aucun enregistrement.'}
                 </h3>
                 <p style={{ fontSize: 14, color: '#6e6e73' }}>
-                  Les inscriptions du footer apparaîtront ici.
+                  {newsletterSearchQ && newsletterRowsForTab.length > 0
+                    ? 'Modifiez votre recherche.'
+                    : 'Les inscriptions du footer apparaîtront ici.'}
                 </p>
               </div>
             ) : (

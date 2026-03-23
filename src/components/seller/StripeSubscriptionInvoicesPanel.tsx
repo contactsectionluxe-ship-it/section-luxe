@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronDown, Search, Download, Eye } from 'lucide-react';
+import { ChevronDown, Search, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getValidAccessTokenForFetch } from '@/lib/supabase/auth';
 
@@ -542,23 +542,27 @@ export function StripeSubscriptionInvoicesPanel({
               {Array.from({ length: 6 }, (_, i) => (
                 <div
                   key={i}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                    padding: '18px 24px',
-                    borderBottom: i < 5 ? '1px solid #e8e6e3' : 'none',
-                  }}
+                  className="mes-factures-invoice-row"
+                  style={{ borderBottom: i < 5 ? '1px solid #e8e6e3' : 'none' }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <div className="catalogue-skeleton" style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }} />
-                    <div className="catalogue-skeleton" style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0 }} />
+                  <div
+                    className="mes-factures-invoice-row__download"
+                    style={{
+                      width: 40,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-start',
+                    }}
+                  >
+                    <div className="catalogue-skeleton" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
                   </div>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div className="mes-factures-invoice-row__main" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <div className="catalogue-skeleton" style={{ height: 15, width: '70%', borderRadius: 4 }} />
                     <div className="catalogue-skeleton" style={{ height: 13, width: '90%', borderRadius: 4 }} />
                   </div>
-                  <div className="catalogue-skeleton" style={{ width: 72, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                  <div className="mes-factures-invoice-row__price">
+                    <div className="catalogue-skeleton" style={{ width: 72, height: 18, borderRadius: 4, flexShrink: 0 }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -571,20 +575,13 @@ export function StripeSubscriptionInvoicesPanel({
                 const title =
                   inv.productTitle?.trim() ? `${baseTitle} - ${inv.productTitle.trim()}` : baseTitle;
                 const subtitle = `${formatDate(inv.issuedAt)} · ${statusLabel(inv.status)}`;
-                const rowStyle: CSSProperties = {
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: '18px 24px',
-                  borderBottom: '1px solid #e8e6e3',
-                };
                 const iconSquareStyle: CSSProperties = {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 48,
-                  height: 48,
-                  borderRadius: 12,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 10,
                   backgroundColor: '#f5f5f7',
                   border: '1px solid #e8e6e3',
                   flexShrink: 0,
@@ -594,44 +591,79 @@ export function StripeSubscriptionInvoicesPanel({
                   color: '#6e6e73',
                   textDecoration: 'none',
                 };
-                const viewIconInner = <Eye size={22} color="#6e6e73" strokeWidth={2} aria-hidden />;
+                /** Colonne = largeur du bouton (40px), alignée à gauche : même logique que le padding droit après le prix. */
+                const downloadColStyle: CSSProperties = {
+                  flexShrink: 0,
+                  width: 40,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                };
+                const invoiceTitleTypography: CSSProperties = {
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: '#1d1d1f',
+                  fontFamily: 'var(--font-inter), var(--font-sans)',
+                };
+                const titleStyle: CSSProperties = {
+                  ...invoiceTitleTypography,
+                  margin: 0,
+                  marginBottom: 1,
+                };
                 return (
-                  <div key={inv.id} style={rowStyle}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div
+                    key={inv.id}
+                    className={`mes-factures-invoice-row${!dl ? ' mes-factures-invoice-row--no-pdf' : ''}`}
+                  >
+                    <div className="mes-factures-invoice-row__download" style={downloadColStyle}>
                       {dl ? (
                         <a
                           href={dl}
                           target="_blank"
                           rel="noopener noreferrer"
+                          className="mes-factures-download-btn"
                           style={downloadBtnStyle}
                           title={inv.invoicePdf ? 'Télécharger la facture (PDF)' : 'Ouvrir la facture'}
                           aria-label={
                             inv.invoicePdf ? 'Télécharger le PDF de la facture' : 'Ouvrir la page de la facture'
                           }
+                          onClick={(e) => {
+                            e.preventDefault();
+                            window.open(dl, '_blank', 'noopener,noreferrer');
+                          }}
                         >
-                          <Download size={22} strokeWidth={2} aria-hidden />
+                          <span className="mes-factures-download-btn__icon" aria-hidden>
+                            <Download size={18} strokeWidth={2} />
+                          </span>
+                          <span className="mes-factures-download-btn__label">Télécharger</span>
                         </a>
                       ) : null}
+                    </div>
+                    <div className="mes-factures-invoice-row__main">
                       {href ? (
                         <a
                           href={href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ ...iconSquareStyle, color: '#6e6e73', textDecoration: 'none', cursor: 'pointer' }}
-                          title="Voir la facture"
-                          aria-label="Voir la facture"
+                          className="mes-factures-title-link"
+                          style={{
+                            ...titleStyle,
+                            textDecoration: 'none',
+                            display: 'inline-block',
+                            maxWidth: '100%',
+                            wordBreak: 'break-word',
+                          }}
+                          title={title}
+                          aria-label={`Voir la facture : ${title}`}
                         >
-                          {viewIconInner}
+                          {title}
                         </a>
                       ) : (
-                        <div style={iconSquareStyle}>{viewIconInner}</div>
+                        <p style={titleStyle}>{title}</p>
                       )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 2 }}>{title}</p>
                       <p style={{ fontSize: 13, color: '#6e6e73', margin: 0 }}>{subtitle}</p>
                     </div>
-                    <div style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', flexShrink: 0 }}>
+                    <div className="mes-factures-invoice-row__price" style={invoiceTitleTypography}>
                       {formatPrice(inv.total, inv.currency)}
                     </div>
                   </div>
