@@ -558,6 +558,97 @@ a:focus-visible {
   align-items: stretch;
 }
 
+/* Plus / Pro : les formules disparaissent, le paiement apparaît en fondu simple */
+.abonnement-checkout-slot {
+  position: relative;
+  width: 100%;
+}
+
+.abonnement-checkout-slot--payment .abonnement-checkout-slot-plans {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.abonnement-checkout-slot-payment {
+  width: 100%;
+  max-width: none;
+  margin-left: 0;
+  margin-right: 0;
+  box-sizing: border-box;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  transition: opacity 0.28s ease;
+  z-index: 2;
+}
+
+.abonnement-checkout-slot--payment .abonnement-checkout-slot-payment {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  position: relative;
+  z-index: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .abonnement-checkout-slot-plans,
+  .abonnement-checkout-slot-payment {
+    transition: none !important;
+  }
+}
+
+.abonnement-embedded-checkout-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  width: 100%;
+}
+
+.abonnement-embedded-checkout-back-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Paiement centré sur toute la largeur du bloc (sous « Revenir »), sans encadrement */
+.abonnement-embedded-checkout-shell.abonnement-shell {
+  align-self: center;
+  width: 100%;
+  max-width: 460px;
+  min-width: 0;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+@media (max-width: 640px) {
+  .abonnement-embedded-checkout-body {
+    gap: 18px;
+  }
+
+  .abonnement-embedded-checkout-shell.abonnement-shell {
+    max-width: none;
+  }
+}
+
 .abonnement-plan-card {
   flex: 1 1 0;
   min-width: 0;

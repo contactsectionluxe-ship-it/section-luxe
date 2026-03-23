@@ -7,6 +7,7 @@ import { Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
 import { getSession } from '@/lib/supabase/auth';
+import { AbonnementEmbeddedCheckout } from '@/components/AbonnementEmbeddedCheckout';
 
 type PlanFeatureLine = string | { readonly text: string; readonly tone: 'red' };
 
@@ -39,7 +40,7 @@ const plans: readonly {
     id: 'plus',
     name: 'Plus',
     price: '99 €',
-    priceDetail: 'HT/mois',
+    priceDetail: 'HT hors TVA / mois',
     description: "Pour les vendeurs réguliers, jusqu'à 200 annonces publiées simultanément.",
     features: [
       '200 annonces simultanées',
@@ -55,7 +56,7 @@ const plans: readonly {
     id: 'pro',
     name: 'Pro',
     price: '325 €',
-    priceDetail: 'HT/mois',
+    priceDetail: 'HT hors TVA / mois',
     description: "Pour les boutiques établies, jusqu'à 800 annonces publiées simultanément.",
     features: [
       '800 annonces simultanées',
@@ -86,6 +87,9 @@ function AbonnementVendeurContent() {
   const [managePortalLoading, setManagePortalLoading] = useState(false);
   const [startPlanPortalLoading, setStartPlanPortalLoading] = useState(false);
   const [flowMessage, setFlowMessage] = useState<{ kind: 'canceled' | 'error'; text?: string } | null>(null);
+  const [embeddedCheckoutTier, setEmbeddedCheckoutTier] = useState<'plus' | 'pro' | null>(null);
+  /** idle → zone paiement (checkout monté dès le clic pour l’API en parallèle). */
+  const [checkoutPhase, setCheckoutPhase] = useState<'idle' | 'payment'>('idle');
   const verifyStartedFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -117,6 +121,18 @@ function AbonnementVendeurContent() {
       cancelled = true;
     };
   }, []);
+
+  /** Lien avec ?tier=plus|pro (ex. ancienne page paiement) → ouvre le checkout sous les cartes. */
+  useEffect(() => {
+    if (subscriptionsEnabled !== true) return;
+    const t = searchParams.get('tier');
+    if (t === 'plus' || t === 'pro') {
+      setEmbeddedCheckoutTier(t);
+      setCheckoutPhase('payment');
+      setFlowMessage(null);
+      router.replace(abonnementPathPreservingLimit(searchParams));
+    }
+  }, [subscriptionsEnabled, searchParams, router]);
 
   useEffect(() => {
     if (searchParams.get('canceled') === '1') {
@@ -159,10 +175,15 @@ function AbonnementVendeurContent() {
     })();
   }, [searchParams, seller, authLoading, refreshUser, clearStripeQueryAndRefreshPath]);
 
-  const goToPaymentPage = (tier: 'plus' | 'pro') => {
+  const openEmbeddedCheckout = useCallback((tier: 'plus' | 'pro') => {
     setFlowMessage(null);
-    router.push(`/vendeur/abonnement/paiement?tier=${tier}`);
-  };
+    setCheckoutPhase('payment');
+    setEmbeddedCheckoutTier(tier);
+  }, []);
+
+  const stripeReady = subscriptionsEnabled === true;
+  const checkoutPaymentVisible = checkoutPhase === 'payment' && Boolean(embeddedCheckoutTier && stripeReady);
+  const checkoutPrefetchActive = Boolean(embeddedCheckoutTier && stripeReady);
 
   const openBillingPortal = async (source: 'manage' | 'startPlan') => {
     setFlowMessage(null);
@@ -211,7 +232,6 @@ function AbonnementVendeurContent() {
 
   const subTier = normalizeSubscriptionTier(seller.subscriptionTier);
   const showLimitBanner = searchParams.get('limite') === '1' || searchParams.get('depassement') === '1';
-  const stripeReady = subscriptionsEnabled === true;
   /** Portail Stripe : client connu + formule Plus/Pro + abonnement enregistré côté Stripe */
   const showPortal =
     stripeReady &&
@@ -234,21 +254,24 @@ function AbonnementVendeurContent() {
       style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}
     >
       <div className="abonnement-page-inner" style={{ width: '100%', maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px', boxSizing: 'border-box' }}>
-        <div style={{ textAlign: 'left', marginBottom: 32 }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 28,
-              fontWeight: 500,
-              marginBottom: 8,
-              color: '#1d1d1f',
-              letterSpacing: '-0.02em',
-            }}
-          >
-            Mon abonnement
-          </h1>
-          <p style={{ fontSize: 15, color: '#6e6e73', fontFamily: 'var(--font-inter), var(--font-sans)' }}>L’offre adaptée à la taille de votre activité.</p>
-        </div>
+        <div>
+          <div className="abonnement-page-title-block" style={{ textAlign: 'left', marginBottom: 32 }}>
+            <h1
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                marginBottom: 8,
+                color: '#1d1d1f',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Mon abonnement
+            </h1>
+            <p style={{ fontSize: 15, color: '#6e6e73', fontFamily: 'var(--font-inter), var(--font-sans)' }}>
+              L’offre adaptée à la taille de votre activité.
+            </p>
+          </div>
 
         <div className="abonnement-shell">
           {showLimitBanner ? (
@@ -324,7 +347,11 @@ function AbonnementVendeurContent() {
               </button>
             </div>
           ) : null}
-          <div className="abonnement-plans-row">
+          <div
+            className={`abonnement-checkout-slot${checkoutPaymentVisible ? ' abonnement-checkout-slot--payment' : ''}`}
+          >
+            <div className="abonnement-checkout-slot-plans" aria-hidden={checkoutPaymentVisible}>
+              <div className="abonnement-plans-row">
             {plans.map((plan) => (
               <div
                 key={plan.id}
@@ -390,7 +417,7 @@ function AbonnementVendeurContent() {
                     <button
                       type="button"
                       className="abonnement-plan-cta-btn abonnement-plan-cta-btn--primary"
-                      onClick={() => goToPaymentPage(plan.id as 'plus' | 'pro')}
+                      onClick={() => openEmbeddedCheckout(plan.id as 'plus' | 'pro')}
                     >
                       {plan.id === 'plus' ? 'Passer à Plus' : 'Passer à Pro'}
                     </button>
@@ -404,16 +431,25 @@ function AbonnementVendeurContent() {
                 </div>
               </div>
             ))}
+              </div>
+            </div>
+
+            {checkoutPrefetchActive && embeddedCheckoutTier ? (
+              <div className="abonnement-checkout-slot-payment" aria-hidden={!checkoutPaymentVisible}>
+                <AbonnementEmbeddedCheckout
+                  key={embeddedCheckoutTier}
+                  tier={embeddedCheckoutTier}
+                  replacementLayout
+                  onDismiss={() => {
+                    setEmbeddedCheckoutTier(null);
+                    setCheckoutPhase('idle');
+                  }}
+                />
+              </div>
+            ) : null}
           </div>
-
-          <p className="abonnement-shell-footnote">Les montants Plus et Pro sont indiqués hors taxes.</p>
         </div>
-
-        <p style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73', fontFamily: 'var(--font-inter), var(--font-sans)' }}>
-          <Link href="/" style={{ color: '#1d1d1f', fontWeight: 500 }}>
-            Retour à l&apos;accueil
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
