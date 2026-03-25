@@ -383,7 +383,12 @@ a:focus-visible {
 
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
 .annonce-produit-page .seller-verified-subscription-badge {
-  transform: translateY(0.07em) !important;
+  transform: translateY(0.03em) !important;
+}
+
+/* Liste annonces d’un vendeur : bannière uniquement (pas la popup carte) — badge très légèrement plus bas */
+.catalogue-page-main--seller .catalogue-seller-banner .catalogue-seller-banner-title-row .seller-verified-subscription-badge {
+  transform: translateY(0.08em) !important;
 }
 
 /* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
@@ -1573,6 +1578,26 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   /* Page Mes annonces : masquer le bouton « Déposer une annonce » sur mobile */
   .mes-annonces-deposer-link {
+    display: none !important;
+  }
+  /* Partager : icône à droite du bloc titre + nom vendeur ; pas de 2e ligne (Déposer masqué) */
+  .mes-annonces-header-actions {
+    display: none !important;
+  }
+  .mes-annonces-title-block {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  .mes-annonces-catalogue-share-icon-mobile {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .mes-annonces-catalogue-share-btn {
     display: none !important;
   }
   /* Page Mes annonces : barre de recherche pleine largeur, masquer « Plus récents » (tri) sur mobile */

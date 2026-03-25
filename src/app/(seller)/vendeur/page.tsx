@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X, Euro } from 'lucide-react';
+import { Plus, Package, Heart, Clock, CheckCircle, XCircle, AlertCircle, MessageCircle, Phone, Search, ChevronDown, X, Euro, Share2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isSubscriptionLimitError } from '@/lib/subscription';
 import { getSellerListings, deleteListing, updateListing } from '@/lib/supabase/listings';
@@ -14,6 +14,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput, CATEGORIES } from '@/lib/utils';
 import { ListingPhoto } from '@/components/ListingPhoto';
+import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
 function normalizeForSearch(s: string): string {
@@ -65,6 +66,32 @@ export default function SellerDashboardPage() {
   const [reservedListingIds, setReservedListingIds] = useState<Set<string>>(new Set());
   const mesAnnoncesGridRef = useRef<HTMLDivElement>(null);
   const [depotInactiveLimiteBanner, setDepotInactiveLimiteBanner] = useState(false);
+  const [catalogueShareFeedback, setCatalogueShareFeedback] = useState(false);
+
+  const shareSellerCatalogue = useCallback(async () => {
+    if (!seller || typeof window === 'undefined') return;
+    const path = sellerCataloguePath(seller);
+    const url = `${window.location.origin}${path}`;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({
+          title: `${seller.companyName} — Section Luxe`,
+          text: 'Découvrez mes annonces sur Section Luxe.',
+          url,
+        });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCatalogueShareFeedback(true);
+      window.setTimeout(() => setCatalogueShareFeedback(false), 2200);
+    } catch {
+      // ignore
+    }
+  }, [seller]);
 
   useEffect(() => {
     try {
@@ -358,12 +385,13 @@ export default function SellerDashboardPage() {
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="mes-annonces-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
-              Mes annonces
-            </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="mes-annonces-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
+          <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px' }}>
+                Mes annonces
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               {showSkeletons ? (
                 <div className="catalogue-skeleton" style={{ width: 140, height: 18, borderRadius: 4 }} />
               ) : (
@@ -384,12 +412,64 @@ export default function SellerDashboardPage() {
                   <XCircle size={12} /> Refusé
                 </span>
               )}
+              </div>
             </div>
+            {!showSkeletons && isApprovedSeller && seller && (
+              <button
+                type="button"
+                className="mes-annonces-catalogue-share-icon-mobile"
+                onClick={() => shareSellerCatalogue()}
+                aria-label={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
+                title={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
+                style={{
+                  display: 'none',
+                  flexShrink: 0,
+                  width: 44,
+                  height: 44,
+                  padding: 0,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                {catalogueShareFeedback ? <CheckCircle size={22} strokeWidth={2} color="#166534" /> : <Share2 size={22} strokeWidth={2} />}
+              </button>
+            )}
           </div>
-          {!showSkeletons && isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle" className="mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
-              <Plus size={18} /> Déposer une annonce
-            </Link>
+          {!showSkeletons && isApprovedSeller && seller && (
+            <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
+              <Link href="/vendeur/annonces/nouvelle" className="mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+                <Plus size={18} /> Déposer une annonce
+              </Link>
+              <button
+                type="button"
+                className="mes-annonces-catalogue-share-btn"
+                onClick={() => shareSellerCatalogue()}
+                aria-label="Partager le lien de mon catalogue public"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '12px 18px',
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  fontSize: 14,
+                  fontWeight: 500,
+                  borderRadius: 12,
+                  border: '1px solid #d2d2d7',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <Share2 size={18} strokeWidth={2} />
+                {catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
+              </button>
+            </div>
           )}
         </div>
 

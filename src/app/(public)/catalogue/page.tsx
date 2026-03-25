@@ -1904,6 +1904,9 @@ function CatalogueContent() {
       baseFilters.conditions = [...OCCASION_CONDITIONS];
       const sid = searchParams.get('sellerId') ?? (pathname.startsWith('/catalogue/vendeur/') ? filters.sellerId : undefined);
       if (sid) baseFilters.sellerId = sid;
+    } else if (pathname.startsWith('/catalogue/vendeur/') && filters.sellerId) {
+      /* Réinitialiser les filtres sans retirer le vendeur : la bannière reste visible */
+      baseFilters.sellerId = filters.sellerId;
     }
     setFilters(baseFilters);
     setSearchQuery('');
@@ -4029,18 +4032,65 @@ function CatalogueContent() {
                           <Store size={32} color="#888" />
                         )}
                       </div>
-                      <div style={{ minWidth: 0 }}>
-                        {filters.sellerId ? (
-                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {seller.companyName}
-                          </h2>
-                        ) : (
-                        <Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>
-                          <h2 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {seller.companyName}
-                          </h2>
-                        </Link>
-                        )}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          className="catalogue-seller-banner-title-row"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '0.35em',
+                            rowGap: 4,
+                            marginBottom: 4,
+                            minWidth: 0,
+                            /* Même base em que la ligne nom + badge page produit (Inter 22px) */
+                            fontFamily: 'var(--font-inter), var(--font-sans)',
+                            fontSize: 22,
+                            fontWeight: 600,
+                            color: '#1d1d1f',
+                          }}
+                        >
+                          {filters.sellerId ? (
+                            <h2
+                              style={{
+                                fontFamily: 'var(--font-playfair), Georgia, serif',
+                                fontSize: 22,
+                                fontWeight: 600,
+                                color: '#1d1d1f',
+                                margin: 0,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                minWidth: 0,
+                                flex: '0 1 auto',
+                                maxWidth: '100%',
+                              }}
+                            >
+                              {seller.companyName}
+                            </h2>
+                          ) : (
+                            <Link
+                              href={sellerCataloguePath(seller)}
+                              style={{ color: 'inherit', textDecoration: 'none', minWidth: 0, flex: '0 1 auto', maxWidth: '100%' }}
+                            >
+                              <h2
+                                style={{
+                                  fontFamily: 'var(--font-playfair), Georgia, serif',
+                                  fontSize: 22,
+                                  fontWeight: 600,
+                                  color: '#1d1d1f',
+                                  margin: 0,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {seller.companyName}
+                              </h2>
+                            </Link>
+                          )}
+                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                        </div>
                         <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
                           {listings.length} annonce{listings.length !== 1 ? 's' : ''}
                 </p>
@@ -4704,7 +4754,25 @@ function CatalogueContent() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}><Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link></p>
+              <div
+                className="catalogue-seller-banner-title-row"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.35em',
+                  marginBottom: 8,
+                  fontFamily: 'var(--font-inter), var(--font-sans)',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#1d1d1f',
+                }}
+              >
+                <Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>
+                  {seller.companyName}
+                </Link>
+                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+              </div>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe
