@@ -801,7 +801,7 @@ export default function ProductPage() {
                   </Link>
                 )}
               </div>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 16, color: '#0a0a0a' }}>
+              <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 16, color: '#0a0a0a' }}>
                 {getListingDisplayTitle(listing)}
               </h1>
               <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
@@ -896,7 +896,7 @@ export default function ProductPage() {
               </div>
 
               {seller && (
-                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                <div className="produit-seller-card-desktop" style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
@@ -905,17 +905,17 @@ export default function ProductPage() {
                         <Store size={40} color="#888" />
                       )}
                     </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 6, marginBottom: 4, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 24, fontWeight: 600, color: '#1d1d1f' }}>
-                        <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
-                          <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                    <div className="produit-vendeur-nom-col">
+                      <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--desktop">
+                        <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
+                          <h3>{seller.companyName}</h3>
                         </Link>
                         <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                       </div>
-                      <p style={{ fontSize: 14, color: '#888', margin: 0 }}>Vendeur professionnel</p>
+                      <p style={{ fontSize: 14, color: '#888', margin: 0, lineHeight: 1.25 }}>Vendeur professionnel</p>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                  <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
                     <button
                       type="button"
                       onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }}
@@ -1134,8 +1134,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                 {seller && (
-                  <p style={{ fontSize: 13, fontWeight: 400, color: '#6e6e73', marginBottom: 20, marginTop: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
-                    <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+                  <p className="produit-vendeur-desc-seller-row produit-vendeur-desc-seller-row--desktop" style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>
+                    <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-desc-seller-link" title={seller.companyName}>
+                      {seller.companyName}
+                    </Link>
                     <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                   </p>
                 )}
@@ -1255,10 +1257,10 @@ export default function ProductPage() {
                       <Store size={40} color="#888" />
                     )}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 6, marginBottom: 6, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 20, fontWeight: 600, color: '#1d1d1f' }}>
-                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
-                        <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                  <div className="produit-vendeur-nom-col">
+                    <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--section">
+                      <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
+                        <h3>{seller.companyName}</h3>
                       </Link>
                       <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                     </div>
@@ -1410,7 +1412,7 @@ export default function ProductPage() {
                     <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
                   )}
                 </div>
-                <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
+                <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
                 <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 24, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1509,17 +1511,17 @@ export default function ProductPage() {
                           <Store size={34} color="#888" />
                         )}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 4, marginBottom: 2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
-                          <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
-                            <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                      <div className="produit-vendeur-nom-col">
+                        <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--mobile-card">
+                          <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
+                            <h3>{seller.companyName}</h3>
                           </Link>
                           <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                         </div>
-                        <p style={{ fontSize: 13, color: '#888', margin: 0 }}>Vendeur professionnel</p>
+                        <p style={{ fontSize: 13, color: '#888', margin: 0, lineHeight: 1.25 }}>Vendeur professionnel</p>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                       <button type="button" onClick={() => { const next = !showPhone; if (next) { const revealerId = isAuthenticated && user?.uid ? user.uid : getVisitorId(); incrementPhoneReveals(listing.id, revealerId ?? undefined).catch(() => {}); } setShowPhone(next); }} style={{ flex: 1, height: 42, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, fontSize: 13, fontWeight: 500, cursor: 'pointer', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
                         {showPhone ? (
                           <span style={{ fontSize: 17 }}>{formatPhoneDisplay(seller.phone)}</span>
@@ -1697,8 +1699,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                   {seller && (
-                    <p style={{ fontSize: 12, fontWeight: 400, color: '#6e6e73', marginBottom: 14, marginTop: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
-                      <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+                    <p className="produit-vendeur-desc-seller-row produit-vendeur-desc-seller-row--mobile" style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>
+                      <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-desc-seller-link" title={seller.companyName}>
+                        {seller.companyName}
+                      </Link>
                       <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                     </p>
                   )}
@@ -1816,10 +1820,10 @@ export default function ProductPage() {
                           <Store size={34} color="#888" />
                         )}
                       </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em', rowGap: 4, marginBottom: 4, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 22, fontWeight: 600, color: '#1d1d1f' }}>
-                          <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none', minWidth: 0 }}>
-                            <h3 style={{ margin: 0, font: 'inherit' }}>{seller.companyName}</h3>
+                      <div className="produit-vendeur-nom-col">
+                        <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--mobile-section">
+                          <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
+                            <h3>{seller.companyName}</h3>
                           </Link>
                           <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                         </div>
@@ -1921,8 +1925,10 @@ export default function ProductPage() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.35em' }}>
-                <Link href={`${sellerCataloguePath(seller)}`} style={{ color: 'inherit', textDecoration: 'none' }}>{seller.companyName}</Link>
+              <p className="produit-vendeur-map-seller-row">
+                <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-map-seller-link" title={seller.companyName}>
+                  {seller.companyName}
+                </Link>
                 <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
               </p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>

@@ -287,6 +287,20 @@ a:focus-visible {
     width: 50% !important;
     max-width: 50% !important;
   }
+  /* Carte vendeur (colonne droite) : remonter légèrement sous le prix / cœur */
+  .produit-seller-card-desktop {
+    transform: translateY(-10px);
+  }
+}
+
+/* Page produit : titre d’annonce (h1) — 3 lignes max puis … */
+.annonce-produit-page .produit-annonce-titre {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.25;
 }
 
 /* Page produit : les 4 titres de section (Informations, Description, Prix, Vendeur professionnel) même taille sur mobile */
@@ -383,7 +397,109 @@ a:focus-visible {
 
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
 .annonce-produit-page .seller-verified-subscription-badge {
-  transform: translateY(0.03em) !important;
+  transform: translateY(0.085em) !important;
+}
+
+/* Page produit : nom vendeur + badge sur une seule ligne (taille fluide + ellipsis si trop long) */
+.produit-vendeur-nom-col {
+  flex: 1;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: vendeur-nom;
+}
+.produit-vendeur-nom-badge-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.35em;
+  min-width: 0;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-weight: 500;
+  color: #0a0a0a;
+  line-height: 1.2;
+}
+.produit-vendeur-nom-badge-row--desktop {
+  margin-bottom: 2px;
+  font-size: clamp(14px, 6.8cqi, 28px);
+}
+.produit-vendeur-nom-badge-row--section {
+  margin-bottom: 6px;
+  font-size: clamp(14px, 6.8cqi, 28px);
+}
+.produit-vendeur-nom-badge-row--mobile-card {
+  margin-bottom: 2px;
+  font-size: clamp(13px, 6.2cqi, 24px);
+}
+.produit-vendeur-nom-badge-row--mobile-section {
+  margin-bottom: 4px;
+  font-size: clamp(13px, 6.2cqi, 24px);
+}
+.produit-vendeur-nom-lien {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: inherit;
+  text-decoration: none;
+}
+.produit-vendeur-nom-lien h3 {
+  margin: 0;
+  font: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Ligne vendeur sous la description (desktop / mobile) */
+.produit-vendeur-desc-seller-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.35em;
+  min-width: 0;
+  container-type: inline-size;
+}
+.produit-vendeur-desc-seller-row--desktop {
+  font-size: clamp(12px, 5.5cqi, 15px);
+}
+.produit-vendeur-desc-seller-row--mobile {
+  font-size: clamp(11px, 5cqi, 14px);
+}
+.produit-vendeur-desc-seller-link {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-weight: 500;
+  color: #0a0a0a;
+  text-decoration: none;
+}
+
+/* Popup carte : nom + badge sur une ligne */
+.produit-vendeur-map-seller-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 0.35em;
+  min-width: 0;
+  margin: 0 0 8px;
+  container-type: inline-size;
+  font-size: clamp(13px, 5.5cqi, 18px);
+}
+.produit-vendeur-map-seller-link {
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-weight: 500;
+  color: #0a0a0a;
+  text-decoration: none;
 }
 
 /* Liste annonces d’un vendeur : bannière uniquement (pas la popup carte) — badge très légèrement plus bas */
