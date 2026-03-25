@@ -62,10 +62,10 @@ export default function MentionsLegalesPage() {
           <p style={paragraphStyle}>
             <strong>SL INVEST</strong><br />
             Société par Actions Simplifiée (SAS) au capital de 1 000 €<br />
-            Siège social : [Numéro] Boulevard Murat, 75016 Paris, France<br />
-            Immatriculée au Registre du Commerce et des Sociétés de Paris sous le numéro 912 345 678 RCS Paris<br />
-            Numéro SIRET : 912 345 678 00012<br />
-            Numéro de TVA intracommunautaire : FR 12 912345678<br />
+            Siège social : en création<br />
+            Immatriculée au Registre du Commerce et des Sociétés de Paris sous le numéro [en création] RCS Paris<br />
+            Numéro SIRET : en création<br />
+            Numéro de TVA intracommunautaire : en création<br />
             Directeur de la publication : Michael Labrador, Président<br />
             Adresse de contact : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>

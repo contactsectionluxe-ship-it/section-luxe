@@ -69,9 +69,9 @@ export default function PolitiqueConfidentialitePage() {
             <p style={paragraphStyle}>
               <strong>SL INVEST</strong><br />
               SAS au capital de 1 000 €<br />
-              Siège social : Boulevard Murat, 75016 Paris, France<br />
-              RCS Paris : 912 345 678<br />
-              TVA intracommunautaire : FR 12 912345678<br />
+              Siège social : en création<br />
+              RCS Paris : en création<br />
+              TVA intracommunautaire : en création<br />
               Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
             </p>
             <p style={paragraphStyle}>

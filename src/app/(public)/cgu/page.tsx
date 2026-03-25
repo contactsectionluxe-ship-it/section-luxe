@@ -125,11 +125,10 @@ export default function CGUPage() {
           <p style={paragraphStyle}>
             <strong>SL INVEST</strong><br />
             SAS au capital de 1 000 €<br />
-            Siège social : Boulevard Murat, 75016 Paris, France<br />
-            RCS Paris : [à compléter]<br />
-            SIRET : [à compléter]<br />
-            TVA intracommunautaire : [à compléter]<br />
-            Président : Monsieur Michael Labrador<br />
+            Siège social : en création<br />
+            RCS Paris : en création<br />
+            SIRET : en création<br />
+            TVA intracommunautaire : en création<br />
             Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
           </p>
 
@@ -220,7 +219,8 @@ export default function CGUPage() {
           <ul style={listStyle}>
             <li style={listItemStyle}>date de publication ;</li>
             <li style={listItemStyle}>pertinence des mots-clés ;</li>
-            <li style={listItemStyle}>catégorie sélectionnée.</li>
+            <li style={listItemStyle}>catégorie sélectionnée ;</li>
+            <li style={listItemStyle}>nombre de « likes ».</li>
           </ul>
           <p style={paragraphStyle}>
             Le classement ne repose pas sur une relation capitalistique ou contractuelle particulière.
@@ -259,61 +259,90 @@ export default function CGUPage() {
             Toute notification abusive engage la responsabilité de son auteur.
           </p>
 
-          <h3 style={articleTitleStyle}>Article 9 – Absence d&apos;authentification et de garantie</h3>
+          <h3 style={articleTitleStyle}>Article 9 – Absence d&apos;authentification et garanties</h3>
+
+          <h4 style={subSectionTitleStyle}>9.1 Absence de vérification physique ou certification</h4>
           <p style={paragraphStyle}>
-            La Société ne procède à aucune authentification physique, expertise ou certification des produits.
-            Elle ne garantit pas :
-          </p>
-          <ul style={listStyle}>
-            <li style={listItemStyle}>l&apos;authenticité ;</li>
-            <li style={listItemStyle}>l&apos;absence de contrefaçon ;</li>
-            <li style={listItemStyle}>la conformité ;</li>
-            <li style={listItemStyle}>l&apos;exactitude des informations publiées ;</li>
-            <li style={listItemStyle}>l&apos;adéquation à un usage particulier ;</li>
-            <li style={listItemStyle}>l&apos;aboutissement d&apos;une transaction.</li>
-          </ul>
-          <p style={paragraphStyle}>
-            La Plateforme est fournie « en l&apos;état » et « selon disponibilité ».
+            La Société ne procède à aucune authentification physique, expertise ou certification des produits publiés par les vendeurs professionnels.
           </p>
 
-          <h3 style={articleTitleStyle}>Article 10 – Modèle économique</h3>
-          <p style={paragraphStyle}>
-            Chaque annonce publiée est facturée : 4,90 € HT par annonce.
-            La Société peut modifier ses tarifs à tout moment pour l&apos;avenir.
-            TVA applicable selon réglementation.
-            Paiement exigible immédiatement.
-          </p>
-          <p style={paragraphStyle}>
-            En cas de défaut de paiement :
-          </p>
+          <h4 style={subSectionTitleStyle}>9.2 Responsabilité du vendeur</h4>
+          <p style={paragraphStyle}>Le vendeur est seul responsable :</p>
           <ul style={listStyle}>
-            <li style={listItemStyle}>suspension immédiate ;</li>
-            <li style={listItemStyle}>suppression du compte possible.</li>
+            <li style={listItemStyle}>De l&apos;authenticité et de la conformité de ses produits ;</li>
+            <li style={listItemStyle}>Du respect des droits de propriété intellectuelle et légaux ;</li>
+            <li style={listItemStyle}>Des informations publiées sur les annonces ;</li>
+            <li style={listItemStyle}>Du service après-vente, de la livraison et des garanties légales.</li>
           </ul>
+
+          <h4 style={subSectionTitleStyle}>9.3 Limitation de la responsabilité de la Société</h4>
           <p style={paragraphStyle}>
-            Aucun remboursement sauf obligation légale impérative.
-          </p>
-          <p style={paragraphStyle}>
-            <strong>Remises et offres promotionnelles</strong><br />
-            La Société se réserve la faculté d&apos;accorder, à sa seule discrétion, des remises, offres promotionnelles ou conditions tarifaires particulières.
-            Ces remises :
+            La Plateforme est fournie « en l&apos;état » et « selon disponibilité ». La Société ne garantit ni :
           </p>
           <ul style={listStyle}>
-            <li style={listItemStyle}>peuvent être temporaires ou conditionnelles ;</li>
-            <li style={listItemStyle}>peuvent être réservées à certaines catégories d&apos;utilisateurs ;</li>
-            <li style={listItemStyle}>ne créent aucun droit acquis pour l&apos;avenir ;</li>
-            <li style={listItemStyle}>peuvent être modifiées ou supprimées à tout moment.</li>
+            <li style={listItemStyle}>L&apos;authenticité, l&apos;absence de contrefaçon ou de vol des biens ;</li>
+            <li style={listItemStyle}>La conformité des informations publiées aux usages ou lois locales ;</li>
+            <li style={listItemStyle}>L&apos;aboutissement d&apos;une transaction ou le succès commercial d&apos;une annonce.</li>
+          </ul>
+
+          <h3 style={articleTitleStyle}>Article 10 – Modèle économique</h3>
+
+          <h4 style={subSectionTitleStyle}>10.1 Formules d&apos;abonnement</h4>
+          <p style={paragraphStyle}>La Société propose les formules suivantes :</p>
+          <ul style={listStyle}>
+            <li style={listItemStyle}>Start : gratuit, limité à 50 annonces actives ;</li>
+            <li style={listItemStyle}>Plus : 99 € HT par mois, jusqu&apos;à 200 annonces actives ;</li>
+            <li style={listItemStyle}>Pro : 325 € HT par mois, jusqu&apos;à 800 annonces actives.</li>
+          </ul>
+
+          <h4 style={subSectionTitleStyle}>10.2 Modalités et reconduction</h4>
+          <ul style={listStyle}>
+            <li style={listItemStyle}>Les abonnements sont conclus pour une durée mensuelle ;</li>
+            <li style={listItemStyle}>
+              La reconduction est automatique pour des périodes successives d&apos;un mois, sauf résiliation par le vendeur ;
+            </li>
+            <li style={listItemStyle}>
+              Le paiement est effectué à la souscription puis prélevé automatiquement à chaque échéance.
+            </li>
+          </ul>
+
+          <h4 style={subSectionTitleStyle}>10.3 Suspension et résiliation</h4>
+          <ul style={listStyle}>
+            <li style={listItemStyle}>
+              En cas de non-paiement ou de violation des CGU/CGV, la Société peut suspendre ou résilier l&apos;abonnement ;
+            </li>
+            <li style={listItemStyle}>
+              La résiliation prend effet à la fin de la période en cours ; aucun remboursement n&apos;est effectué pour la période déjà payée.
+            </li>
+          </ul>
+
+          <h4 style={subSectionTitleStyle}>10.4 Renonciation au droit de rétractation</h4>
+          <p style={paragraphStyle}>
+            Le vendeur reconnaît que le service commence immédiatement après la souscription et renonce expressément à tout droit de rétractation pour la période en cours, conformément à la réglementation applicable aux services numériques.
+          </p>
+
+          <h4 style={subSectionTitleStyle}>10.5 Modification des tarifs</h4>
+          <p style={paragraphStyle}>
+            La Société se réserve le droit de modifier les tarifs à tout moment pour l&apos;avenir. Un préavis raisonnable sera communiqué aux abonnés avant toute modification.
+          </p>
+
+          <h4 style={subSectionTitleStyle}>10.6 Remises et offres promotionnelles</h4>
+          <p style={paragraphStyle}>
+            La Société peut accorder, à sa seule discrétion, des remises, offres promotionnelles ou conditions tarifaires particulières :
+          </p>
+          <ul style={listStyle}>
+            <li style={listItemStyle}>Ces remises peuvent être temporaires ou conditionnelles ;</li>
+            <li style={listItemStyle}>Elles peuvent être réservées à certaines catégories d&apos;utilisateurs ;</li>
+            <li style={listItemStyle}>Elles ne créent aucun droit acquis pour l&apos;avenir ;</li>
+            <li style={listItemStyle}>Elles peuvent être modifiées ou supprimées à tout moment.</li>
           </ul>
           <p style={paragraphStyle}>
             L&apos;application d&apos;une remise pour une opération donnée ne saurait obliger la Société à reconduire cette remise ultérieurement.
           </p>
 
           <h3 style={articleTitleStyle}>Article 11 – Durée des annonces</h3>
-          <p style={paragraphStyle}>
-            Durée maximale : 6 mois.
-            Renouvellement possible moyennant nouveau paiement.
-            La Société peut retirer toute annonce en cas :
-          </p>
+          <p style={paragraphStyle}>Durée maximale : 6 mois.</p>
+          <p style={paragraphStyle}>La Société peut retirer toute annonce en cas :</p>
           <ul style={listStyle}>
             <li style={listItemStyle}>de fraude ;</li>
             <li style={listItemStyle}>de suspicion de contrefaçon ;</li>
@@ -407,8 +436,20 @@ export default function CGUPage() {
           </p>
 
           <h3 style={articleTitleStyle}>Article 21 – Médiation</h3>
+
+          <h4 style={subSectionTitleStyle}>21.1 Accès à la médiation</h4>
           <p style={paragraphStyle}>
-            Conformément au Code de la consommation, le consommateur peut saisir gratuitement un médiateur de la consommation dont les coordonnées seront communiquées sur demande ou disponibles sur le site.
+            Conformément aux dispositions légales applicables, les utilisateurs (consommateurs) peuvent saisir gratuitement un médiateur de la consommation en cas de litige non résolu à l&apos;amiable.
+          </p>
+
+          <h4 style={subSectionTitleStyle}>21.2 Limitation B2B</h4>
+          <p style={paragraphStyle}>
+            Pour les vendeurs professionnels, l&apos;usage de la médiation n&apos;est pas obligatoire. Tout litige entre professionnels relève des tribunaux compétents selon le droit applicable (Article 23 CGU/CGV).
+          </p>
+
+          <h4 style={subSectionTitleStyle}>21.3 Contact médiation</h4>
+          <p style={paragraphStyle}>
+            L&apos;utilisateur peut demander les coordonnées du médiateur à l&apos;adresse : contact.sectionluxe@gmail.com
           </p>
 
           <h3 style={articleTitleStyle}>Article 22 – Langue</h3>

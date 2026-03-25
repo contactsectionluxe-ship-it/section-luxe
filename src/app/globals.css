@@ -371,6 +371,12 @@ a:focus-visible {
   max-width: 100%;
 }
 
+/* À la une + catalogue vue liste : badge Plus/Pro un peu plus bas vs le nom (grille catalogue inchangée) */
+.home-featured-grid .seller-verified-subscription-badge,
+.catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
+  transform: translateY(-0.04em) !important;
+}
+
 /* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
 @media (min-width: 1600px) {
   .hero-section {

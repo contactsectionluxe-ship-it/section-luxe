@@ -52,6 +52,7 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
 
   return (
     <span
+      className="seller-verified-subscription-badge"
       aria-label={tier === 'pro' ? 'Vendeur abonnement Pro' : 'Vendeur abonnement Plus'}
       title={tier === 'pro' ? 'Abonnement Pro' : 'Abonnement Plus'}
       style={wrapStyle}

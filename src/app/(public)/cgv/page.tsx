@@ -107,15 +107,29 @@ export default function CGVPage() {
               <strong>SL INVEST</strong><br />
               SAS au capital de 1 000 €<br />
               Siège social : Boulevard Murat, 75016 Paris, France<br />
-              RCS Paris : [à compléter]<br />
-              SIRET : [à compléter]<br />
-              TVA intracommunautaire : [à compléter]<br />
-              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a><br />
-              Ci-après « la Société »
+              RCS Paris : en création<br />
+              SIRET : en création<br />
+              TVA intracommunautaire : en création<br />
+              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
             </p>
             <p style={paragraphStyle}>
-              <strong>ET</strong><br />
+              Ci-après « la Société »
+              <br />
+              <br />
+              La Société exploite la plateforme en ligne &quot;Section Luxe&quot;, accessible à l&apos;adresse{' '}
+              <a href="https://section-luxe.vercel.app/" style={{ color: '#6e6e73', textDecoration: 'none' }}>
+                https://section-luxe.vercel.app/
+              </a>
+              .
+            </p>
+            <p style={paragraphStyle}>
+              <strong>ET</strong>
+              <br />
               Tout professionnel souhaitant publier des annonces sur la plateforme Section Luxe (ci-après le « Vendeur »).
+            </p>
+            <p style={paragraphStyle}>
+              Les présentes CGV sont réservées aux vendeurs professionnels. En s&apos;inscrivant sur la plateforme, le Vendeur
+              reconnaît agir dans le cadre de son activité professionnelle.
             </p>
 
             <h2 style={sectionTitleStyle}>Article 2 – Objet</h2>
@@ -179,28 +193,88 @@ export default function CGVPage() {
 
             <h2 style={sectionTitleStyle}>Article 7 – Tarifs</h2>
             <p style={paragraphStyle}>
-              Les services sont fournis à titre onéreux.
-              À titre indicatif : 4,90 € HT par annonce.
-              Le prix applicable est celui affiché au moment de la commande.
-              La TVA est applicable selon la réglementation en vigueur.
-              La Société peut modifier ses tarifs à tout moment pour l&apos;avenir.
+              Les services de la plateforme sont fournis moyennant le paiement d&apos;un abonnement mensuel, selon les
+              formules suivantes :
+            </p>
+            <ul style={listStyle}>
+              <li style={listItemStyle}>
+                <strong>Start</strong> : gratuit, limité à 50 annonces actives
+              </li>
+              <li style={listItemStyle}>
+                <strong>Plus</strong> : 99 € HT par mois, jusqu&apos;à 200 annonces actives
+              </li>
+              <li style={listItemStyle}>
+                <strong>Pro</strong> : 325 € HT par mois, jusqu&apos;à 800 annonces actives
+              </li>
+            </ul>
+            <p style={paragraphStyle}>
+              Les tarifs applicables sont ceux affichés au moment de la souscription. La TVA est appliquée selon la
+              réglementation en vigueur.
+            </p>
+            <p style={paragraphStyle}>
+              La Société se réserve le droit de modifier ses tarifs à tout moment pour l&apos;avenir. En cas de
+              modification, un préavis raisonnable sera communiqué aux Vendeurs.
             </p>
 
             <h2 style={sectionTitleStyle}>Article 8 – Paiement</h2>
             <p style={paragraphStyle}>
-              Le paiement est exigible immédiatement lors de la commande.
-              Le règlement est effectué via un prestataire de paiement sécurisé.
-              En cas de défaut ou d&apos;incident de paiement :
+              8.1 Modalités
+              <br />
+              Le paiement de l&apos;abonnement est effectué à la souscription puis prélevé automatiquement à chaque échéance
+              mensuelle via un prestataire de paiement sécurisé.
             </p>
-            <ul style={listStyle}>
-              <li style={listItemStyle}>l&apos;annonce pourra être suspendue ou non publiée ;</li>
-              <li style={listItemStyle}>le compte pourra être suspendu ou résilié.</li>
-            </ul>
             <p style={paragraphStyle}>
-              Toute somme versée est définitivement acquise, sauf disposition légale impérative contraire.
+              8.2 Suspension pour non-paiement
+              <br />
+              En cas de défaut ou d&apos;incident de paiement, l&apos;accès aux services pourra être suspendu ou résilié
+              jusqu&apos;à régularisation.
+            </p>
+            <p style={paragraphStyle}>
+              8.3 Sommes acquises
+              <br />
+              Toute somme versée pour la période en cours est définitivement acquise, sauf inexécution du service ou
+              disposition légale impérative contraire.
+            </p>
+            <p style={paragraphStyle}>
+              8.4 Renonciation au droit de rétractation
+              <br />
+              Le Vendeur reconnaît que l&apos;exécution du service commence immédiatement après la souscription et renonce
+              expressément à tout droit de rétractation pour la période en cours.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 9 – Remises et offres promotionnelles</h2>
+            <h2 style={sectionTitleStyle}>Article 9 – Abonnements</h2>
+            <p style={paragraphStyle}>
+              9.1 Durée
+              <br />
+              Les abonnements sont conclus pour une durée mensuelle.
+            </p>
+            <p style={paragraphStyle}>
+              9.2 Reconduction
+              <br />
+              Les abonnements sont reconduits automatiquement pour des périodes successives d&apos;un mois, sauf résiliation
+              par le Vendeur.
+            </p>
+            <p style={paragraphStyle}>
+              9.3 Paiement
+              <br />
+              Le paiement est effectué à la souscription puis prélevé automatiquement à chaque échéance mensuelle.
+            </p>
+            <p style={paragraphStyle}>
+              9.4 Résiliation
+              <br />
+              Le Vendeur peut résilier son abonnement à tout moment depuis son compte.
+              <br />
+              La résiliation prend effet à la fin de la période en cours.
+              <br />
+              Aucun remboursement n&apos;est effectué pour la période déjà payée.
+            </p>
+            <p style={paragraphStyle}>
+              9.5 Suspension
+              <br />
+              En cas de non-paiement ou de violation des CGV, la Société peut suspendre ou résilier l&apos;abonnement.
+            </p>
+
+            <h2 style={sectionTitleStyle}>Article 10 – Remises et offres promotionnelles</h2>
             <p style={paragraphStyle}>
               La Société peut accorder des remises ou offres promotionnelles à sa seule discrétion.
               Ces offres :
@@ -211,7 +285,7 @@ export default function CGVPage() {
               <li style={listItemStyle}>peuvent être modifiées ou supprimées à tout moment.</li>
             </ul>
 
-            <h2 style={sectionTitleStyle}>Article 10 – Obligations et garanties du vendeur</h2>
+            <h2 style={sectionTitleStyle}>Article 11 – Obligations et garanties du vendeur</h2>
             <p style={paragraphStyle}>
               Le Vendeur garantit :
             </p>
@@ -234,7 +308,7 @@ export default function CGVPage() {
               <li style={listItemStyle}>des réclamations et litiges.</li>
             </ul>
 
-            <h2 style={sectionTitleStyle}>Article 11 – Interdictions</h2>
+            <h2 style={sectionTitleStyle}>Article 12 – Interdictions</h2>
             <p style={paragraphStyle}>
               Sont strictement interdits :
             </p>
@@ -248,10 +322,14 @@ export default function CGVPage() {
             <p style={paragraphStyle}>
               La Société peut retirer tout contenu sans préavis.
             </p>
-
-            <h2 style={sectionTitleStyle}>Article 12 – Responsabilité</h2>
             <p style={paragraphStyle}>
-              <strong>12.1 Responsabilité du Vendeur</strong><br />
+              La Société se réserve également le droit de refuser toute annonce portant atteinte à l&apos;image ou au
+              positionnement haut de gamme de la plateforme.
+            </p>
+
+            <h2 style={sectionTitleStyle}>Article 13 – Responsabilité</h2>
+            <p style={paragraphStyle}>
+              <strong>13.1 Responsabilité du Vendeur</strong><br />
               Le Vendeur indemnisera intégralement la Société de toute réclamation, condamnation, frais, dommages et intérêts, honoraires d&apos;avocat ou procédure résultant :
             </p>
             <ul style={listStyle}>
@@ -262,7 +340,7 @@ export default function CGVPage() {
               <li style={listItemStyle}>d&apos;un manquement aux obligations légales.</li>
             </ul>
             <p style={paragraphStyle}>
-              <strong>12.2 Responsabilité de la Société</strong><br />
+              <strong>13.2 Responsabilité de la Société</strong><br />
               La Société est responsable uniquement de la bonne exécution de ses services techniques, dans les limites autorisées par la loi applicable.
               Elle ne saurait être tenue responsable, notamment :
             </p>
@@ -282,20 +360,20 @@ export default function CGVPage() {
               La responsabilité totale de la Société est strictement plafonnée au montant total HT versé par le Vendeur au cours des douze (12) derniers mois précédant le fait générateur.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 13 – Suspension technique</h2>
+            <h2 style={sectionTitleStyle}>Article 14 – Suspension technique</h2>
             <p style={paragraphStyle}>
               La Société peut suspendre temporairement l&apos;accès à la Plateforme pour des raisons techniques, de maintenance, de mise à jour, de sécurité ou en cas d&apos;incident affectant le fonctionnement du service.
               Ces suspensions n&apos;ouvrent droit à aucune indemnisation.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 14 – Résiliation</h2>
+            <h2 style={sectionTitleStyle}>Article 15 – Résiliation</h2>
             <p style={paragraphStyle}>
-              <strong>14.1 Résiliation par le Vendeur</strong><br />
+              <strong>15.1 Résiliation par le Vendeur</strong><br />
               Le Vendeur peut résilier son compte à tout moment.
               Les sommes versées restent acquises.
             </p>
             <p style={paragraphStyle}>
-              <strong>14.2 Résiliation par la Société</strong><br />
+              <strong>15.2 Résiliation par la Société</strong><br />
               La Société peut suspendre ou résilier sans préavis en cas de :
             </p>
             <ul style={listStyle}>
@@ -306,24 +384,24 @@ export default function CGVPage() {
               <li style={listItemStyle}>obligation légale.</li>
             </ul>
 
-            <h2 style={sectionTitleStyle}>Article 15 – Propriété intellectuelle</h2>
+            <h2 style={sectionTitleStyle}>Article 16 – Propriété intellectuelle</h2>
             <p style={paragraphStyle}>
               Le Vendeur concède à la Société une licence non exclusive, gratuite et mondiale d&apos;utilisation des contenus publiés aux fins d&apos;exploitation, promotion et diffusion de la Plateforme.
               La Société demeure titulaire de tous droits relatifs à la Plateforme et à ses bases de données.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 16 – Conservation et archivage</h2>
+            <h2 style={sectionTitleStyle}>Article 17 – Conservation et archivage</h2>
             <p style={paragraphStyle}>
               La Société pourra conserver ou archiver les données et annonces pendant une durée conforme aux obligations légales et à ses besoins probatoires.
               Après résiliation, les données pourront être supprimées dans un délai raisonnable.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 17 – Force majeure</h2>
+            <h2 style={sectionTitleStyle}>Article 18 – Force majeure</h2>
             <p style={paragraphStyle}>
               La Société ne pourra être tenue responsable en cas d&apos;événement imprévisible, irrésistible et extérieur empêchant l&apos;exécution du service.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 18 – Modification des CGV</h2>
+            <h2 style={sectionTitleStyle}>Article 19 – Modification des CGV</h2>
             <p style={paragraphStyle}>
               La Société peut modifier les CGV.
               Les modifications seront notifiées avec un délai raisonnable avant leur entrée en vigueur.
@@ -331,29 +409,29 @@ export default function CGVPage() {
               La poursuite de l&apos;utilisation vaut acceptation.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 19 – Prescription</h2>
+            <h2 style={sectionTitleStyle}>Article 20 – Prescription</h2>
             <p style={paragraphStyle}>
-              Toute action du Vendeur à l&apos;encontre de la Société se prescrit dans un délai d&apos;un (1) an à compter du fait générateur.
+              Toute action se prescrit conformément aux délais légaux applicables.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 20 – Intégralité – Non-renonciation – Divisibilité</h2>
+            <h2 style={sectionTitleStyle}>Article 21 – Intégralité – Non-renonciation – Divisibilité</h2>
             <p style={paragraphStyle}>
               Les CGV constituent l&apos;intégralité de l&apos;accord entre les parties.
               Le fait pour la Société de ne pas se prévaloir d&apos;une clause ne vaut pas renonciation.
               Si une clause est déclarée nulle, les autres demeurent applicables.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 21 – Hiérarchie contractuelle</h2>
+            <h2 style={sectionTitleStyle}>Article 22 – Hiérarchie contractuelle</h2>
             <p style={paragraphStyle}>
               En cas de contradiction entre les présentes CGV et les Conditions Générales d&apos;Utilisation (CGU) de la Plateforme, les CGV prévalent pour toutes les relations commerciales entre la Société et le Vendeur.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 22 – Cession</h2>
+            <h2 style={sectionTitleStyle}>Article 23 – Cession</h2>
             <p style={paragraphStyle}>
               La Société peut céder les présentes CGV dans le cadre d&apos;une fusion, restructuration ou cession d&apos;activité.
             </p>
 
-            <h2 style={sectionTitleStyle}>Article 23 – Droit applicable – Juridiction</h2>
+            <h2 style={sectionTitleStyle}>Article 24 – Droit applicable – Juridiction</h2>
             <p style={paragraphStyle}>
               Les présentes CGV sont régies par le droit français.
               Tout litige entre professionnels relève de la compétence exclusive des tribunaux du ressort du siège social de la Société, y compris en cas de pluralité de défendeurs ou d&apos;appel en garantie.

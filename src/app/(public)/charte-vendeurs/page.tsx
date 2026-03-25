@@ -267,10 +267,10 @@ export default function CharteVendeursPage() {
               Le vendeur renonce à tout recours contre Section Luxe au titre de ses relations avec d&apos;autres utilisateurs.
             </p>
 
-            <h2 style={sectionTitleStyle}>12. Commissions et rémunération de la plateforme</h2>
+            <h2 style={sectionTitleStyle}>12. Rémunération de la plateforme</h2>
             <p style={paragraphStyle}>
-              Les commissions et frais perçus par Section Luxe rémunèrent exclusivement la mise à disposition de la Plateforme et des services associés.
-              Sauf stipulation contraire prévue dans les CGV, ces commissions demeurent acquises à Section Luxe, y compris en cas d&apos;annulation ou de litige intervenant entre vendeur et acheteur.
+              Les frais perçus par Section Luxe rémunèrent exclusivement la mise à disposition de la Plateforme et des services associés.
+              Sauf stipulation contraire prévue dans les CGV, ces sommes demeurent acquises à Section Luxe, y compris en cas d&apos;annulation ou de litige intervenant entre vendeur et acheteur.
             </p>
 
             <h2 style={sectionTitleStyle}>13. Garantie et indemnisation</h2>

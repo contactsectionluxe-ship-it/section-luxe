@@ -150,6 +150,9 @@ export default function SignalementPage() {
 
             <h2 style={sectionTitleStyle}>3. Traitement des signalements</h2>
             <p style={paragraphStyle}>
+              Les signalements sont traités conformément aux dispositions des CGU et CGV applicables, notamment en matière de responsabilité, suspension et retrait de contenus.
+            </p>
+            <p style={paragraphStyle}>
               Conformément à l&apos;article 6-I-2 de la loi n°2004-575 du 21 juin 2004 pour la confiance dans l&apos;économie numérique (LCEN), Section Luxe agit en qualité d&apos;hébergeur des contenus publiés par les utilisateurs.
               À ce titre :
             </p>
@@ -161,6 +164,9 @@ export default function SignalementPage() {
             <p style={paragraphStyle}>
               Les signalements sont traités dans les meilleurs délais, généralement sous 7 jours ouvrés, sauf situation nécessitant une analyse approfondie.
               Le retrait d&apos;un contenu ne constitue pas une reconnaissance de responsabilité de la part de Section Luxe.
+            </p>
+            <p style={paragraphStyle}>
+              Section Luxe ne pourra en aucun cas être tenue responsable des préjudices résultant des contenus publiés par les utilisateurs ou des décisions prises à la suite d&apos;un signalement.
             </p>
 
             <h2 style={sectionTitleStyle}>4. Signalement abusif</h2>
@@ -180,7 +186,10 @@ export default function SignalementPage() {
             <p style={paragraphStyle}>
               Les informations transmises dans le cadre d&apos;un signalement sont traitées conformément à notre Politique de confidentialité.
               Elles peuvent être communiquées aux autorités compétentes si la réglementation l&apos;exige.
-</p>
+            </p>
+            <p style={paragraphStyle}>
+              Les informations communiquées dans le cadre d&apos;un signalement ne seront transmises aux autorités compétentes qu&apos;en cas de demande légale ou de suspicion légitime d&apos;infraction.
+            </p>
         </div>
 
         <p className="conditions-page-back-link" style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
