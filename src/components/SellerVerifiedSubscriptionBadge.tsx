@@ -18,8 +18,8 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
 
   /**
    * Catalogue : même échelle que le libellé vendeur (hérite du font-size du parent).
-   * translateY uniquement sur le badge : n’influence pas la boîte flex du nom (le nom ne bouge pas).
-   * Léger décalage vers le haut pour l’alignement optique avec du texte en capitales.
+   * Alignement vertical avec le nom via flex + line-height sur `.listing-grid-vendeur-nom-badge-row` /
+   * `.catalogue-listing-vendeur-nom-row` (globals.css), sans translateY pour rester cohérent toutes tailles d’écran.
    */
   const wrapStyle: CSSProperties = {
     display: 'inline-flex',
@@ -29,9 +29,7 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
     padding: 0,
     lineHeight: 0,
     flexShrink: 0,
-    ...(isCatalogue
-      ? { transform: 'translateY(-0.07em)' }
-      : { transform: 'translateY(0.05em)' }),
+    ...(isCatalogue ? {} : { transform: 'translateY(0.05em)' }),
   };
 
   const svgStyle: CSSProperties = isCatalogue

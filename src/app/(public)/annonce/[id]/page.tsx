@@ -598,7 +598,7 @@ export default function ProductPage() {
 
   if (loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+      <div className="annonce-produit-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
           <Link href={fromVendeurParam ? '/vendeur' : returnBackHref} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
             <ArrowLeft size={16} />
@@ -728,7 +728,7 @@ export default function ProductPage() {
 
   return (
     <>
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+    <div className="annonce-produit-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
         {/* Back button */}
         <Link
