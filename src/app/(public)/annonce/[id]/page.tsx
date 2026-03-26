@@ -1608,8 +1608,8 @@ export default function ProductPage() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
-                      <div ref={etatInfoRefMobile} style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, position: 'relative' }}>
+                    <div ref={etatInfoRefMobile} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, position: 'relative' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <CheckCircle size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
                         <button
@@ -1633,33 +1633,49 @@ export default function ProductPage() {
                         >
                           <Info size={12} strokeWidth={2.2} />
                         </button>
-                        {(etatInfoClicked || etatInfoHover) && (
-                          <div
-                            role="tooltip"
-                            onMouseEnter={() => setEtatInfoHover(true)}
-                            onMouseLeave={() => setEtatInfoHover(false)}
-                            style={{
-                              position: 'absolute', left: 0, top: '100%', marginTop: 6, zIndex: 20, minWidth: 280, maxWidth: 340,
-                              padding: 14, backgroundColor: '#fff', border: '1px solid #e8e6e3', borderRadius: 12,
-                              boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 12, lineHeight: 1.5, color: '#1d1d1f',
-                            }}
-                          >
-                            {ETAT_DEFINITIONS.map((item) => (
-                              <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 10 }}>
-                                <strong style={{ display: 'block', marginBottom: 2 }}>{item.title}</strong>
-                                <span style={{ color: '#6e6e73' }}>{item.text}</span>
-                              </div>
-                            ))}
-                            <p style={{ margin: 0, marginTop: 10, paddingTop: 8, borderTop: '1px solid #eee', fontSize: 11, color: '#6e6e73', lineHeight: 1.5 }}>
-                              L&apos;article est montré tel qu&apos;il est sur les photos. La description sert uniquement de repère.
-                            </p>
-                          </div>
-                        )}
                       </div>
                       <TruncatedInfoValue
                         text={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
                         fontSize={13}
                       />
+                      {(etatInfoClicked || etatInfoHover) && (
+                        <div
+                          role="tooltip"
+                          onMouseEnter={() => setEtatInfoHover(true)}
+                          onMouseLeave={() => setEtatInfoHover(false)}
+                          style={{
+                            position: 'absolute',
+                            /* Pleine largeur de la grille 2 colonnes (gap 20px) : plus large, ancré à gauche */
+                            left: 'calc(-100% - 20px)',
+                            right: 'auto',
+                            width: 'calc(200% + 20px)',
+                            top: '100%',
+                            marginTop: 6,
+                            zIndex: 20,
+                            maxWidth: 'none',
+                            boxSizing: 'border-box',
+                            wordBreak: 'break-word',
+                            padding: 16,
+                            backgroundColor: '#fff',
+                            border: '1px solid #e8e6e3',
+                            borderRadius: 12,
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                            fontSize: 13,
+                            lineHeight: 1.5,
+                            color: '#1d1d1f',
+                          }}
+                        >
+                          {ETAT_DEFINITIONS.map((item) => (
+                            <div key={item.title} style={{ marginBottom: item.title === 'État correct' ? 0 : 10 }}>
+                              <strong style={{ display: 'block', marginBottom: 2 }}>{item.title}</strong>
+                              <span style={{ color: '#6e6e73' }}>{item.text}</span>
+                            </div>
+                          ))}
+                          <p style={{ margin: 0, marginTop: 10, paddingTop: 8, borderTop: '1px solid #eee', fontSize: 12, color: '#6e6e73', lineHeight: 1.5 }}>
+                            L&apos;article est montré tel qu&apos;il est sur les photos. La description sert uniquement de repère.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
