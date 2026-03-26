@@ -494,10 +494,13 @@ export default function ProductPage() {
   const handleShare = async () => {
     const path = listing ? listingAnnoncePath(listing) : `/annonce/${listingId}`;
     const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : '';
-    const title = listing ? `${getListingDisplayTitle(listing)} - Section Luxe` : 'Section Luxe';
+    const listingTitle = listing ? getListingDisplayTitle(listing) : '';
+    const shareText = listing
+      ? `Accéder à l'annonce "${listingTitle}" sur Section Luxe.`
+      : 'Section Luxe';
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title, url });
+        await navigator.share({ title: 'Section Luxe', text: shareText, url });
       } else {
         await navigator.clipboard?.writeText(url);
         alert('Lien copié dans le presse-papiers.');

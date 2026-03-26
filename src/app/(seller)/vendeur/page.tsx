@@ -75,8 +75,8 @@ export default function SellerDashboardPage() {
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
-          title: `${seller.companyName} — Section Luxe`,
-          text: 'Découvrez mes annonces sur Section Luxe.',
+          title: 'Section Luxe',
+          text: `Découvrez les annonces de "${seller.companyName}" sur Section Luxe.`,
           url,
         });
         return;

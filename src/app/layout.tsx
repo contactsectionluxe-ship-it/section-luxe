@@ -20,12 +20,40 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
+const SITE_TITLE = 'Section Luxe - Trouver le meilleur du luxe - Annonces Luxe';
+const SITE_DESCRIPTION =
+  'Section Luxe référence les articles des vendeurs professionnels du luxe. Comparez, analysez et trouvez la meilleure offre parmi nos annonces luxe professionnel.';
+
 export const metadata: Metadata = {
-  title: 'Section Luxe - Marketplace d\'articles de luxe',
-  description:
-    'Découvrez des articles de luxe d\'exception sur Section Luxe, la marketplace réservée aux vendeurs professionnels. Sac, montres, bijoux et plus encore.',
-  keywords: ['luxe', 'marketplace', 'sacs', 'montres', 'bijoux', 'mode', 'occasion', 'section luxe'],
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  keywords: [
+    'luxe occasion',
+    'acheter luxe occasion',
+    'vente luxe occasion',
+    'annonces luxe',
+    'luxe professionnel',
+    'site vente luxe',
+    'section luxe',
+    'marketplace luxe',
+    'luxe',
+    'sacs',
+    'montres',
+    'bijoux',
+    'mode',
+  ],
   icons: { icon: '/icon.png' },
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: 'fr_FR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
