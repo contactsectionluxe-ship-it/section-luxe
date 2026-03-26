@@ -496,7 +496,7 @@ export default function ProductPage() {
     const url = typeof window !== 'undefined' ? `${window.location.origin}${path}` : '';
     const listingTitle = listing ? getListingDisplayTitle(listing) : '';
     const shareText = listing
-      ? `Accéder à l'annonce "${listingTitle}" sur Section Luxe.`
+      ? `Accéder à l'annonce ${listingTitle} sur Section Luxe.`
       : 'Section Luxe';
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
