@@ -24,6 +24,7 @@ import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
+import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 
 /** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
 function getListingDisplayTitle(listing: Listing): string {
@@ -40,6 +41,14 @@ function getListingDisplayTitle(listing: Listing): string {
 function formatPhoneDisplay(phone: string): string {
   const digits = phone.replace(/\D/g, '');
   return digits.replace(/(.{2})/g, '$1 ').trim();
+}
+
+/** Largeur × hauteur (cm) sans préfixes L / H — pour la section Informations */
+function formatDimensionsCmValue(widthCm: number | null | undefined, heightCm: number | null | undefined): string {
+  if (widthCm == null && heightCm == null) return ' ';
+  if (widthCm != null && heightCm != null) return `${widthCm} × ${heightCm} cm`;
+  if (widthCm != null) return `${widthCm} cm`;
+  return `${heightCm} cm`;
 }
 
 const ETAT_DEFINITIONS: { title: string; text: string }[] = [
@@ -742,9 +751,9 @@ export default function ProductPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 40 }}>
           {/* Desktop: photo et détails même hauteur (hauteur = photo), puis miniatures en dessous */}
           <div className="hide-mobile" style={{ display: 'flex', flexDirection: 'column', gap: 40 }}>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
+            <div className="produit-desktop-photo-details-row" style={{ display: 'flex', flexDirection: 'row', gap: 40, alignItems: 'stretch' }}>
               {/* Photo principale — format carré, clic = agrandir */}
-              <div style={{ flex: '0 0 auto', width: 'min(100%, 520px)', aspectRatio: '1/1' }}>
+              <div className="produit-desktop-photo-col" style={{ flex: '0 0 auto', width: 'min(100%, 520px)', aspectRatio: '1/1' }}>
                 <div
                   role="button"
                   tabIndex={0}
@@ -755,7 +764,7 @@ export default function ProductPage() {
                   <ListingPhoto
                     src={listing.photos[currentPhotoIndex]}
                     alt={getListingDisplayTitle(listing)}
-                    sizes="(max-width: 768px) 100vw, 520px"
+                    sizes="(max-width: 768px) min(100vw, 400px), 520px"
                     priority
                   />
                   {listing.photos.length > 1 && (
@@ -779,8 +788,8 @@ export default function ProductPage() {
       </div>
       </div>
 
-              {/* Détails — reste de la ligne */}
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+              {/* Détails — reste de la ligne (flex colonne étirée à la hauteur de la photo : carte vendeur en bas) */}
+            <div className="produit-desktop-details-col" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                 {listing.category === 'montres' && categoryLabel && (
                   <Link href={`/catalogue?category=montres`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
@@ -896,7 +905,7 @@ export default function ProductPage() {
               </div>
 
               {seller && (
-                <div className="produit-seller-card-desktop" style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
@@ -973,7 +982,7 @@ export default function ProductPage() {
                         overflow: 'hidden',
                       }}
                     >
-                      <ListingPhoto src={photo} alt="" sizes="60px" />
+                      <ListingPhoto src={photo} alt="" sizes="60px" quality="thumb" />
                     </button>
                   ))}
                 </div>
@@ -1003,7 +1012,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <span title={categoryLabel || listing.category} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoryLabel || listing.category}</span>
+                        <TruncatedInfoValue text={categoryLabel || listing.category} fontSize={14} />
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
@@ -1014,7 +1023,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <span title={listing.brand} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.brand}</span>
+                        <TruncatedInfoValue text={listing.brand} fontSize={14} />
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
                       )}
@@ -1024,14 +1033,14 @@ export default function ProductPage() {
                         <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Modèle</span>
                       </div>
-                      <span title={listing.model ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.model ?? ''}</span>
+                      <TruncatedInfoValue text={listing.model ?? ''} fontSize={14} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
                       </div>
-                      <span title={listing.year != null ? String(listing.year) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.year != null ? listing.year : ' '}</span>
+                      <TruncatedInfoValue text={listing.year != null ? String(listing.year) : ' '} fontSize={14} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
@@ -1083,46 +1092,58 @@ export default function ProductPage() {
                           </div>
                         )}
                       </div>
-                      <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
+                        fontSize={14}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Layers size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
                       </div>
-                      <span title={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
+                        fontSize={14}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Palette size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
                       </div>
-                      <span title={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
+                        fontSize={14}
+                      />
                     </div>
-                    {listing.size && (
+                    {(listing.category === 'chaussures' || listing.category === 'vetements' || listing.category === 'montres') && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                           <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
-                        <span title={(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : String(listing.size)} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : listing.size}</span>
+                        <TruncatedInfoValue
+                          text={
+                            !listing.size
+                              ? ' '
+                              : (listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number])))
+                                ? `${listing.size} EU`
+                                : listing.category === 'montres'
+                                  ? `${listing.size} mm`
+                                  : String(listing.size)
+                          }
+                          fontSize={14}
+                        />
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (listing.widthCm != null || listing.heightCm != null) && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimensions</span>
+                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimension</span>
                       </div>
-                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {`L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
-                      </span>
+                      <TruncatedInfoValue text={formatDimensionsCmValue(listing.widthCm, listing.heightCm)} fontSize={14} />
                     </div>
                     )}
                   </div>
@@ -1134,11 +1155,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                 {seller && (
-                  <p className="produit-vendeur-desc-seller-row produit-vendeur-desc-seller-row--desktop" style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>
+                  <p style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>
                     <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-desc-seller-link" title={seller.companyName}>
                       {seller.companyName}
                     </Link>
-                    <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                   </p>
                 )}
                 <div ref={descriptionRefDesktop} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
@@ -1167,7 +1187,7 @@ export default function ProductPage() {
               </div>
               {/* Section Prix — design type barre de comparaison (offre et prix) */}
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
-                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                <h2 className="produit-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 18 }}>
                   <LineChart size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Indicateur de marché
                 </h2>
@@ -1244,54 +1264,42 @@ export default function ProductPage() {
           {/* Section Vendeur Professionnel — même largeur que les autres (100 % colonne gauche) */}
           {seller && (
             <div style={{ marginTop: 24, borderTop: '1px solid #e5e5e7', paddingTop: 24, width: '100%' }}>
-              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 24 }}>
+              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 18 }}>
                 <Store size={21} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                 Vendeur professionnel
               </h2>
-              <div style={{ maxWidth: 480 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
-                  <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    {seller.avatarUrl ? (
-                      <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <Store size={40} color="#888" />
-                    )}
-                  </div>
-                  <div className="produit-vendeur-nom-col">
-                    <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--section">
-                      <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
-                        <h3>{seller.companyName}</h3>
-                      </Link>
-                      <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
-                    </div>
-                    {seller.description && (
-                      <>
-                        <p
-                          ref={sellerDescriptionRef}
-                          style={{
-                            fontSize: 14,
-                            color: '#666',
-                            margin: 0,
-                            lineHeight: 1.5,
-                            whiteSpace: 'pre-line',
-                            ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
-                          }}
-                        >
-                          {seller.description}
-                        </p>
-                        {(sellerDescriptionOverflows || showMoreAbout) && (
-                          <button
-                            type="button"
-                            onClick={() => setShowMoreAbout((v) => !v)}
-                            style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
-                          >
-                            {showMoreAbout ? 'Voir moins' : 'Voir plus'}
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </div>
+              <div style={{ width: '100%' }}>
+                <div className="produit-vendeur-section-nom">
+                  <Link href={`${sellerCataloguePath(seller)}`} title={seller.companyName}>
+                    <h3>{seller.companyName}</h3>
+                  </Link>
                 </div>
+                {seller.description && (
+                  <div style={{ marginTop: 12, width: '100%' }}>
+                    <p
+                      ref={sellerDescriptionRef}
+                      style={{
+                        fontSize: 14,
+                        color: '#666',
+                        margin: 0,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-line',
+                        ...(showMoreAbout ? {} : { display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' as const }),
+                      }}
+                    >
+                      {seller.description}
+                    </p>
+                    {(sellerDescriptionOverflows || showMoreAbout) && (
+                      <button
+                        type="button"
+                        onClick={() => setShowMoreAbout((v) => !v)}
+                        style={{ marginTop: 6, padding: 0, background: 'none', border: 'none', fontSize: 14, fontWeight: 500, color: '#1d1d1f', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        {showMoreAbout ? 'Voir moins' : 'Voir plus'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
               {/* Voir les annonces + carte : même largeur que la ligne au-dessus (100 % section) */}
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 12, marginTop: 20 }}>
@@ -1378,7 +1386,7 @@ export default function ProductPage() {
                 <ListingPhoto
                   src={listing.photos[currentPhotoIndex]}
                   alt={getListingDisplayTitle(listing)}
-                  sizes="(max-width: 768px) 100vw, 520px"
+                  sizes="(max-width: 768px) min(100vw, 400px), 520px"
                   priority
                 />
               </div>
@@ -1390,7 +1398,7 @@ export default function ProductPage() {
                       onClick={() => setCurrentPhotoIndex(index)}
                       style={{ position: 'relative', width: 50, height: 50, flexShrink: 0, border: currentPhotoIndex === index ? '2px solid #1d1d1f' : '1px solid #d2d2d7', borderRadius: 12, padding: 0, cursor: 'pointer', overflow: 'hidden' }}
                     >
-                      <ListingPhoto src={photo} alt="" sizes="50px" />
+                      <ListingPhoto src={photo} alt="" sizes="50px" quality="thumb" />
                     </button>
                   ))}
                 </div>
@@ -1568,7 +1576,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
-                        <span title={categoryLabel || listing.category} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoryLabel || listing.category}</span>
+                        <TruncatedInfoValue text={categoryLabel || listing.category} fontSize={13} />
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
@@ -1579,7 +1587,7 @@ export default function ProductPage() {
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
                       </div>
                       {listing.brand ? (
-                        <span title={listing.brand} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.brand}</span>
+                        <TruncatedInfoValue text={listing.brand} fontSize={13} />
                       ) : (
                         <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
                       )}
@@ -1589,14 +1597,14 @@ export default function ProductPage() {
                         <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Modèle</span>
                       </div>
-                      <span title={listing.model ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.model || ' '}</span>
+                      <TruncatedInfoValue text={listing.model || ' '} fontSize={13} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Calendar size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Année</span>
                       </div>
-                      <span title={listing.year != null ? String(listing.year) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.year != null ? listing.year : ' '}</span>
+                      <TruncatedInfoValue text={listing.year != null ? String(listing.year) : ' '} fontSize={13} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
@@ -1648,46 +1656,58 @@ export default function ProductPage() {
                           </div>
                         )}
                       </div>
-                      <span title={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.condition ? (CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition) : ' '}
+                        fontSize={13}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Layers size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Matière</span>
                       </div>
-                      <span title={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
+                        fontSize={13}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Palette size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ color: '#1d1d1f', fontSize: 13 }}>Couleur</span>
                       </div>
-                      <span title={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
-                      </span>
+                      <TruncatedInfoValue
+                        text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
+                        fontSize={13}
+                      />
                     </div>
-                    {listing.size && (
+                    {(listing.category === 'chaussures' || listing.category === 'vetements' || listing.category === 'montres') && (
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                           <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
                           <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
-                        <span title={(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : String(listing.size)} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.category === 'montres' ? `${listing.size} mm` : listing.size}</span>
+                        <TruncatedInfoValue
+                          text={
+                            !listing.size
+                              ? ' '
+                              : (listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number])))
+                                ? `${listing.size} EU`
+                                : listing.category === 'montres'
+                                  ? `${listing.size} mm`
+                                  : String(listing.size)
+                          }
+                          fontSize={13}
+                        />
                       </div>
                     )}
-                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (listing.widthCm != null || listing.heightCm != null) && (
+                    {listing.category !== 'chaussures' && listing.category !== 'vetements' && listing.category !== 'montres' && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dim</span>
+                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimension</span>
                       </div>
-                      <span title={`L ${listing.widthCm != null ? listing.widthCm : ''} × H ${listing.heightCm != null ? listing.heightCm : ''} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {`L ${listing.widthCm != null ? listing.widthCm : '   '} × H ${listing.heightCm != null ? listing.heightCm : '   '} cm`}
-                      </span>
+                      <TruncatedInfoValue text={formatDimensionsCmValue(listing.widthCm, listing.heightCm)} fontSize={13} />
                     </div>
                     )}
                   </div>
@@ -1699,11 +1719,10 @@ export default function ProductPage() {
                   Description
                 </h2>
                   {seller && (
-                    <p className="produit-vendeur-desc-seller-row produit-vendeur-desc-seller-row--mobile" style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>
+                    <p style={{ fontWeight: 400, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>
                       <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-desc-seller-link" title={seller.companyName}>
                         {seller.companyName}
                       </Link>
-                      <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
                     </p>
                   )}
                   <div ref={descriptionRefMobile} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
@@ -1732,7 +1751,7 @@ export default function ProductPage() {
                 </div>
                 {/* Section Prix - mobile */}
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
-                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 6 }}>
+                  <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                     <LineChart size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                     Indicateur de marché
                   </h2>
@@ -1808,32 +1827,20 @@ export default function ProductPage() {
                 {/* Section Vendeur professionnel (mobile) — sous Indicateur de marché */}
                 {seller && (
                   <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 10 }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                       <Store size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                       Vendeur professionnel
                     </h2>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
-                      <div style={{ width: 58, height: 58, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        {seller.avatarUrl ? (
-                          <img src={getSellerAvatarUrl(seller) ?? ''} alt={seller.companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <Store size={34} color="#888" />
-                        )}
-                      </div>
-                      <div className="produit-vendeur-nom-col">
-                        <div className="produit-vendeur-nom-badge-row produit-vendeur-nom-badge-row--mobile-section">
-                          <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
-                            <h3>{seller.companyName}</h3>
-                          </Link>
-                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
-                        </div>
-                        {seller.description && (
-                          <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-line' }}>
-                            {seller.description}
-                          </p>
-                        )}
-                      </div>
+                    <div className="produit-vendeur-section-nom" style={{ marginBottom: seller.description ? 0 : 14 }}>
+                      <Link href={`${sellerCataloguePath(seller)}`} title={seller.companyName}>
+                        <h3>{seller.companyName}</h3>
+                      </Link>
                     </div>
+                    {seller.description && (
+                      <p style={{ fontSize: 13, color: '#666', lineHeight: 1.5, margin: '10px 0 14px', whiteSpace: 'pre-line', width: '100%' }}>
+                        {seller.description}
+                      </p>
+                    )}
 
                     <Link
                       href={`${sellerCataloguePath(seller)}`}

@@ -37,6 +37,10 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
+    /** AVIF/WebP en priorité : meilleure qualité par octet pour le même poids que du JPEG. */
+    formats: ['image/avif', 'image/webp'],
+    /** Cache long des variantes optimisées (répétitions / navigation : pas de re-téléchargement inutile). */
+    minimumCacheTTL: 60 * 60 * 24 * 30,
   },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];

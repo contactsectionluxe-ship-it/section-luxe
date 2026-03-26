@@ -2,13 +2,17 @@
 
 import Image from 'next/image';
 
-/** Affiche la première photo d'une annonce avec next/image (optimisation, lazy load) si l'URL est Supabase, sinon <img>. */
+/** Qualité JPEG/WebP/AVIF (1–100). Défaut un peu au-dessus du défaut Next (75) pour un rendu plus net ; les miniatures utilisent une valeur plus basse pour limiter le poids. */
+const DEFAULT_QUALITY = 82;
+const THUMB_QUALITY = 75;
+
 export function ListingPhoto({
   src,
   alt,
   fill = true,
   sizes = '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw',
   priority = false,
+  quality = DEFAULT_QUALITY,
   className,
   style,
 }: {
@@ -17,9 +21,12 @@ export function ListingPhoto({
   fill?: boolean;
   sizes?: string;
   priority?: boolean;
+  /** Qualité (1–100) ou `thumb` pour vignettes (poids réduit, sans impact visible sur petites tailles). */
+  quality?: number | 'thumb';
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const q = quality === 'thumb' ? THUMB_QUALITY : quality;
   if (!src) {
     return (
       <div
@@ -49,6 +56,7 @@ export function ListingPhoto({
         alt={alt}
         fill
         sizes={sizes}
+        quality={q}
         priority={priority}
         className={className}
         style={{ objectFit: 'cover', ...style }}
@@ -64,6 +72,7 @@ export function ListingPhoto({
         width={400}
         height={400}
         sizes={sizes}
+        quality={q}
         priority={priority}
         className={className}
         style={{ objectFit: 'cover', width: '100%', height: '100%', ...style }}

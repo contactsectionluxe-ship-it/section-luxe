@@ -3987,7 +3987,7 @@ function CatalogueContent() {
             {/* Bloc vendeur : nom, logo, annonces */}
             {filters.sellerId && (
             <div
-              className="catalogue-seller-banner"
+              className="catalogue-seller-banner catalogue-seller-store-banner"
               style={{
                   marginBottom: 24,
                   padding: 12,
@@ -3998,7 +3998,7 @@ function CatalogueContent() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
-                  flexWrap: 'wrap',
+                  flexWrap: 'nowrap',
               }}
             >
                 {sellerLoading ? (
@@ -4032,13 +4032,13 @@ function CatalogueContent() {
                           <Store size={32} color="#888" />
                         )}
                       </div>
-                      <div style={{ minWidth: 0, flex: 1 }}>
+                      <div className="catalogue-seller-text-block" style={{ minWidth: 0, flex: 1 }}>
                         <div
                           className="catalogue-seller-banner-title-row"
                           style={{
                             display: 'flex',
                             alignItems: 'center',
-                            flexWrap: 'wrap',
+                            flexWrap: 'nowrap',
                             gap: '0.35em',
                             rowGap: 4,
                             marginBottom: 4,

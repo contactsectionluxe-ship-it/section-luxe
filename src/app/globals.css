@@ -287,9 +287,18 @@ a:focus-visible {
     width: 50% !important;
     max-width: 50% !important;
   }
-  /* Carte vendeur (colonne droite) : remonter légèrement sous le prix / cœur */
-  .produit-seller-card-desktop {
-    transform: translateY(-10px);
+  /* Zone photo + colonne détails : hauteur de ligne = hauteur du carré photo ; la colonne détails s’étire pour coller la carte vendeur en bas au bas de la photo */
+  .produit-desktop-photo-details-row {
+    align-items: stretch !important;
+  }
+  .produit-desktop-photo-details-row > .produit-desktop-photo-col {
+    align-self: flex-start;
+  }
+  .produit-desktop-photo-details-row > .produit-desktop-details-col {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 0 !important;
+    align-self: stretch !important;
   }
 }
 
@@ -305,6 +314,10 @@ a:focus-visible {
 
 /* Page produit : les 4 titres de section (Informations, Description, Prix, Vendeur professionnel) même taille sur mobile */
 @media (max-width: 767px) {
+  /* Téléphone : nom vendeur (carte Téléphone / Message) — un peu sous le titre produit (24px) */
+  .produit-vendeur-nom-badge-row--mobile-card {
+    font-size: 22px;
+  }
   .produit-section-title {
     font-size: 20px !important;
     margin-bottom: 6px !important;
@@ -392,7 +405,7 @@ a:focus-visible {
 /* Badge seul : très léger décalage vers le haut (le nom vendeur ne bouge pas) */
 .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge,
 .catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
-  transform: translateY(-0.04em);
+  transform: translateY(-0.055em);
 }
 
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
@@ -422,17 +435,38 @@ a:focus-visible {
   margin-bottom: 2px;
   font-size: clamp(14px, 6.8cqi, 28px);
 }
-.produit-vendeur-nom-badge-row--section {
-  margin-bottom: 6px;
-  font-size: clamp(14px, 6.8cqi, 28px);
-}
 .produit-vendeur-nom-badge-row--mobile-card {
   margin-bottom: 2px;
-  font-size: clamp(13px, 6.2cqi, 24px);
 }
-.produit-vendeur-nom-badge-row--mobile-section {
-  margin-bottom: 4px;
-  font-size: clamp(13px, 6.2cqi, 24px);
+
+/* Section « Vendeur professionnel » (page produit) : nom seul, sans photo ni badge — typo un peu plus petite */
+.produit-vendeur-section-nom {
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: vendeur-section-nom;
+}
+.produit-vendeur-section-nom a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+  min-width: 0;
+}
+.produit-vendeur-section-nom h3 {
+  margin: 0;
+  font-family: var(--font-playfair), Georgia, serif;
+  font-weight: 500;
+  color: #0a0a0a;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: clamp(13px, 5.2cqi, 22px);
+}
+@media (max-width: 767px) {
+  .produit-vendeur-section-nom h3 {
+    font-size: clamp(14px, 5.6cqi, 20px);
+  }
 }
 .produit-vendeur-nom-lien {
   min-width: 0;
@@ -450,32 +484,27 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-/* Ligne vendeur sous la description (desktop / mobile) */
-.produit-vendeur-desc-seller-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 0.35em;
-  min-width: 0;
-  container-type: inline-size;
-}
-.produit-vendeur-desc-seller-row--desktop {
-  font-size: clamp(12px, 5.5cqi, 15px);
-}
-.produit-vendeur-desc-seller-row--mobile {
-  font-size: clamp(11px, 5cqi, 14px);
-}
+/* Nom vendeur sous le titre Description : même typo que le titre annonce sous Informations (Inter, gris) */
 .produit-vendeur-desc-seller-link {
+  display: inline-block;
   min-width: 0;
   max-width: 100%;
-  flex: 0 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-playfair), Georgia, serif;
-  font-weight: 500;
-  color: #0a0a0a;
+  font-family: var(--font-inter), var(--font-sans), system-ui, sans-serif;
+  font-weight: 400;
+  font-size: 13px;
+  color: #6e6e73;
   text-decoration: none;
+}
+.produit-vendeur-desc-seller-link:visited {
+  color: #6e6e73;
+}
+@media (max-width: 767px) {
+  .produit-vendeur-desc-seller-link {
+    font-size: 12px;
+  }
 }
 
 /* Popup carte : nom + badge sur une ligne */
@@ -1204,34 +1233,57 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .catalogue-mobile-filters-panel .catalogue-filters-recherche-block {
     padding-top: 14px !important;
   }
-  /* Bannière vendeur (catalogue): garder le code postal à droite du bloc nom + nombre */
-  .catalogue-seller-banner {
+  /* Bannière « boutique » vendeur : une ligne horizontale logo | (nom+badge puis N annonces) | CP — le compteur reste sous le nom */
+  .catalogue-page-main--seller .catalogue-seller-store-banner {
     flex-wrap: nowrap !important;
     align-items: center !important;
-    gap: 10px !important;
-    padding-top: 6px !important;
-    padding-bottom: 6px !important;
-  }
-  .catalogue-seller-main-info {
-    min-width: 0 !important;
-    flex: 1 !important;
     gap: 8px !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+    overflow: hidden !important;
   }
-  .catalogue-seller-logo-wrap {
-    width: 52px !important;
-    height: 52px !important;
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-main-info {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    gap: 8px !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
   }
-  .catalogue-seller-location-btn {
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-text-block {
+    min-width: 0 !important;
+    display: block !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-banner-title-row {
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+    margin-bottom: 4px !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-text-block > p {
+    margin: 0 !important;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+    white-space: nowrap !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-logo-wrap {
+    width: 48px !important;
+    height: 48px !important;
+    flex-shrink: 0 !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-location-btn {
     min-width: auto !important;
+    max-width: 42vw !important;
     height: 36px !important;
-    padding: 0 10px !important;
+    padding: 0 8px !important;
     gap: 4px !important;
     flex-shrink: 0 !important;
   }
-  /* Vue vendeur (mobile): harmoniser les espaces bannière / filtres / annonces */
-  .catalogue-page-main--seller .catalogue-seller-banner {
-    margin-bottom: 12px !important;
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-location-btn span {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
+  /* Vue vendeur (mobile): harmoniser l’espace bannière / filtres / annonces */
   .catalogue-page-main--seller .catalogue-barre-tri--seller {
     margin-bottom: 12px !important;
   }
