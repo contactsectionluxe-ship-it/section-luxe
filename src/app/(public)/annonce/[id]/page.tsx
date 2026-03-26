@@ -1623,15 +1623,25 @@ export default function ProductPage() {
                           onMouseLeave={() => setEtatInfoHover(false)}
                           aria-label="Informations sur les états"
                           style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 20, height: 20, padding: 0,
-                            border: '1px solid #d2d2d7', borderRadius: '50%',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 22,
+                            height: 22,
+                            padding: 0,
+                            lineHeight: 0,
+                            fontSize: 0,
+                            boxSizing: 'border-box',
+                            border: '1px solid #d2d2d7',
+                            borderRadius: '50%',
                             backgroundColor: etatInfoClicked ? '#1d1d1f' : (etatInfoHover ? '#1d1d1f' : '#fff'),
                             color: etatInfoClicked ? '#fff' : (etatInfoHover ? '#fff' : '#6e6e73'),
-                            cursor: 'pointer', transition: 'background-color 0.2s, color 0.2s',
+                            cursor: 'pointer',
+                            transition: 'background-color 0.2s, color 0.2s',
                             boxShadow: etatInfoClicked ? '0 1px 3px rgba(0,0,0,0.12)' : (etatInfoHover ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)'),
                           }}
                         >
-                          <Info size={12} strokeWidth={2.2} />
+                          <Info size={13} strokeWidth={2.2} style={{ display: 'block', flexShrink: 0 }} aria-hidden />
                         </button>
                       </div>
                       <TruncatedInfoValue
