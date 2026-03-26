@@ -402,10 +402,10 @@ a:focus-visible {
   line-height: 1.2;
 }
 
-/* Badge seul : très léger décalage vers le haut (le nom vendeur ne bouge pas) */
+/* Badge seul : léger décalage vertical (le nom vendeur ne bouge pas) — un peu plus bas qu’avant */
 .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge,
 .catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
-  transform: translateY(-0.055em);
+  transform: translateY(-0.038em);
 }
 
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
