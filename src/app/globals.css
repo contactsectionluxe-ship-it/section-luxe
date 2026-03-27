@@ -2185,23 +2185,16 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     object-fit: contain !important;
     object-position: left center;
   }
-  /* Header mobile : même écart entre Favoris, Messages et User/Connexion ; bloc aligné à droite avec le menu */
+  /* Header mobile : Favoris, Messages, User serrés avec espace égal + proche du menu, barre décalée à droite */
   .header-right {
-    justify-content: flex-end !important;
-    gap: 4px !important;
-    min-width: 0 !important;
+    gap: 2px !important;
   }
   .header-actions {
     display: flex !important;
-    align-items: center !important;
-    gap: 6px !important;
-  }
-  /* Un peu plus d’air uniquement entre Favoris et Messages (Messages–User inchangé) */
-  .header-actions > a.header-action-favoris {
-    margin-right: 3px !important;
+    gap: 4px !important;
   }
   .header-actions > a:nth-child(2) {
-    margin-left: 0 !important;
+    margin-left: 2mm !important;
   }
   .header-actions > a,
   .header-actions > div {
@@ -2222,7 +2215,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     height: 22px !important;
   }
   .header-actions .header-action-user {
-    margin-left: 0 !important;
+    margin-left: 8px !important;
   }
 
   /* Boutons prev/next du carousel catégories : les garder dans l’écran */
