@@ -14,7 +14,7 @@ import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
-import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
+import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
 import { isSubscriptionLimitError } from '@/lib/subscription';
 
@@ -412,6 +412,7 @@ function NewListingContent() {
     const articleTypeLabels = (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') ? getArticleTypeLabelsForCategory(category, genre) : [];
     const raw = [...set]
       .filter((m) => m !== 'Autre' && !excludedAsCategory.includes(m))
+      .filter((m) => !MODELES_EXCLUS_DEPOT_ANNONCE.has(m))
       .filter((m) => (category !== 'vetements' || !MODELE_VETEMENTS_GENERIQUES_EXCLUS.has(m)))
       .filter((m) => modelMatchesArticleType(m, effectiveArticleType, category, brandForModels))
       .filter((m) => !articleTypeLabels.includes(m))

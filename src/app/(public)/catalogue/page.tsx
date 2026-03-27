@@ -34,6 +34,7 @@ import {
   modelMatchesArticleType,
   MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE,
   MODELE_VETEMENTS_GENERIQUES_EXCLUS,
+  MODELES_EXCLUS_DEPOT_ANNONCE,
   MATIERES_BY_CATEGORY,
   MODELS_BY_CATEGORY_BRAND,
   CONDITIONS,
@@ -586,7 +587,9 @@ function CatalogueContent() {
         });
       }
     }
-    return [...modelSet].filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre').sort(sortModelesWithNumericLast);
+    return [...modelSet]
+      .filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre' && !MODELES_EXCLUS_DEPOT_ANNONCE.has(m))
+      .sort(sortModelesWithNumericLast);
   }, [filters.categories, filters.category, filters.brands, filters.brand, filters.articleTypes, filters.genre]);
 
   /** Modèles groupés par marque (pour afficher des sections quand plusieurs marques sont choisies). Filtrage par type de produit comme dans Déposer une annonce. "Autre" n'est jamais proposé. */
@@ -650,9 +653,13 @@ function CatalogueContent() {
           modelSet.add(name);
         });
       }
-      const list = [...modelSet].filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre').sort(sortModelesWithNumericLast);
+      const list = [...modelSet]
+        .filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre' && !MODELES_EXCLUS_DEPOT_ANNONCE.has(m))
+        .sort(sortModelesWithNumericLast);
       const allModels = list;
-      const favorisRaw = (MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? []).filter((m) => m !== 'Autre' && m.toLowerCase() !== 'autre');
+      const favorisRaw = (MODELES_PLUS_CONNUS_PAR_MARQUE[brand] ?? []).filter(
+        (m) => m !== 'Autre' && m.toLowerCase() !== 'autre' && !MODELES_EXCLUS_DEPOT_ANNONCE.has(m),
+      );
       const favoris = favorisRaw.filter((m) => modelSet.has(m)).slice(0, 6);
       out.push({ brandLabel: brand, models: allModels, favoris });
     }
