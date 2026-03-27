@@ -11,15 +11,15 @@ const navigation = [
 
 const linkStyle = { fontSize: 15, fontWeight: 500, color: '#6e6e73', padding: '8px 0' };
 const iconSize = 22;
+const messagesIconSize = 20;
+const favorisIconSize = 23;
 const headerIconCellSize = 24;
-const headerFavorisIconSize = 24;
-const headerMessagesIconSize = 20;
 const iconLabelStyle = {
   display: 'flex' as const,
   flexDirection: 'column' as const,
   alignItems: 'center' as const,
   gap: 2,
-  padding: '10px 10px',
+  padding: '10px 8px',
   minWidth: 64,
   maxWidth: 64,
   fontSize: 12,
@@ -100,12 +100,12 @@ export function HeaderFallback() {
           <div className="hide-mobile header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" className="header-action-favoris header-action-item" style={iconLabelStyle}>
               <div className="header-action-icon header-action-icon--favoris" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                <Heart size={headerFavorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerFavorisIconSize, height: headerFavorisIconSize }} aria-hidden />
+                <Heart size={favorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: favorisIconSize, height: favorisIconSize }} aria-hidden />
               </div><span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" className="header-action-messages header-action-item" style={iconLabelStyle}>
               <div className="header-action-icon header-action-icon--messages" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                <MessageCircle size={headerMessagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerMessagesIconSize, height: headerMessagesIconSize }} aria-hidden />
+                <MessageCircle size={messagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: messagesIconSize, height: messagesIconSize }} aria-hidden />
               </div><span style={headerActionLabelStyle}>Messages</span>
             </Link>
             <Link href="/connexion" className="header-action-user header-action-item" style={{ ...iconLabelStyle, minWidth: 64 }}>

@@ -2015,20 +2015,21 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
 }
 
-/* Header : tailles d’icônes (Favoris un peu plus grand, Messages un peu plus petit, User référence 22px) */
+/* Header : cœur Favoris légèrement au-dessus de User (22px) ; Messages plus petit (optique Lucide) */
 .header-action-icon--favoris svg {
-  width: 24px !important;
-  height: 24px !important;
+  width: 23px !important;
+  height: 23px !important;
+  flex-shrink: 0;
+  transform: translateY(-0.42px);
+}
+.header-action-icon--user svg {
+  width: 22px !important;
+  height: 22px !important;
   flex-shrink: 0;
 }
 .header-action-icon--messages svg {
   width: 20px !important;
   height: 20px !important;
-  flex-shrink: 0;
-}
-.header-action-icon--user svg {
-  width: 22px !important;
-  height: 22px !important;
   flex-shrink: 0;
 }
 
@@ -2050,15 +2051,16 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
 @media (min-width: 768px) {
   .header-right .header-actions {
     align-items: flex-start !important;
+    gap: 12px !important;
   }
   /* Le compte est dans un wrapper : « contents » aligne le bouton comme Favoris / Messages sans décaler le groupe */
   .header-actions .header-action-user:not(a) {
     display: contents;
   }
-  /* Léger espace entre Messages et Compte / Connexion */
+  /* L’espacement entre les colonnes est géré par gap sur .header-actions */
   .header-actions .header-action-user > button.header-action-item,
   .header-actions > a.header-action-user.header-action-item {
-    margin-left: 14px;
+    margin-left: 0;
   }
   .header-actions > a.header-action-item,
   .header-actions .header-action-user > button.header-action-item {
@@ -2274,6 +2276,13 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   .header-actions .header-action-user {
     margin-left: 10px !important;
+  }
+  /* Cœur + bulle : léger décalage à droite (optique sur petit écran) */
+  .header-action-icon--favoris svg {
+    transform: translate(6px, -0.42px) !important;
+  }
+  .header-action-icon--messages svg {
+    transform: translateX(6px) !important;
   }
 
   /* Boutons prev/next du carousel catégories : les garder dans l’écran */

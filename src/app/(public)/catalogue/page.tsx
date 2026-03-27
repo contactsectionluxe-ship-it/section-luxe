@@ -4424,7 +4424,7 @@ function CatalogueContent() {
                         <CatalogueCardPhotos
                           photos={listing.photos}
                           alt={listing.title}
-                          sizes="(max-width: 768px) 50vw, 33vw"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1400px) 33vw, min(440px, 28vw)"
                         />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
@@ -4537,7 +4537,7 @@ function CatalogueContent() {
                         <CatalogueCardPhotos
                           photos={listing.photos}
                           alt={listing.title}
-                          sizes="120px"
+                          sizes="(max-width: 768px) 42vw, 200px"
                         />
                       </div>
                             <div

@@ -164,17 +164,20 @@ export function Header() {
     transition: 'color 0.2s',
   };
 
+  /** Même taille que l’icône User / Connexion pour aligner les trois colonnes (icône + libellé) */
   const iconSize = 22;
-  /** Hauteur de ligne d’icônes (grille desktop) : alignée sur la plus grande icône */
+  /** MessageCircle remplit plus le cadre Lucide : légèrement plus petit pour équivalence visuelle avec Heart / User */
+  const messagesIconSize = 20;
+  /** Cœur Favoris : un peu plus grand que User (22px) */
+  const favorisIconSize = 23;
+  /** Cellule grille desktop (globals.css) : icônes centrées dans 24px */
   const headerIconCellSize = 24;
-  const headerFavorisIconSize = 24;
-  const headerMessagesIconSize = 20;
   const iconLabelStyle = {
     display: 'flex' as const,
     flexDirection: 'column' as const,
     alignItems: 'center' as const,
     gap: 2,
-    padding: '10px 10px',
+    padding: '10px 8px',
     minWidth: 64,
     maxWidth: 64,
     fontSize: 12,
@@ -271,12 +274,12 @@ export function Header() {
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" className="header-action-favoris header-action-item" style={iconLabelStyle}>
               <div className="header-action-icon header-action-icon--favoris" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                <Heart size={headerFavorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerFavorisIconSize, height: headerFavorisIconSize }} aria-hidden />
+                <Heart size={favorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: favorisIconSize, height: favorisIconSize }} aria-hidden />
               </div><span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" className="header-action-messages header-action-item" style={iconLabelStyle}>
               <div className="header-action-icon header-action-icon--messages" style={{ position: 'relative', ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                <MessageCircle size={headerMessagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerMessagesIconSize, height: headerMessagesIconSize }} aria-hidden />
+                <MessageCircle size={messagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: messagesIconSize, height: messagesIconSize }} aria-hidden />
                 {unreadMessages > 0 && (
                   <span
                     style={{

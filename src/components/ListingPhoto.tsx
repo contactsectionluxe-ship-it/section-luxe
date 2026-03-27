@@ -2,9 +2,11 @@
 
 import Image from 'next/image';
 
-/** Qualité JPEG/WebP/AVIF (1–100). Défaut un peu au-dessus du défaut Next (75) pour un rendu plus net ; les miniatures utilisent une valeur plus basse pour limiter le poids. */
-const DEFAULT_QUALITY = 82;
-const THUMB_QUALITY = 75;
+/** Qualité JPEG/WebP/AVIF (1–100). Défaut au-dessus du défaut Next (75). */
+const DEFAULT_QUALITY = 85;
+const THUMB_QUALITY = 78;
+/** Catalogue grille / fiche produit : rendu plus fin (toujours via Image optimizer). */
+export const LISTING_PHOTO_QUALITY_SHARP = 92;
 
 export function ListingPhoto({
   src,

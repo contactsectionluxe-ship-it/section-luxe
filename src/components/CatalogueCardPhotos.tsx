@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { ListingPhoto } from '@/components/ListingPhoto';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
 const arrowSize = 14;
 
@@ -75,7 +75,7 @@ export function CatalogueCardPhotos({
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
-      <ListingPhoto src={currentPhoto} alt={alt} sizes={sizes} />
+      <ListingPhoto src={currentPhoto} alt={alt} sizes={sizes} quality={LISTING_PHOTO_QUALITY_SHARP} />
       {validPhotos.length > 1 && (
         <>
           <button

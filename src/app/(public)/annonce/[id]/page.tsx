@@ -21,7 +21,7 @@ import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
-import { ListingPhoto } from '@/components/ListingPhoto';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
@@ -767,7 +767,8 @@ export default function ProductPage() {
                   <ListingPhoto
                     src={listing.photos[currentPhotoIndex]}
                     alt={getListingDisplayTitle(listing)}
-                    sizes="(max-width: 768px) min(100vw, 400px), 520px"
+                    sizes="(max-width: 768px) min(100vw, 440px), min(640px, 90vw)"
+                    quality={LISTING_PHOTO_QUALITY_SHARP}
                     priority
                   />
                   {listing.photos.length > 1 && (
@@ -1389,7 +1390,8 @@ export default function ProductPage() {
                 <ListingPhoto
                   src={listing.photos[currentPhotoIndex]}
                   alt={getListingDisplayTitle(listing)}
-                  sizes="(max-width: 768px) min(100vw, 400px), 520px"
+                  sizes="(max-width: 768px) min(100vw, 440px), min(640px, 90vw)"
+                  quality={LISTING_PHOTO_QUALITY_SHARP}
                   priority
                 />
               </div>
