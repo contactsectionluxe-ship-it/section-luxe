@@ -68,6 +68,9 @@ type EditListingDraft = {
   existingPhotos?: string[];
 };
 
+/** Listes déroulantes étape caractéristiques : une seule ouverte à la fois. */
+type Step1DropdownId = 'category' | 'type' | 'marque' | 'modele' | 'size' | 'condition' | 'material' | 'color';
+
 const inputStyle: React.CSSProperties = {
   width: '100%',
   height: 50,
@@ -115,11 +118,12 @@ export default function EditListingPage() {
   const [model, setModel] = useState('');
   const [customModel, setCustomModel] = useState('');
   const [modeleSearchQuery, setModeleSearchQuery] = useState('');
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [marqueOpen, setMarqueOpen] = useState(false);
-  const [modeleOpen, setModeleOpen] = useState(false);
-  const [conditionOpen, setConditionOpen] = useState(false);
+  const [step1Dropdown, setStep1Dropdown] = useState<Step1DropdownId | null>(null);
+  const blurStep1Dropdown = (id: Step1DropdownId) => () => {
+    setTimeout(() => {
+      setStep1Dropdown((prev) => (prev === id ? null : prev));
+    }, 200);
+  };
   const [etatInfoClicked, setEtatInfoClicked] = useState(false);
   const [etatInfoHover, setEtatInfoHover] = useState(false);
   const categoryListRef = useRef<HTMLDivElement>(null);
@@ -134,15 +138,12 @@ export default function EditListingPage() {
   const [condition, setCondition] = useState('');
   const [material, setMaterial] = useState('');
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
-  const [materialOpen, setMaterialOpen] = useState(false);
   const [customMaterial, setCustomMaterial] = useState('');
   const [color, setColor] = useState('');
   const [colorSearchQuery, setColorSearchQuery] = useState('');
-  const [colorOpen, setColorOpen] = useState(false);
   const [customColor, setCustomColor] = useState('');
   const [size, setSize] = useState('');
   const [sizeSearchQuery, setSizeSearchQuery] = useState('');
-  const [sizeOpen, setSizeOpen] = useState(false);
   /** Partie du titre après "Marque - " (personnalisable par le vendeur) */
   const [titleSuffix, setTitleSuffix] = useState('');
   const [description, setDescription] = useState('');
@@ -897,7 +898,7 @@ export default function EditListingPage() {
                     if (nextGenre.length === 0) {
                       setCategory('');
                       setArticleType('');
-                      setCategoryOpen(false);
+                      setStep1Dropdown(null);
                     } else if (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') setArticleType('');
                     setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                   }}
@@ -922,7 +923,7 @@ export default function EditListingPage() {
                     if (nextGenre.length === 0) {
                       setCategory('');
                       setArticleType('');
-                      setCategoryOpen(false);
+                      setStep1Dropdown(null);
                     } else if (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') setArticleType('');
                     setBrand(''); setCustomBrand(''); setMarqueSearchQuery(''); setModel(''); setCustomModel(''); setModeleSearchQuery('');
                   }}
@@ -946,8 +947,8 @@ export default function EditListingPage() {
               <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
               <button
                 type="button"
-                onClick={() => genre.length > 0 && setCategoryOpen((o) => !o)}
-                onBlur={() => setTimeout(() => setCategoryOpen(false), 200)}
+                onClick={() => genre.length > 0 && setStep1Dropdown((d) => (d === 'category' ? null : 'category'))}
+                onBlur={blurStep1Dropdown('category')}
                 disabled={genre.length === 0}
                 style={{
                   ...selectStyle(genre.length === 0),
@@ -964,7 +965,7 @@ export default function EditListingPage() {
                   </>
                 ) : category ? (CATEGORIES.find((o) => o.value === category)?.label ?? category) : 'Sélectionner une catégorie'}
               </button>
-              {categoryOpen && genre.length > 0 && (
+              {step1Dropdown === 'category' && genre.length > 0 && (
                 <div
                   ref={categoryListRef}
                   className="listing-dropdown-list"
@@ -1005,7 +1006,7 @@ setMaterialSearchQuery('');
                           setColor('');
                           setColorSearchQuery('');
                           setCustomColor('');
-                          setCategoryOpen(false);
+                          setStep1Dropdown(null);
                       }}
                       style={{
                         display: 'block',
@@ -1038,8 +1039,8 @@ setMaterialSearchQuery('');
                     <>
                 <button
                   type="button"
-                        onClick={() => genre.length > 0 && setTypeOpen((o) => !o)}
-                        onBlur={() => setTimeout(() => setTypeOpen(false), 200)}
+                        onClick={() => genre.length > 0 && setStep1Dropdown((d) => (d === 'type' ? null : 'type'))}
+                        onBlur={blurStep1Dropdown('type')}
                         disabled={genre.length === 0}
                   style={{
                           ...inputStyle,
@@ -1059,7 +1060,7 @@ setMaterialSearchQuery('');
                             ? (articleTypeDisplayLabel || 'Sélectionner un type de produit')
                             : 'Sélectionner un type de produit'}
                 </button>
-                      {typeOpen && genre.length > 0 && (
+                      {step1Dropdown === 'type' && genre.length > 0 && (
                         <div
                           ref={typeListRef}
                           className="listing-dropdown-list"
@@ -1085,7 +1086,7 @@ setMaterialSearchQuery('');
                               onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
                                 setArticleType(opt.value);
-                                setTypeOpen(false);
+                                setStep1Dropdown(null);
                   }}
                   style={{
                                 display: 'block',
@@ -1129,10 +1130,10 @@ setMaterialSearchQuery('');
                 onChange={(e) => {
                   setMarqueSearchQuery(e.target.value);
                   if (brand && e.target.value !== brand) setBrand('');
-                  setMarqueOpen(true);
+                  setStep1Dropdown('marque');
                 }}
-                onFocus={() => { if (!marqueDisabled) setMarqueOpen(true); }}
-                onBlur={() => setTimeout(() => setMarqueOpen(false), 200)}
+                onFocus={() => { if (!marqueDisabled) setStep1Dropdown('marque'); }}
+                onBlur={blurStep1Dropdown('marque')}
                 placeholder={marquePlaceholder}
                 disabled={marqueDisabled}
                 style={{
@@ -1141,7 +1142,7 @@ setMaterialSearchQuery('');
                   opacity: marqueDisabled ? 0.7 : 1,
                 }}
               />
-              {!marqueDisabled && marqueOpen && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
+              {!marqueDisabled && step1Dropdown === 'marque' && brandOptions.filter((opt) => !marqueSearchQuery.trim() || opt.label.toLowerCase().includes(marqueSearchQuery.trim().toLowerCase())).length > 0 && (
                 <div
                   ref={marqueListRef}
                   className="listing-dropdown-list"
@@ -1179,7 +1180,7 @@ setMaterialSearchQuery('');
                           setColor('');
                           setColorSearchQuery('');
                           setCustomColor('');
-                          setMarqueOpen(false);
+                          setStep1Dropdown(null);
                         }}
                         style={{
                           display: 'block',
@@ -1218,10 +1219,10 @@ setMaterialSearchQuery('');
                         if (modeleDisabled) return;
                       setModeleSearchQuery(e.target.value);
                       if (model && e.target.value !== model) setModel('');
-                      setModeleOpen(true);
+                      setStep1Dropdown('modele');
                     }}
-                      onFocus={() => { if (!modeleDisabled) setModeleOpen(true); }}
-                    onBlur={() => setTimeout(() => setModeleOpen(false), 200)}
+                      onFocus={() => { if (!modeleDisabled) setStep1Dropdown('modele'); }}
+                    onBlur={blurStep1Dropdown('modele')}
                       placeholder={modelePlaceholder}
                       disabled={modeleDisabled}
                       style={{
@@ -1230,7 +1231,7 @@ setMaterialSearchQuery('');
                         opacity: modeleDisabled ? 0.7 : 1,
                       }}
                     />
-                    {!modeleDisabled && modeleOpen && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
+                    {!modeleDisabled && step1Dropdown === 'modele' && modelOptions.filter((name) => !modeleSearchQuery.trim() || name.toLowerCase().includes(modeleSearchQuery.trim().toLowerCase())).length > 0 && (
                     <div
                       ref={modeleListRef}
                       className="listing-dropdown-list"
@@ -1259,7 +1260,7 @@ setMaterialSearchQuery('');
                             onClick={() => {
                               setModel(name);
                               setModeleSearchQuery(name);
-                              setModeleOpen(false);
+                              setStep1Dropdown(null);
                             }}
                             style={{
                               display: 'block',
@@ -1311,10 +1312,10 @@ setMaterialSearchQuery('');
                           if (sizeDisabled) return;
                     setSizeSearchQuery(e.target.value);
                     if (size && e.target.value !== size) setSize('');
-                    setSizeOpen(true);
+                    setStep1Dropdown('size');
                   }}
-                        onFocus={() => { if (!sizeDisabled) setSizeOpen(true); }}
-                  onBlur={() => setTimeout(() => setSizeOpen(false), 200)}
+                        onFocus={() => { if (!sizeDisabled) setStep1Dropdown('size'); }}
+                  onBlur={blurStep1Dropdown('size')}
                         placeholder={sizePlaceholder}
                         disabled={sizeDisabled}
                         style={{
@@ -1323,7 +1324,7 @@ setMaterialSearchQuery('');
                           opacity: sizeDisabled ? 0.7 : 1,
                         }}
                       />
-                      {!sizeDisabled && sizeOpen && (() => {
+                      {!sizeDisabled && step1Dropdown === 'size' && (() => {
                         const m = (model || modeleSearchQuery.trim()).toLowerCase();
                         const isPantalon = category === 'vetements' && (m === 'pantalon' || m.includes('pantalon'));
                         const isJean = category === 'vetements' && (m === 'jean' || m.includes('jean'));
@@ -1362,7 +1363,7 @@ setMaterialSearchQuery('');
                           onClick={() => {
                             setSize(opt);
                             setSizeSearchQuery(opt);
-                            setSizeOpen(false);
+                            setStep1Dropdown(null);
                           }}
                           style={{
                             display: 'block',
@@ -1459,8 +1460,8 @@ setMaterialSearchQuery('');
                 )}
               <button
                 type="button"
-                onClick={() => setConditionOpen((o) => !o)}
-                onBlur={() => setTimeout(() => setConditionOpen(false), 200)}
+                onClick={() => setStep1Dropdown((d) => (d === 'condition' ? null : 'condition'))}
+                onBlur={blurStep1Dropdown('condition')}
                 style={{
                   ...inputStyle,
                   textAlign: 'left',
@@ -1475,7 +1476,7 @@ setMaterialSearchQuery('');
                 {condition ? (CONDITIONS.find((o) => o.value === condition)?.label ?? condition) : "Sélectionner l'état"}
               </button>
               </div>
-              {conditionOpen && (
+              {step1Dropdown === 'condition' && (
                 <div
                   ref={conditionListRef}
                   className="listing-dropdown-list"
@@ -1501,7 +1502,7 @@ setMaterialSearchQuery('');
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => {
                         setCondition(opt.value);
-                        setConditionOpen(false);
+                        setStep1Dropdown(null);
                       }}
                       style={{
                         display: 'block',
@@ -1535,10 +1536,10 @@ setMaterialSearchQuery('');
                       if (matiereDisabled) return;
                       setMaterialSearchQuery(e.target.value);
                       if (material && e.target.value !== (materialOptions.find((o) => o.value === material)?.label ?? '')) setMaterial('');
-                      setMaterialOpen(true);
+                      setStep1Dropdown('material');
                     }}
-                    onFocus={() => { if (!matiereDisabled) setMaterialOpen(true); }}
-                    onBlur={() => setTimeout(() => setMaterialOpen(false), 200)}
+                    onFocus={() => { if (!matiereDisabled) setStep1Dropdown('material'); }}
+                    onBlur={blurStep1Dropdown('material')}
                     placeholder={matiereDisabled ? 'Sélectionner d\'abord un modèle' : 'Rechercher ou préciser la matière…'}
                     disabled={matiereDisabled}
                     style={{
@@ -1547,7 +1548,7 @@ setMaterialSearchQuery('');
                       opacity: matiereDisabled ? 0.7 : 1,
                     }}
                   />
-                  {!matiereDisabled && materialOpen && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
+                  {!matiereDisabled && step1Dropdown === 'material' && materialOptions.filter((opt) => !materialSearchQuery.trim() || opt.label.toLowerCase().includes(materialSearchQuery.trim().toLowerCase())).length > 0 && (
                     <div
                       ref={materialListRef}
                       className="listing-dropdown-list"
@@ -1576,7 +1577,7 @@ setMaterialSearchQuery('');
                             onClick={() => {
                               setMaterial(opt.value);
                               setMaterialSearchQuery(opt.label);
-                              setMaterialOpen(false);
+                              setStep1Dropdown(null);
                             }}
                             style={{
                               display: 'block',
@@ -1621,10 +1622,10 @@ setMaterialSearchQuery('');
                       if (couleurDisabled) return;
                       setColorSearchQuery(e.target.value);
                       if (color && e.target.value !== (colorOptions.find((o) => o.value === color)?.label ?? '')) setColor('');
-                      setColorOpen(true);
+                      setStep1Dropdown('color');
                     }}
-                    onFocus={() => { if (!couleurDisabled) setColorOpen(true); }}
-                    onBlur={() => setTimeout(() => setColorOpen(false), 200)}
+                    onFocus={() => { if (!couleurDisabled) setStep1Dropdown('color'); }}
+                    onBlur={blurStep1Dropdown('color')}
                     placeholder={couleurDisabled ? 'Sélectionner d\'abord un modèle' : 'Rechercher ou préciser la couleur…'}
                     disabled={couleurDisabled}
                     style={{
@@ -1633,7 +1634,7 @@ setMaterialSearchQuery('');
                       opacity: couleurDisabled ? 0.7 : 1,
                     }}
                   />
-                  {!couleurDisabled && colorOpen && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
+                  {!couleurDisabled && step1Dropdown === 'color' && colorOptions.filter((opt) => !colorSearchQuery.trim() || opt.label.toLowerCase().includes(colorSearchQuery.trim().toLowerCase())).length > 0 && (
                     <div
                       ref={colorListRef}
                       className="listing-dropdown-list"
@@ -1662,7 +1663,7 @@ setMaterialSearchQuery('');
                             onClick={() => {
                               setColor(opt.value);
                               setColorSearchQuery(opt.label);
-                              setColorOpen(false);
+                              setStep1Dropdown(null);
                             }}
                             style={{
                               display: 'block',
