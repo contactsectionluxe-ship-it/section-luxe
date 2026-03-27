@@ -2015,19 +2015,77 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
 }
 
-/* Header desktop : espace avant compte / connexion ; même hauteur de ligne d’icônes (Favoris / Messages / Connexion) */
+/* Header : tailles d’icônes (Favoris un peu plus grand, Messages un peu plus petit, User référence 22px) */
+.header-action-icon--favoris svg {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0;
+}
+.header-action-icon--messages svg {
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0;
+}
+.header-action-icon--user svg {
+  width: 22px !important;
+  height: 22px !important;
+  flex-shrink: 0;
+}
+
+/* Libellés Favoris / Messages / Connexion / prénom : même police (Inter) et couleur, lien ou bouton */
+.header-actions > a.header-action-item > span,
+.header-actions .header-action-user > button.header-action-item > span {
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #6e6e73 !important;
+  padding: 0;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Header desktop : même axe vertical pour les 3 colonnes (icônes + textes) ; marge compte inchangée côté bouton */
 @media (min-width: 768px) {
-  .header-actions .header-action-user {
-    margin-left: 10px;
+  .header-right .header-actions {
+    align-items: flex-start !important;
   }
-  .header-actions > a {
-    justify-content: flex-start;
+  /* Le compte est dans un wrapper : « contents » aligne le bouton comme Favoris / Messages sans décaler le groupe */
+  .header-actions .header-action-user:not(a) {
+    display: contents;
   }
-  .header-actions > a > div:first-child,
-  .header-actions .header-action-user > button > div:first-child {
-    flex: 0 0 22px;
-    align-items: center;
+  /* Léger espace entre Messages et Compte / Connexion */
+  .header-actions .header-action-user > button.header-action-item,
+  .header-actions > a.header-action-user.header-action-item {
+    margin-left: 14px;
+  }
+  .header-actions > a.header-action-item,
+  .header-actions .header-action-user > button.header-action-item {
+    display: grid !important;
+    grid-template-rows: 24px auto;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+    justify-items: center;
+    align-content: start;
+    align-self: start;
     box-sizing: border-box;
+  }
+  .header-actions > a.header-action-item > div:first-child,
+  .header-actions .header-action-user > button.header-action-item > div:first-child {
+    grid-row: 1;
+    grid-column: 1;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    box-sizing: border-box;
+  }
+  .header-actions > a.header-action-item > span,
+  .header-actions .header-action-user > button.header-action-item > span {
+    grid-row: 2;
+    grid-column: 1;
   }
 }
 
@@ -2211,11 +2269,11 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   .header-actions > a > div,
   .header-actions > div > button > div:first-child {
-    width: 22px !important;
-    height: 22px !important;
+    width: 24px !important;
+    height: 24px !important;
   }
   .header-actions .header-action-user {
-    margin-left: 8px !important;
+    margin-left: 10px !important;
   }
 
   /* Boutons prev/next du carousel catégories : les garder dans l’écran */

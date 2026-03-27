@@ -11,7 +11,9 @@ const navigation = [
 
 const linkStyle = { fontSize: 15, fontWeight: 500, color: '#6e6e73', padding: '8px 0' };
 const iconSize = 22;
-const messagesHeaderIconSize = 21;
+const headerIconCellSize = 24;
+const headerFavorisIconSize = 24;
+const headerMessagesIconSize = 20;
 const iconLabelStyle = {
   display: 'flex' as const,
   flexDirection: 'column' as const,
@@ -96,23 +98,20 @@ export function HeaderFallback() {
 
         <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
           <div className="hide-mobile header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <Link href="/favoris" className="header-action-favoris" style={iconLabelStyle}>
-              <div style={iconWrapStyle}>
-                <Heart size={iconSize} strokeWidth={1.5} style={{ display: 'block', transform: 'scale(1.07)' }} aria-hidden />
-              </div>
-              <span style={headerActionLabelStyle}>Favoris</span>
+            <Link href="/favoris" className="header-action-favoris header-action-item" style={iconLabelStyle}>
+              <div className="header-action-icon header-action-icon--favoris" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
+                <Heart size={headerFavorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerFavorisIconSize, height: headerFavorisIconSize }} aria-hidden />
+              </div><span style={headerActionLabelStyle}>Favoris</span>
             </Link>
-            <Link href="/messages" style={iconLabelStyle}>
-              <div style={iconWrapStyle}>
-                <MessageCircle size={messagesHeaderIconSize} strokeWidth={1.5} style={{ display: 'block' }} aria-hidden />
-              </div>
-              <span style={headerActionLabelStyle}>Messages</span>
+            <Link href="/messages" className="header-action-messages header-action-item" style={iconLabelStyle}>
+              <div className="header-action-icon header-action-icon--messages" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
+                <MessageCircle size={headerMessagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: headerMessagesIconSize, height: headerMessagesIconSize }} aria-hidden />
+              </div><span style={headerActionLabelStyle}>Messages</span>
             </Link>
-            <Link href="/connexion" className="header-action-user" style={{ ...iconLabelStyle, minWidth: 64 }}>
-              <div style={iconWrapStyle}>
-                <User size={iconSize} strokeWidth={1.5} />
-              </div>
-              <span style={headerActionLabelStyle}>Connexion</span>
+            <Link href="/connexion" className="header-action-user header-action-item" style={{ ...iconLabelStyle, minWidth: 64 }}>
+              <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
+                <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
+              </div><span style={headerActionLabelStyle}>Connexion</span>
             </Link>
           </div>
           <div className="hide-desktop" style={{ width: 44, height: 44 }} aria-hidden />
