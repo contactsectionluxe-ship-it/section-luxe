@@ -11,6 +11,7 @@ const navigation = [
 
 const linkStyle = { fontSize: 15, fontWeight: 500, color: '#6e6e73', padding: '8px 0' };
 const iconSize = 22;
+const messagesHeaderIconSize = 21;
 const iconLabelStyle = {
   display: 'flex' as const,
   flexDirection: 'column' as const,
@@ -93,21 +94,21 @@ export function HeaderFallback() {
           ))}
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
-          <div className="hide-mobile" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <Link href="/favoris" style={iconLabelStyle}>
+        <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
+          <div className="hide-mobile header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+            <Link href="/favoris" className="header-action-favoris" style={iconLabelStyle}>
               <div style={iconWrapStyle}>
-                <Heart size={iconSize} strokeWidth={1.5} />
+                <Heart size={iconSize} strokeWidth={1.5} style={{ display: 'block', transform: 'scale(1.07)' }} aria-hidden />
               </div>
               <span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
               <div style={iconWrapStyle}>
-                <MessageCircle size={iconSize} strokeWidth={1.5} />
+                <MessageCircle size={messagesHeaderIconSize} strokeWidth={1.5} style={{ display: 'block' }} aria-hidden />
               </div>
               <span style={headerActionLabelStyle}>Messages</span>
             </Link>
-            <Link href="/connexion" style={{ ...iconLabelStyle, minWidth: 64 }}>
+            <Link href="/connexion" className="header-action-user" style={{ ...iconLabelStyle, minWidth: 64 }}>
               <div style={iconWrapStyle}>
                 <User size={iconSize} strokeWidth={1.5} />
               </div>

@@ -165,6 +165,8 @@ export function Header() {
   };
 
   const iconSize = 22;
+  /** Bulle Messages dans la barre : légèrement plus petite, cadre 22px inchangé → libellé « Messages » stable */
+  const messagesHeaderIconSize = 21;
   const iconLabelStyle = {
     display: 'flex' as const,
     flexDirection: 'column' as const,
@@ -265,13 +267,15 @@ export function Header() {
 
           <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <Link href="/favoris" style={iconLabelStyle}>
-              <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.5} /></div>
+            <Link href="/favoris" className="header-action-favoris" style={iconLabelStyle}>
+              <div style={iconWrapStyle}>
+                <Heart size={iconSize} strokeWidth={1.5} style={{ display: 'block', transform: 'scale(1.07)' }} aria-hidden />
+              </div>
               <span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
               <div style={{ position: 'relative', ...iconWrapStyle }}>
-                <MessageCircle size={iconSize} strokeWidth={1.5} />
+                <MessageCircle size={messagesHeaderIconSize} strokeWidth={1.5} style={{ display: 'block' }} aria-hidden />
                 {unreadMessages > 0 && (
                   <span
                     style={{
@@ -300,7 +304,7 @@ export function Header() {
             </Link>
             {isAuthenticated ? (
               <>
-                <div style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
+                <div className="header-action-user" style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
                   <button
                     ref={userMenuButtonRef}
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
@@ -382,7 +386,7 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <Link href="/connexion" style={{ ...iconLabelStyle, minWidth: 64 }}>
+              <Link href="/connexion" className="header-action-user" style={{ ...iconLabelStyle, minWidth: 64 }}>
                 <div style={iconWrapStyle}><User size={iconSize} strokeWidth={1.5} /></div>
                 <span style={headerActionLabelStyle}>Connexion</span>
               </Link>

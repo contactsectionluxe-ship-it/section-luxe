@@ -2015,6 +2015,22 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
 }
 
+/* Header desktop : espace avant compte / connexion ; même hauteur de ligne d’icônes (Favoris / Messages / Connexion) */
+@media (min-width: 768px) {
+  .header-actions .header-action-user {
+    margin-left: 10px;
+  }
+  .header-actions > a {
+    justify-content: flex-start;
+  }
+  .header-actions > a > div:first-child,
+  .header-actions .header-action-user > button > div:first-child {
+    flex: 0 0 22px;
+    align-items: center;
+    box-sizing: border-box;
+  }
+}
+
 /* Catalogue : squelettes de chargement premium (shimmer fluide) */
 @keyframes catalogue-skeleton-shimmer {
   0% { background-position: -150% 0; }
@@ -2197,6 +2213,9 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .header-actions > div > button > div:first-child {
     width: 22px !important;
     height: 22px !important;
+  }
+  .header-actions .header-action-user {
+    margin-left: 8px !important;
   }
 
   /* Boutons prev/next du carousel catégories : les garder dans l’écran */
