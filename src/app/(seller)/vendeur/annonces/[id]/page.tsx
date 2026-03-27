@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,6 +135,35 @@ export default function EditListingPage() {
   const materialListRef = useRef<HTMLDivElement>(null);
   const colorListRef = useRef<HTMLDivElement>(null);
   const sizeListRef = useRef<HTMLDivElement>(null);
+  const categoryFieldRef = useRef<HTMLDivElement>(null);
+  const typeFieldRef = useRef<HTMLDivElement>(null);
+  const marqueFieldRef = useRef<HTMLDivElement>(null);
+  const modeleFieldRef = useRef<HTMLDivElement>(null);
+  const sizeFieldRef = useRef<HTMLDivElement>(null);
+  const materialFieldRef = useRef<HTMLDivElement>(null);
+  const colorFieldRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!step1Dropdown) return;
+    const fieldRefs: Record<Step1DropdownId, RefObject<HTMLDivElement | null>> = {
+      category: categoryFieldRef,
+      type: typeFieldRef,
+      marque: marqueFieldRef,
+      modele: modeleFieldRef,
+      size: sizeFieldRef,
+      condition: etatInfoRef,
+      material: materialFieldRef,
+      color: colorFieldRef,
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const root = fieldRefs[step1Dropdown]?.current;
+      if (root?.contains(e.target as Node)) return;
+      setStep1Dropdown(null);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [step1Dropdown]);
+
   const [condition, setCondition] = useState('');
   const [material, setMaterial] = useState('');
   const [materialSearchQuery, setMaterialSearchQuery] = useState('');
@@ -943,7 +972,7 @@ export default function EditListingPage() {
                 </button>
               </div>
             </div>
-            <div style={{ marginBottom: 18, position: 'relative' }}>
+            <div ref={categoryFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Catégorie <span style={{ color: '#1d1d1f' }}>*</span></label>
               <button
                 type="button"
@@ -1027,7 +1056,7 @@ setMaterialSearchQuery('');
               )}
             </div>
             {(category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && (
-              <div style={{ marginBottom: 18, position: 'relative' }}>
+              <div ref={typeFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
                 <label style={labelStyle}>Type de produit <span style={{ color: '#1d1d1f' }}>*</span></label>
                 {(() => {
                   const articleTypeOptions = category === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : category === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : category === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : category === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
@@ -1117,7 +1146,7 @@ setMaterialSearchQuery('');
                 <input type="text" value={customCategory} onChange={(e) => setCustomCategory(e.target.value)} placeholder="Indiquez la catégorie" style={inputStyle} />
               </div>
             )}
-            <div style={{ marginBottom: 18, position: 'relative' }}>
+            <div ref={marqueFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Marque <span style={{ color: '#1d1d1f' }}>*</span></label>
               {(() => {
                 const marqueDisabled = !category || genre.length === 0 || (hasTypeCategory && !articleType);
@@ -1203,7 +1232,7 @@ setMaterialSearchQuery('');
                 );
               })()}
             </div>
-            <div style={{ marginBottom: 18, position: 'relative' }}>
+            <div ref={modeleFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Modèle <span style={{ color: '#1d1d1f' }}>*</span></label>
               {(() => {
                 const hasMarque = !!(brand || marqueSearchQuery.trim());
@@ -1297,7 +1326,7 @@ setMaterialSearchQuery('');
               })()}
             </div>
             {(category === 'chaussures' || category === 'vetements') && (
-              <div style={{ marginBottom: 18, position: 'relative' }}>
+              <div ref={sizeFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
                 <label style={labelStyle}>{category === 'chaussures' ? 'Pointure' : 'Taille'}</label>
                 {(() => {
                   const hasModele = !!(model || modeleSearchQuery.trim() || customModel.trim());
@@ -1522,7 +1551,7 @@ setMaterialSearchQuery('');
                 </div>
               )}
             </div>
-            <div style={{ marginBottom: 18, position: 'relative' }}>
+            <div ref={materialFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Matière</label>
               {(() => {
                 const hasModel = modelOptions.length > 0 ? !!(model || modeleSearchQuery.trim()) : !!customModel.trim();
@@ -1608,7 +1637,7 @@ setMaterialSearchQuery('');
               );
               })()}
             </div>
-            <div style={{ marginBottom: 18, position: 'relative' }}>
+            <div ref={colorFieldRef} style={{ marginBottom: 18, position: 'relative' }}>
               <label style={labelStyle}>Couleur</label>
               {(() => {
                 const hasModel = modelOptions.length > 0 ? !!(model || modeleSearchQuery.trim()) : !!customModel.trim();
