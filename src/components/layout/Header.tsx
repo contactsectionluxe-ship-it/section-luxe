@@ -172,9 +172,11 @@ export function Header() {
     gap: 2,
     padding: '10px 10px',
     minWidth: 64,
+    maxWidth: 64,
     fontSize: 12,
     fontWeight: linkStyle.fontWeight,
     color: linkStyle.color,
+    boxSizing: 'border-box' as const,
   };
   const iconWrapStyle = {
     width: iconSize,
@@ -183,6 +185,18 @@ export function Header() {
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
     color: '#1d1d1f',
+    flexShrink: 0,
+  };
+  /** Libellés sous les icônes (Favoris, Messages, prénom) : même largeur et centrage pour s’aligner entre eux */
+  const headerActionLabelStyle = {
+    display: 'block' as const,
+    width: 64,
+    maxWidth: 64,
+    textAlign: 'center' as const,
+    lineHeight: 1.2,
+    overflow: 'hidden' as const,
+    textOverflow: 'ellipsis' as const,
+    whiteSpace: 'nowrap' as const,
   };
 
   return (
@@ -218,8 +232,14 @@ export function Header() {
             gap: 16,
           }}
         >
-          <Link href="/" className="header-logo-link" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
-            <img src="/logo.png" alt="Section Luxe" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
+          <Link
+            href="/"
+            className="header-logo-link"
+            aria-label="Accueil — Section Luxe"
+            title="Accueil"
+            style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start', position: 'relative', zIndex: 1 }}
+          >
+            <img src="/logo.png" alt="" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
           </Link>
 
           <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
@@ -247,11 +267,11 @@ export function Header() {
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
             <Link href="/favoris" style={iconLabelStyle}>
               <div style={iconWrapStyle}><Heart size={iconSize} strokeWidth={1.5} /></div>
-              <span>Favoris</span>
+              <span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
               <div style={{ position: 'relative', ...iconWrapStyle }}>
-                <MessageCircle size={20} strokeWidth={1.5} />
+                <MessageCircle size={iconSize} strokeWidth={1.5} />
                 {unreadMessages > 0 && (
                   <span
                     style={{
@@ -276,11 +296,11 @@ export function Header() {
                   </span>
                 )}
               </div>
-              <span>Messages</span>
+              <span style={headerActionLabelStyle}>Messages</span>
             </Link>
             {isAuthenticated ? (
               <>
-                <div style={{ position: 'relative', minWidth: 64 }}>
+                <div style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
                   <button
                     ref={userMenuButtonRef}
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
@@ -292,10 +312,10 @@ export function Header() {
                       fontFamily: 'inherit',
                     }}
                   >
-                    <div style={{ ...iconWrapStyle, width: 24, height: 24 }}>
-                      <User size={24} strokeWidth={1.5} />
+                    <div style={iconWrapStyle}>
+                      <User size={iconSize} strokeWidth={1.5} />
                     </div>
-                    <span style={{ width: 64, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
+                    <span style={headerActionLabelStyle}>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
                   </button>
                   {userMenuOpen && (
                     <div
@@ -363,8 +383,8 @@ export function Header() {
               </>
             ) : (
               <Link href="/connexion" style={{ ...iconLabelStyle, minWidth: 64 }}>
-                <div style={{ ...iconWrapStyle, width: 24, height: 24 }}><User size={24} strokeWidth={1.5} /></div>
-                <span style={{ width: 64, textAlign: 'center' }}>Connexion</span>
+                <div style={iconWrapStyle}><User size={iconSize} strokeWidth={1.5} /></div>
+                <span style={headerActionLabelStyle}>Connexion</span>
               </Link>
             )}
             </div>

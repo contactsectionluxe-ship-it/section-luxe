@@ -18,9 +18,11 @@ const iconLabelStyle = {
   gap: 2,
   padding: '10px 10px',
   minWidth: 64,
+  maxWidth: 64,
   fontSize: 12,
   fontWeight: 500,
   color: '#6e6e73',
+  boxSizing: 'border-box' as const,
 };
 const iconWrapStyle = {
   width: iconSize,
@@ -29,6 +31,17 @@ const iconWrapStyle = {
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   color: '#1d1d1f',
+  flexShrink: 0,
+};
+const headerActionLabelStyle = {
+  display: 'block' as const,
+  width: 64,
+  maxWidth: 64,
+  textAlign: 'center' as const,
+  lineHeight: 1.2,
+  overflow: 'hidden' as const,
+  textOverflow: 'ellipsis' as const,
+  whiteSpace: 'nowrap' as const,
 };
 
 /** Fallback du header : logo + menu toujours visibles, seul le libellé "Connexion" à droite peut être remplacé par le nom utilisateur après chargement. */
@@ -62,8 +75,14 @@ export function HeaderFallback() {
           gap: 16,
         }}
       >
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start' }}>
-          <img src="/logo.png" alt="Section Luxe" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
+        <Link
+          href="/"
+          className="header-logo-link"
+          aria-label="Accueil — Section Luxe"
+          title="Accueil"
+          style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start', position: 'relative', zIndex: 1 }}
+        >
+          <img src="/logo.png" alt="" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
         </Link>
 
         <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
@@ -80,19 +99,19 @@ export function HeaderFallback() {
               <div style={iconWrapStyle}>
                 <Heart size={iconSize} strokeWidth={1.5} />
               </div>
-              <span>Favoris</span>
+              <span style={headerActionLabelStyle}>Favoris</span>
             </Link>
             <Link href="/messages" style={iconLabelStyle}>
               <div style={iconWrapStyle}>
-                <MessageCircle size={20} strokeWidth={1.5} />
+                <MessageCircle size={iconSize} strokeWidth={1.5} />
               </div>
-              <span>Messages</span>
+              <span style={headerActionLabelStyle}>Messages</span>
             </Link>
             <Link href="/connexion" style={{ ...iconLabelStyle, minWidth: 64 }}>
-              <div style={{ ...iconWrapStyle, width: 24, height: 24 }}>
-                <User size={24} strokeWidth={1.5} />
+              <div style={iconWrapStyle}>
+                <User size={iconSize} strokeWidth={1.5} />
               </div>
-              <span style={{ width: 64, textAlign: 'center' }}>Connexion</span>
+              <span style={headerActionLabelStyle}>Connexion</span>
             </Link>
           </div>
           <div className="hide-desktop" style={{ width: 44, height: 44 }} aria-hidden />
