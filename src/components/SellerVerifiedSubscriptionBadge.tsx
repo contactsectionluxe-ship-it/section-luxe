@@ -1,11 +1,18 @@
 import type { CSSProperties } from 'react';
 import type { SubscriptionTier } from '@/lib/subscription';
 
-export type SellerVerifiedSubscriptionBadgeVariant = 'annonce' | 'catalogueGrid' | 'catalogueLine';
+export type SellerVerifiedSubscriptionBadgeVariant =
+  | 'annonce'
+  | 'catalogueGrid'
+  | 'catalogueLine'
+  /** Grille « À la une » : même taille que catalogueGrid, gris plus clair que le libellé vendeur. */
+  | 'homeFeatured'
+  /** Fiche produit : même gris que les cartes catalogue (#aeaeb2), taille compacte comme `annonce` (0.88em). */
+  | 'produit';
 
 type Props = {
   tier: SubscriptionTier;
-  /** annonce : taille relative. Catalogue : MapPin + currentColor. Même gris #86868b partout (ligne vendeur catalogue). */
+  /** annonce : compact #86868b. produit : compact #aeaeb2 (comme cartes catalogue). Catalogue : currentColor. homeFeatured : #aeaeb2 + taille grille. */
   variant?: SellerVerifiedSubscriptionBadgeVariant;
 };
 
@@ -14,6 +21,9 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
   if (tier !== 'plus' && tier !== 'pro') return null;
 
   const isCatalogue = variant === 'catalogueGrid' || variant === 'catalogueLine';
+  const isHomeFeatured = variant === 'homeFeatured';
+  const isProduit = variant === 'produit';
+  const useCatalogueSizing = isCatalogue || isHomeFeatured;
   const catalogueIconEm = variant === 'catalogueLine' ? '1.16em' : '1.22em';
 
   /**
@@ -29,22 +39,22 @@ export function SellerVerifiedSubscriptionBadge({ tier, variant = 'annonce' }: P
     padding: 0,
     lineHeight: 0,
     flexShrink: 0,
-    ...(isCatalogue ? {} : { transform: 'translateY(0.05em)' }),
+    ...(useCatalogueSizing ? {} : { transform: 'translateY(0.05em)' }),
   };
 
-  const svgStyle: CSSProperties = isCatalogue
+  const svgStyle: CSSProperties = useCatalogueSizing
     ? {
         width: catalogueIconEm,
         height: catalogueIconEm,
         flexShrink: 0,
-        color: 'currentColor',
+        color: isHomeFeatured ? '#aeaeb2' : 'currentColor',
         display: 'block',
       }
     : {
         width: '0.88em',
         height: '0.88em',
         flexShrink: 0,
-        color: '#86868b',
+        color: isProduit ? '#aeaeb2' : '#86868b',
         display: 'block',
       };
 

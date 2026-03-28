@@ -10,6 +10,7 @@ import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
+import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -24,10 +25,14 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(Number(price)));
 }
+
+/** Cartes « À la une » : alignées sur `connexion-form-box`. */
+const CONNEXION_FORM_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
+const CONNEXION_FORM_CARD_RADIUS = 18;
 
 const CATEGORIES_VISIBLE = 4;
 const CATEGORY_GAP = 12;
@@ -502,9 +507,9 @@ export default function HomeContent() {
                     display: 'flex',
                     flexDirection: 'column',
                     backgroundColor: '#fff',
-                    borderRadius: 12,
+                    borderRadius: CONNEXION_FORM_CARD_RADIUS,
                     border: '1px solid #e8e6e3',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                    boxShadow: CONNEXION_FORM_CARD_SHADOW,
                     overflow: 'hidden',
                     minWidth: 0,
                     ['--skeleton-index' as string]: i,
@@ -529,6 +534,7 @@ export default function HomeContent() {
                       gap: 6,
                       minWidth: 0,
                       minHeight: 118,
+                      backgroundColor: '#fff',
                     }}
                   >
                     <p style={{ margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 12 }}>
@@ -563,9 +569,9 @@ export default function HomeContent() {
                       display: 'flex',
                       flexDirection: 'column',
                       backgroundColor: '#fff',
-                      borderRadius: 12,
+                      borderRadius: CONNEXION_FORM_CARD_RADIUS,
                       border: '1px solid #e8e6e3',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      boxShadow: CONNEXION_FORM_CARD_SHADOW,
                       overflow: 'hidden',
                       minWidth: 0,
                     }}
@@ -581,14 +587,14 @@ export default function HomeContent() {
                     >
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="(max-width: 640px) 50vw, 25vw" />
                     </div>
-                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
+                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                           <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
-                          <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="catalogueGrid" />
+                          <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="homeFeatured" />
                         </span>
                         {listing.sellerPostcode && (
-                          <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
+                          <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
                             <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
                             {listing.sellerPostcode}
                           </span>
@@ -617,7 +623,7 @@ export default function HomeContent() {
                           </h3>
                         );
                       })()}
-                      <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
+                      <ListingCaracteristiques listing={listing} variant="homeFeatured" className="catalogue-listing-caracteristiques" />
                       <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
                         <span style={{ fontSize: 17, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                       </div>
@@ -682,11 +688,10 @@ export default function HomeContent() {
           }}
         />
         <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
-          <h2
+          <FluidOneLineHeading
             className="home-section-vendeur-cta-title"
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 'clamp(24px, 4vw, 32px)',
               fontWeight: 500,
               color: '#1d1d1f',
               marginBottom: 16,
@@ -694,7 +699,7 @@ export default function HomeContent() {
             }}
           >
             Vous êtes un vendeur professionnel ?
-          </h2>
+          </FluidOneLineHeading>
           <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>

@@ -20,7 +20,7 @@ import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
-import { getDealLevel, getBarPositionFromDeal } from '@/lib/deal';
+import { getDealLevel, getBarPositionFromDeal, DEAL_MARKET_BAR_SEGMENT_COLORS } from '@/lib/deal';
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
@@ -830,10 +830,10 @@ export default function ProductPage() {
                       <button
                         type="button"
                         onClick={() => setShowPrixPopup(true)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 12, fontWeight: 500, lineHeight: 1, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
-                        <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Euro size={9} color="#fff" strokeWidth={2.5} />
+                        <span style={{ width: 13, height: 13, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Euro size={8} color="#fff" strokeWidth={2.5} />
                         </span>
                         {deal.label}
                       </button>
@@ -923,7 +923,7 @@ export default function ProductPage() {
                         <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
                           <h3>{seller.companyName}</h3>
                         </Link>
-                        <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                        <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
                       </div>
                       <p style={{ fontSize: 14, color: '#888', margin: 0, lineHeight: 1.25 }}>Vendeur professionnel</p>
                     </div>
@@ -1204,10 +1204,10 @@ export default function ProductPage() {
                       <button
                         type="button"
                         onClick={() => setShowPrixPopup(true)}
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 12, fontWeight: 500, lineHeight: 1, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
                       >
-                        <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Euro size={10} color="#fff" strokeWidth={2.5} />
+                        <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Euro size={8} color="#fff" strokeWidth={2.5} />
                         </span>
                         {deal.label}
                       </button>
@@ -1216,10 +1216,9 @@ export default function ProductPage() {
                 </div>
                 <div style={{ position: 'relative', marginBottom: 12 }}>
                   <div style={{ height: 8, display: 'flex', gap: 2, borderRadius: 4, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
-                    <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
-                    <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
-                    <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
-                    <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+                    {DEAL_MARKET_BAR_SEGMENT_COLORS.map((c) => (
+                      <div key={c} style={{ flex: 1, backgroundColor: c }} />
+                    ))}
                   </div>
                   {priceStats && (
                     <div
@@ -1436,10 +1435,10 @@ export default function ProductPage() {
                         <button
                           type="button"
                           onClick={() => setShowPrixPopup(true)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 11, fontWeight: 500, lineHeight: 1, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
-                          <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Euro size={8} color="#fff" strokeWidth={2.5} />
+                          <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Euro size={7} color="#fff" strokeWidth={2.5} />
                           </span>
                           {deal.label}
                         </button>
@@ -1529,7 +1528,7 @@ export default function ProductPage() {
                           <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-nom-lien" title={seller.companyName}>
                             <h3>{seller.companyName}</h3>
                           </Link>
-                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
                         </div>
                         <p style={{ fontSize: 13, color: '#888', margin: 0, lineHeight: 1.25 }}>Vendeur professionnel</p>
                       </div>
@@ -1795,10 +1794,10 @@ export default function ProductPage() {
                         <button
                           type="button"
                           onClick={() => setShowPrixPopup(true)}
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 5, fontSize: 11, fontWeight: 500, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 11, fontWeight: 500, lineHeight: 1, color: deal.color, cursor: 'pointer', fontFamily: 'inherit' }}
                         >
-                          <span style={{ width: 16, height: 16, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <Euro size={9} color="#fff" strokeWidth={2.5} />
+                          <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Euro size={7} color="#fff" strokeWidth={2.5} />
                           </span>
                           {deal.label}
                         </button>
@@ -1807,10 +1806,9 @@ export default function ProductPage() {
                   </div>
                   <div style={{ position: 'relative', marginBottom: 10 }}>
                     <div style={{ height: 6, display: 'flex', gap: 1, borderRadius: 3, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
-                      <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
-                      <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
-                      <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
-                      <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+                      {DEAL_MARKET_BAR_SEGMENT_COLORS.map((c) => (
+                        <div key={c} style={{ flex: 1, backgroundColor: c }} />
+                      ))}
                     </div>
                     {priceStats && (
                       <div
@@ -1967,7 +1965,7 @@ export default function ProductPage() {
                 <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-map-seller-link" title={seller.companyName}>
                   {seller.companyName}
                 </Link>
-                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
               </p>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
@@ -2426,9 +2424,9 @@ Ces données sont utilisées pour :`}
               {priceStats && (() => {
                 const deal = getDealLevel(listing.price, priceStats.average);
                 return (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 10px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 6, fontSize: 12, fontWeight: 500, color: deal.color }}>
-                    <span style={{ width: 18, height: 18, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Euro size={10} color="#fff" strokeWidth={2.5} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 8px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 12, fontWeight: 500, lineHeight: 1, color: deal.color }}>
+                    <span style={{ width: 14, height: 14, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Euro size={8} color="#fff" strokeWidth={2.5} />
                     </span>
                     {deal.label}
                   </span>
@@ -2437,10 +2435,9 @@ Ces données sont utilisées pour :`}
             </div>
             <div style={{ position: 'relative', marginBottom: 12 }}>
               <div style={{ height: 8, display: 'flex', gap: 2, borderRadius: 4, overflow: 'hidden', backgroundColor: '#e5e5e7' }}>
-                <div style={{ flex: 1, backgroundColor: '#248a3d' }} />
-                <div style={{ flex: 1, backgroundColor: '#5cb85c' }} />
-                <div style={{ flex: 1, backgroundColor: '#6e6e73' }} />
-                <div style={{ flex: 1, backgroundColor: '#ff9500' }} />
+                {DEAL_MARKET_BAR_SEGMENT_COLORS.map((c) => (
+                  <div key={c} style={{ flex: 1, backgroundColor: c }} />
+                ))}
               </div>
               {priceStats && (
                 <div style={{ position: 'absolute', left: `${getBarPositionFromDeal(getDealLevel(listing.price, priceStats.average)) * 100}%`, top: -4, width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '6px solid #1d1d1f', transform: 'translateX(-50%)' }} />

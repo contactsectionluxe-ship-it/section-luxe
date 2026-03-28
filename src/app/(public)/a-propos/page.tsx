@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
 
 const LINE_HEIGHT = 1.75;
 const FONT_SIZE = 16;
@@ -225,11 +226,10 @@ export default function AProposPage() {
           }}
         />
         <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
-          <h2
+          <FluidOneLineHeading
             className="home-section-vendeur-cta-title"
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 'clamp(24px, 4vw, 32px)',
               fontWeight: 500,
               color: '#1d1d1f',
               marginBottom: 16,
@@ -237,7 +237,7 @@ export default function AProposPage() {
             }}
           >
             Vous êtes un vendeur professionnel ?
-          </h2>
+          </FluidOneLineHeading>
           <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>

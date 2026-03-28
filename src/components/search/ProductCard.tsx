@@ -17,9 +17,9 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(Number(price)));
 }
 
 export function ProductCard({ listing, isFavorited = false, onAuthRequired }: ProductCardProps) {

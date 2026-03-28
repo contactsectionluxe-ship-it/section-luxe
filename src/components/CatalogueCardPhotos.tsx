@@ -1,12 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
-const arrowSize = 14;
-
-/** Carousel discret pour les photos des cartes catalogue : flèches gauche/droite si plusieurs photos, swipe au doigt. */
+/** Photos des cartes catalogue : plusieurs images en carrousel par swipe (pas de flèches sur la vignette). */
 export function CatalogueCardPhotos({
   photos,
   alt,
@@ -33,18 +30,6 @@ export function CatalogueCardPhotos({
     },
     [validPhotos.length]
   );
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    goTo(index - 1);
-  };
-
-  const handleNext = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    goTo(index + 1);
-  };
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
@@ -76,56 +61,6 @@ export function CatalogueCardPhotos({
       onTouchEnd={handleTouchEnd}
     >
       <ListingPhoto src={currentPhoto} alt={alt} sizes={sizes} quality={LISTING_PHOTO_QUALITY_SHARP} />
-      {validPhotos.length > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label="Photo précédente"
-            onClick={handlePrev}
-            style={{
-              position: 'absolute',
-              left: 6,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 28,
-              height: 28,
-              border: 'none',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'transparent',
-              color: 'rgba(0,0,0,0.45)',
-              cursor: 'pointer',
-            }}
-          >
-            <ChevronLeft size={arrowSize} strokeWidth={2} />
-          </button>
-          <button
-            type="button"
-            aria-label="Photo suivante"
-            onClick={handleNext}
-            style={{
-              position: 'absolute',
-              right: 6,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: 28,
-              height: 28,
-              border: 'none',
-              padding: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'transparent',
-              color: 'rgba(0,0,0,0.45)',
-              cursor: 'pointer',
-            }}
-          >
-            <ChevronRight size={arrowSize} strokeWidth={2} />
-          </button>
-        </>
-      )}
     </div>
   );
 }

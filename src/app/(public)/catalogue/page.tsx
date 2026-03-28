@@ -58,6 +58,10 @@ const iconColor = '#6e6e73';
 const PAGE_SIZE_DEFAULT = 21;
 const PAGE_SIZE_MOBILE_GRID = 20;
 
+/** Grille catalogue : même carte que la page d’accueil « À la une » (connexion-form-box). */
+const CATALOGUE_GRID_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
+const CATALOGUE_GRID_CARD_RADIUS = 18;
+
 const SORT_OPTIONS = [
   { value: 'date_desc', label: 'Plus récents' },
   { value: 'date_asc', label: 'Plus anciens' },
@@ -113,9 +117,9 @@ function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(Math.round(Number(price)));
 }
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni apostrophes (ex. "Île-de-France" → "iledefrance"). */
@@ -4096,7 +4100,7 @@ function CatalogueContent() {
                               </h2>
                             </Link>
                           )}
-                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                          <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
                         </div>
                         <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
                           {listings.length} annonce{listings.length !== 1 ? 's' : ''}
@@ -4262,7 +4266,9 @@ function CatalogueContent() {
                 const count = viewMode === 'grid' ? 9 : 6;
                 return (
                   <div
-                    className="catalogue-results"
+                    className={
+                      viewMode === 'grid' ? 'catalogue-results catalogue-results-grid' : 'catalogue-results catalogue-results-line'
+                    }
                     style={{
                       display: viewMode === 'grid' ? 'grid' : 'flex',
                       gridTemplateColumns: viewMode === 'grid' ? 'repeat(3, 1fr)' : undefined,
@@ -4279,10 +4285,10 @@ function CatalogueContent() {
                           display: 'flex',
                           flexDirection: viewMode === 'grid' ? 'column' : 'row',
                           backgroundColor: '#fff',
-                          borderRadius: viewMode === 'grid' ? 12 : 8,
+                          borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                           overflow: 'hidden',
                           border: '1px solid #e8e6e3',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                          boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                           minWidth: 0,
                           minHeight: viewMode === 'grid' ? undefined : 56,
                           position: 'relative',
@@ -4299,7 +4305,19 @@ function CatalogueContent() {
                             borderRight: viewMode === 'grid' ? undefined : '1px solid #e8e6e3',
                           }}
                         />
-                        <div style={{ padding: viewMode === 'grid' ? '14px 14px 10px' : '10px 48px 10px 14px', flex: 1, minWidth: 0, minHeight: viewMode === 'grid' ? 'calc(112px + 2mm)' : undefined, display: 'flex', flexDirection: 'column', gap: viewMode === 'grid' ? 6 : 8, justifyContent: viewMode === 'grid' ? undefined : 'space-between' }}>
+                        <div
+                          style={{
+                            padding: viewMode === 'grid' ? '14px 14px 10px' : '10px 48px 10px 14px',
+                            flex: 1,
+                            minWidth: 0,
+                            minHeight: viewMode === 'grid' ? 'calc(112px + 2mm)' : undefined,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: viewMode === 'grid' ? 6 : 8,
+                            justifyContent: viewMode === 'grid' ? undefined : 'space-between',
+                            ...(viewMode === 'grid' ? { borderTop: '1px solid #e8e6e3', backgroundColor: '#fff' } : { backgroundColor: '#fff' }),
+                          }}
+                        >
                           {viewMode === 'grid' ? (
                             <>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 12 }}>
@@ -4307,7 +4325,7 @@ function CatalogueContent() {
                                 <div className="catalogue-skeleton" style={{ height: 12, width: 60, flexShrink: 0 }} />
                               </div>
                               <div className="catalogue-skeleton" style={{ height: 16, width: '92%' }} />
-                              <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap', marginBottom: 6 }}>
+                              <div style={{ display: 'flex', gap: '6px 12px', flexWrap: 'wrap', marginBottom: 5 }}>
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 60 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 70 }} />
                                 <div className="catalogue-skeleton" style={{ height: 13, width: 55 }} />
@@ -4373,7 +4391,7 @@ function CatalogueContent() {
               }
               if (viewMode === 'grid') {
                 return (
-              <div className="catalogue-results" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
+              <div className="catalogue-results catalogue-results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
                   <Link
                     key={listing.id}
@@ -4387,10 +4405,10 @@ function CatalogueContent() {
                         display: 'flex',
                         flexDirection: 'column',
                         backgroundColor: '#fff',
-                        borderRadius: 12,
+                        borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                         overflow: 'hidden',
                         border: '1px solid #e8e6e3',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                         minWidth: 0,
                       }}
                     >
@@ -4434,15 +4452,15 @@ function CatalogueContent() {
                           sizes="(max-width: 768px) 50vw, (max-width: 1400px) 33vw, min(440px, 28vw)"
                         />
                       </div>
-                      <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                        <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
+                        <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                           <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                             <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
-                            <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="catalogueGrid" />
+                            <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant={filters.sellerId ? 'produit' : 'homeFeatured'} />
                           </span>
                           {listing.sellerPostcode && (
-                            <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
-                              <MapPin size={13} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
+                            <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
+                              <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
                               {listing.sellerPostcode}
                             </span>
                           )}
@@ -4455,15 +4473,15 @@ function CatalogueContent() {
                         </h3>
                           );
                         })()}
-                        <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
+                        <ListingCaracteristiques listing={listing} variant="homeFeatured" className="catalogue-listing-caracteristiques" />
                         <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
                           <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                           {dealByListingId[listing.id] && (() => {
                             const deal = dealByListingId[listing.id]!;
                             return (
-                              <span className="catalogue-listing-deal-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 2, padding: '3px 6px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 4, fontSize: 10, fontWeight: 500, color: deal.color, whiteSpace: 'nowrap' }}>
-                                <span style={{ width: 13, height: 13, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                  <Euro size={7} color="#fff" strokeWidth={2.5} />
+                              <span className="catalogue-listing-deal-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 5px', backgroundColor: '#fff', border: `1px solid ${deal.color}`, borderRadius: 3, fontSize: 11, fontWeight: 500, lineHeight: 1, color: deal.color, whiteSpace: 'nowrap' }}>
+                                <span style={{ width: 11, height: 11, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Euro size={6} color="#fff" strokeWidth={2.5} />
                                 </span>
                                 {deal.label}
                               </span>
@@ -4478,7 +4496,7 @@ function CatalogueContent() {
                 );
               }
               return (
-              <div className="catalogue-results" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
+              <div className="catalogue-results catalogue-results-line" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
                 {paginatedListings.map((listing) => (
                   <Link
                     key={listing.id}
@@ -4493,10 +4511,10 @@ function CatalogueContent() {
                         display: 'flex',
                         flexDirection: 'row',
                         backgroundColor: '#fff',
-                        borderRadius: 8,
+                        borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                         overflow: 'hidden',
                         border: '1px solid #e8e6e3',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                        boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                         minHeight: 56,
                         minWidth: 0,
                       }}
@@ -4563,14 +4581,29 @@ function CatalogueContent() {
                           {(() => {
                             const lineText = listing.title || '';
                             return (
-                              <h3 title={lineText} className="catalogue-line-title" style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 4, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                              <h3
+                                title={lineText}
+                                className="catalogue-line-title"
+                                style={{
+                                  fontSize: 20,
+                                  fontWeight: 600,
+                                  color: '#1d1d1f',
+                                  margin: 0,
+                                  marginBottom: 4,
+                                  minWidth: 0,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  lineHeight: 1.4,
+                                }}
+                              >
                                 {highlightSearchTerms(lineText, filters.query)}
                           </h3>
                             );
                           })()}
-                          <ListingCaracteristiques listing={listing} variant="line" className="catalogue-listing-caracteristiques" />
+                          <ListingCaracteristiques listing={listing} variant="lineCatalogue" className="catalogue-listing-caracteristiques" />
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <p className="catalogue-listing-prix" style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.4 }}>
+                            <p className="catalogue-listing-prix" style={{ fontSize: 19, fontWeight: 600, color: '#1d1d1f', margin: 0, lineHeight: 1.3 }}>
                               {formatPrice(listing.price)}
                             </p>
                             {dealByListingId[listing.id] && (() => {
@@ -4581,20 +4614,21 @@ function CatalogueContent() {
                         style={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: 3,
-                                    padding: '4px 7px',
-                                    marginLeft: 4,
+                                    gap: 4,
+                                    padding: '3px 6px',
+                                    marginLeft: 2,
                                     backgroundColor: '#fff',
                                     border: `1px solid ${deal.color}`,
-                                    borderRadius: 4,
+                                    borderRadius: 3,
                                     fontSize: 11,
                           fontWeight: 500,
+                                    lineHeight: 1,
                                     color: deal.color,
                           whiteSpace: 'nowrap',
                         }}
                       >
-                                  <span style={{ width: 15, height: 15, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <Euro size={9} color="#fff" strokeWidth={2.5} />
+                                  <span style={{ width: 12, height: 12, borderRadius: '50%', backgroundColor: deal.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <Euro size={7} color="#fff" strokeWidth={2.5} />
                                   </span>
                                   {deal.label}
                                 </span>
@@ -4602,17 +4636,17 @@ function CatalogueContent() {
                             })()}
                           </div>
                         </div>
-                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, paddingBottom: 4, marginTop: 2, display: 'flex', alignItems: 'center', minHeight: 36 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 500, color: '#86868b', lineHeight: 1.4, minWidth: 0, width: '100%', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        <div className="catalogue-listing-vendeur-block" style={{ borderTop: '1px solid #e8e6e3', paddingTop: 8, paddingBottom: 4, marginTop: 2, display: 'flex', alignItems: 'center', minHeight: 36, backgroundColor: '#fff' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontSize: 13, fontWeight: 400, color: '#86868b', lineHeight: 1.2, minWidth: 0, width: '100%', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                             <span className="catalogue-listing-vendeur-nom-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                               <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {listing.sellerName}
                               </span>
-                              <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="catalogueLine" />
+                              <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant={filters.sellerId ? 'produit' : 'homeFeatured'} />
                             </span>
                           {listing.sellerPostcode && (
-                              <span className="catalogue-listing-codepostal" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                              <MapPin size={18} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} /> {listing.sellerPostcode}
+                              <span className="catalogue-listing-codepostal" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1.2, fontWeight: 400, flexShrink: 0, letterSpacing: 0.5 }}>
+                              <MapPin size={15} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} /> {listing.sellerPostcode}
                               </span>
                           )}
                           </div>
@@ -4778,7 +4812,7 @@ function CatalogueContent() {
                 <Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>
                   {seller.companyName}
                 </Link>
-                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} />
+                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
               </div>
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>

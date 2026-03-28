@@ -5,13 +5,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/** Affichage prix d’annonce : euros entiers uniquement (pas de ,00). */
 export function formatPrice(price: number): string {
+  const n = Math.round(Number(price));
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(n);
 }
 
 /**
@@ -61,6 +63,28 @@ export function sanitizePriceInputWhileTyping(raw: string): string {
   const sep = Math.max(lastComma, lastDot);
   if (sep === -1) return v;
   return v.slice(0, sep + 1) + v.slice(sep + 1).replace(/[^0-9]/g, '').slice(0, 2);
+}
+
+/**
+ * Prix d’annonce (création / édition) : euros entiers uniquement.
+ * Tout ce qui suit la première virgule ou le premier point est ignoré (pas de centimes).
+ */
+export function sanitizeListingPriceInputWhileTyping(raw: string): string {
+  let s = String(raw).trim().replace(WEIRD_COMMAS, ',');
+  const sepIdx = s.search(/[,.]/);
+  if (sepIdx !== -1) s = s.slice(0, sepIdx);
+  s = s.replace(/[^\d]/g, '');
+  if (s.length > 1) s = s.replace(/^0+(?=\d)/, '');
+  return s;
+}
+
+/** Parse prix annonce : entier strict > 0, ou null. */
+export function parseListingPriceInputToNumber(raw: string): number | null {
+  const cleaned = sanitizeListingPriceInputWhileTyping(raw);
+  if (!cleaned) return null;
+  const n = parseInt(cleaned, 10);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
 }
 
 export function formatDate(date: Date): string {

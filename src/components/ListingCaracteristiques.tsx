@@ -6,7 +6,6 @@ import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
 import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
-const iconSize = 14;
 const iconColor = '#6e6e73';
 
 export function ListingCaracteristiques({
@@ -20,14 +19,18 @@ export function ListingCaracteristiques({
   style?: React.CSSProperties;
   /** En mode "grid" (catalogue en cases) : état, taille, couleur, matière — pas catégorie ni année */
   /** En mode "line" (catalogue en ligne) : état, taille (si présent), date, couleur, matière */
-  variant?: 'full' | 'grid' | 'line';
+  /** "homeFeatured" : comme grid, texte et icônes plus compacts (page d’accueil À la une). */
+  /** "lineCatalogue" : même rendu compact + ordre ligne catalogue (avec année). */
+  variant?: 'full' | 'grid' | 'line' | 'homeFeatured' | 'lineCatalogue';
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const iconSize =
+    variant === 'lineCatalogue' ? 14 : variant === 'homeFeatured' ? 13.5 : 14;
 
   const items = useMemo(() => {
     const arr: { key: string; node: React.ReactNode }[] = [];
-    const isGrid = variant === 'grid';
-    const isLine = variant === 'line';
+    const isGrid = variant === 'grid' || variant === 'homeFeatured';
+    const isLine = variant === 'line' || variant === 'lineCatalogue';
 
     if (!isGrid && !isLine && listing.category) {
       arr.push({
@@ -115,7 +118,7 @@ export function ListingCaracteristiques({
         ),
       });
     }
-    // En mode grille : ordre état → taille → couleur → matière
+    // En mode grille / À la une : ordre état → taille → couleur → matière
     if (isGrid) {
       const order = ['condition', 'size', 'color', 'material'];
       return order.map((key) => arr.find((x) => x.key === key)).filter(Boolean) as { key: string; node: React.ReactNode }[];
@@ -195,6 +198,9 @@ export function ListingCaracteristiques({
 
   const visible = items.slice(0, visibleCount);
 
+  const compact = variant === 'homeFeatured' || variant === 'lineCatalogue';
+  const lineCatalogue = variant === 'lineCatalogue';
+
   return (
     <div
       ref={ref}
@@ -202,11 +208,11 @@ export function ListingCaracteristiques({
       style={{
         display: 'flex',
         flexWrap: 'nowrap',
-        gap: '11px 15px',
-        marginBottom: 6,
-        fontSize: 13,
+        gap: lineCatalogue ? '7px 12px' : compact ? '6px 12px' : '11px 15px',
+        marginBottom: lineCatalogue ? 6 : compact ? 5 : 6,
+        fontSize: lineCatalogue ? 13 : compact ? 12.5 : 13,
         color: '#6e6e73',
-        lineHeight: 1.35,
+        lineHeight: lineCatalogue ? 1.35 : compact ? 1.33 : 1.35,
         minWidth: 0,
         maxWidth: '100%',
         width: '100%',

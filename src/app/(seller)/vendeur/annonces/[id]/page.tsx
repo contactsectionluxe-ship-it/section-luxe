@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { PageLoader, CguCgvCheckbox } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
-import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
+import { CATEGORIES, parseListingPriceInputToNumber, sanitizeListingPriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
@@ -484,7 +484,7 @@ export default function EditListingPage() {
           certificat: pkg.includes('certificat') ? true : null,
           facture: pkg.includes('facture') ? true : null,
         });
-        setPrice(data.price.toString());
+        setPrice(String(Math.round(Number(data.price))));
         setIsActive(data.isActive);
         setExistingPhotos(data.photos || []);
         // Restaurer le brouillon sessionStorage si présent (après changement d'onglet/retour)
@@ -519,7 +519,7 @@ export default function EditListingPage() {
               if (d.widthCm != null) setWidthCm(d.widthCm);
               if (d.year != null) setYear(d.year);
               if (d.contenuInclus != null && typeof d.contenuInclus === 'object') setContenuInclusState(d.contenuInclus);
-              if (d.price != null) setPrice(d.price);
+              if (d.price != null) setPrice(sanitizeListingPriceInputWhileTyping(String(d.price)));
               if (d.isActive != null) setIsActive(d.isActive);
               if (d.acceptCguCgv != null) setAcceptCguCgv(d.acceptCguCgv);
               if (Array.isArray(d.existingPhotos)) setExistingPhotos(d.existingPhotos);
@@ -741,9 +741,9 @@ export default function EditListingPage() {
       setError('Veuillez ajouter au moins une photo');
       return;
     }
-    const priceNum = parsePriceInputToNumber(price);
+    const priceNum = parseListingPriceInputToNumber(price);
     if (priceNum == null) {
-      setError('Veuillez entrer un prix valide');
+      setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
       return;
     }
 
@@ -2253,9 +2253,9 @@ setMaterialSearchQuery('');
               <label style={labelStyle}>Prix (€) <span style={{ color: '#1d1d1f' }}>*</span></label>
               <input
                 type="text"
-                inputMode="decimal"
+                inputMode="numeric"
                 value={price}
-                onChange={(e) => setPrice(sanitizePriceInputWhileTyping(e.target.value))}
+                onChange={(e) => setPrice(sanitizeListingPriceInputWhileTyping(e.target.value))}
                 placeholder="Ex: 5000"
                 style={inputStyle}
               />

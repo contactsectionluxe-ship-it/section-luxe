@@ -183,7 +183,7 @@ export async function createListing(
     seller_name: data.sellerName,
     title: data.title,
     description: data.description,
-    price: data.price,
+    price: Math.round(Number(data.price)),
     category: (data.category || '').toLowerCase(),
     photos: data.photos,
     likes_count: 0,
@@ -259,7 +259,7 @@ export async function updateListing(
 
   if (data.title !== undefined) updateData.title = data.title;
   if (data.description !== undefined) updateData.description = data.description;
-  if (data.price !== undefined) updateData.price = data.price;
+  if (data.price !== undefined) updateData.price = Math.round(Number(data.price));
   if (data.category !== undefined) updateData.category = (data.category || '').toLowerCase();
   if (data.photos !== undefined) updateData.photos = data.photos;
   if (data.isActive !== undefined) updateData.is_active = data.isActive;

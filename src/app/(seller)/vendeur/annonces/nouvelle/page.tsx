@@ -12,7 +12,7 @@ import { PageLoader } from '@/components/ui';
 import { createListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
-import { CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
+import { CATEGORIES, parseListingPriceInputToNumber, sanitizeListingPriceInputWhileTyping } from '@/lib/utils';
 import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
@@ -194,7 +194,7 @@ function NewListingContent() {
       if (d.widthCm != null) setWidthCm(d.widthCm);
       if (d.year != null) setYear(d.year);
       if (d.contenuInclus != null && typeof d.contenuInclus === 'object') setContenuInclusState(d.contenuInclus);
-      if (d.price != null) setPrice(d.price);
+      if (d.price != null) setPrice(sanitizeListingPriceInputWhileTyping(String(d.price)));
       if (d.acceptCguCgv != null) setAcceptCguCgv(d.acceptCguCgv);
     } catch {
       // ignore
@@ -532,9 +532,9 @@ if (modelOptions.length > 0) {
   };
 
   const validateStep4 = () => {
-    const priceNum = parsePriceInputToNumber(price);
+    const priceNum = parseListingPriceInputToNumber(price);
     if (priceNum == null) {
-      setError('Entrez un prix valide');
+      setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
       return false;
     }
     setError('');
@@ -575,9 +575,9 @@ if (modelOptions.length > 0) {
       const typeLabelForTitle = getArticleTypeSingleLabelForTitle(category, genre, articleType);
       const suggestedSuffix = [typeLabelForTitle, modelToSave].filter(Boolean).join(' ').trim() || categoryLabel || '';
       const finalTitle = brandToSave ? `${brandToSave} - ${(titleSuffix.trim() || suggestedSuffix).trim()}` : (titleSuffix.trim() || suggestedSuffix).trim();
-      const priceNum = parsePriceInputToNumber(price);
+      const priceNum = parseListingPriceInputToNumber(price);
       if (priceNum == null) {
-        setError('Entrez un prix valide');
+        setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
         setLoading(false);
         return;
       }
@@ -2076,9 +2076,9 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       value={price}
-                      onChange={(e) => setPrice(sanitizePriceInputWhileTyping(e.target.value))}
+                      onChange={(e) => setPrice(sanitizeListingPriceInputWhileTyping(e.target.value))}
                       placeholder="Ex: 5000"
                       required
                       style={{ ...inputStyle, paddingRight: 44 }}

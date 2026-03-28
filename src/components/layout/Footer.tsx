@@ -121,8 +121,6 @@ export function Footer() {
               <Link href="/catalogue?condition=new" style={{ fontSize: 14, color: '#6e6e73' }}>Neuf</Link>
               <Link href="/a-propos" style={{ fontSize: 14, color: '#6e6e73' }}>À propos</Link>
               <Link href="/contact" style={{ fontSize: 14, color: '#6e6e73' }}>Contact</Link>
-              <Link href="/favoris" style={{ fontSize: 14, color: '#6e6e73' }}>Favoris</Link>
-              <Link href="/messages" style={{ fontSize: 14, color: '#6e6e73' }}>Messages</Link>
             </nav>
           </div>
 

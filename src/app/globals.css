@@ -376,9 +376,9 @@ a:focus-visible {
   align-self: center;
 }
 
-/* Vue liste : titre aligné sur la hauteur du bouton cœur (top 10px, Ø 36px → centre 28px), −0,5 mm vs centre */
+/* Vue liste : titre aligné sur la hauteur du bouton cœur (top 10px, Ø 36px → centre 28px), −0,5 mm vs centre (titre 20px) */
 .catalogue-line-card .catalogue-line-title-block {
-  padding-top: calc(10px + 18px - (22px * 1.4 / 2) - 0.5mm);
+  padding-top: calc(10px + 18px - (20px * 1.4 / 2) - 0.5mm);
 }
 
 /* Grille / liste : badge Plus/Pro immédiatement après le nom (éviter flex:1 sur le nom = vide avant le badge) */
@@ -650,10 +650,6 @@ a:focus-visible {
     grid-template-columns: repeat(2, 1fr) !important;
     margin-top: 0 !important;
   }
-  .catalogue-card-photos button[aria-label="Photo précédente"],
-  .catalogue-card-photos button[aria-label="Photo suivante"] {
-    display: none !important;
-  }
   .listing-grid-title {
     white-space: normal !important;
     display: -webkit-box !important;
@@ -702,9 +698,17 @@ a:focus-visible {
     max-width: none !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    /* Même retrait horizontal que le corps des cartes « À la une » (padding 14px des cartes) */
+    padding-inline: 14px !important;
   }
   .home-section-vendeur-cta-title {
-    font-size: 22px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    /* Taille fixée par FluidOneLineHeading via --vendeur-title-fs (pleine largeur, une ligne) */
+    font-size: var(--vendeur-title-fs, 14px) !important;
+    line-height: 1.2 !important;
   }
   .home-section-vendeur-cta-desc {
     font-size: 14px !important;
@@ -719,6 +723,12 @@ a:focus-visible {
   .home-section-vendeur-cta-btn svg {
     width: 14px !important;
     height: 14px !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .home-section-vendeur-cta-title {
+    font-size: clamp(24px, 4vw, 32px) !important;
   }
 }
 
@@ -1291,14 +1301,32 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .catalogue-listing-caracteristiques {
     display: none !important;
   }
+  /* Accueil « À la une » : conserver état / taille / couleur / matière avec icônes (variante homeFeatured, plus compact) */
+  .home-section-featured .catalogue-listing-caracteristiques {
+    display: flex !important;
+  }
+  /* Catalogue vue grille : même ligne caractéristiques + icônes qu’À la une (mobile masque sinon .catalogue-listing-caracteristiques) */
+  .catalogue-results-grid .catalogue-listing-caracteristiques {
+    display: flex !important;
+  }
   /* Masquer étiquette offre équitable et nom du vendeur (garder la ligne et le code postal) */
   .catalogue-listing-deal-badge,
   .catalogue-listing-vendeur-nom {
     display: none !important;
   }
-  /* Prix plus petit sur la liste articles catalogue */
+  /* Catalogue vue ligne : réafficher nom, badge offre et caractéristiques (même logique que la grille) */
+  .catalogue-results-line .catalogue-listing-caracteristiques {
+    display: flex !important;
+  }
+  .catalogue-results-line .catalogue-listing-vendeur-nom {
+    display: inline !important;
+  }
+  .catalogue-results-line .catalogue-listing-deal-badge {
+    display: inline-flex !important;
+  }
+  /* Prix vue liste catalogue */
   .catalogue-listing-prix {
-    font-size: 18px !important;
+    font-size: 19px !important;
   }
   /* Moins d'espace entre prix / ligne / code postal */
   .catalogue-listing-vendeur-block {
