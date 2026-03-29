@@ -419,6 +419,19 @@ a:focus-visible {
   transform: translateY(calc(-0.038em - 0.1mm));
 }
 
+/* Desktop : badge encore +0,05 mm vers le haut — À la une, Mes favoris, catalogue vue ligne uniquement */
+@media (min-width: 768px) {
+  .home-section-featured .home-featured-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge {
+    transform: translateY(calc(-0.038em - 0.15mm));
+  }
+  .favoris-page-inner .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge {
+    transform: translateY(calc(-0.038em - 0.05mm));
+  }
+  .catalogue-results-line .catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
+    transform: translateY(-0.038em);
+  }
+}
+
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
 .annonce-produit-page .seller-verified-subscription-badge {
   transform: translateY(0.085em) !important;
