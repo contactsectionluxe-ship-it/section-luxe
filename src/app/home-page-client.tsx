@@ -35,7 +35,9 @@ const CONNEXION_FORM_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
 const CONNEXION_FORM_CARD_RADIUS = 18;
 
 const CATEGORIES_VISIBLE = 4;
-const CATEGORY_GAP = 12;
+// Même gap que la grille « À la une » (24px) pour des vignettes de même largeur.
+const CATEGORY_GAP = 24;
+const CATEGORY_SCROLL_INNER_WIDTH = 'calc(150cqw + 12px)';
 
 export default function HomePage() {
   const [listings, setListings] = useState<Listing[]>([]);
@@ -198,32 +200,35 @@ export default function HomePage() {
       </section>
 
       {/* Categories */}
-      <section className="home-section-padded home-section-categories" style={{ padding: '80px 24px', overflow: 'visible' }}>
+      <section className="home-section-padded home-section-categories" style={{ padding: '80px 24px 0', overflow: 'visible' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto', overflow: 'visible' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 36 }}>
-            <div>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-playfair), Georgia, serif',
-                  fontSize: 28,
-                  fontWeight: 500,
-                  letterSpacing: '-0.02em',
-                  margin: 0,
-                  marginBottom: 4,
-                  color: '#1d1d1f',
-                }}
-              >
-                Catégories
-              </h2>
-              <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>Rechercher par catégorie</p>
-            </div>
-            <Link
-              href="/catalogue"
-              className="hide-mobile"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#1d1d1f', fontWeight: 500, flexShrink: 0 }}
+          <div className="home-categories-section-head" style={{ marginBottom: 16 }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                letterSpacing: '-0.02em',
+                margin: 0,
+                marginBottom: 4,
+                color: '#1d1d1f',
+              }}
             >
-              Tout voir <ArrowRight size={14} strokeWidth={2} />
-            </Link>
+              Catégories
+            </h2>
+            <div
+              className="home-categories-sub-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, minWidth: 0 }}
+            >
+              <p style={{ fontSize: 15, color: '#6e6e73', margin: 0, minWidth: 0, flex: '1 1 auto' }}>Rechercher par catégorie</p>
+              <Link
+                href="/catalogue"
+                className="home-categories-voir-tout"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#1d1d1f', fontWeight: 500, flexShrink: 0 }}
+              >
+                Tout voir <ArrowRight size={14} strokeWidth={2} />
+              </Link>
+            </div>
           </div>
           <div className="categories-scroll-wrap" style={{ position: 'relative' }} data-scroll-state={scrollState}>
             <button
@@ -276,7 +281,7 @@ export default function HomePage() {
               aria-label="Catégories"
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
-                if ((e.target as HTMLElement).closest?.('.category-item-photo-link')) return;
+                if ((e.target as HTMLElement).closest?.('.category-item-card-link')) return;
                 hasDragged.current = false;
                 dragStartX.current = e.clientX;
                 dragStartScrollLeft.current = categoriesScrollRef.current?.scrollLeft ?? 0;
@@ -323,8 +328,8 @@ export default function HomePage() {
                 style={{
                   display: 'flex',
                   gap: CATEGORY_GAP,
-                  padding: '4px 0',
-                  width: 'calc(150cqw + 6px)',
+                  padding: '20px 0',
+                  width: CATEGORY_SCROLL_INNER_WIDTH,
                 }}
               >
                 {categories.map((cat) => (
@@ -337,83 +342,92 @@ export default function HomePage() {
                       flexDirection: 'column',
                       alignItems: 'stretch',
                       gap: 10,
+                      minWidth: 0,
                     }}
                   >
                     <Link
                       href={cat.href}
                       prefetch={true}
-                      className="category-item-photo-link"
+                      className="category-item-card-link"
+                      aria-label={cat.name}
                       style={{
                         display: 'block',
                         textDecoration: 'none',
                         color: 'inherit',
-                        transition: 'transform 0.2s',
                         cursor: 'pointer',
                         touchAction: 'manipulation',
+                        minWidth: 0,
                       }}
                       onClick={(e) => {
                         if (hasDragged.current) e.preventDefault();
                       }}
-                      onMouseEnter={(e) => {
-                        if (!isDragging) e.currentTarget.style.transform = 'scale(1.02)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'scale(1)';
-                      }}
                     >
-                      <div
+                      <article
                         style={{
-                          aspectRatio: '1',
-                          borderRadius: 18,
-                          overflow: 'hidden',
-                          backgroundColor: '#f6f6f8',
+                          position: 'relative',
                           display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          flexDirection: 'column',
+                          backgroundColor: '#f6f6f8',
+                          borderRadius: CONNEXION_FORM_CARD_RADIUS,
+                          border: '1px solid #e8e6e3',
+                          boxShadow: CONNEXION_FORM_CARD_SHADOW,
+                          overflow: 'hidden',
+                          minWidth: 0,
                         }}
                       >
-                        {cat.image ? (
-                          <img
-                            src={cat.image}
-                            alt={cat.name}
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: (cat.name === 'Sacs' || cat.name === 'Bijoux' || cat.name === 'Montres' || cat.name === 'Vêtements' || cat.name === 'Accessoires') ? 'contain' : 'cover',
-                              ...(cat.name === 'Sacs' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                              ...(cat.name === 'Bijoux' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
-                              ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
-                              ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
-                              ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
-                              ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
-                            }}
-                          />
-                        ) : (
-                          <span
-                            style={{
-                              fontFamily: 'var(--font-playfair), Georgia, serif',
-                              fontSize: 17,
-                              fontWeight: 500,
-                              letterSpacing: '-0.02em',
-                              color: '#1d1d1f',
-                            }}
-                          >
-                            {cat.name}
-                          </span>
-                        )}
-                      </div>
+                        <div
+                          style={{
+                            position: 'relative',
+                            width: '100%',
+                            aspectRatio: '1',
+                            backgroundColor: '#f6f6f8',
+                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {cat.image ? (
+                            <img
+                              src={cat.image}
+                              alt=""
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: (cat.name === 'Sacs' || cat.name === 'Bijoux' || cat.name === 'Montres' || cat.name === 'Vêtements' || cat.name === 'Accessoires') ? 'contain' : 'cover',
+                                ...(cat.name === 'Sacs' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Bijoux' && { transform: 'scale(0.92)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
+                              }}
+                            />
+                          ) : null}
+                        </div>
+                      </article>
                     </Link>
-                    <span
+                    <p
                       className="category-item-label"
+                      title={cat.name}
                       style={{
-                        fontSize: 15,
-                        color: '#6e6e73',
+                        margin: 0,
+                        fontSize: 12,
+                        fontWeight: 400,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                        color: '#86868b',
                         textAlign: 'center',
-                        lineHeight: 1.2,
+                        lineHeight: 1,
+                        minWidth: 0,
+                        width: '100%',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {cat.name}
-                    </span>
+                    </p>
                   </div>
                 ))}
               </div>
@@ -468,32 +482,35 @@ export default function HomePage() {
       </section>
 
       {/* Featured Products */}
-      <section className="home-section-padded home-section-featured" style={{ padding: '56px 24px 80px' }}>
+      <section className="home-section-padded home-section-featured" style={{ padding: '80px 24px 80px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 36 }}>
-            <div>
-              <h2
-                style={{
-                  fontFamily: 'var(--font-playfair), Georgia, serif',
-                  fontSize: 28,
-                  fontWeight: 500,
-                  letterSpacing: '-0.02em',
-                  margin: 0,
-                  marginBottom: 4,
-                  color: '#1d1d1f',
-                }}
-              >
-                À la une
-              </h2>
-              <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>Notre sélection du moment</p>
-            </div>
-            <Link
-              href="/catalogue?sortBy=likes"
-              className="hide-mobile"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#1d1d1f', fontWeight: 500, flexShrink: 0 }}
+          <div className="home-featured-section-head" style={{ marginBottom: 36 }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 28,
+                fontWeight: 500,
+                letterSpacing: '-0.02em',
+                margin: 0,
+                marginBottom: 4,
+                color: '#1d1d1f',
+              }}
             >
-              Voir tout <ArrowRight size={14} strokeWidth={2} />
-            </Link>
+              À la une
+            </h2>
+            <div
+              className="home-featured-sub-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, minWidth: 0 }}
+            >
+              <p style={{ fontSize: 15, color: '#6e6e73', margin: 0, minWidth: 0, flex: '1 1 auto' }}>Notre sélection du moment</p>
+              <Link
+                href="/catalogue?sortBy=likes"
+                className="home-featured-voir-tout"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#1d1d1f', fontWeight: 500, flexShrink: 0 }}
+              >
+                Voir tout <ArrowRight size={14} strokeWidth={2} />
+              </Link>
+            </div>
           </div>
 
           {/* Grille avec hauteur min pour éviter le saut du footer au refresh */}
@@ -667,7 +684,7 @@ export default function HomePage() {
         style={{
           position: 'relative',
           marginTop: -24,
-          padding: '120px 24px 88px',
+          padding: '120px 24px 108px',
           backgroundImage: 'url(/section-vendeur-bg.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center 50%',

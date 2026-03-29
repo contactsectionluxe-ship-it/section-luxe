@@ -202,7 +202,7 @@ export default function AProposPage() {
         style={{
           position: 'relative',
           marginTop: -40,
-          padding: '120px 24px 88px',
+          padding: '120px 24px 108px',
           backgroundImage: 'url(/section-vendeur-bg.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center 50%',

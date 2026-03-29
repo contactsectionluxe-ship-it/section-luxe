@@ -408,6 +408,12 @@ a:focus-visible {
   transform: translateY(-0.038em);
 }
 
+/* Grilles type « À la une » : badge +0,1 mm plus haut que le défaut grille/liste */
+.home-section-featured .home-featured-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge,
+.catalogue-results-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge {
+  transform: translateY(calc(-0.038em - 0.1mm));
+}
+
 /* Page annonce / produit uniquement : badge Plus/Pro un peu plus bas (transform sur le badge seul, le nom ne bouge pas) */
 .annonce-produit-page .seller-verified-subscription-badge {
   transform: translateY(0.085em) !important;
@@ -536,6 +542,68 @@ a:focus-visible {
   transform: translateY(0.08em) !important;
 }
 
+/* Page d'accueil « À la une » : même ligne et même corps visuel sous-titre + « Voir tout » (tous écrans ; mobile surcharge ci-dessous) */
+.home-section-featured .home-featured-sub-row {
+  align-items: baseline;
+}
+.home-section-featured .home-featured-sub-row p {
+  line-height: 1.45;
+}
+.home-section-featured .home-featured-voir-tout {
+  font-size: 15px;
+  line-height: 1.45;
+  font-family: var(--font-inter), var(--font-sans);
+}
+.home-section-featured .home-featured-voir-tout svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Page d'accueil Catégories : « Rechercher par catégorie » + « Tout voir » même ligne (tous écrans ; mobile surcharge ci-dessous) */
+.home-section-categories .home-categories-sub-row {
+  align-items: baseline;
+}
+.home-section-categories .home-categories-sub-row p {
+  line-height: 1.45;
+}
+.home-section-categories .home-categories-voir-tout {
+  font-size: 15px;
+  line-height: 1.45;
+  font-family: var(--font-inter), var(--font-sans);
+}
+.home-section-categories .home-categories-voir-tout svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+/* Ne pas couper l’ombre des cartes (box-shadow) sur les bords de la section */
+.home-section-categories {
+  overflow: visible !important;
+}
+.home-section-categories .categories-scroll-wrap {
+  overflow: visible;
+  /* Déborde dans le padding latéral de la section : l’ombre n’est pas coupée par overflow-x du scroll, tout en gardant le même axe que la grille (1100px utiles). */
+  margin-left: -24px;
+  margin-right: -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+  box-sizing: border-box;
+  width: calc(100% + 48px);
+}
+
+/* Desktop (≥768px) : éviter un 5e fragment visible au repos (4 tuiles = 100cqw avec gap 24 en TSX) */
+@media (min-width: 768px) {
+  .home-section-categories .categories-scroll-container {
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 0;
+  }
+  .home-section-categories .categories-scroll-item {
+    scroll-snap-align: start;
+  }
+}
+
 /* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
 @media (min-width: 1600px) {
   .hero-section {
@@ -602,11 +670,28 @@ a:focus-visible {
   .home-section-categories {
     padding-top: 40px !important;
   }
-  .home-section-categories > div > div:first-of-type {
-    margin-bottom: 18px !important;
+  /* Même espace sous-sous-titre → contenu que « À la une » : 18px au total (padding haut du ruban, pas marge double) */
+  .home-section-categories > div > div.home-categories-section-head {
+    margin-bottom: 0 !important;
   }
-  .home-section-categories > div > div:first-of-type p {
+  .home-section-categories .home-categories-sub-row p {
     font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  .home-categories-voir-tout {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  .home-categories-voir-tout svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
+  .home-section-categories .categories-scroll-wrap {
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    width: calc(100% + 40px);
   }
   /* Page d'accueil mobile : afficher 2 catégories puis défiler (desktop inchangé), centrage par snap */
   .categories-scroll-container {
@@ -615,31 +700,51 @@ a:focus-visible {
     overscroll-behavior-x: none !important;
   }
   .categories-scroll-inner {
-    /* 6 items × (100cqw - 12px)/2 + 5×12px gap = 300cqw + 24px — pas d’espace vide à droite */
+    /* 2 colonnes visibles : gap 12px (aligné grille « À la une » mobile) ; 6×tuile + 5×gap = 300cqw + 24px */
+    gap: 12px !important;
     width: calc(300cqw + 24px) !important;
+    padding-top: 18px !important;
+    padding-bottom: 20px !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
   }
   .categories-scroll-item {
     flex: 0 0 calc((100cqw - 12px) / 2) !important;
     scroll-snap-align: start !important;
     scroll-snap-stop: always !important;
   }
+  /* Aligné sur .listing-grid-vendeur mobile (annonce « À la une ») */
   .home-section-categories .category-item-label {
-    font-size: 12px !important;
+    font-size: 11px !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.5px !important;
+    color: #86868b !important;
+    line-height: 1 !important;
   }
   /* Premier clic immédiat sur mobile : pas d’attente double-tap */
-  .home-section-categories .category-item-photo-link {
+  .home-section-categories .category-item-card-link {
     touch-action: manipulation !important;
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0.08);
   }
+  /* Même écart qu’après le hero → titre Catégories (padding-top 40px sur .home-section-categories) */
   .home-section-featured {
-    padding-top: 0 !important;
-    margin-top: -12px !important;
+    padding-top: 40px !important;
+    margin-top: 0 !important;
   }
-  .home-section-featured > div > div:first-of-type {
+  .home-section-featured > div > div.home-featured-section-head {
     margin-bottom: 18px !important;
   }
-  .home-section-featured > div > div:first-of-type p {
+  .home-section-featured .home-featured-sub-row p {
     font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  .home-featured-voir-tout {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+  }
+  .home-featured-voir-tout svg {
+    width: 13px !important;
+    height: 13px !important;
   }
   .home-section-featured .home-featured-grid {
     grid-template-columns: repeat(2, 1fr) !important;
@@ -691,7 +796,7 @@ a:focus-visible {
   .home-section-vendeur-cta {
     margin-top: -44px !important;
     padding-top: 56px !important;
-    padding-bottom: 56px !important;
+    padding-bottom: 68px !important;
     background-position: center -12% !important;
   }
   .home-section-vendeur-cta-inner {
@@ -1368,9 +1473,6 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   .favoris-list-grid .catalogue-listing-caracteristiques {
     display: flex !important;
-  }
-  .favoris-list-grid .listing-grid-vendeur-nom {
-    display: inline !important;
   }
   /* Ma messagerie : pleine largeur sur mobile */
   .messages-page-inner,
