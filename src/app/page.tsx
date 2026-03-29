@@ -291,8 +291,8 @@ export default function HomePage() {
                 style={{
                   display: 'flex',
                   gap: CATEGORY_GAP,
-                  /* Espace vertical pour box-shadow ; pas de padding horizontal = aligné sur la grille « À la une » */
-                  padding: '20px 0',
+                  /* Pas de padding horizontal = aligné sur la grille « À la une » */
+                  padding: '14px 0',
                   width: CATEGORY_SCROLL_INNER_WIDTH,
                 }}
               >
@@ -333,8 +333,6 @@ export default function HomePage() {
                           flexDirection: 'column',
                           backgroundColor: '#f6f6f8',
                           borderRadius: CONNEXION_FORM_CARD_RADIUS,
-                          border: '1px solid #e8e6e3',
-                          boxShadow: CONNEXION_FORM_CARD_SHADOW,
                           overflow: 'hidden',
                           minWidth: 0,
                         }}
@@ -526,7 +524,6 @@ export default function HomePage() {
                     flexDirection: 'column',
                     backgroundColor: '#fff',
                     borderRadius: CONNEXION_FORM_CARD_RADIUS,
-                    border: '1px solid #e8e6e3',
                     boxShadow: CONNEXION_FORM_CARD_SHADOW,
                     overflow: 'hidden',
                     minWidth: 0,
@@ -588,7 +585,6 @@ export default function HomePage() {
                       flexDirection: 'column',
                       backgroundColor: '#fff',
                       borderRadius: CONNEXION_FORM_CARD_RADIUS,
-                      border: '1px solid #e8e6e3',
                       boxShadow: CONNEXION_FORM_CARD_SHADOW,
                       overflow: 'hidden',
                       minWidth: 0,

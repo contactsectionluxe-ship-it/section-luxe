@@ -4287,7 +4287,6 @@ function CatalogueContent() {
                           backgroundColor: '#fff',
                           borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                           overflow: 'hidden',
-                          border: '1px solid #e8e6e3',
                           boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                           minWidth: 0,
                           minHeight: viewMode === 'grid' ? undefined : 56,
@@ -4302,7 +4301,6 @@ function CatalogueContent() {
                             aspectRatio: viewMode === 'grid' ? '1' : undefined,
                             flexShrink: 0,
                             borderRadius: viewMode === 'grid' ? 0 : 4,
-                            borderRight: viewMode === 'grid' ? undefined : '1px solid #e8e6e3',
                           }}
                         />
                         <div
@@ -4407,7 +4405,6 @@ function CatalogueContent() {
                         backgroundColor: '#fff',
                         borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                         overflow: 'hidden',
-                        border: '1px solid #e8e6e3',
                         boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                         minWidth: 0,
                       }}
@@ -4513,7 +4510,6 @@ function CatalogueContent() {
                         backgroundColor: '#fff',
                         borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                         overflow: 'hidden',
-                        border: '1px solid #e8e6e3',
                         boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                         minHeight: 56,
                         minWidth: 0,
@@ -4556,7 +4552,6 @@ function CatalogueContent() {
                           position: 'relative',
                           backgroundColor: '#fff',
                           overflow: 'hidden',
-                          borderRight: '1px solid #e8e6e3',
                         }}
                       >
                         <CatalogueCardPhotos

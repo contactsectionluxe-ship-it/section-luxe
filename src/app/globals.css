@@ -608,13 +608,13 @@ a:focus-visible {
   flex-shrink: 0;
 }
 
-/* Ne pas couper l’ombre des cartes (box-shadow) sur les bords de la section */
+/* Section catégories : overflow visible pour le carrousel et l’alignement avec la grille */
 .home-section-categories {
   overflow: visible !important;
 }
 .home-section-categories .categories-scroll-wrap {
   overflow: visible;
-  /* Déborde dans le padding latéral de la section : l’ombre n’est pas coupée par overflow-x du scroll, tout en gardant le même axe que la grille (1100px utiles). */
+  /* Déborde dans le padding latéral de la section pour le scroll horizontal, même axe que la grille (1100px utiles). */
   margin-left: -24px;
   margin-right: -24px;
   padding-left: 24px;

@@ -731,7 +731,7 @@ export default function SellerDashboardPage() {
               {Array.from({ length: 8 }, (_, i) => (
                 <div key={i} className="catalogue-skeleton-card" style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', ['--skeleton-index' as string]: i }}>
                   <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
-                  <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: '88px' }}>
+                  <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: '88px', backgroundColor: '#fff' }}>
                     <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
                     <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
                     <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
@@ -853,7 +853,7 @@ export default function SellerDashboardPage() {
                         </button>
                       )}
                     </div>
-                    <div style={{ padding: '16px 16px 12px' }}>
+                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', backgroundColor: '#fff' }}>
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {(() => {

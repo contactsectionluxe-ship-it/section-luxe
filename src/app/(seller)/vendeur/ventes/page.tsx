@@ -644,7 +644,6 @@ function MesVentesPageContent() {
                             padding: '12px 14px',
                             borderRadius: 12,
                             backgroundColor: '#fff',
-                            border: '1px solid #e8e6e3',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                           }}
                         >
@@ -788,8 +787,7 @@ function MesVentesPageContent() {
                             paddingLeft: highlighted ? 11 : 14,
                             borderRadius: 12,
                             backgroundColor: '#fff',
-                            border: '1px solid #e8e6e3',
-                            borderLeft: highlighted ? '3px solid #ea580c' : '1px solid #e8e6e3',
+                            borderLeft: highlighted ? '3px solid #ea580c' : 'none',
                             boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                           }}
                         >
