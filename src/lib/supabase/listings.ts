@@ -330,8 +330,8 @@ export async function getListing(publicId: string): Promise<Listing | null> {
   return merged[0] ?? null;
 }
 
-// Get all active listings with optional filters
-export async function getListings(options?: {
+/** Options de filtre catalogue partagées par `getListings` et `countListings`. */
+export type ListingSearchFilterOptions = {
   category?: string;
   categories?: string[];
   brand?: string;
@@ -349,11 +349,9 @@ export async function getListings(options?: {
   sizes?: string[];
   genres?: ('femme' | 'homme')[];
   articleTypes?: string[];
-  limitCount?: number;
-  sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
-}): Promise<Listing[]> {
-  if (!isSupabaseConfigured || !supabase) return [];
-  
+};
+
+function applyListingSearchFiltersToQuery(query: any, options?: ListingSearchFilterOptions): any {
   const {
     category,
     categories,
@@ -372,14 +370,7 @@ export async function getListings(options?: {
     sizes,
     genres,
     articleTypes,
-    limitCount = 50,
-    sortBy = 'newest',
   } = options || {};
-
-  let query = supabase
-    .from('listings')
-    .select(LISTING_SELECT)
-    .eq('is_active', true);
 
   const cats = categories?.length ? categories : (category ? [category] : undefined);
   if (cats?.length) {
@@ -435,9 +426,8 @@ export async function getListings(options?: {
         const inPart = `article_type.in.(${articleTypeList.join(',')})`;
         query = query.or(`${inPart},category.eq.montres`);
       } else if (hasPoloOrTshirt) {
-        // Types indépendants : Polo = tshirt_polo avec model contenant "polo" ; T-shirt = tshirt_polo sans "polo" (ou model null)
         const orParts: string[] = [];
-        const poloPattern = '%polo%'; // encodé par le client dans l'URL
+        const poloPattern = '%polo%';
         for (const t of articleTypeList) {
           if (t === 'polo') {
             orParts.push(`and(article_type.eq.tshirt_polo,model.ilike.${poloPattern})`);
@@ -492,6 +482,23 @@ export async function getListings(options?: {
     query = query.in('size', sizes);
   }
 
+  return query;
+}
+
+// Get all active listings with optional filters
+export async function getListings(
+  options?: ListingSearchFilterOptions & {
+    limitCount?: number;
+    sortBy?: 'newest' | 'oldest' | 'price_asc' | 'price_desc' | 'likes';
+  },
+): Promise<Listing[]> {
+  if (!isSupabaseConfigured || !supabase) return [];
+
+  const { limitCount = 50, sortBy = 'newest' } = options || {};
+
+  let query = supabase.from('listings').select(LISTING_SELECT).eq('is_active', true);
+  query = applyListingSearchFiltersToQuery(query, options);
+
   // Apply sorting
   switch (sortBy) {
     case 'oldest':
@@ -519,6 +526,16 @@ export async function getListings(options?: {
   if (error) throw error;
   const listings = (data || []).map(rowToListing);
   return mergeSellerPublicFieldsIntoListings(listings);
+}
+
+/** Nombre d’annonces actives correspondant aux mêmes filtres que `getListings`. */
+export async function countListings(options?: ListingSearchFilterOptions): Promise<number> {
+  if (!isSupabaseConfigured || !supabase) return 0;
+  let query = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_active', true);
+  query = applyListingSearchFiltersToQuery(query, options);
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
 }
 
 /** Liste des marques présentes sur les annonces actives (en stock). */

@@ -11,6 +11,7 @@ import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
+import { HomeHeroSearchCard } from '@/components/HomeHeroSearchCard';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -116,85 +117,109 @@ export default function HomePage() {
             pointerEvents: 'none',
           }}
         />
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto' }}>
-          <h1
-            style={{
-              fontFamily: 'var(--font-playfair), Georgia, serif',
-              fontSize: 'clamp(32px, 5vw, 56px)',
-              fontWeight: 500,
-              lineHeight: 1.1,
-              letterSpacing: '-0.02em',
-              marginBottom: 24,
-              maxWidth: 520,
-              color: '#1d1d1f',
-            }}
-          >
-            <span className="hide-mobile">Trouvez la pièce de luxe qui vous correspond</span>
-            <span className="hide-desktop">Trouvez la pièce de luxe<br />qui vous correspond</span>
-          </h1>
-          <p
-            className="hero-sous-titre"
-            style={{
-              fontSize: 16,
-              color: '#6e6e73',
-              maxWidth: 400,
-              marginBottom: 24,
-              lineHeight: 1.5,
-            }}
-          >
-            Une vision claire du marché professionnel.
-            <br />
-            Comparez, analysez, choisissez
-          </p>
-          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
-            <Link
-              href="/catalogue"
+        <div
+          style={{
+            position: 'relative',
+            maxWidth: 1100,
+            margin: '0 auto',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 40,
+          }}
+        >
+          <div style={{ flex: '1 1 300px', minWidth: 0, maxWidth: 560 }}>
+            <h1
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                height: 50,
-                padding: '0 28px',
-                backgroundColor: '#1d1d1f',
-                color: '#fff',
-                fontSize: 15,
+                fontFamily: 'var(--font-playfair), Georgia, serif',
+                fontSize: 'clamp(32px, 5vw, 56px)',
                 fontWeight: 500,
-                borderRadius: 980,
-                transition: 'opacity 0.2s',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
-            >
-              <span className="hero-catalogue-label-desktop">Accéder au catalogue</span>
-              <span className="hero-catalogue-label-mobile">Voir le catalogue</span>
-              <ArrowRight size={18} strokeWidth={2} />
-            </Link>
-            <Link
-              href="/inscription-vendeur"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: 50,
-                padding: '0 28px',
-                backgroundColor: '#fff',
+                lineHeight: 1.1,
+                letterSpacing: '-0.02em',
+                marginBottom: 24,
+                maxWidth: 520,
                 color: '#1d1d1f',
-                fontSize: 15,
-                fontWeight: 500,
-                border: '1.5px solid #d2d2d7',
-                borderRadius: 980,
-                transition: 'background-color 0.2s, color 0.2s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f7';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#fff';
               }}
             >
-              Devenir vendeur
-            </Link>
+              <span className="hide-mobile">Trouvez la pièce de luxe qui vous correspond</span>
+              <span className="hide-desktop">Trouvez la pièce de luxe<br />qui vous correspond</span>
+            </h1>
+            <p
+              className="hero-sous-titre"
+              style={{
+                fontSize: 16,
+                color: '#6e6e73',
+                maxWidth: 400,
+                marginBottom: 24,
+                lineHeight: 1.5,
+              }}
+            >
+              Une vision claire du marché professionnel.
+              <br />
+              Comparez, analysez, choisissez
+            </p>
+            <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+              <Link
+                href="/catalogue"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  height: 50,
+                  padding: '0 28px',
+                  backgroundColor: '#1d1d1f',
+                  color: '#fff',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  borderRadius: 980,
+                  transition: 'opacity 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+              >
+                <span className="hero-catalogue-label-desktop">Accéder au catalogue</span>
+                <span className="hero-catalogue-label-mobile">Voir le catalogue</span>
+                <ArrowRight size={18} strokeWidth={2} />
+              </Link>
+              <Link
+                href="/inscription-vendeur"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 50,
+                  padding: '0 28px',
+                  backgroundColor: '#fff',
+                  color: '#1d1d1f',
+                  fontSize: 15,
+                  fontWeight: 500,
+                  border: '1.5px solid #d2d2d7',
+                  borderRadius: 980,
+                  transition: 'background-color 0.2s, color 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#f5f5f7';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fff';
+                }}
+              >
+                Devenir vendeur
+              </Link>
+            </div>
+          </div>
+          <div
+            className="hide-mobile"
+            style={{
+              flex: '0 1 400px',
+              maxWidth: '100%',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              marginTop: 14,
+            }}
+          >
+            <HomeHeroSearchCard />
           </div>
         </div>
       </section>
