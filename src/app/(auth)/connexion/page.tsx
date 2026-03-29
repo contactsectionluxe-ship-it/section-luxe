@@ -66,7 +66,7 @@ function LoginForm() {
   };
 
   return (
-    <div style={pageWrapStyle}>
+    <div className="app-shell-hpad" style={pageWrapStyle}>
       <div
         className="connexion-page-inner"
         style={{
@@ -213,7 +213,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div style={connexionPageWrapStyle}>
+        <div className="app-shell-hpad" style={connexionPageWrapStyle}>
           <div style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
             <div style={{ textAlign: 'center', marginBottom: 36 }}>
               <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>

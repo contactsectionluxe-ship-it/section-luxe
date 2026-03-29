@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 export default function NotFound() {
   return (
     <main
+      className="not-found-page"
       style={{
         paddingTop: 'var(--header-height)',
         minHeight: '100vh',

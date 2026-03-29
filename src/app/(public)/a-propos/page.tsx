@@ -74,7 +74,7 @@ function BulletItem({ children, centered }: { children: React.ReactNode; centere
 export default function AProposPage() {
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div className="a-propos-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="a-propos-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
             <h1

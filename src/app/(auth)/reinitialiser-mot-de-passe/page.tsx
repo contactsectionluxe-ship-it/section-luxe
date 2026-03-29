@@ -78,7 +78,7 @@ export default function ReinitialiserMotDePassePage() {
 
   if (!ready) {
     return (
-      <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
+      <div className="app-shell-hpad" style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
         <div style={{ width: '100%', maxWidth: 420, textAlign: 'center', paddingTop: 88 }}>
           <p style={{ color: '#6e6e73' }}>Chargement...</p>
         </div>
@@ -88,7 +88,7 @@ export default function ReinitialiserMotDePassePage() {
 
   if (!hasRecoverySession) {
     return (
-      <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
+      <div className="app-shell-hpad" style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <div style={{ height: 88, marginBottom: 0 }} aria-hidden />
           <div style={{ textAlign: 'center', marginBottom: 36 }}>
@@ -103,7 +103,7 @@ export default function ReinitialiserMotDePassePage() {
 
   if (success) {
     return (
-      <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
+      <div className="app-shell-hpad" style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           <div style={{ height: 88, marginBottom: 0 }} aria-hidden />
           <div style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
@@ -117,7 +117,7 @@ export default function ReinitialiserMotDePassePage() {
   }
 
   return (
-    <div style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
+    <div className="app-shell-hpad" style={{ paddingTop: 220, minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '0 24px 24px', backgroundColor: '#fbfbfb' }}>
       <div style={{ width: '100%', maxWidth: 420 }}>
         <div style={{ height: 88, marginBottom: 0 }} aria-hidden />
         <div style={{ textAlign: 'center', marginBottom: 36 }}>

@@ -383,7 +383,7 @@ export default function SellerDashboardPage() {
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div className="mes-annonces-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
         {/* Header */}
         <div className="mes-annonces-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>

@@ -1,10 +1,8 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/hooks/useAuth';
 import { Header } from '@/components/layout/Header';
-import { HeaderFallback } from '@/components/layout/HeaderFallback';
 import { Footer } from '@/components/layout/Footer';
 import { FirebaseWarning } from '@/components/FirebaseWarning';
 
@@ -66,9 +64,7 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col antialiased font-sans">
         <AuthProvider>
           <FirebaseWarning />
-          <Suspense fallback={<HeaderFallback />}>
-            <Header />
-          </Suspense>
+          <Header />
           <div className="flex-1" style={{ backgroundColor: '#fff' }}>{children}</div>
           <div style={{ flexShrink: 0 }}>
             <Footer />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle, BarChart2, LayoutGrid, Tag, Sparkles, Info, Mail, CreditCard } from 'lucide-react';
@@ -9,6 +9,7 @@ import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 import { Conversation } from '@/types';
+
 const navigation = [
   { name: 'Catalogue', href: '/catalogue?reset=1', icon: LayoutGrid },
   { name: 'Occasion', href: '/catalogue?condition=occasion', icon: Tag },
@@ -17,24 +18,142 @@ const navigation = [
   { name: 'Contact', href: '/contact', icon: Mail },
 ];
 
-export function Header() {
+function matchNavActive(
+  pathname: string,
+  sp: { get: (key: string) => string | null },
+  href: string
+) {
+  if (href === '/') return pathname === '/';
+  if (href === '/catalogue') return pathname === '/catalogue' && !sp.get('condition');
+  if (href.startsWith('/catalogue?')) {
+    const params = new URLSearchParams(href.split('?')[1] || '');
+    const wantCondition = params.get('condition');
+    if (pathname !== '/catalogue') return false;
+    if (wantCondition === null) return !sp.get('condition');
+    return sp.get('condition') === wantCondition;
+  }
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+function HeaderDesktopNavFallback({
+  linkStyle,
+}: {
+  linkStyle: { fontSize: number; fontWeight: number; color: string; transition: string };
+}) {
+  return (
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
+      {navigation.map((item) => (
+        <Link
+          key={item.name}
+          href={item.href}
+          style={{
+            ...linkStyle,
+            color: linkStyle.color,
+            padding: '8px 0',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = linkStyle.color)}
+        >
+          {item.name}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+function HeaderDesktopNavWithParams({
+  linkStyle,
+}: {
+  linkStyle: { fontSize: number; fontWeight: number; color: string; transition: string };
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, seller, isAuthenticated, isSeller, isAdmin } = useAuth();
+  const isNavActive = useCallback(
+    (href: string) => matchNavActive(pathname, searchParams, href),
+    [pathname, searchParams]
+  );
+  return (
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
+      {navigation.map((item) => {
+        const active = isNavActive(item.href);
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            style={{
+              ...linkStyle,
+              color: active ? '#434346' : linkStyle.color,
+              padding: '8px 0',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = active ? '#434346' : '#6e6e73')}
+          >
+            {item.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function HeaderMobileNavLinks({
+  isNavActive,
+  onItemClick,
+}: {
+  isNavActive: (href: string) => boolean;
+  onItemClick: () => void;
+}) {
+  return (
+    <>
+      {navigation.map((item) => {
+        const active = isNavActive(item.href);
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            onClick={onItemClick}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              padding: '12px 14px',
+              fontSize: 15,
+              color: '#1d1d1f',
+              borderRadius: 10,
+              transition: 'background-color 0.15s',
+              backgroundColor: active ? '#e8e8ed' : 'transparent',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#e8e8ed';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent';
+            }}
+          >
+            <Icon size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            {item.name}
+          </Link>
+        );
+      })}
+    </>
+  );
+}
+
+function HeaderMobileNavWithParams({ onItemClick }: { onItemClick: () => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isNavActive = useCallback(
+    (href: string) => matchNavActive(pathname, searchParams, href),
+    [pathname, searchParams]
+  );
+  return <HeaderMobileNavLinks isNavActive={isNavActive} onItemClick={onItemClick} />;
+}
+
+function HeaderMain() {
+  const { user, seller, loading: authLoading, isAuthenticated, isSeller, isAdmin } = useAuth();
   const showAdmin = isAdmin && isAdminEmail(user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const isNavActive = (href: string) => {
-    if (href === '/') return pathname === '/';
-    if (href === '/catalogue') return pathname === '/catalogue' && !searchParams.get('condition');
-    if (href.startsWith('/catalogue?')) {
-      const params = new URLSearchParams(href.split('?')[1] || '');
-      const wantCondition = params.get('condition');
-      if (pathname !== '/catalogue') return false;
-      if (wantCondition === null) return !searchParams.get('condition');
-      return searchParams.get('condition') === wantCondition;
-    }
-    return pathname === href || pathname.startsWith(href + '/');
-  };
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [userMenuRight, setUserMenuRight] = useState(24);
@@ -45,6 +164,7 @@ export function Header() {
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
+    handleScroll();
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -209,6 +329,7 @@ export function Header() {
   return (
     <>
       <header
+        className="site-header"
         style={{
           position: 'fixed',
           top: 0,
@@ -232,7 +353,7 @@ export function Header() {
             margin: '0 auto',
             padding: '0 24px',
             width: '100%',
-            height: 72,
+            height: 'var(--header-height)',
             display: 'grid',
             gridTemplateColumns: '1fr auto 1fr',
             alignItems: 'center',
@@ -249,26 +370,9 @@ export function Header() {
             <img src="/logo.png" alt="" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
           </Link>
 
-          <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
-            {navigation.map((item) => {
-              const active = isNavActive(item.href);
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  style={{
-                    ...linkStyle,
-                    color: active ? '#434346' : linkStyle.color,
-                    padding: '8px 0',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = active ? '#434346' : '#6e6e73')}
-                >
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
+          <Suspense fallback={<HeaderDesktopNavFallback linkStyle={linkStyle} />}>
+            <HeaderDesktopNavWithParams linkStyle={linkStyle} />
+          </Suspense>
 
           <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
@@ -305,9 +409,31 @@ export function Header() {
                 )}
               </div><span style={headerActionLabelStyle}>Messages</span>
             </Link>
-            {isAuthenticated ? (
-              <>
-                <div className="header-action-user" style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
+            <div className="header-action-user" style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
+              {authLoading ? (
+                <button
+                  type="button"
+                  disabled
+                  className="header-action-item"
+                  aria-busy="true"
+                  aria-label="Chargement du compte"
+                  style={{
+                    ...iconLabelStyle,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'default',
+                    fontFamily: 'inherit',
+                    opacity: 0.55,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
+                    <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
+                  </div>
+                  <span style={headerActionLabelStyle}>{'\u00a0'}</span>
+                </button>
+              ) : isAuthenticated ? (
+                <>
                   <button
                     ref={userMenuButtonRef}
                     type="button"
@@ -387,13 +513,16 @@ export function Header() {
                       </div>
                     </div>
                   )}
-                </div>
-              </>
-            ) : (
-              <Link href="/connexion" className="header-action-user header-action-item" style={{ ...iconLabelStyle, minWidth: 64 }}>
-                <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}><User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden /></div><span style={headerActionLabelStyle}>Connexion</span>
-              </Link>
-            )}
+                </>
+              ) : (
+                <Link href="/connexion" className="header-action-item" style={{ ...iconLabelStyle, minWidth: 64, textDecoration: 'none' }}>
+                  <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
+                    <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
+                  </div>
+                  <span style={headerActionLabelStyle}>Connexion</span>
+                </Link>
+              )}
+            </div>
             </div>
             <button
               ref={mobileMenuButtonRef}
@@ -429,36 +558,20 @@ export function Header() {
           }}
         >
           <div style={{ padding: 8, minHeight: 0 }}>
-            {navigation.map((item) => {
-              const active = isNavActive(item.href);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '12px 14px',
-                    fontSize: 15,
-                    color: '#1d1d1f',
-                    borderRadius: 10,
-                    transition: 'background-color 0.15s',
-                    backgroundColor: active ? '#e8e8ed' : 'transparent',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent'; }}
-                >
-                  <Icon size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
-                  {item.name}
-                </Link>
-              );
-            })}
+            <Suspense
+              fallback={
+                <HeaderMobileNavLinks isNavActive={() => false} onItemClick={() => setMobileMenuOpen(false)} />
+              }
+            >
+              <HeaderMobileNavWithParams onItemClick={() => setMobileMenuOpen(false)} />
+            </Suspense>
           </div>
         </div>
       )}
     </>
   );
+}
+
+export function Header() {
+  return <HeaderMain />;
 }

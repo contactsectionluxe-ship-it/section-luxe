@@ -75,7 +75,7 @@ function RegisterForm() {
   };
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+    <div className="app-shell-hpad" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
       <div className="inscription-page-inner" style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>

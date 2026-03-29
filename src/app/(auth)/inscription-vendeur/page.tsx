@@ -483,7 +483,7 @@ function SellerRegisterContent() {
   if (authLoading || (user && isSeller)) return null;
   if (success) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+      <div className="app-shell-hpad" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
         <div className="inscription-vendeur-page-inner" style={{ width: '100%', maxWidth: 450, paddingTop: 60, paddingBottom: 60, textAlign: 'center' }}>
           <div
             style={{
@@ -608,7 +608,7 @@ function SellerRegisterContent() {
   }
 
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
+    <div className="app-shell-hpad" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
       <div className="inscription-vendeur-page-inner" style={{ width: '100%', maxWidth: 520, paddingTop: 30, paddingBottom: 80 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1

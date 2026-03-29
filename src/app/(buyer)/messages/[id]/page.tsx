@@ -201,7 +201,7 @@ export default function ConversationPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div className="messages-conversation-inner" style={{ maxWidth: 800, width: '100%', margin: '0 auto', padding: '30px 24px 80px', boxSizing: 'border-box' }}>
+      <div className="messages-conversation-inner" style={{ maxWidth: 1100, width: '100%', margin: '0 auto', padding: '30px 24px 80px', boxSizing: 'border-box' }}>
         {/* En-tête : titre + barre avec retour, miniature, interlocuteur (même niveau que page Contact) */}
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1

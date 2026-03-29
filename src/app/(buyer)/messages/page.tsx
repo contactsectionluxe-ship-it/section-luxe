@@ -160,7 +160,7 @@ export default function MessagesPage() {
     return (
       <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         {(authLoading || loading) && <div className="catalogue-loading-bar" aria-hidden />}
-        <div className="messages-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+        <div className="messages-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
           <div style={{ marginBottom: 20 }}>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
               Ma messagerie
@@ -252,7 +252,7 @@ export default function MessagesPage() {
 
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div className="messages-page-inner" style={{ maxWidth: 1200, margin: '0 auto', padding: '30px calc(20px + 1cm - 0.5mm) 60px' }}>
+      <div className="messages-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
         {/* Même structure que Mes favoris : bloc titre puis barre de recherche + filtre sur une ligne */}
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>

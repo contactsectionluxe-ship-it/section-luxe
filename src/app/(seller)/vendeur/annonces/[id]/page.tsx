@@ -829,7 +829,7 @@ export default function EditListingPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
       {/* Ligne titre : même design que Déposer une annonce (classes partagées pour le mobile) */}
-      <div className="deposer-annonce-title-row" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1200, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div className="deposer-annonce-title-row" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href="/vendeur"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
