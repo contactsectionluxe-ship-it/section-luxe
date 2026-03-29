@@ -408,6 +408,11 @@ a:focus-visible {
   transform: translateY(-0.038em);
 }
 
+/* Catalogue vue ligne : badge à droite du nom vendeur +0,05 mm vers le bas (les autres vues inchangées) */
+.catalogue-results-line .catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
+  transform: translateY(calc(-0.038em + 0.05mm));
+}
+
 /* Grilles type « À la une » : badge +0,1 mm plus haut que le défaut grille/liste */
 .home-section-featured .home-featured-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge,
 .catalogue-results-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge {
