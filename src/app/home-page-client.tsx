@@ -103,7 +103,7 @@ export default function HomePage() {
           paddingLeft: 24,
           paddingRight: 24,
           backgroundImage: 'url(/banniere-hero.png)',
-          backgroundSize: '60%',
+          backgroundSize: '56%',
           backgroundPosition: '100% center',
           backgroundRepeat: 'no-repeat',
         }}

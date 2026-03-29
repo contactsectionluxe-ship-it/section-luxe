@@ -648,15 +648,15 @@ a:focus-visible {
   }
 }
 
-/* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop garde 60%) */
+/* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop : voir inline ~56%) */
 @media (min-width: 1600px) {
   .hero-section {
-    background-size: 52% !important;
+    background-size: 48% !important;
   }
 }
 @media (min-width: 2000px) {
   .hero-section {
-    background-size: 42% !important;
+    background-size: 38% !important;
   }
 }
 

@@ -330,7 +330,7 @@ export async function getListing(publicId: string): Promise<Listing | null> {
   return merged[0] ?? null;
 }
 
-/** Options de filtre catalogue partagées par `getListings` et `countListings`. */
+/** Options de filtre catalogue pour `getListings`. */
 export type ListingSearchFilterOptions = {
   category?: string;
   categories?: string[];
@@ -526,16 +526,6 @@ export async function getListings(
   if (error) throw error;
   const listings = (data || []).map(rowToListing);
   return mergeSellerPublicFieldsIntoListings(listings);
-}
-
-/** Nombre d’annonces actives correspondant aux mêmes filtres que `getListings`. */
-export async function countListings(options?: ListingSearchFilterOptions): Promise<number> {
-  if (!isSupabaseConfigured || !supabase) return 0;
-  let query = supabase.from('listings').select('id', { count: 'exact', head: true }).eq('is_active', true);
-  query = applyListingSearchFiltersToQuery(query, options);
-  const { count, error } = await query;
-  if (error) throw error;
-  return count ?? 0;
 }
 
 /** Liste des marques présentes sur les annonces actives (en stock). */
