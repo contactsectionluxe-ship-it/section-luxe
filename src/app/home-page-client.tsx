@@ -231,50 +231,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="categories-scroll-wrap" style={{ position: 'relative' }} data-scroll-state={scrollState}>
-            <button
-              type="button"
-              aria-label="Catégories précédentes"
-              onClick={() => {
-                const el = categoriesScrollRef.current;
-                if (!el) return;
-                const pageW = el.clientWidth;
-                const pageIndex = Math.round(el.scrollLeft / pageW);
-                const target = Math.max((pageIndex - 1) * pageW, 0);
-                el.scrollTo({ left: target, behavior: 'smooth' });
-              }}
-              style={{
-                position: 'absolute',
-                left: -18,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 36,
-                height: 36,
-                borderRadius: '50%',
-                border: '1px solid #e8e8ed',
-                background: 'rgba(255,255,255,0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#8e8e93',
-                cursor: 'pointer',
-                transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.25s',
-                zIndex: 1,
-                opacity: scrollState === 'start' ? 0 : 1,
-                pointerEvents: scrollState === 'start' ? 'none' : 'auto',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = '#f5f5f7';
-                e.currentTarget.style.color = '#1d1d1f';
-                e.currentTarget.style.borderColor = '#d2d2d7';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
-                e.currentTarget.style.color = '#8e8e93';
-                e.currentTarget.style.borderColor = '#e8e8ed';
-              }}
-            >
-              <ChevronLeft size={20} strokeWidth={2} />
-            </button>
+            <div className="categories-scroll-viewport">
             <div
               ref={categoriesScrollRef}
               role="region"
@@ -282,12 +239,15 @@ export default function HomePage() {
               onPointerDown={(e) => {
                 if (e.button !== 0) return;
                 if ((e.target as HTMLElement).closest?.('.category-item-card-link')) return;
+                const el = categoriesScrollRef.current;
+                if (!el) return;
+                e.preventDefault();
                 hasDragged.current = false;
                 dragStartX.current = e.clientX;
-                dragStartScrollLeft.current = categoriesScrollRef.current?.scrollLeft ?? 0;
+                dragStartScrollLeft.current = el.scrollLeft;
                 isDraggingRef.current = true;
                 setIsDragging(true);
-                (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+                el.setPointerCapture?.(e.pointerId);
               }}
               onPointerMove={(e) => {
                 if (!isDraggingRef.current || !categoriesScrollRef.current) return;
@@ -300,28 +260,31 @@ export default function HomePage() {
                 isDraggingRef.current = false;
                 setIsDragging(false);
                 hasDragged.current = false;
-                (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
-              }}
-              onPointerLeave={(e) => {
-                if (isDraggingRef.current) {
-                  isDraggingRef.current = false;
-                  setIsDragging(false);
-                  hasDragged.current = false;
-                  (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+                try {
+                  categoriesScrollRef.current?.releasePointerCapture(e.pointerId);
+                } catch {
+                  /* déjà relâché */
                 }
+              }}
+              onPointerCancel={() => {
+                isDraggingRef.current = false;
+                setIsDragging(false);
+                hasDragged.current = false;
               }}
               style={{
                 overflowX: 'auto',
                 overflowY: 'hidden',
                 width: '100%',
                 cursor: isDragging ? 'grabbing' : 'grab',
-                userSelect: isDragging ? 'none' : 'auto',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 WebkitOverflowScrolling: 'touch',
                 containerType: 'inline-size',
               }}
               className="categories-scroll categories-scroll-container"
+              data-dragging={isDragging ? 'true' : 'false'}
             >
               <div
                 className="categories-scroll-inner"
@@ -434,6 +397,45 @@ export default function HomePage() {
             </div>
             <button
               type="button"
+              aria-label="Catégories précédentes"
+              onClick={() => {
+                const el = categoriesScrollRef.current;
+                if (!el) return;
+                const pageW = el.clientWidth;
+                const pageIndex = Math.round(el.scrollLeft / pageW);
+                const target = Math.max((pageIndex - 1) * pageW, 0);
+                el.scrollTo({ left: target, behavior: 'smooth' });
+              }}
+              style={{
+                position: 'absolute',
+                borderRadius: '50%',
+                border: '1px solid #e8e8ed',
+                background: 'rgba(255,255,255,0.9)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#8e8e93',
+                cursor: 'pointer',
+                transition: 'background 0.2s, color 0.2s, border-color 0.2s, opacity 0.25s',
+                zIndex: 2,
+                opacity: scrollState === 'start' ? 0 : 1,
+                pointerEvents: scrollState === 'start' ? 'none' : 'auto',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f5f5f7';
+                e.currentTarget.style.color = '#1d1d1f';
+                e.currentTarget.style.borderColor = '#d2d2d7';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.9)';
+                e.currentTarget.style.color = '#8e8e93';
+                e.currentTarget.style.borderColor = '#e8e8ed';
+              }}
+            >
+              <ChevronLeft size={20} strokeWidth={2} />
+            </button>
+            <button
+              type="button"
               aria-label="Catégories suivantes"
               onClick={() => {
                 const el = categoriesScrollRef.current;
@@ -446,11 +448,6 @@ export default function HomePage() {
               }}
               style={{
                 position: 'absolute',
-                right: -18,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                width: 36,
-                height: 36,
                 borderRadius: '50%',
                 border: '1px solid #e8e8ed',
                 background: 'rgba(255,255,255,0.9)',
@@ -460,7 +457,7 @@ export default function HomePage() {
                 color: '#8e8e93',
                 cursor: 'pointer',
                 transition: 'background 0.2s, color 0.2s, border-color 0.2s',
-                zIndex: 1,
+                zIndex: 2,
                 opacity: scrollState === 'end' ? 0 : 1,
                 pointerEvents: scrollState === 'end' ? 'none' : 'auto',
               }}
@@ -477,6 +474,7 @@ export default function HomePage() {
             >
               <ChevronRight size={20} strokeWidth={2} />
             </button>
+            </div>
           </div>
         </div>
       </section>

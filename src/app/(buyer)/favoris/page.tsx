@@ -35,6 +35,10 @@ function normalizeForSearch(s: string): string {
     .replace(/[-'\s]+/g, '');
 }
 
+/** Même ombre et rayon que les cartes « À la une » (accueil) */
+const LISTING_CARD_RADIUS = 18;
+const LISTING_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
+
 const FAVORIS_SORT_OPTIONS = [
   { value: 'recent' as const, label: 'Plus récents' },
   { value: 'oldest' as const, label: 'Plus anciens' },
@@ -197,10 +201,10 @@ export default function FavoritesPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   backgroundColor: '#fff',
-                  borderRadius: 12,
+                  borderRadius: LISTING_CARD_RADIUS,
                   overflow: 'hidden',
                   border: '1px solid #e8e6e3',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                  boxShadow: LISTING_CARD_SHADOW,
                   minWidth: 0,
                   position: 'relative',
                   ['--skeleton-index' as string]: i,
@@ -388,9 +392,9 @@ export default function FavoritesPage() {
                       display: 'flex',
                       flexDirection: 'column',
                       backgroundColor: '#fff',
-                      borderRadius: 12,
+                      borderRadius: LISTING_CARD_RADIUS,
                       border: '1px solid #e8e6e3',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+                      boxShadow: LISTING_CARD_SHADOW,
                       overflow: 'hidden',
                       minWidth: 0,
                     }}

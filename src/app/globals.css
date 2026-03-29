@@ -265,10 +265,22 @@ a:focus-visible {
   .hide-desktop {
     display: none !important;
   }
-  /* Page d'accueil section catégories : flèches au milieu de la carte (image), pas du texte */
-  .categories-scroll-wrap button[aria-label="Catégories précédentes"],
-  .categories-scroll-wrap button[aria-label="Catégories suivantes"] {
+  /* Flèches par rapport au viewport scroll : centre sur le bord gauche/droit visible = moitié sur la carte latérale */
+  .categories-scroll-viewport button[aria-label="Catégories précédentes"] {
+    left: 0 !important;
+    right: auto !important;
     top: 46% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+  .categories-scroll-viewport button[aria-label="Catégories suivantes"] {
+    right: 0 !important;
+    left: auto !important;
+    top: 46% !important;
+    transform: translate(50%, -50%) !important;
+    width: 36px !important;
+    height: 36px !important;
   }
 }
 
@@ -610,15 +622,29 @@ a:focus-visible {
   box-sizing: border-box;
   width: calc(100% + 48px);
 }
+/* Repère des flèches = bords du viewport de défilement (moitié du bouton sur la carte latérale) */
+.home-section-categories .categories-scroll-viewport {
+  position: relative;
+  width: 100%;
+}
 
 /* Desktop (≥768px) : éviter un 5e fragment visible au repos (4 tuiles = 100cqw avec gap 24 en TSX) */
 @media (min-width: 768px) {
   .home-section-categories .categories-scroll-container {
     scroll-snap-type: x proximity;
     scroll-padding-inline: 0;
+    /* Glisser sur les libellés : pas de lutte avec le snap pendant le drag */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .home-section-categories .categories-scroll-container[data-dragging='true'] {
+    scroll-snap-type: none !important;
   }
   .home-section-categories .categories-scroll-item {
     scroll-snap-align: start;
+  }
+  .home-section-categories .category-item-label {
+    cursor: grab;
   }
 }
 
@@ -717,6 +743,9 @@ a:focus-visible {
     scroll-padding-inline: 0;
     overscroll-behavior-x: none !important;
   }
+  .home-section-categories .categories-scroll-container[data-dragging='true'] {
+    scroll-snap-type: none !important;
+  }
   .categories-scroll-inner {
     /* 2 colonnes visibles : gap 12px (aligné grille « À la une » mobile) ; 6×tuile + 5×gap = 300cqw + 24px */
     gap: 12px !important;
@@ -773,6 +802,7 @@ a:focus-visible {
     grid-template-columns: repeat(2, 1fr) !important;
     margin-top: 0 !important;
   }
+  /* Jusqu’à 2 lignes + … si besoin ; pas de min-height : une annonce à 1 ligne ne force pas la hauteur des voisines */
   .listing-grid-title {
     white-space: normal !important;
     display: -webkit-box !important;
@@ -780,9 +810,7 @@ a:focus-visible {
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
-    min-height: 2.6em !important;
     line-height: 1.3 !important;
-    /* Remplir les 2 lignes puis … uniquement en fin ; couper les mots longs si besoin */
     overflow-wrap: anywhere !important;
     word-break: break-word !important;
     hyphens: auto !important;
@@ -808,8 +836,9 @@ a:focus-visible {
     font-size: 11px !important;
     flex-shrink: 0 !important;
   }
+  /* Un peu moins d’air au-dessus du prix (le inline -5px est écrasé ici sur mobile) */
   .listing-grid-price {
-    margin-top: 2px !important;
+    margin-top: -6px !important;
   }
   .home-section-vendeur-cta {
     margin-top: -44px !important;
@@ -2455,10 +2484,10 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     transform: translateX(-5px) !important;
   }
 
-  /* Boutons prev/next du carousel catégories : les garder dans l’écran */
-  /* Flèches catégories : discrètes, centre de la flèche droite pile au milieu de la bordure droite de la dernière catégorie */
-  button[aria-label="Catégories précédentes"] {
+  /* Boutons prev/next : bord du viewport = bord de la carte visible (moitié sur la tuile) */
+  .categories-scroll-viewport button[aria-label="Catégories précédentes"] {
     left: 0 !important;
+    right: auto !important;
     top: calc(42% + 1mm) !important;
     transform: translate(-50%, -50%) !important;
     width: 28px !important;
@@ -2468,12 +2497,13 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     color: rgba(0,0,0,0.5) !important;
     opacity: 0.9 !important;
   }
-  button[aria-label="Catégories précédentes"] svg {
+  .categories-scroll-viewport button[aria-label="Catégories précédentes"] svg {
     width: 16px !important;
     height: 16px !important;
   }
-  button[aria-label="Catégories suivantes"] {
+  .categories-scroll-viewport button[aria-label="Catégories suivantes"] {
     right: 0 !important;
+    left: auto !important;
     top: calc(42% + 1mm) !important;
     transform: translate(50%, -50%) !important;
     width: 28px !important;
@@ -2483,7 +2513,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     color: rgba(0,0,0,0.5) !important;
     opacity: 0.9 !important;
   }
-  button[aria-label="Catégories suivantes"] svg {
+  .categories-scroll-viewport button[aria-label="Catégories suivantes"] svg {
     width: 16px !important;
     height: 16px !important;
   }
