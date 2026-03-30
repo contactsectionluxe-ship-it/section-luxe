@@ -1,16 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense, type RefObject } from 'react';
+import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
-import { createListing, updateListing } from '@/lib/supabase/listings';
-import { uploadListingPhotos } from '@/lib/supabase/storage';
+import { uploadSaleProposalPhotos } from '@/lib/supabase/storage';
+import { createSaleProposalWithInvites } from '@/lib/supabase/saleProposals';
+import { MultiLocationPicker } from '@/components/proposition-vente/MultiLocationPicker';
+import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
+import { unionPrefixes, sellerPostcodeMatchesPrefixes } from '@/lib/saleProposalLocations';
+import { fetchCoordsForPostcode, haversineKm } from '@/lib/geoCoords';
+import { normalizeSubscriptionTier } from '@/lib/subscription';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
+import { sellerRowToPropositionAddressLine } from '@/lib/sellerAddressDisplay';
 import { CguCgvCheckbox } from '@/components/ui';
 import { CATEGORIES, parseListingPriceInputToNumber, sanitizeListingPriceInputWhileTyping } from '@/lib/utils';
 import {
@@ -22,7 +28,6 @@ import {
 } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
-import { isSubscriptionLimitError } from '@/lib/subscription';
 
 const ETAT_OPTIONS = [
   { value: 'new', label: 'Neuf' },
@@ -45,12 +50,14 @@ const CONTENU_INCLUS_OPTIONS = [
   { value: 'facture', label: 'Facture' },
 ];
 
-const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix'];
+const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix & vendeurs'];
 
-const DRAFT_KEY_NEW = 'luxe-annonce-nouvelle-draft';
+const DRAFT_KEY_NEW = 'luxe-proposition-vente-draft';
 
 type NewListingDraft = {
   step?: number;
+  selectedLocations?: SaleProposalLocationEntry[];
+  selectedSellerIds?: string[];
   category?: string;
   genre?: ('homme' | 'femme')[];
   articleType?: string;
@@ -84,46 +91,24 @@ type NewListingDraft = {
 /** Listes déroulantes étape 1 : une seule ouverte à la fois. */
 type Step1DropdownId = 'category' | 'type' | 'marque' | 'modele' | 'size' | 'condition' | 'material' | 'color';
 
-function NewListingContent() {
+export function ProposerVenteFormClient() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const fromVentes = searchParams.get('from') === 'ventes';
-  const { user, seller, isApprovedSeller, loading: authLoading } = useAuth();
+  const { user, isSeller, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
-  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
-
-  // Paiement non mené à terme : supprimer l'annonce brouillon et afficher un message (une seule fois)
-  const cancelHandledRef = useRef(false);
-  useEffect(() => {
-    if (authLoading || !user || cancelHandledRef.current) return;
-    const cancel = searchParams.get('cancel');
-    const listingIdParam = searchParams.get('listingId');
-    if (cancel !== '1' || !listingIdParam?.trim()) return;
-    cancelHandledRef.current = true;
-
-    const run = async () => {
-      const { getSession } = await import('@/lib/supabase/auth');
-      const session = await getSession();
-      if (!session?.access_token) {
-        setCancelMessage('Paiement annulé. Reconnectez-vous pour déposer une annonce.');
-        router.replace(fromVentes ? '/vendeur/annonces/nouvelle?from=ventes' : '/vendeur/annonces/nouvelle', { scroll: false });
-        return;
-      }
-      const res = await fetch('/api/annonces/cancel-deposit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ listingId: listingIdParam.trim() }),
-      });
-      const base = fromVentes ? '/vendeur/annonces/nouvelle?from=ventes' : '/vendeur/annonces/nouvelle';
-      router.replace(base, { scroll: false });
-      setCancelMessage(res.ok ? 'Paiement annulé. L\'annonce n\'a pas été conservée.' : 'Paiement annulé.');
-    };
-    run();
-  }, [authLoading, user, searchParams, fromVentes, router]);
+  const [selectedLocations, setSelectedLocations] = useState<SaleProposalLocationEntry[]>([]);
+  const [radiusKm, setRadiusKm] = useState(0);
+  const [buyerLatLon, setBuyerLatLon] = useState<{ lat: number; lon: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [selectedSellerIds, setSelectedSellerIds] = useState<string[]>([]);
+  const [eligibleSellers, setEligibleSellers] = useState<
+    { id: string; companyName: string; addressLine: string; subscriptionTier: string; avatarUrl: string | null }[]
+  >([]);
+  const [eligibleLoading, setEligibleLoading] = useState(false);
 
   const [category, setCategory] = useState<ListingCategory | '' | 'autre'>('');
   const [genre, setGenre] = useState<('homme' | 'femme')[]>([]);
@@ -202,6 +187,8 @@ function NewListingContent() {
       if (d.contenuInclus != null && typeof d.contenuInclus === 'object') setContenuInclusState(d.contenuInclus);
       if (d.price != null) setPrice(sanitizeListingPriceInputWhileTyping(String(d.price)));
       if (d.acceptCguCgv != null) setAcceptCguCgv(d.acceptCguCgv);
+      if (Array.isArray(d.selectedLocations)) setSelectedLocations(d.selectedLocations);
+      if (Array.isArray(d.selectedSellerIds)) setSelectedSellerIds(d.selectedSellerIds);
     } catch {
       // ignore
     }
@@ -209,6 +196,7 @@ function NewListingContent() {
 
   // Sauvegarder le brouillon complet (sessionStorage) à chaque modification + quand on quitte l'onglet
   const draftPayloadRef = useRef<NewListingDraft>({});
+  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Si false, le titre est resynchronisé avec le titre suggéré quand marque / modèle / type changent. */
   const titleManuallyEditedRef = useRef(false);
   draftPayloadRef.current = {
@@ -216,6 +204,8 @@ function NewListingContent() {
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
     color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     contenuInclus, price, acceptCguCgv,
+    selectedLocations,
+    selectedSellerIds,
   };
   useEffect(() => {
     if (draftTimeoutRef.current) clearTimeout(draftTimeoutRef.current);
@@ -237,6 +227,7 @@ function NewListingContent() {
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
     color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     JSON.stringify(contenuInclus), price, acceptCguCgv,
+    JSON.stringify(selectedLocations), selectedSellerIds.join(','),
   ]);
   useEffect(() => {
     const onHide = () => {
@@ -310,28 +301,41 @@ function NewListingContent() {
   const [photoRejectMessage, setPhotoRejectMessage] = useState<string | null>(null);
 
   const maxPhotos = 9;
-  const onDropPhotos = useCallback(
-    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
-      const remaining = maxPhotos - photos.length;
+  const appendProposalPhotos = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    let rejectedCountForMessage = 0;
+    setPhotos((prev) => {
+      const remaining = maxPhotos - prev.length;
+      if (remaining <= 0) {
+        rejectedCountForMessage = acceptedFiles.length + fileRejections.length;
+        return prev;
+      }
       const validFiles = acceptedFiles.filter((f) => validateImageFile(f).ok);
       const toAdd = validFiles.slice(0, remaining);
-      setPhotos((prev) => [...prev, ...toAdd]);
-      const rejectedCount = fileRejections.length + (acceptedFiles.length - validFiles.length);
-      if (rejectedCount > 0) {
-        if (photoAdditionHasOversizeFile(acceptedFiles, fileRejections)) {
-          setPhotoRejectMessage(PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT);
-        } else {
-          setPhotoRejectMessage(
-            rejectedCount === 1
-              ? `1 fichier non ajouté : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
-              : `${rejectedCount} fichiers non ajoutés : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
-          );
-        }
+      rejectedCountForMessage =
+        fileRejections.length +
+        (acceptedFiles.length - validFiles.length) +
+        Math.max(0, validFiles.length - remaining);
+      return [...prev, ...toAdd];
+    });
+    if (rejectedCountForMessage > 0) {
+      if (photoAdditionHasOversizeFile(acceptedFiles, fileRejections)) {
+        setPhotoRejectMessage(PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT);
       } else {
-        setPhotoRejectMessage(null);
+        setPhotoRejectMessage(
+          rejectedCountForMessage === 1
+            ? `1 fichier non ajouté : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
+            : `${rejectedCountForMessage} fichiers non ajoutés : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
+        );
       }
+    } else {
+      setPhotoRejectMessage(null);
+    }
+  }, []);
+  const onDropPhotos = useCallback(
+    (acceptedFiles: File[], fileRejections: FileRejection[]) => {
+      appendProposalPhotos(acceptedFiles, fileRejections);
     },
-    [photos.length]
+    [appendProposalPhotos]
   );
   useEffect(() => {
     if (!photoRejectMessage) return;
@@ -365,8 +369,6 @@ function NewListingContent() {
   };
 
   // Étape 3
-  const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Fermer le tooltip État (i) au clic ailleurs sur la page
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -380,9 +382,6 @@ function NewListingContent() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [etatInfoClicked, etatInfoHover]);
-
-  // Étape 4
-  const [isActive, setIsActive] = useState(true);
 
   const categoryOptions = CATEGORIES;
   // Marques filtrées par catégorie et genre (Homme / Femme)
@@ -479,9 +478,207 @@ function NewListingContent() {
     setTitleSuffix(suggested);
   }, [category, customCategory, brand, marqueSearchQuery, model, modeleSearchQuery, customModel, genre, articleType, modelOptions.length]);
 
+  const clearPropositionGeolocation = useCallback(() => {
+    setBuyerLatLon(null);
+    setGeoError(null);
+    setGeoLoading(false);
+  }, []);
+
+  const requestPropositionGeolocation = useCallback(() => {
+    setGeoError(null);
+    setGeoLoading(true);
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setGeoError("La géolocalisation n'est pas supportée par votre navigateur.");
+      setGeoLoading(false);
+      return;
+    }
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setGeoError(
+        "La géolocalisation n'est disponible qu'en HTTPS. Ouvrez le site avec une adresse commençant par https:// (ou utilisez localhost en développement).",
+      );
+      setGeoLoading(false);
+      return;
+    }
+    const options: PositionOptions = {
+      enableHighAccuracy: false,
+      timeout: 15000,
+      maximumAge: 300000,
+    };
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setBuyerLatLon({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+        setGeoError(null);
+        setGeoLoading(false);
+      },
+      (err: GeolocationPositionError) => {
+        const code = err?.code ?? 0;
+        const isSecure = typeof window !== 'undefined' && window.isSecureContext;
+        const message =
+          code === 1
+            ? !isSecure
+              ? "La géolocalisation n'est disponible qu'en HTTPS. Ouvrez le site avec une adresse sécurisée (https://) pour utiliser le filtre par rayon."
+              : "Localisation refusée. Vérifiez les autorisations du site : cliquez sur l'icône (cadenas ou i) à gauche de l'adresse et autorisez la localisation."
+            : code === 2
+              ? 'Position indisponible. Vérifiez que la localisation est activée sur votre appareil.'
+              : code === 3
+                ? 'Délai dépassé. Réessayez dans un endroit avec meilleur signal.'
+                : "Impossible d'obtenir votre position. Vérifiez les autorisations du navigateur et réessayez.";
+        setGeoError(message);
+        setGeoLoading(false);
+      },
+      options,
+    );
+  }, []);
+
+  const handlePropositionRadiusKmChange = useCallback(
+    (km: number) => {
+      setRadiusKm(km);
+      if (km === 0) clearPropositionGeolocation();
+    },
+    [clearPropositionGeolocation],
+  );
+
+  useEffect(() => {
+    if (step !== 4) return;
+    if (!isSupabaseConfigured || !supabase) {
+      setEligibleSellers([]);
+      setEligibleLoading(false);
+      return;
+    }
+
+    if (radiusKm > 0) {
+      if (!buyerLatLon) {
+        setEligibleSellers([]);
+        setEligibleLoading(false);
+        return;
+      }
+      let cancelled = false;
+      setEligibleLoading(true);
+      void (async () => {
+        const { data, error } = await supabase
+          .from('sellers')
+          .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
+          .eq('status', 'approved')
+          .in('subscription_tier', ['plus', 'pro']);
+        if (cancelled) return;
+        if (error || !data) {
+          setEligibleSellers([]);
+          setEligibleLoading(false);
+          return;
+        }
+        const raw = data as {
+          id: string;
+          company_name: string | null;
+          address: string | null;
+          city: string | null;
+          postcode: string | null;
+          subscription_tier: string | null;
+          avatar_url: string | null;
+        }[];
+        const cache = new Map<string, { lat: number; lon: number } | null>();
+        const rows: {
+          id: string;
+          companyName: string;
+          addressLine: string;
+          subscriptionTier: string;
+          avatarUrl: string | null;
+        }[] = [];
+        for (const s of raw) {
+          if (
+            normalizeSubscriptionTier(s.subscription_tier) !== 'plus' &&
+            normalizeSubscriptionTier(s.subscription_tier) !== 'pro'
+          ) {
+            continue;
+          }
+          const pc = s.postcode?.replace(/\s/g, '').trim() || '';
+          if (!pc) continue;
+          const key = pc.slice(0, 5);
+          if (!cache.has(key)) {
+            cache.set(key, await fetchCoordsForPostcode(key));
+          }
+          if (cancelled) return;
+          const c = cache.get(key);
+          if (!c) continue;
+          if (haversineKm(buyerLatLon, c) <= radiusKm) {
+            rows.push({
+              id: s.id,
+              companyName: s.company_name?.trim() || 'Vendeur',
+              addressLine: sellerRowToPropositionAddressLine(s as Record<string, unknown>),
+              subscriptionTier: s.subscription_tier || 'plus',
+              avatarUrl: s.avatar_url,
+            });
+          }
+        }
+        if (!cancelled) {
+          setEligibleSellers(rows);
+          setEligibleLoading(false);
+          setSelectedSellerIds((prev) => prev.filter((id) => rows.some((r) => r.id === id)));
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const prefixes = unionPrefixes(selectedLocations);
+    if (prefixes.length === 0) {
+      setEligibleSellers([]);
+      setEligibleLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setEligibleLoading(true);
+    void supabase
+      .from('sellers')
+      .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
+      .eq('status', 'approved')
+      .in('subscription_tier', ['plus', 'pro'])
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setEligibleLoading(false);
+        if (error || !data) {
+          setEligibleSellers([]);
+          return;
+        }
+        const rows = (
+          data as {
+            id: string;
+            company_name: string | null;
+            address: string | null;
+            city: string | null;
+            postcode: string | null;
+            subscription_tier: string | null;
+            avatar_url: string | null;
+          }[]
+        )
+          .filter(
+            (s) =>
+              (normalizeSubscriptionTier(s.subscription_tier) === 'plus' ||
+                normalizeSubscriptionTier(s.subscription_tier) === 'pro') &&
+              sellerPostcodeMatchesPrefixes(s.postcode, prefixes),
+          )
+          .map((s) => ({
+            id: s.id,
+            companyName: s.company_name?.trim() || 'Vendeur',
+            addressLine: sellerRowToPropositionAddressLine(s as Record<string, unknown>),
+            subscriptionTier: s.subscription_tier || 'plus',
+            avatarUrl: s.avatar_url,
+          }));
+        setEligibleSellers(rows);
+        setSelectedSellerIds((prev) => prev.filter((id) => rows.some((r) => r.id === id)));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, selectedLocations, radiusKm, buyerLatLon]);
+
   if (authLoading) return <PageLoader />;
-  if (!isApprovedSeller) {
-    router.push('/vendeur');
+  if (!user) {
+    router.replace('/connexion?redirect=/proposer-vente');
+    return null;
+  }
+  if (isSeller) {
+    router.replace('/vendeur');
     return null;
   }
 
@@ -507,7 +704,7 @@ function NewListingContent() {
       setError('Rechercher ou préciser la marque');
       return false;
     }
-if (modelOptions.length > 0) {
+    if (modelOptions.length > 0) {
       const modelOrTyped = model || modeleSearchQuery.trim();
       if (!modelOrTyped) {
         setError('Sélectionner ou saisir le modèle');
@@ -545,7 +742,27 @@ if (modelOptions.length > 0) {
   const validateStep4 = () => {
     const priceNum = parseListingPriceInputToNumber(price);
     if (priceNum == null) {
-      setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
+      setError('Indiquez un prix souhaité en euros entiers, sans centimes (ex. 5000)');
+      return false;
+    }
+    if (radiusKm > 0) {
+      if (geoLoading) {
+        setError('Localisation en cours… patientez un instant.');
+        return false;
+      }
+      if (!buyerLatLon) {
+        setError(
+          geoError ||
+            'Autorisez la géolocalisation pour utiliser le filtre par rayon, ou repassez le curseur sur « — — » et choisissez une ville ou une région.',
+        );
+        return false;
+      }
+    } else if (selectedLocations.length === 0) {
+      setError('Ajoutez au moins une localisation (ville, code postal ou région)');
+      return false;
+    }
+    if (selectedSellerIds.length === 0) {
+      setError('Sélectionnez au moins un vendeur professionnel (Plus ou Pro) dans la zone choisie');
       return false;
     }
     setError('');
@@ -569,7 +786,7 @@ if (modelOptions.length > 0) {
     e.preventDefault();
     setCguCgvError('');
     if (!acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour publier l\'annonce.');
+      setCguCgvError('Veuillez accepter les CGU et les CGV pour envoyer votre proposition.');
       return;
     }
     if (!validateStep4()) return;
@@ -593,46 +810,61 @@ if (modelOptions.length > 0) {
         return;
       }
 
-      const publishNow = isActive;
-
-      const { id: listingId, savedAsInactiveDueToLimit } = await createListing({
-        sellerId: user!.uid,
-        sellerName: seller!.companyName,
+      const proposalId = await createSaleProposalWithInvites({
+        visitorId: user!.uid,
         title: finalTitle,
         description: description.trim() || '',
-        price: priceNum,
-        category: (category === 'autre' ? customCategory.trim() : category) as ListingCategory,
+        category: category === 'autre' ? customCategory.trim().toLowerCase() : category,
         genre: genre.length > 0 ? genre : null,
-        photos: [],
+        articleType:
+          (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType
+            ? articleType.includes('::')
+              ? articleType.split('::')[0]
+              : articleType
+            : null,
         brand: brandToSave || null,
         model: modelToSave || null,
         condition: condition || null,
         material: materialToSave,
         color: colorToSave,
-        heightCm: (category === 'chaussures' || category === 'vetements') ? null : (heightCm ? parseFloat(heightCm.replace(',', '.')) : null),
-        widthCm: (category === 'chaussures' || category === 'vetements') ? null : (widthCm ? parseFloat(widthCm.replace(',', '.')) : null),
+        heightCm:
+          category === 'chaussures' || category === 'vetements'
+            ? null
+            : heightCm
+              ? parseFloat(heightCm.replace(',', '.'))
+              : null,
+        widthCm:
+          category === 'chaussures' || category === 'vetements'
+            ? null
+            : widthCm
+              ? parseFloat(widthCm.replace(',', '.'))
+              : null,
         year: year ? parseInt(year, 10) : null,
-        packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
-        size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType ? (articleType.includes('::') ? articleType.split('::')[0] : articleType) : null,
-        isActive: publishNow,
+        packaging:
+          CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length > 0
+            ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value)
+            : null,
+        size:
+          category === 'montres'
+            ? widthCm
+              ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10))
+              : null
+            : category === 'chaussures' || category === 'vetements'
+              ? size || sizeSearchQuery.trim() || null
+              : null,
+        wishPriceCents: Math.round(priceNum * 100),
+        locations: selectedLocations,
+        invitedSellerIds: selectedSellerIds,
       });
-
-      if (savedAsInactiveDueToLimit) {
-        try {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('listingDepotInactiveLimite', '1');
-          }
-        } catch {
-          // ignore
-        }
-      }
 
       let photoUrls: string[] = [];
       if (photos.length > 0) {
-        photoUrls = await uploadListingPhotos(user!.uid, listingId, photos);
-        if (photoUrls.length > 0) {
-          await updateListing(listingId, { photos: photoUrls });
+        photoUrls = await uploadSaleProposalPhotos(user!.uid, proposalId, photos);
+      }
+      if (photoUrls.length > 0) {
+        const { supabase: sb } = await import('@/lib/supabase/client');
+        if (sb) {
+          await sb.from('sale_proposals').update({ photo_urls: photoUrls }).eq('id', proposalId).eq('visitor_id', user!.uid);
         }
       }
 
@@ -647,15 +879,11 @@ if (modelOptions.length > 0) {
       await fetch('/api/cgu-cgv-acceptance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user!.uid, context: 'publication_annonce' }),
+        body: JSON.stringify({ userId: user!.uid, context: 'proposition_vente' }),
       });
 
-      router.push(fromVentes ? '/vendeur/ventes' : '/vendeur');
+      router.push('/suivre-mes-offres');
     } catch (err: unknown) {
-      if (isSubscriptionLimitError(err)) {
-        router.push('/vendeur/abonnement?limite=1');
-        return;
-      }
       const message =
         err instanceof Error
           ? err.message
@@ -663,12 +891,15 @@ if (modelOptions.length > 0) {
             ? (err as { message: string }).message
             : 'Une erreur est survenue';
       if (process.env.NODE_ENV === 'development' && err instanceof Error) {
-        console.error('[createListing]', message, err);
+        console.error('[createSaleProposal]', message, err);
       }
+      const storageObjectTooLarge = /exceeded the maximum allowed size/i.test(message);
       setError(
-        message.includes('Storage') || message.includes('upload')
-          ? `Erreur lors de l'upload des photos. Vérifiez que le bucket "listings" existe et que les politiques Storage sont appliquées (voir supabase/storage-policies.sql). Détail : ${message}`
-          : message
+        storageObjectTooLarge
+          ? `Le stockage Supabase refuse le fichier (limite du bucket « listings » trop basse). Prévu côté app : ${PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT}. Exécutez la migration storage_listings_bucket_file_size_10mb.sql ou augmentez la limite du bucket dans Storage → listings.`
+          : message.includes('Storage') || message.includes('upload')
+            ? `Erreur lors de l'upload des photos. Détail : ${message}`
+            : message
       );
     } finally {
       setLoading(false);
@@ -707,13 +938,13 @@ if (modelOptions.length > 0) {
       {/* Ligne titre : Retour à gauche (comme Modifier l'annonce), Déposer une annonce au centre */}
       <div className="deposer-annonce-title-row" style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
-          href={fromVentes ? '/vendeur/ventes' : '/vendeur'}
+          href="/"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
           className="hover:opacity-80 deposer-annonce-back-link"
-          aria-label={fromVentes ? 'Retour à mes ventes' : 'Retour à mes annonces'}
+          aria-label="Retour à l'accueil"
         >
           <ArrowLeft size={18} />
-          <span className="deposer-annonce-back-link-text">{fromVentes ? 'Retour à mes ventes' : 'Retour à mes annonces'}</span>
+          <span className="deposer-annonce-back-link-text">Retour à l&apos;accueil</span>
         </Link>
         <div className="deposer-annonce-title-center">
           <h1
@@ -726,11 +957,11 @@ if (modelOptions.length > 0) {
               letterSpacing: '-0.02em',
             }}
           >
-            Déposer une annonce
+            Proposer une pièce
           </h1>
           <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>
-            <span className="deposer-annonce-subtitle-desktop">Créez une nouvelle annonce pour la publier</span>
-            <span className="deposer-annonce-subtitle-mobile">Créez une nouvelle annonce.</span>
+            <span className="deposer-annonce-subtitle-desktop">Proposer une pièce aux vendeurs</span>
+            <span className="deposer-annonce-subtitle-mobile">Proposer une pièce aux vendeurs</span>
           </p>
         </div>
         <div className="deposer-annonce-title-spacer" aria-hidden />
@@ -781,12 +1012,6 @@ if (modelOptions.length > 0) {
               {error}
             </div>
           )}
-          {cancelMessage && (
-            <div style={{ padding: 14, backgroundColor: '#f0f9ff', color: '#0369a1', fontSize: 13, marginBottom: 20 }}>
-              {cancelMessage}
-            </div>
-          )}
-
           <AnimatePresence mode="wait">
             {step === 1 && (
               <motion.div
@@ -1705,6 +1930,18 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                         gap: 12,
                         marginTop: photos.length < maxPhotos ? 16 : 0,
                       }}
+                      onDragOver={(e) => {
+                        if ([...e.dataTransfer.types].includes('Files')) {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'copy';
+                        }
+                      }}
+                      onDrop={(e) => {
+                        if ([...e.dataTransfer.types].includes('Files') && e.dataTransfer.files.length > 0) {
+                          e.preventDefault();
+                          appendProposalPhotos(Array.from(e.dataTransfer.files), []);
+                        }
+                      }}
                     >
                       {displaySlots.map((slot, displayIndex) =>
                         slot.type === 'placeholder' ? (
@@ -1712,11 +1949,22 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                             key="placeholder"
                             onDragOver={(e) => {
                               e.preventDefault();
-                              e.dataTransfer.dropEffect = 'move';
-                              setPhotoDropTargetIndex(displayIndex);
+                              if ([...e.dataTransfer.types].includes('Files')) {
+                                e.dataTransfer.dropEffect = 'copy';
+                              } else {
+                                e.dataTransfer.dropEffect = 'move';
+                                setPhotoDropTargetIndex(displayIndex);
+                              }
                             }}
                             onDrop={(e) => {
                               e.preventDefault();
+                              if (e.dataTransfer.files.length > 0) {
+                                e.stopPropagation();
+                                appendProposalPhotos(Array.from(e.dataTransfer.files), []);
+                                setDraggingPhotoIndex(null);
+                                setPhotoDropTargetIndex(null);
+                                return;
+                              }
                               const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
                               if (!Number.isNaN(from) && from !== displayIndex) handleMovePhoto(from, displayIndex);
                               setDraggingPhotoIndex(null);
@@ -1755,11 +2003,22 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                             }}
                             onDragOver={(e) => {
                               e.preventDefault();
-                              e.dataTransfer.dropEffect = 'move';
-                              setPhotoDropTargetIndex(displayIndex);
+                              if ([...e.dataTransfer.types].includes('Files')) {
+                                e.dataTransfer.dropEffect = 'copy';
+                              } else {
+                                e.dataTransfer.dropEffect = 'move';
+                                setPhotoDropTargetIndex(displayIndex);
+                              }
                             }}
                             onDrop={(e) => {
                               e.preventDefault();
+                              if (e.dataTransfer.files.length > 0) {
+                                e.stopPropagation();
+                                appendProposalPhotos(Array.from(e.dataTransfer.files), []);
+                                setDraggingPhotoIndex(null);
+                                setPhotoDropTargetIndex(null);
+                                return;
+                              }
                               const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
                               if (!Number.isNaN(from) && from !== displayIndex) handleMovePhoto(from, displayIndex);
                               setDraggingPhotoIndex(null);
@@ -2083,7 +2342,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                 onSubmit={handleSubmit}
               >
                 <div style={{ marginBottom: 24 }}>
-                  <label style={labelStyle}>Prix <span style={{ color: '#1d1d1f' }}>*</span></label>
+                  <label style={labelStyle}>Prix souhaité <span style={{ color: '#1d1d1f' }}>*</span></label>
                   <div style={{ position: 'relative' }}>
                     <input
                       type="text"
@@ -2110,18 +2369,71 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                  <input
-                    type="checkbox"
-                    id="isActiveNew"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                    style={{ width: 16, height: 16, accentColor: '#1d1d1f', marginLeft: 4 }}
-                  />
-                  <label htmlFor="isActiveNew" style={{ fontSize: 14, color: '#333' }}>
-                    Annonce active (visible dans le catalogue)
-                  </label>
-                </div>
+                <MultiLocationPicker
+                  selected={selectedLocations}
+                  onChange={setSelectedLocations}
+                  radiusKm={radiusKm}
+                  onRadiusKmChange={handlePropositionRadiusKmChange}
+                  geoError={geoError}
+                  geoLoading={geoLoading}
+                  onRequestGeolocation={requestPropositionGeolocation}
+                  onClearGeolocation={clearPropositionGeolocation}
+                />
+                {(eligibleLoading || eligibleSellers.length > 0) && (
+                  <div style={{ marginBottom: 24 }}>
+                    {eligibleLoading ? (
+                      <p style={{ fontSize: 14, color: '#6e6e73' }}>Recherche des vendeurs…</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {eligibleSellers.map((s) => {
+                          const checked = selectedSellerIds.includes(s.id);
+                          return (
+                            <label
+                              key={s.id}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 12,
+                                padding: '6px 12px',
+                                border: '1px solid #e8e6e3',
+                                borderRadius: 12,
+                                cursor: 'pointer',
+                                backgroundColor: checked ? '#f5f5f7' : '#fff',
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  setSelectedSellerIds((prev) =>
+                                    prev.includes(s.id) ? prev.filter((x) => x !== s.id) : [...prev, s.id],
+                                  )
+                                }
+                                style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: 15, color: '#1d1d1f', lineHeight: 1.25 }}>{s.companyName}</div>
+                                <div
+                                  style={{
+                                    fontSize: 12,
+                                    lineHeight: 1.25,
+                                    marginTop: 2,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 1,
+                                  }}
+                                >
+                                  <div style={{ color: '#6e6e73' }}>{s.addressLine || 'Adresse non renseignée'}</div>
+                                  <div style={{ color: '#86868b' }}>Vendeur professionnel</div>
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <CguCgvCheckbox
                   id="nouvelle-annonce-cgu-cgv"
                   checked={acceptCguCgv}
@@ -2162,7 +2474,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       opacity: loading ? 0.7 : 1,
                     }}
                   >
-                    {loading ? 'Publication...' : "Publier l'annonce"}
+                    {loading ? 'Envoi…' : 'Envoyer'}
                   </button>
                 </div>
               </motion.form>
@@ -2174,10 +2486,3 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
   );
 }
 
-export default function NewListingPage() {
-  return (
-    <Suspense fallback={<PageLoader />}>
-      <NewListingContent />
-    </Suspense>
-  );
-}

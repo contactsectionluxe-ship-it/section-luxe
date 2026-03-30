@@ -130,3 +130,59 @@ export async function uploadListingPhotos(
   );
   return Promise.all(uploadPromises);
 }
+
+/** Photos de proposition de vente : dossier `{userId}/proposals/{proposalId}/` dans le bucket listings. */
+export async function uploadSaleProposalPhotos(
+  userId: string,
+  proposalId: string,
+  files: File[],
+  startIndex: number = 0,
+): Promise<string[]> {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase Storage non configuré');
+  }
+  if (files.length === 0) return [];
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    const base = typeof window !== 'undefined' ? window.location.origin : '';
+    const urls: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const rawExt = (file.name.split('.').pop() || 'jpg').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'jpg';
+      const ext = ALLOWED_EXT.includes(rawExt as (typeof ALLOWED_EXT)[number]) ? rawExt : 'jpg';
+      const safeName = `photo_${startIndex + i}.${ext}`;
+      const safeType = SAFE_MIME[ext] || 'image/jpeg';
+      const buffer = await file.arrayBuffer();
+      const formData = new FormData();
+      formData.set('proposalId', proposalId);
+      formData.set('startIndex', String(startIndex + i));
+      formData.append('photos', new File([buffer], safeName, { type: safeType }));
+      const res = await fetch(`${base}/api/upload-sale-proposal-photos`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg = (body as { error?: string }).error || `Upload échoué (${res.status})`;
+        throw new Error(msg);
+      }
+      const data = (await res.json()) as { urls: string[] };
+      if (data.urls?.[0]) urls.push(data.urls[0]);
+    }
+    return urls;
+  }
+
+  const uploadPromises = files.map((file, index) => {
+    const client = checkSupabase();
+    const extension = file.name.split('.').pop();
+    const path = `${userId}/proposals/${proposalId}/photo_${startIndex + index}.${extension}`;
+    return client.storage.from('listings').upload(path, file, { upsert: true }).then(({ error }) => {
+      if (error) throw error;
+      const { data } = client.storage.from('listings').getPublicUrl(path);
+      return data.publicUrl;
+    });
+  });
+  return Promise.all(uploadPromises);
+}

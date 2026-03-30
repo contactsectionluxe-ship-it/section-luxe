@@ -330,6 +330,27 @@ export async function getListing(publicId: string): Promise<Listing | null> {
   return merged[0] ?? null;
 }
 
+/**
+ * Messagerie : pour chaque id, indique si l’annonce est encore au catalogue (ligne présente et `is_active`).
+ * Inactif ou ligne absente → `false`. (Annonce supprimée avec `listing_id` NULL : pas d’id ici ; l’UI s’appuie sur `listing_title` / `listing_photo` sur `conversations`.)
+ */
+export async function getListingsCatalogVisibility(listingIds: string[]): Promise<Record<string, boolean>> {
+  if (!isSupabaseConfigured || !supabase || listingIds.length === 0) return {};
+  const unique = [...new Set(listingIds.filter((id) => typeof id === 'string' && id.length > 0))];
+  if (unique.length === 0) return {};
+
+  const { data, error } = await supabase.from('listings').select('id, is_active').in('id', unique);
+  if (error) return {};
+
+  const map: Record<string, boolean> = {};
+  for (const id of unique) map[id] = false;
+
+  for (const row of (data || []) as { id: string; is_active: boolean | null }[]) {
+    map[row.id] = row.is_active === true;
+  }
+  return map;
+}
+
 /** Options de filtre catalogue pour `getListings`. */
 export type ListingSearchFilterOptions = {
   category?: string;

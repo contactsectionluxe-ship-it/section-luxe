@@ -32,6 +32,7 @@ const nextConfig: NextConfig = {
   distDir: process.env.VERCEL ? '.next' : '.nosync/.next',
   experimental: {
     serverActions: { bodySizeLimit: '50mb' },
+    proxyClientMaxBodySize: '50mb',
   },
   images: {
     remotePatterns: [
@@ -51,6 +52,11 @@ const nextConfig: NextConfig = {
       {
         source: '/produit/:id',
         destination: '/annonce/:id',
+        permanent: true,
+      },
+      {
+        source: '/mes-propositions-vente',
+        destination: '/suivre-mes-offres',
         permanent: true,
       },
     ];

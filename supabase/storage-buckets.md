@@ -17,6 +17,7 @@
 - **Name:** `listings`
 - Coche **Public bucket** (les photos des produits sont visibles par tous sur le site).
 - Clique **Create bucket**.
+- **Limite de taille par fichier :** l’application autorise jusqu’à **10 Mo** par photo (`src/lib/file-validation.ts`). Dans Supabase, ouvre **Storage** → bucket **listings** → menu **…** → **Edit bucket** et règle la limite à **au moins 10 Mo**, ou exécute la migration **`supabase/migrations/storage_listings_bucket_file_size_10mb.sql`** (sinon erreur *The object exceeded the maximum allowed size* à l’upload).
 
 ## 2. Politiques d’accès pour `documents` (obligatoire)
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase/server';
 import { CGU_CGV_VERSION } from '@/lib/cgu-cgv-version';
 
-const ALLOWED_CONTEXTS = ['inscription', 'inscription_vendeur', 'publication_annonce', 'modification_annonce'] as const;
+const ALLOWED_CONTEXTS = ['inscription', 'inscription_vendeur', 'publication_annonce', 'modification_annonce', 'proposition_vente'] as const;
 
 export async function POST(request: NextRequest) {
   try {

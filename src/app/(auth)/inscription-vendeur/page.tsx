@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { fetchSiretSuggestions, type SiretSuggestion } from '@/lib/siret';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { CguCgvCheckbox } from '@/components/ui';
+import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/file-validation';
 
 function FileUploadField({
   label,
@@ -53,7 +54,7 @@ function FileUploadField({
     if (!first) return;
     const isTooLarge = first.errors.some((e) => e.code === 'file-too-large');
     if (isTooLarge) {
-      setRejectMessage('Votre fichier dépasse 5 Mo. Choisissez un fichier plus léger.');
+      setRejectMessage(`Votre fichier dépasse ${MAX_FILE_SIZE_MB} Mo. Choisissez un fichier plus léger.`);
     } else {
       setRejectMessage('Votre fichier : format non accepté. Utilisez JPEG, PNG ou PDF.');
     }
@@ -64,7 +65,7 @@ function FileUploadField({
     onDropRejected,
     accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'application/pdf': ['.pdf'] },
     maxFiles: 1,
-    maxSize: 5 * 1024 * 1024,
+    maxSize: MAX_FILE_SIZE_BYTES,
   });
 
   const isImageFile = file?.type.startsWith('image/');
@@ -169,7 +170,7 @@ function FileUploadField({
           <p style={{ fontSize: 13, color: '#666' }}>
             Glissez-déposez ou cliquez
           </p>
-          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>5 Mo max. JPEG, PNG ou PDF.</p>
+          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>{MAX_FILE_SIZE_MB} Mo max. JPEG, PNG ou PDF.</p>
         </div>
       )}
       {rejectMessage && (
@@ -957,7 +958,7 @@ function SellerRegisterContent() {
                   Pour valider votre compte, nous avons besoin de vérifier votre identité et
                   l&apos;existence légale de votre entreprise.
                   <br />
-                  <strong>Formats acceptés : JPEG, PNG, PDF. (5 Mo max)</strong>
+                  <strong>Formats acceptés : JPEG, PNG, PDF. ({MAX_FILE_SIZE_MB} Mo max)</strong>
                 </div>
 
                 <FileUploadField

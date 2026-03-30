@@ -204,7 +204,11 @@ export interface Database {
           sender_name: string
           content: string
           created_at: string
-          read: boolean
+          /** Après migration messages_rename_read_to_is_read */
+          is_read?: boolean
+          /** Ancienne colonne avant renommage */
+          read?: boolean
+          image_url?: string | null
         }
         Insert: {
           id?: string
@@ -213,7 +217,9 @@ export interface Database {
           sender_name: string
           content: string
           created_at?: string
+          is_read?: boolean
           read?: boolean
+          image_url?: string | null
         }
         Update: {
           id?: string
@@ -222,7 +228,9 @@ export interface Database {
           sender_name?: string
           content?: string
           created_at?: string
+          is_read?: boolean
           read?: boolean
+          image_url?: string | null
         }
       }
     }

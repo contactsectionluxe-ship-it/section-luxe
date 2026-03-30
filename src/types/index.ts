@@ -104,6 +104,8 @@ export interface Favorite {
 export interface Conversation {
   id: string;
   listingId: string;
+  /** Présent si la conversation concerne une proposition de vente visiteur (sans annonce catalogue). */
+  saleProposalId?: string | null;
   listingTitle: string;
   listingPhoto: string;
   buyerId: string;

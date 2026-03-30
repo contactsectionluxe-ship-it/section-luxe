@@ -75,7 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     // Dynamic import to avoid errors when Supabase is not configured
-    import('@/lib/supabase/auth').then(({ onAuthChange, getUserData, getSellerData }) => {
+    import('@/lib/supabase/auth').then(({ onAuthChange, getUserData, getSellerData, getSession }) => {
+      // Session dès que possible : limite l’état « invité » dans le header au refresh (sans async sur ce .then : cleanup useEffect correct).
+      void getSession().then((session) => {
+        if (session?.user) {
+          setSupabaseUser(session.user);
+        }
+      });
+
       const { data: { subscription } } = onAuthChange(async (sbUser) => {
         setSupabaseUser(sbUser);
 

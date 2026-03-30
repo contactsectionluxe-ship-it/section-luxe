@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseServer } from '@/lib/supabase/server';
-import { validateImageFile, MAX_FILE_SIZE_BYTES } from '@/lib/file-validation';
+import { validateImageFile, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/file-validation';
 
 const MAX_PHOTOS_PER_REQUEST = 12;
 const MAX_TOTAL_UPLOAD_BYTES = MAX_FILE_SIZE_BYTES * MAX_PHOTOS_PER_REQUEST;
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: isFormDataParse
-            ? 'Envoi des photos impossible. Réessayez avec moins de photos ou des fichiers plus légers (max 5 Mo par photo). Si le problème persiste, évitez les noms de fichiers avec accents ou emoji.'
+            ? `Envoi des photos impossible. Réessayez avec moins de photos ou des fichiers plus légers (max ${MAX_FILE_SIZE_MB} Mo par photo). Si le problème persiste, évitez les noms de fichiers avec accents ou emoji.`
             : msg,
         },
         { status: 400 }

@@ -12,7 +12,8 @@ function checkSupabase() {
 function rowToConversation(row: any): Conversation {
   return {
     id: row.id,
-    listingId: row.listing_id,
+    listingId: row.listing_id ?? '',
+    saleProposalId: row.sale_proposal_id ?? null,
     listingTitle: row.listing_title,
     listingPhoto: row.listing_photo || '',
     buyerId: row.buyer_id,
@@ -29,6 +30,8 @@ function rowToConversation(row: any): Conversation {
 }
 
 function rowToMessage(row: any): Message {
+  const rawRead = row.is_read ?? row.read;
+  const isRead = rawRead === true || rawRead === 't';
   return {
     id: row.id,
     conversationId: row.conversation_id,
@@ -36,7 +39,7 @@ function rowToMessage(row: any): Message {
     senderName: row.sender_name,
     content: row.content,
     createdAt: new Date(row.created_at),
-    read: row.read || false,
+    read: isRead,
     imageUrl: row.image_url || null,
   };
 }
@@ -67,6 +70,31 @@ export async function getOrCreateConversation(data: {
   if (error) throw error;
   const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
   if (!row) throw new Error('get_or_create_conversation n\'a pas renvoyé de conversation');
+  return rowToConversation(row);
+}
+
+export async function getOrCreateProposalConversation(data: {
+  proposalId: string;
+  listingTitle: string;
+  listingPhoto: string;
+  buyerId: string;
+  buyerName: string;
+  sellerId: string;
+  sellerName: string;
+}): Promise<Conversation> {
+  const client = checkSupabase();
+  const { data: rows, error } = await client.rpc('get_or_create_proposal_conversation', {
+    p_proposal_id: data.proposalId,
+    p_listing_title: data.listingTitle,
+    p_listing_photo: data.listingPhoto ?? '',
+    p_buyer_id: data.buyerId,
+    p_buyer_name: data.buyerName,
+    p_seller_id: data.sellerId,
+    p_seller_name: data.sellerName,
+  });
+  if (error) throw error;
+  const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  if (!row) throw new Error('get_or_create_proposal_conversation n\'a pas renvoyé de conversation');
   return rowToConversation(row);
 }
 
@@ -144,7 +172,6 @@ export async function sendMessage(data: {
       sender_id: data.senderId,
       sender_name: data.senderName,
       content: data.content,
-      read: false,
       ...(data.imageUrl != null && data.imageUrl !== '' && { image_url: data.imageUrl }),
     })
     .select()
@@ -235,6 +262,18 @@ export function subscribeToMessages(
         getMessages(conversationId, 50, since).then(callback);
       }
     )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      () => {
+        getMessages(conversationId, 50, since).then(callback);
+      }
+    )
     .subscribe();
 
   return () => {
@@ -294,6 +333,16 @@ export async function markConversationAsRead(
     .from('conversations')
     .update({ [unreadField]: 0 })
     .eq('id', conversationId);
+
+  const { error: rpcErr } = await client.rpc('mark_conversation_messages_read', {
+    p_conversation_id: conversationId,
+  });
+  if (rpcErr) {
+    const msg = rpcErr.message || '';
+    if (!/does not exist|schema cache|could not find.*function/i.test(msg)) {
+      console.warn('mark_conversation_messages_read:', rpcErr);
+    }
+  }
 }
 
 // "Supprimer" une conversation côté utilisateur uniquement (masquée pour lui, reste visible pour l'autre)

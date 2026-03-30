@@ -1,22 +1,29 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { Menu, X, Heart, MessageCircle, User, LogOut, Store, Settings, Package, FileText, PlusCircle, BarChart2, LayoutGrid, Tag, Sparkles, Info, Mail, CreditCard } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, FileText, PlusCircle, BarChart2, Send, CreditCard, Search, Info } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
 import { Conversation } from '@/types';
 
-const navigation = [
-  { name: 'Catalogue', href: '/catalogue?reset=1', icon: LayoutGrid },
-  { name: 'Occasion', href: '/catalogue?condition=occasion', icon: Tag },
-  { name: 'Neuf', href: '/catalogue?condition=new', icon: Sparkles },
-  { name: 'À propos', href: '/a-propos', icon: Info },
-  { name: 'Contact', href: '/contact', icon: Mail },
-];
+type HeaderNavItem = { name: string; href: string; mobileIcon: LucideIcon };
+
+function getHeaderNavItems(isAuthenticated: boolean): HeaderNavItem[] {
+  return [
+    { name: 'Trouver une pièce', href: '/catalogue?reset=1', mobileIcon: Search },
+    {
+      name: 'Proposer ma pièce',
+      href: isAuthenticated ? '/proposer-vente' : '/connexion?redirect=/proposer-vente',
+      mobileIcon: PlusCircle,
+    },
+    { name: 'Section Luxe', href: '/a-propos', mobileIcon: Info },
+  ];
+}
 
 function matchNavActive(
   pathname: string,
@@ -24,6 +31,20 @@ function matchNavActive(
   href: string
 ) {
   if (href === '/') return pathname === '/';
+  if (href.includes('/connexion')) {
+    const q = href.split('?')[1];
+    if (q) {
+      const p = new URLSearchParams(q);
+      const want = p.get('redirect') || '';
+      if (want.includes('proposer-vente')) {
+        return pathname === '/connexion' && (sp.get('redirect') || '').includes('proposer-vente');
+      }
+    }
+  }
+  if (href === '/proposer-vente' || href.split('?')[0] === '/proposer-vente') {
+    return pathname === '/proposer-vente';
+  }
+  if (href === '/a-propos') return pathname === '/a-propos' || pathname.startsWith('/a-propos/');
   if (href === '/catalogue') return pathname === '/catalogue' && !sp.get('condition');
   if (href.startsWith('/catalogue?')) {
     const params = new URLSearchParams(href.split('?')[1] || '');
@@ -35,24 +56,114 @@ function matchNavActive(
   return pathname === href || pathname.startsWith(href + '/');
 }
 
-function HeaderDesktopNavFallback({
-  linkStyle,
+/** Couleur alignée sur les icônes Favoris / Messages / User du header (#1d1d1f). */
+const HEADER_ACTION_ICON_COLOR = '#1d1d1f';
+
+/** Même police / cassage que `.listing-grid-vendeur` des cartes « À la une » (accueil). */
+const CENTER_NAV_LINK_STYLE: CSSProperties = {
+  fontSize: 14,
+  fontWeight: 400,
+  color: HEADER_ACTION_ICON_COLOR,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  transition: 'color 0.2s',
+};
+
+/** Menu burger téléphone : même typo que les liens du sous-menu compte (fontSize 15, casse naturelle). */
+const HEADER_MOBILE_BURGER_NAV_TEXT_STYLE: CSSProperties = {
+  fontSize: 15,
+  fontWeight: 400,
+  fontFamily: 'inherit',
+  color: '#1d1d1f',
+  textTransform: 'none',
+  letterSpacing: 'normal',
+};
+
+/** Icône User + petit marqueur à droite : croix (invité) ou coche (connecté). Toujours afficher le marqueur (y compris pendant le chargement auth si session déjà connue). */
+function HeaderAccountIcon({
+  iconSize,
+  headerIconCellSize,
+  iconWrapStyle,
+  state,
 }: {
-  linkStyle: { fontSize: number; fontWeight: number; color: string; transition: string };
+  iconSize: number;
+  headerIconCellSize: number;
+  iconWrapStyle: CSSProperties;
+  state: 'guest' | 'member';
 }) {
+  const userSvg = (
+    <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
+  );
+  const markClass =
+    state === 'guest' ? 'header-user-status-mark header-user-status-mark--guest' : 'header-user-status-mark header-user-status-mark--member';
+  const Mark = state === 'guest' ? X : Check;
+  const markColor = HEADER_ACTION_ICON_COLOR;
+  /** Même taille pour les deux états : la largeur réelle est fixée sur le span (pas de saut au refresh). */
+  const markSize = 15;
+  const markStroke = state === 'guest' ? 1.9 : 2.2;
   return (
-    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
-      {navigation.map((item) => (
+    <div
+      className="header-action-icon header-action-icon--user header-account-icon-row"
+      style={{
+        ...iconWrapStyle,
+        width: 'auto',
+        minWidth: headerIconCellSize,
+        height: headerIconCellSize,
+        display: 'inline-flex',
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        gap: 0,
+        flexShrink: 0,
+      }}
+    >
+      <div
+        className="header-account-icon-user-slot"
+        style={{
+          width: headerIconCellSize,
+          height: headerIconCellSize,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {userSvg}
+      </div>
+      <span
+        className={markClass}
+        aria-hidden
+        style={{
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          flexShrink: 0,
+          lineHeight: 0,
+          marginLeft: -2,
+          height: headerIconCellSize,
+          width: 14,
+          minWidth: 14,
+          boxSizing: 'border-box',
+        }}
+      >
+        <Mark size={markSize} strokeWidth={markStroke} color={markColor} style={{ display: 'block' }} />
+      </span>
+    </div>
+  );
+}
+
+function HeaderDesktopNavFallback({ items }: { items: HeaderNavItem[] }) {
+  return (
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, marginTop: '1mm' }}>
+      {items.map((item) => (
         <Link
           key={item.name}
           href={item.href}
+          className="header-center-nav-link"
           style={{
-            ...linkStyle,
-            color: linkStyle.color,
+            ...CENTER_NAV_LINK_STYLE,
             padding: '8px 0',
+            textDecoration: 'none',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = linkStyle.color)}
         >
           {item.name}
         </Link>
@@ -61,11 +172,7 @@ function HeaderDesktopNavFallback({
   );
 }
 
-function HeaderDesktopNavWithParams({
-  linkStyle,
-}: {
-  linkStyle: { fontSize: number; fontWeight: number; color: string; transition: string };
-}) {
+function HeaderDesktopNavWithParams({ items }: { items: HeaderNavItem[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isNavActive = useCallback(
@@ -73,20 +180,19 @@ function HeaderDesktopNavWithParams({
     [pathname, searchParams]
   );
   return (
-    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 28, marginTop: '1mm' }}>
-      {navigation.map((item) => {
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, marginTop: '1mm' }}>
+      {items.map((item) => {
         const active = isNavActive(item.href);
         return (
           <Link
             key={item.name}
             href={item.href}
+            className={`header-center-nav-link${active ? ' header-center-nav-link--active' : ''}`}
             style={{
-              ...linkStyle,
-              color: active ? '#434346' : linkStyle.color,
+              ...CENTER_NAV_LINK_STYLE,
               padding: '8px 0',
+              textDecoration: 'none',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#1d1d1f')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = active ? '#434346' : '#6e6e73')}
           >
             {item.name}
           </Link>
@@ -97,32 +203,38 @@ function HeaderDesktopNavWithParams({
 }
 
 function HeaderMobileNavLinks({
+  items,
   isNavActive,
   onItemClick,
 }: {
+  items: HeaderNavItem[];
   isNavActive: (href: string) => boolean;
   onItemClick: () => void;
 }) {
   return (
     <>
-      {navigation.map((item) => {
+      {items.map((item) => {
         const active = isNavActive(item.href);
-        const Icon = item.icon;
+        const ItemIcon = item.mobileIcon;
         return (
           <Link
             key={item.name}
             href={item.href}
             onClick={onItemClick}
+            className={`header-center-nav-link-mobile${active ? ' header-center-nav-link--active' : ''}`}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: 12,
               padding: '12px 14px',
-              fontSize: 15,
-              color: '#1d1d1f',
+              ...HEADER_MOBILE_BURGER_NAV_TEXT_STYLE,
               borderRadius: 10,
-              transition: 'background-color 0.15s',
+              transition: 'background-color 0.15s, color 0.2s',
               backgroundColor: active ? '#e8e8ed' : 'transparent',
+              whiteSpace: 'nowrap',
+              width: 'max-content',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#e8e8ed';
@@ -131,7 +243,7 @@ function HeaderMobileNavLinks({
               e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent';
             }}
           >
-            <Icon size={18} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            <ItemIcon size={18} color="#1d1d1f" style={{ flexShrink: 0 }} aria-hidden />
             {item.name}
           </Link>
         );
@@ -140,18 +252,30 @@ function HeaderMobileNavLinks({
   );
 }
 
-function HeaderMobileNavWithParams({ onItemClick }: { onItemClick: () => void }) {
+function HeaderMobileNavWithParams({
+  items,
+  onItemClick,
+}: {
+  items: HeaderNavItem[];
+  onItemClick: () => void;
+}) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isNavActive = useCallback(
     (href: string) => matchNavActive(pathname, searchParams, href),
     [pathname, searchParams]
   );
-  return <HeaderMobileNavLinks isNavActive={isNavActive} onItemClick={onItemClick} />;
+  return <HeaderMobileNavLinks items={items} isNavActive={isNavActive} onItemClick={onItemClick} />;
 }
 
 function HeaderMain() {
-  const { user, seller, loading: authLoading, isAuthenticated, isSeller, isAdmin } = useAuth();
+  const { user, seller, supabaseUser, loading: authLoading, isAuthenticated, isSeller, isAdmin } = useAuth();
+  /** Croix si invité ; coche si connecté ou session Supabase déjà là pendant le chargement profil (évite l’icône seule au refresh). */
+  const headerAccountIconMark = isAuthenticated || (authLoading && !!supabaseUser) ? 'member' : 'guest';
+  const headerNavItems = useMemo(
+    () => getHeaderNavItems(!!isAuthenticated),
+    [isAuthenticated]
+  );
   const showAdmin = isAdmin && isAdminEmail(user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -277,33 +401,29 @@ function HeaderMain() {
     return () => window.removeEventListener('messages:refresh-unread', onRefresh);
   }, [refreshUnread]);
 
-  const linkStyle = {
-    fontSize: 15,
-    fontWeight: 500,
-    color: '#6e6e73',
-    transition: 'color 0.2s',
-  };
-
-  /** Même taille que l’icône User / Connexion pour aligner les trois colonnes (icône + libellé) */
+  /** Icônes seules (Favoris, Messages, compte) — sans libellé sous l’icône */
   const iconSize = 22;
-  /** MessageCircle remplit plus le cadre Lucide : légèrement plus petit pour équivalence visuelle avec Heart / User */
+  /** Un peu plus petit que User (22) : MessageCircle paraît plus massif à taille égale */
   const messagesIconSize = 20;
-  /** Cœur Favoris : un peu plus grand que User (22px) */
   const favorisIconSize = 23;
-  /** Cellule grille desktop (globals.css) : icônes centrées dans 24px */
   const headerIconCellSize = 24;
-  const iconLabelStyle = {
+  /** Favoris / Messages : cellule 44px. Compte : User 24px + marqueur (~13px) − chevauchement, + padding tap. */
+  const HEADER_ACTION_ACCOUNT_MIN_WIDTH = 52;
+  const iconOnlyActionStyle = {
     display: 'flex' as const,
-    flexDirection: 'column' as const,
     alignItems: 'center' as const,
-    gap: 2,
+    justifyContent: 'center' as const,
     padding: '10px 8px',
-    minWidth: 64,
-    maxWidth: 64,
-    fontSize: 12,
-    fontWeight: linkStyle.fontWeight,
-    color: linkStyle.color,
+    width: 44,
+    minWidth: 44,
+    maxWidth: 44,
     boxSizing: 'border-box' as const,
+  };
+  const iconOnlyActionStyleAccount = {
+    ...iconOnlyActionStyle,
+    width: HEADER_ACTION_ACCOUNT_MIN_WIDTH,
+    minWidth: HEADER_ACTION_ACCOUNT_MIN_WIDTH,
+    maxWidth: HEADER_ACTION_ACCOUNT_MIN_WIDTH,
   };
   const iconWrapStyle = {
     width: iconSize,
@@ -311,19 +431,8 @@ function HeaderMain() {
     display: 'flex' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    color: '#1d1d1f',
+    color: HEADER_ACTION_ICON_COLOR,
     flexShrink: 0,
-  };
-  /** Libellés sous les icônes (Favoris, Messages, prénom) : même largeur et centrage pour s’aligner entre eux */
-  const headerActionLabelStyle = {
-    display: 'block' as const,
-    width: 64,
-    maxWidth: 64,
-    textAlign: 'center' as const,
-    lineHeight: 1.2,
-    overflow: 'hidden' as const,
-    textOverflow: 'ellipsis' as const,
-    whiteSpace: 'nowrap' as const,
   };
 
   return (
@@ -336,9 +445,9 @@ function HeaderMain() {
           left: 0,
           right: 0,
           overflow: 'visible',
-          backgroundColor: scrolled ? 'rgba(251,251,251,0.92)' : '#fbfbfb',
-          backdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none',
-          WebkitBackdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'none',
+          backgroundColor: scrolled ? 'rgba(251,251,251,0.68)' : 'rgba(251,251,251,0.78)',
+          backdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'saturate(180%) blur(16px)',
+          WebkitBackdropFilter: scrolled ? 'saturate(180%) blur(20px)' : 'saturate(180%) blur(16px)',
           borderBottom: '1px solid rgba(0,0,0,0.06)',
           zIndex: 100,
           transition: 'background-color 0.2s, backdrop-filter 0.2s',
@@ -354,10 +463,10 @@ function HeaderMain() {
             padding: '0 24px',
             width: '100%',
             height: 'var(--header-height)',
-            display: 'grid',
-            gridTemplateColumns: '1fr auto 1fr',
+            display: 'flex',
             alignItems: 'center',
-            gap: 16,
+            justifyContent: 'space-between',
+            position: 'relative',
           }}
         >
           <Link
@@ -365,23 +474,34 @@ function HeaderMain() {
             className="header-logo-link"
             aria-label="Accueil — Section Luxe"
             title="Accueil"
-            style={{ display: 'flex', alignItems: 'center', marginLeft: 8, justifySelf: 'start', position: 'relative', zIndex: 1 }}
+            style={{ display: 'flex', alignItems: 'center', marginLeft: 8, position: 'relative', zIndex: 1, flexShrink: 0 }}
           >
             <img src="/logo.png" alt="" className="header-logo-img" style={{ height: 24, width: 'auto', display: 'block', marginTop: -4 }} />
           </Link>
 
-          <Suspense fallback={<HeaderDesktopNavFallback linkStyle={linkStyle} />}>
-            <HeaderDesktopNavWithParams linkStyle={linkStyle} />
-          </Suspense>
+          <div
+            className="hide-mobile header-center-nav-wrap"
+            style={{
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 2,
+            }}
+          >
+            <Suspense fallback={<HeaderDesktopNavFallback items={headerNavItems} />}>
+              <HeaderDesktopNavWithParams items={headerNavItems} />
+            </Suspense>
+          </div>
 
-          <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, justifySelf: 'end' }}>
+          <div className="header-right" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0, flexShrink: 0, position: 'relative', zIndex: 1 }}>
             <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-            <Link href="/favoris" className="header-action-favoris header-action-item" style={iconLabelStyle}>
+            <Link href="/favoris" className="header-action-favoris header-action-item" aria-label="Favoris" style={iconOnlyActionStyle}>
               <div className="header-action-icon header-action-icon--favoris" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
                 <Heart size={favorisIconSize} strokeWidth={1.5} style={{ display: 'block', width: favorisIconSize, height: favorisIconSize }} aria-hidden />
-              </div><span style={headerActionLabelStyle}>Favoris</span>
+              </div>
             </Link>
-            <Link href="/messages" className="header-action-messages header-action-item" style={iconLabelStyle}>
+            <Link href="/messages" className="header-action-messages header-action-item" aria-label="Messages" style={iconOnlyActionStyle}>
               <div className="header-action-icon header-action-icon--messages" style={{ position: 'relative', ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
                 <MessageCircle size={messagesIconSize} strokeWidth={1.5} style={{ display: 'block', width: messagesIconSize, height: messagesIconSize }} aria-hidden />
                 {unreadMessages > 0 && (
@@ -407,9 +527,9 @@ function HeaderMain() {
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </span>
                 )}
-              </div><span style={headerActionLabelStyle}>Messages</span>
+              </div>
             </Link>
-            <div className="header-action-user" style={{ position: 'relative', minWidth: 64, maxWidth: 64 }}>
+            <div className="header-action-user" style={{ position: 'relative', minWidth: HEADER_ACTION_ACCOUNT_MIN_WIDTH, maxWidth: HEADER_ACTION_ACCOUNT_MIN_WIDTH }}>
               {authLoading ? (
                 <button
                   type="button"
@@ -418,19 +538,17 @@ function HeaderMain() {
                   aria-busy="true"
                   aria-label="Chargement du compte"
                   style={{
-                    ...iconLabelStyle,
+                    ...iconOnlyActionStyleAccount,
                     background: 'none',
                     border: 'none',
                     cursor: 'default',
                     fontFamily: 'inherit',
-                    opacity: 0.55,
+                    opacity: 1,
+                    color: HEADER_ACTION_ICON_COLOR,
                     pointerEvents: 'none',
                   }}
                 >
-                  <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                    <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
-                  </div>
-                  <span style={headerActionLabelStyle}>{'\u00a0'}</span>
+                  <HeaderAccountIcon iconSize={iconSize} headerIconCellSize={headerIconCellSize} iconWrapStyle={iconWrapStyle} state={headerAccountIconMark} />
                 </button>
               ) : isAuthenticated ? (
                 <>
@@ -438,21 +556,23 @@ function HeaderMain() {
                     ref={userMenuButtonRef}
                     type="button"
                     className="header-action-item"
+                    aria-label={(user?.displayName || 'Compte').trim() || 'Menu compte'}
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="menu"
                     onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
                     style={{
-                      ...iconLabelStyle,
+                      ...iconOnlyActionStyleAccount,
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
                       fontFamily: 'inherit',
                     }}
                   >
-                    <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                      <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
-                    </div><span style={headerActionLabelStyle}>{(user?.displayName || '').trim().split(/\s+/)[0] || 'Compte'}</span>
+                    <HeaderAccountIcon iconSize={iconSize} headerIconCellSize={headerIconCellSize} iconWrapStyle={iconWrapStyle} state="member" />
                   </button>
                   {userMenuOpen && (
                     <div
+                      className="header-user-menu-dropdown"
                       onClick={(e) => e.stopPropagation()}
                       style={{
                         position: 'fixed',
@@ -487,10 +607,10 @@ function HeaderMain() {
                                 <Link href="/vendeur/ventes" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><BarChart2 size={18} /> Mes ventes</Link>
                               </>
                             )}
-                            {seller.status !== 'approved' && seller.status !== 'suspended' && (
-                              <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Heart size={18} /> Favoris</Link>
+                            {seller.status === 'approved' && (seller.subscriptionTier === 'plus' || seller.subscriptionTier === 'pro') && (
+                              <Link href="/vendeur/demandes-mise-en-vente" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Handbag size={18} /> Sourcing</Link>
                             )}
-                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><MessageCircle size={18} /> Ma messagerie {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
+                            <Link href="/contact" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact</Link>
                             <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><User size={18} /> Mon profil</Link>
                             <Link href="/vendeur/abonnement" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><CreditCard size={18} /> Mon abonnement</Link>
                             {(seller.status === 'approved' || seller.status === 'suspended') && (
@@ -502,8 +622,8 @@ function HeaderMain() {
                           </>
                         ) : (
                           <>
-                            <Link href="/favoris" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Heart size={18} /> Favoris</Link>
-                            <Link href="/messages" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><MessageCircle size={18} /> Messages {unreadMessages > 0 && <span style={{ marginLeft: 'auto', backgroundColor: '#dc2626', color: '#fff', fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10 }}>{unreadMessages > 99 ? '99+' : unreadMessages}</span>}</Link>
+                            <Link href="/suivre-mes-offres" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><BarChart2 size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Suivre mes offres</Link>
+                            <Link href="/contact" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact</Link>
                             <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><User size={18} /> Mon profil</Link>
                             {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Settings size={18} /> Admin</Link>}
                             <div style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
@@ -515,11 +635,8 @@ function HeaderMain() {
                   )}
                 </>
               ) : (
-                <Link href="/connexion" className="header-action-item" style={{ ...iconLabelStyle, minWidth: 64, textDecoration: 'none' }}>
-                  <div className="header-action-icon header-action-icon--user" style={{ ...iconWrapStyle, width: headerIconCellSize, height: headerIconCellSize }}>
-                    <User size={iconSize} strokeWidth={1.5} style={{ display: 'block', width: iconSize, height: iconSize }} aria-hidden />
-                  </div>
-                  <span style={headerActionLabelStyle}>Connexion</span>
+                <Link href="/connexion" className="header-action-item" aria-label="Connexion" style={{ ...iconOnlyActionStyleAccount, textDecoration: 'none' }}>
+                  <HeaderAccountIcon iconSize={iconSize} headerIconCellSize={headerIconCellSize} iconWrapStyle={iconWrapStyle} state="guest" />
                 </Link>
               )}
             </div>
@@ -528,7 +645,7 @@ function HeaderMain() {
               ref={mobileMenuButtonRef}
               className="hide-desktop"
               onClick={(e) => { e.stopPropagation(); setMobileMenuOpen(!mobileMenuOpen); }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12, transform: 'translateY(0.5px)' }}
             >
               {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -544,9 +661,9 @@ function HeaderMain() {
             position: 'fixed',
             top: 'calc(var(--header-height) + 1px)',
             right: mobileMenuRight,
-            width: 180,
-            minWidth: 180,
-            maxWidth: 180,
+            width: 'max-content',
+            maxWidth: 'calc(100vw - 20px)',
+            minWidth: 0,
             backgroundColor: '#fbfbfb',
             borderTopLeftRadius: 0,
             borderTopRightRadius: 0,
@@ -557,13 +674,24 @@ function HeaderMain() {
             zIndex: 110,
           }}
         >
-          <div style={{ padding: 8, minHeight: 0 }}>
+          <div
+            style={{
+              padding: 8,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              width: 'max-content',
+              maxWidth: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
             <Suspense
               fallback={
-                <HeaderMobileNavLinks isNavActive={() => false} onItemClick={() => setMobileMenuOpen(false)} />
+                <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={() => setMobileMenuOpen(false)} />
               }
             >
-              <HeaderMobileNavWithParams onItemClick={() => setMobileMenuOpen(false)} />
+              <HeaderMobileNavWithParams items={headerNavItems} onItemClick={() => setMobileMenuOpen(false)} />
             </Suspense>
           </div>
         </div>

@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Send, Package, X, Store, MapPin, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Send, Package, PackageX, X, Store, MapPin, Plus, Minus, Check } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
 import {
@@ -12,6 +12,7 @@ import {
   sendMessage,
   markConversationAsRead,
 } from '@/lib/supabase/messaging';
+import { getListingsCatalogVisibility } from '@/lib/supabase/listings';
 import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
@@ -35,9 +36,20 @@ export default function ConversationPage() {
   const [sellerDescExpanded, setSellerDescExpanded] = useState(false);
   const [showMapPopup, setShowMapPopup] = useState(false);
   const [mapZoom, setMapZoom] = useState(13);
+  /** null = chargement ; true = annonce au catalogue ; false = inactive ou annonce supprimée (snapshot sur la conversation) */
+  const [listingInCatalog, setListingInCatalog] = useState<boolean | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastAutoReadMessageIdRef = useRef<string | null>(null);
+
+  const lastOwnMessageId = useMemo(() => {
+    const uid = user?.uid;
+    if (!uid) return null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].senderId === uid) return messages[i].id;
+    }
+    return null;
+  }, [messages, user?.uid]);
 
   const adjustTextareaHeight = () => {
     const ta = textareaRef.current;
@@ -83,6 +95,17 @@ export default function ConversationPage() {
           router.push('/messages');
           return;
         }
+        let nextInCatalog: boolean | null;
+        if (data.saleProposalId) {
+          nextInCatalog = true;
+        } else if (!data.listingId) {
+          nextInCatalog = false;
+        } else {
+          const map = await getListingsCatalogVisibility([data.listingId]);
+          if (!(data.listingId in map)) nextInCatalog = true;
+          else nextInCatalog = map[data.listingId] === true;
+        }
+        setListingInCatalog(nextInCatalog);
         setConversation(data);
         const isBuyer = data.buyerId === user.uid;
         await markConversationAsRead(conversationId, isBuyer);
@@ -145,6 +168,10 @@ export default function ConversationPage() {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !conversation || !user || sending) return;
+    const offCatalog =
+      !conversation.saleProposalId &&
+      (!conversation.listingId || listingInCatalog === false);
+    if (offCatalog) return;
 
     setSending(true);
     try {
@@ -179,6 +206,14 @@ export default function ConversationPage() {
   const otherPartyName = isBuyer ? conversation.sellerName : conversation.buyerName;
   const otherPartyId = isBuyer ? conversation.sellerId : conversation.buyerId;
   const otherPartyIsSeller = isBuyer;
+  const listingOffCatalog =
+    !conversation.saleProposalId &&
+    (!conversation.listingId || listingInCatalog === false);
+
+  const listingCatalogStatusLine =
+    conversation.saleProposalId || conversation.listingId
+      ? null
+      : 'Annonce supprimée — la conversation reste accessible';
 
   const handleShowPartyInfo = async () => {
     setShowPartyPopup(true);
@@ -243,22 +278,55 @@ export default function ConversationPage() {
             >
                 <ArrowLeft size={20} />
             </Link>
-            <Link
-              href={`/annonce/${conversation.listingId}`}
-              style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
-            >
-              <div
-                style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
-              >
-                {conversation.listingPhoto ? (
-                  <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Package size={26} color="#86868b" />
-                  </div>
-                )}
+            {conversation.saleProposalId ? (
+              <div style={{ flexShrink: 0 }}>
+                <div
+                  style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                >
+                  {conversation.listingPhoto ? (
+                    <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Package size={26} color="#86868b" />
+                    </div>
+                  )}
+                </div>
               </div>
-            </Link>
+            ) : listingOffCatalog ? (
+              <div style={{ flexShrink: 0 }} aria-hidden>
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 12,
+                    backgroundColor: '#e8e8ed',
+                    border: '1px solid #e8e6e3',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <PackageX size={28} color="#86868b" strokeWidth={2} />
+                </div>
+              </div>
+            ) : (
+              <Link
+                href={`/annonce/${conversation.listingId}`}
+                style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
+              >
+                <div
+                  style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                >
+                  {conversation.listingPhoto ? (
+                    <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Package size={26} color="#86868b" />
+                    </div>
+                  )}
+                </div>
+              </Link>
+            )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <h2
                   style={{
@@ -273,9 +341,14 @@ export default function ConversationPage() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {conversation.listingTitle}
+                  {listingOffCatalog ? "L'annonce a été supprimée" : conversation.listingTitle || 'Annonce'}
                 </h2>
-                <p style={{ fontSize: 13, color: '#6e6e73', margin: 0, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {listingCatalogStatusLine ? (
+                  <p style={{ fontSize: 12, color: '#86868b', margin: '6px 0 0', lineHeight: 1.35 }}>
+                    {listingCatalogStatusLine}
+                  </p>
+                ) : null}
+                <p style={{ fontSize: 13, color: '#6e6e73', margin: 0, marginTop: listingCatalogStatusLine ? 6 : 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {otherPartyName}
                 </p>
           </div>
@@ -302,6 +375,7 @@ export default function ConversationPage() {
             ) : (
               messages.map((message) => {
                 const isOwn = message.senderId === user?.uid;
+                const showReadReceipt = isOwn && message.id === lastOwnMessageId;
                 return (
                   <div
                     key={message.id}
@@ -312,44 +386,75 @@ export default function ConversationPage() {
                   >
                     <div
                       style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isOwn ? 'flex-end' : 'flex-start',
                         maxWidth: '82%',
-                        padding: '12px 16px',
-                        borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                        backgroundColor: isOwn ? '#000' : '#f2f2f2',
-                        color: isOwn ? '#fff' : '#1d1d1f',
-                        border: isOwn ? 'none' : '1px solid #e8e8e8',
                       }}
                     >
-                      {message.imageUrl && (() => {
-                        const filename = message.imageUrl.split('/').pop()?.split('?')[0] || 'image';
-                        return (
-                          <a
-                            href={message.imageUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download={filename}
-                            style={{
-                              display: 'inline-block',
-                              marginBottom: message.content?.trim() ? 8 : 0,
-                              fontSize: 14,
-                              textDecoration: 'underline',
-                              color: 'inherit',
-                              wordBreak: 'break-all',
-                            }}
-                          >
-                            {filename}
-                          </a>
-                        );
-                      })()}
-                      {message.content?.trim() && (
-                        <p style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
-                        {message.content}
-                      </p>
+                      <div
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: isOwn ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                          backgroundColor: isOwn ? '#000' : '#f2f2f2',
+                          color: isOwn ? '#fff' : '#1d1d1f',
+                          border: isOwn ? 'none' : '1px solid #e8e8e8',
+                        }}
+                      >
+                        {message.imageUrl && (() => {
+                          const filename = message.imageUrl.split('/').pop()?.split('?')[0] || 'image';
+                          return (
+                            <a
+                              href={message.imageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              download={filename}
+                              style={{
+                                display: 'inline-block',
+                                marginBottom: message.content?.trim() ? 8 : 0,
+                                fontSize: 14,
+                                textDecoration: 'underline',
+                                color: 'inherit',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {filename}
+                            </a>
+                          );
+                        })()}
+                        {message.content?.trim() && (
+                          <p style={{ fontSize: 14, lineHeight: 1.55, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
+                            {message.content}
+                          </p>
                         )}
-                      <p style={{ fontSize: 11, marginTop: 8, marginBottom: 0, opacity: isOwn ? 0.7 : 0.85 }}>
-                        <span className="messages-date-relative">{formatRelativeTime(message.createdAt)}</span>
-                        <span className="messages-date-short">{formatDateShort(message.createdAt)}</span>
-                      </p>
+                        <p style={{ fontSize: 11, marginTop: 8, marginBottom: 0, opacity: isOwn ? 0.7 : 0.85 }}>
+                          <span className="messages-date-relative">{formatRelativeTime(message.createdAt)}</span>
+                          <span className="messages-date-short">{formatDateShort(message.createdAt)}</span>
+                        </p>
+                      </div>
+                      {showReadReceipt ? (
+                        <div
+                          style={{
+                            marginTop: 4,
+                            display: 'flex',
+                            alignItems: 'center',
+                            minHeight: 18,
+                          }}
+                          aria-label={message.read ? 'Lu' : 'Envoyé'}
+                        >
+                          {message.read ? (
+                            <span
+                              style={{ display: 'inline-flex', alignItems: 'center', color: '#86868b' }}
+                              aria-hidden
+                            >
+                              <Check size={15} strokeWidth={2.25} style={{ marginRight: -5 }} />
+                              <Check size={15} strokeWidth={2.25} />
+                            </span>
+                          ) : (
+                            <Check size={16} strokeWidth={2.25} color="#86868b" aria-hidden />
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -379,8 +484,11 @@ export default function ConversationPage() {
                     setNewMessage(e.target.value);
                     adjustTextareaHeight();
                   }}
-                  placeholder="Écrivez votre message..."
+                  placeholder={listingOffCatalog ? "L'annonce a été supprimée" : 'Écrivez votre message...'}
                   rows={1}
+                  readOnly={listingOffCatalog}
+                  disabled={listingOffCatalog}
+                  aria-readonly={listingOffCatalog || undefined}
                   style={{
                     flex: 1,
                     height: 50,
@@ -394,12 +502,15 @@ export default function ConversationPage() {
                     boxSizing: 'border-box',
                     resize: 'none',
                     overflowY: 'auto',
+                    backgroundColor: listingOffCatalog ? '#f5f5f7' : '#fff',
+                    color: listingOffCatalog ? '#86868b' : '#1d1d1f',
+                    cursor: listingOffCatalog ? 'not-allowed' : 'text',
                   }}
                 />
                 <button
                   type="submit"
                   className="message-send-btn"
-                  disabled={!newMessage.trim() || sending}
+                  disabled={listingOffCatalog || !newMessage.trim() || sending}
                   style={{
                     width: 50,
                     height: 50,
@@ -410,7 +521,8 @@ export default function ConversationPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: !newMessage.trim() || sending ? 'not-allowed' : 'pointer',
+                    cursor: listingOffCatalog || !newMessage.trim() || sending ? 'not-allowed' : 'pointer',
+                    opacity: listingOffCatalog ? 0.45 : 1,
                   }}
                   aria-label="Envoyer"
                 >

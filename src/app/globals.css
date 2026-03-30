@@ -120,6 +120,41 @@ a:focus-visible {
   display: none;
 }
 
+/* Titres formulaires (Déposer / Proposer / Modifier) : bloc titre centré dans la page (colonnes symétriques) */
+@media (min-width: 768px) {
+  .deposer-annonce-title-row {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr !important;
+    align-items: start !important;
+    column-gap: 0 !important;
+  }
+  .deposer-annonce-title-row > a.deposer-annonce-back-link {
+    justify-self: start;
+    /* start : même axe vertical que le titre (Playfair 28px), pas baseline du sous-titre */
+    align-self: start;
+    padding-top: 8px;
+  }
+  .deposer-annonce-title-center {
+    justify-self: center;
+    text-align: center;
+    min-width: 0;
+    max-width: min(720px, 100%);
+    padding: 0 12px;
+    box-sizing: border-box;
+  }
+  .deposer-annonce-title-center h1 {
+    text-align: center;
+  }
+  .deposer-annonce-title-center p {
+    text-align: center;
+    margin: 0;
+  }
+  .deposer-annonce-title-row > .deposer-annonce-title-spacer {
+    width: auto !important;
+    min-width: 0 !important;
+  }
+}
+
 /* Page Détails annonce : libellés stats courts masqués par défaut (affichés uniquement sur mobile) */
 .voir-annonce-stat-mobile {
   display: none;
@@ -293,6 +328,53 @@ a:focus-visible {
   }
 }
 
+/* Header : liens centraux (Trouver une pièce, etc.) — soulignement animé au survol, persistant sur la route active */
+.header-center-nav-link {
+  position: relative;
+  display: inline-block;
+}
+.header-center-nav-link::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 5px;
+  height: 1px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none;
+}
+.header-center-nav-link:hover::after,
+.header-center-nav-link:focus-visible::after,
+.header-center-nav-link.header-center-nav-link--active::after {
+  transform: scaleX(1);
+}
+
+/* Même logique dans le menu mobile (drawer) */
+.header-center-nav-link-mobile {
+  position: relative;
+}
+.header-center-nav-link-mobile::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+  height: 1px;
+  background-color: currentColor;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
+  pointer-events: none;
+}
+.header-center-nav-link-mobile:hover::after,
+.header-center-nav-link-mobile:focus-visible::after,
+.header-center-nav-link-mobile.header-center-nav-link--active::after {
+  transform: scaleX(1);
+}
+
 /* Page produit : Informations, Description, Vendeur professionnel sur 50 % à gauche sur desktop */
 @media (min-width: 768px) {
   .produit-section-left {
@@ -423,6 +505,23 @@ a:focus-visible {
 /* Catalogue vue ligne : badge à droite du nom vendeur +0,05 mm vers le bas (les autres vues inchangées) */
 .catalogue-results-line .catalogue-listing-vendeur-nom-row .seller-verified-subscription-badge {
   transform: translateY(calc(-0.038em + 0.05mm));
+}
+
+/* Suivre mes offres : liens noms vendeurs vers catalogue public */
+.suivre-mes-offres-page .suivre-mes-offres-seller-link:hover {
+  text-decoration: underline;
+  color: #1d1d1f;
+}
+
+/* Suivre mes offres : cartes vue ligne plus compactes (hauteur) — sans toucher au catalogue */
+.suivre-mes-offres-page .catalogue-line-card .catalogue-line-photo,
+.sourcing-page .catalogue-line-card .catalogue-line-photo {
+  --catalogue-line-thumb-side: max(40px, calc(22cqw - 10mm)) !important;
+  min-width: 40px !important;
+}
+.suivre-mes-offres-page .catalogue-line-card .catalogue-line-title-block,
+.sourcing-page .catalogue-line-card .catalogue-line-title-block {
+  padding-top: 4px !important;
 }
 
 /* Grilles type « À la une » : badge +0,1 mm plus haut que le défaut grille/liste */
@@ -1925,9 +2024,24 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .mes-annonces-deposer-link {
     display: none !important;
   }
+  /* Page Suivre mes offres : garder « Proposer une pièce » visible sur mobile */
+  .suivre-mes-offres-page .mes-annonces-deposer-link {
+    display: inline-flex !important;
+  }
+  /* Sourcing : bouton retour espace vendeur visible sur mobile */
+  .sourcing-page .mes-annonces-deposer-link {
+    display: inline-flex !important;
+  }
   /* Partager : icône à droite du bloc titre + nom vendeur ; pas de 2e ligne (Déposer masqué) */
   .mes-annonces-header-actions {
     display: none !important;
+  }
+  .suivre-mes-offres-page .mes-annonces-header-actions,
+  .sourcing-page .mes-annonces-header-actions {
+    display: flex !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+    margin-top: 4px !important;
   }
   .mes-annonces-title-block {
     display: flex !important;
@@ -2050,14 +2164,25 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   .deposer-annonce-title-row {
     position: relative !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
     padding-left: 48px !important;
     padding-right: 48px !important;
   }
+  .deposer-annonce-title-center {
+    flex: 1 !important;
+    min-width: 0 !important;
+    text-align: center !important;
+    padding: 0 8px !important;
+  }
+  /* Flèche alignée sur la 1re ligne du titre (28px), pas au milieu du bloc titre+sous-titre — même rendu Déposer / Proposer / Modifier */
   .deposer-annonce-back-link {
     position: absolute !important;
     left: 24px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
+    /* padding-top du titre (30px) + décalage : compromis alignement flèche / 1re ligne du h1 (identique Déposer / Proposer / Modifier) */
+    top: 42px !important;
+    transform: none !important;
   }
   /* Page Déposer une annonce : étapes 1–4 rapprochées et centrées, traits bien centrés sur mobile */
   .deposer-annonce-steps-row {
@@ -2192,50 +2317,68 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
 }
 
-/* Header : cœur Favoris légèrement au-dessus de User (22px) ; Messages plus petit (optique Lucide) */
+/* Header : glyphes centrés dans la cellule 24×24 (pas de translate asymétrique) */
 .header-action-icon--favoris svg {
   width: 23px !important;
   height: 23px !important;
   flex-shrink: 0;
-  transform: translateY(-0.42px);
+  transform: none;
 }
 .header-action-icon--user svg {
   width: 22px !important;
   height: 22px !important;
   flex-shrink: 0;
+  transform: none;
+}
+/* Compte en chargement : pas d’assombrissement (refresh = même rendu que l’icône active) */
+.header-actions .header-action-user > button.header-action-item:disabled {
+  opacity: 1 !important;
+  color: #1d1d1f !important;
+}
+
+/* Compte : User + mini croix / coche à droite (pas de clip) */
+.header-account-icon-row {
+  box-sizing: border-box;
+}
+/* Aligner la colonne User sur Favoris / Messages (cellule 24px centrée dans 44px vs flex-start dans 52px) */
+.header-actions .header-action-user > button.header-action-item > div.header-account-icon-row,
+.header-actions .header-action-user > a.header-action-item > div.header-account-icon-row {
+  margin-left: 2px;
+}
+.header-user-status-mark {
+  pointer-events: none;
+}
+/* Bas du glyphe croix/coche aligné sur le bas du pictogramme User (22px centré dans 24px) : léger remontée */
+/* Même boîte pour croix / coche : pas de déplacement horizontal de l’icône User au refresh */
+.header-action-icon--user .header-user-status-mark--guest svg,
+.header-action-icon--user .header-user-status-mark--member svg {
+  width: 13px !important;
+  height: 13px !important;
+  flex-shrink: 0;
+  transform: translateY(-1px) !important;
 }
 .header-action-icon--messages svg {
   width: 20px !important;
   height: 20px !important;
   flex-shrink: 0;
+  transform: translateX(2px);
+}
+/* Vendre : même pictogramme que Mes annonces (Package), taille alignée User */
+.header-action-icon--vendre svg {
+  width: 22px !important;
+  height: 22px !important;
+  flex-shrink: 0;
 }
 
-/* Libellés Favoris / Messages / Connexion / prénom : même police (Inter) et couleur, lien ou bouton */
-.header-actions > a.header-action-item > span,
-.header-actions .header-action-user > button.header-action-item > span,
-.header-actions .header-action-user > a.header-action-item > span {
-  font-family: var(--font-inter), var(--font-sans);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.2;
-  color: #6e6e73 !important;
-  padding: 0;
-  margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Header desktop : même axe vertical pour les 3 colonnes (icônes + textes) ; marge compte inchangée côté bouton */
+/* Header desktop : icônes seules (Favoris, Messages, compte), alignées au centre */
 @media (min-width: 768px) {
   .header-right .header-actions {
-    align-items: flex-start !important;
-    gap: 12px !important;
+    align-items: center !important;
+    gap: 5px !important;
   }
-  /* Le compte est dans un wrapper : « contents » aligne le bouton comme Favoris / Messages sans décaler le groupe */
   .header-actions .header-action-user:not(a) {
     display: contents;
   }
-  /* L’espacement entre les colonnes est géré par gap sur .header-actions */
   .header-actions .header-action-user > button.header-action-item,
   .header-actions > a.header-action-user.header-action-item,
   .header-actions .header-action-user > a.header-action-item {
@@ -2244,20 +2387,15 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .header-actions > a.header-action-item,
   .header-actions .header-action-user > button.header-action-item,
   .header-actions .header-action-user > a.header-action-item {
-    display: grid !important;
-    grid-template-rows: 24px auto;
-    grid-template-columns: minmax(0, 1fr);
-    row-gap: 2px;
-    justify-items: center;
-    align-content: start;
-    align-self: start;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
     box-sizing: border-box;
   }
   .header-actions > a.header-action-item > div:first-child,
   .header-actions .header-action-user > button.header-action-item > div:first-child,
   .header-actions .header-action-user > a.header-action-item > div:first-child {
-    grid-row: 1;
-    grid-column: 1;
     display: flex !important;
     align-items: center;
     justify-content: center;
@@ -2265,11 +2403,12 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     height: 24px;
     box-sizing: border-box;
   }
-  .header-actions > a.header-action-item > span,
-  .header-actions .header-action-user > button.header-action-item > span,
-  .header-actions .header-action-user > a.header-action-item > span {
-    grid-row: 2;
-    grid-column: 1;
+  .header-actions > a.header-action-item > div:first-child.header-account-icon-row,
+  .header-actions .header-action-user > button.header-action-item > div:first-child.header-account-icon-row,
+  .header-actions .header-action-user > a.header-action-item > div:first-child.header-account-icon-row {
+    width: auto !important;
+    min-width: 24px;
+    justify-content: flex-start;
   }
 }
 
@@ -2409,41 +2548,53 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   :root {
     --header-height: 56px;
   }
-  /* Même apparence qu’en haut de page d’accueil : pas de fond translucide au scroll */
   .site-header {
-    background-color: #fbfbfb !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    transition: none !important;
+    background-color: rgba(251, 251, 251, 0.78) !important;
+    backdrop-filter: saturate(180%) blur(16px) !important;
+    -webkit-backdrop-filter: saturate(180%) blur(16px) !important;
+    transition: background-color 0.2s, backdrop-filter 0.2s !important;
   }
   .header-inner {
     height: 56px !important;
-    grid-template-columns: auto 1fr auto !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     gap: 12px !important;
     padding-left: 24px !important;
     padding-right: calc(12px - 2mm) !important;
   }
   .header-logo-link {
     justify-self: start !important;
-    margin-top: 1mm !important;
+    margin-top: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
   }
+  /* Ratio naturel, taille réduite sur téléphone */
   .header-logo-img {
-    height: 20px !important;
     width: auto !important;
-    max-height: 20px !important;
+    height: auto !important;
+    max-height: 21px !important;
+    max-width: none !important;
     object-fit: contain !important;
     object-position: left center;
+    margin-top: 0 !important;
+    flex-shrink: 0 !important;
   }
-  /* Header mobile : Favoris, Messages, User serrés avec espace égal + proche du menu, barre décalée à droite */
+  /* Header mobile : Favoris, Messages, User proches du menu burger */
   .header-right {
-    gap: 2px !important;
+    gap: 0 !important;
   }
   .header-actions {
     display: flex !important;
-    gap: 4px !important;
+    gap: 0 !important;
+    margin-right: -6px !important;
+  }
+  .header-right > button.hide-desktop {
+    margin-left: -4px !important;
   }
   .header-actions > a:nth-child(2) {
-    margin-left: 2mm !important;
+    margin-left: 0 !important;
   }
   /* Largeurs fixes pour éviter le décalage des icônes (auth, badge messages, hydratation) */
   .header-actions > a,
@@ -2470,18 +2621,39 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     width: 24px !important;
     height: 24px !important;
   }
+  .header-actions > div > button > div:first-child.header-account-icon-row,
+  .header-actions > div.header-action-user > a > div:first-child.header-account-icon-row {
+    width: auto !important;
+    min-width: 24px;
+    max-width: none !important;
+    height: 24px !important;
+  }
   .header-actions .header-action-user {
-    margin-left: 10px !important;
+    flex: 0 0 auto !important;
+    min-width: 52px !important;
+    max-width: none !important;
+    /* Même rythme que Favoris ↔ Messages (gap 0) : pas de marge supplémentaire */
+    margin-left: 0 !important;
   }
-  /* Cœur + bulle : léger décalage à droite (optique sur petit écran) */
-  .header-action-icon--favoris svg {
-    transform: translate(6px, -0.42px) !important;
-  }
-  .header-action-icon--messages svg {
-    transform: translateX(6px) !important;
-  }
+  .header-action-icon--favoris svg,
   .header-action-icon--user svg {
-    transform: translateX(-5px) !important;
+    transform: none !important;
+  }
+  /* Bulle Messages : léger décalage à droite sur téléphone (optique Lucide) */
+  .header-action-icon--messages svg {
+    transform: translateX(6.5px) !important;
+  }
+  /* Décalage desktop compte (52px vs 44px) inutile sur colonnes 32px : mieux centré entre les voisins */
+  .header-actions .header-action-user > button.header-action-item > div.header-account-icon-row,
+  .header-actions .header-action-user > a.header-action-item > div.header-account-icon-row {
+    margin-left: 0 !important;
+  }
+  .header-actions > a.header-action-item,
+  .header-actions .header-action-user > button.header-action-item,
+  .header-actions .header-action-user > a.header-action-item {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   /* Boutons prev/next : bord du viewport = bord de la carte visible (moitié sur la tuile) */
@@ -2527,6 +2699,12 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     opacity: 0 !important;
     pointer-events: none !important;
     visibility: hidden !important;
+  }
+
+  /* Accueil : pas de flèches catégories sur téléphone (défilement au doigt) */
+  .home-section-categories .categories-scroll-viewport button[aria-label="Catégories précédentes"],
+  .home-section-categories .categories-scroll-viewport button[aria-label="Catégories suivantes"] {
+    display: none !important;
   }
 
   /* Footer : paddings adaptés au mobile, grille en 2 colonnes */

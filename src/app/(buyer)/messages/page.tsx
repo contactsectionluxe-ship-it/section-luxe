@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MessageCircle, Trash2, Search, ChevronDown } from 'lucide-react';
+import { MessageCircle, Trash2, Search, ChevronDown, PackageX } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { subscribeToConversations, deleteConversation } from '@/lib/supabase/messaging';
+import { getListingsCatalogVisibility } from '@/lib/supabase/listings';
 import { Conversation } from '@/types';
 import { formatRelativeTime, formatDateShort } from '@/lib/utils';
 
@@ -16,6 +17,13 @@ const MESSAGES_FILTER_OPTIONS: { value: FilterTab; label: string }[] = [
   { value: 'unread', label: 'Non lus' },
   { value: 'read', label: 'Lus' },
 ];
+
+/** Hors catalogue : annonce supprimée (listing_id NULL) ou inactive — on garde titre/photo sur la conversation. */
+function isListingOffCatalog(c: Conversation, visibility: Record<string, boolean>): boolean {
+  if (c.saleProposalId) return false;
+  if (!c.listingId) return true;
+  return c.listingId in visibility && visibility[c.listingId] === false;
+}
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -30,6 +38,8 @@ export default function MessagesPage() {
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const filterDropdownRef = useRef<HTMLDivElement>(null);
   const emptyDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const catalogFetchGenRef = useRef(0);
+  const [catalogVisibility, setCatalogVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -56,6 +66,18 @@ export default function MessagesPage() {
       );
       setConversations(merged);
       setLoading(false);
+      const listingIds = [
+        ...new Set(merged.filter((c) => !c.saleProposalId && c.listingId).map((c) => c.listingId)),
+      ];
+      if (listingIds.length === 0) {
+        setCatalogVisibility({});
+      } else {
+        const gen = ++catalogFetchGenRef.current;
+        getListingsCatalogVisibility(listingIds).then((map) => {
+          if (gen !== catalogFetchGenRef.current) return;
+          setCatalogVisibility(map);
+        });
+      }
       if (merged.length > 0) {
         if (emptyDelayRef.current) {
           clearTimeout(emptyDelayRef.current);
@@ -367,6 +389,7 @@ export default function MessagesPage() {
               {filteredConversations.map((conversation, index) => {
                 const unreadCount = getUnreadCount(conversation);
                 const isUnread = unreadCount > 0;
+                const listingOffCatalog = isListingOffCatalog(conversation, catalogVisibility);
                 return (
                   <div
                     key={conversation.id}
@@ -379,21 +402,53 @@ export default function MessagesPage() {
                       backgroundColor: isUnread ? '#fafaf9' : '#fff',
                     }}
                   >
-                    <Link
-                      href={`/annonce/${conversation.listingId}`}
-                      style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
-                        {conversation.listingPhoto ? (
-                          <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <MessageCircle size={28} color="#86868b" />
-                          </div>
-                        )}
+                    {conversation.saleProposalId ? (
+                      <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
+                          {conversation.listingPhoto ? (
+                            <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <MessageCircle size={28} color="#86868b" />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </Link>
+                    ) : listingOffCatalog ? (
+                      <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                        <div
+                          style={{
+                            width: 80,
+                            height: 80,
+                            borderRadius: 12,
+                            backgroundColor: '#e8e8ed',
+                            border: '1px solid #e8e6e3',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                          aria-hidden
+                        >
+                          <PackageX size={30} color="#86868b" strokeWidth={2} />
+                        </div>
+                      </div>
+                    ) : (
+                      <Link
+                        href={`/annonce/${conversation.listingId}`}
+                        style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
+                          {conversation.listingPhoto ? (
+                            <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <MessageCircle size={28} color="#86868b" />
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    )}
                     <Link
                       href={`/messages/${conversation.id}`}
                       style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 28, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
@@ -409,7 +464,7 @@ export default function MessagesPage() {
                           </span>
                         </div>
                         <p style={{ fontSize: 13, color: '#6e6e73', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {conversation.listingTitle}
+                          {listingOffCatalog ? "L'annonce a été supprimée" : conversation.listingTitle || 'Annonce'}
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                           <p style={{ fontSize: 13, color: isUnread ? '#1d1d1f' : '#86868b', fontWeight: isUnread ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>

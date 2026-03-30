@@ -1,10 +1,22 @@
 /**
- * Règles communes : JPEG, PNG uniquement (5 Mo max). Pas de WebP par prudence.
+ * Règles communes : JPEG, PNG uniquement (10 Mo max). Pas de WebP par prudence.
  * Documents « devenir vendeur » : en plus PDF.
  */
 
-export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 Mo
-export const MAX_FILE_SIZE_MB = 5;
+export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 Mo
+export const MAX_FILE_SIZE_MB = 10;
+
+/** Message court (ex. toast liste photos) quand un fichier dépasse la taille max. */
+export const PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT = `${MAX_FILE_SIZE_MB} Mo max/photo`;
+
+/** Refus dropzone `file-too-large` ou fichier > max dans les fichiers fournis (ex. dépôt sur grille). */
+export function photoAdditionHasOversizeFile(
+  acceptedFiles: File[],
+  fileRejections: ReadonlyArray<{ errors: ReadonlyArray<{ code: string }> }>
+): boolean {
+  if (fileRejections.some((r) => r.errors.some((e) => e.code === 'file-too-large'))) return true;
+  return acceptedFiles.some((f) => f.size > MAX_FILE_SIZE_BYTES);
+}
 
 /** Types MIME pour les photos (avatar, annonces) : JPEG et PNG uniquement */
 export const ALLOWED_IMAGE_MIMES = ['image/jpeg', 'image/png'] as const;

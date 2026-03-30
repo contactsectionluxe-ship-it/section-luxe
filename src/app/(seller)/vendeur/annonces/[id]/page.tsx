@@ -11,7 +11,13 @@ import { PageLoader, CguCgvCheckbox } from '@/components/ui';
 import { getListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CATEGORIES, parseListingPriceInputToNumber, sanitizeListingPriceInputWhileTyping } from '@/lib/utils';
-import { MAX_FILE_SIZE_BYTES, validateImageFile } from '@/lib/file-validation';
+import {
+  MAX_FILE_SIZE_BYTES,
+  MAX_FILE_SIZE_MB,
+  PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT,
+  photoAdditionHasOversizeFile,
+  validateImageFile,
+} from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY, BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { Listing, ListingCategory } from '@/types';
 import { isSubscriptionLimitError } from '@/lib/subscription';
@@ -313,11 +319,15 @@ export default function EditListingPage() {
       setNewPhotos((prev) => [...prev, ...toAdd]);
       const rejectedCount = fileRejections.length + (acceptedFiles.length - validFiles.length);
       if (rejectedCount > 0) {
-        setPhotoRejectMessage(
-          rejectedCount === 1
-            ? '1 fichier non ajouté : max 5 Mo/photo, types JPEG ou PNG.'
-            : `${rejectedCount} fichiers non ajoutés : max 5 Mo/photo, types JPEG ou PNG.`
-        );
+        if (photoAdditionHasOversizeFile(acceptedFiles, fileRejections)) {
+          setPhotoRejectMessage(PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT);
+        } else {
+          setPhotoRejectMessage(
+            rejectedCount === 1
+              ? `1 fichier non ajouté : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
+              : `${rejectedCount} fichiers non ajoutés : max ${MAX_FILE_SIZE_MB} Mo/photo, types JPEG ou PNG.`
+          );
+        }
       } else {
         setPhotoRejectMessage(null);
       }
@@ -327,7 +337,8 @@ export default function EditListingPage() {
 
   useEffect(() => {
     if (!photoRejectMessage) return;
-    const t = setTimeout(() => setPhotoRejectMessage(null), 5000);
+    const ms = photoRejectMessage === PHOTO_MAX_SIZE_PER_FILE_SHORT_HINT ? 7000 : 5000;
+    const t = setTimeout(() => setPhotoRejectMessage(null), ms);
     return () => clearTimeout(t);
   }, [photoRejectMessage]);
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -829,7 +840,7 @@ export default function EditListingPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
       {/* Ligne titre : même design que Déposer une annonce (classes partagées pour le mobile) */}
-      <div className="deposer-annonce-title-row" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
+      <div className="deposer-annonce-title-row" style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
           href="/vendeur"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
@@ -839,26 +850,26 @@ export default function EditListingPage() {
           <ArrowLeft size={18} />
           <span className="deposer-annonce-back-link-text">Retour à mes annonces</span>
         </Link>
-        <div style={{ flex: 1, textAlign: 'center', minWidth: 0, padding: '0 16px' }}>
+        <div className="deposer-annonce-title-center">
           <h1
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
               fontSize: 28,
               fontWeight: 500,
-              marginBottom: 8,
+              margin: '0 0 8px',
               color: '#1d1d1f',
               letterSpacing: '-0.02em',
             }}
           >
             Modifier l&apos;annonce
           </h1>
-          <p style={{ fontSize: 15, color: '#6e6e73' }}>
+          <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>
             <span className="deposer-annonce-subtitle-desktop">Modifiez les informations de votre annonce</span>
             <span className="deposer-annonce-subtitle-mobile">Modifiez les informations</span>
           </p>
         </div>
-        <div className="deposer-annonce-title-spacer" style={{ width: 220, flexShrink: 0 }} aria-hidden />
-            </div>
+        <div className="deposer-annonce-title-spacer" aria-hidden />
+      </div>
 
       <div className="deposer-annonce-form-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
 
@@ -1742,7 +1753,7 @@ setMaterialSearchQuery('');
             <div style={{ marginBottom: 18 }}>
               <label style={labelStyle}>Déposer les photos <span style={{ color: '#1d1d1f' }}>*</span></label>
               <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>
-                La première photo sera l&apos;image principale. Insérez ou supprimez des photos.
+                La première photo sera l&apos;image principale.
               </p>
 
               {totalPhotosCount < maxPhotos && (
@@ -1770,7 +1781,7 @@ setMaterialSearchQuery('');
                       {isDragActive ? 'Déposez ici' : 'Glissez-déposez ou cliquez pour insérer une photo'}
                     </span>
                     <span style={{ fontSize: 12, color: '#86868b' }}>
-                      Maximum {maxPhotos} photos — 5 Mo max/photo. Types JPEG, PNG.
+                      Maximum 9 photos — 10 Mo max/photo. Types JPEG, PNG.
                     </span>
                   </div>
                 </div>

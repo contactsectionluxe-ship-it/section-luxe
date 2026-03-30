@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS public.favorites (
 -- Conversations table
 CREATE TABLE IF NOT EXISTS public.conversations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  listing_id UUID NOT NULL REFERENCES public.listings(id) ON DELETE CASCADE,
+  listing_id UUID REFERENCES public.listings(id) ON DELETE SET NULL,
   listing_title TEXT NOT NULL,
   listing_photo TEXT DEFAULT '',
   buyer_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
