@@ -3,12 +3,19 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Package, Search, ChevronDown, X, Calendar, Info } from 'lucide-react';
+import { Package, Search, ChevronDown, X, Calendar, SquarePen, Store } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { deleteVisitorSaleProposal, fetchVisitorSaleProposals, type SaleProposalRow } from '@/lib/supabase/saleProposals';
+import {
+  deleteVisitorSaleProposal,
+  fetchVisitorSaleProposals,
+  saleProposalRowToListing,
+  type SaleProposalRow,
+} from '@/lib/supabase/saleProposals';
 import { getSellerData } from '@/lib/supabase/auth';
 import { formatPrice, formatDate } from '@/lib/utils';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { ProposalDescriptionInfo } from '@/components/ProposalDescriptionInfo';
 import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 
 /** Même carte que le catalogue (vue liste). */
@@ -20,22 +27,48 @@ const SORT_OPTIONS = [
   { value: 'oldest' as const, label: 'Plus anciens' },
 ];
 
-/** Plus haute estimation parmi les vendeurs invités (centimes). */
-function bestEstimatedOfferCents(invites: SaleProposalRow['invites'] | undefined): number | null {
-  if (!invites?.length) return null;
-  const cents = invites.map((i) => i.estimated_price_cents).filter((c): c is number => c != null && Number.isFinite(c));
-  if (cents.length === 0) return null;
-  return Math.max(...cents);
-}
+/** Même rendu typographique pour le prix souhaité (méta ligne catalogue). */
+const SUIVRE_MES_OFFRES_MONTANT_STYLE: CSSProperties = {
+  fontSize: 14,
+  fontWeight: 400,
+  color: '#6e6e73',
+  margin: 0,
+  lineHeight: 1.35,
+  flexShrink: 0,
+  fontFamily: 'var(--font-inter), var(--font-sans), system-ui, sans-serif',
+};
 
-/** Vendeur(s) ayant proposé cette estimation maximale (ids uniques). */
-function sellerIdsWithBestOffer(invites: SaleProposalRow['invites'] | undefined, bestCents: number | null): string[] {
-  if (bestCents == null || !invites?.length) return [];
-  const ids = invites
-    .filter((i) => i.estimated_price_cents != null && i.estimated_price_cents === bestCents)
-    .map((i) => i.seller_id);
-  return [...new Set(ids)];
-}
+/** Même principe que `ProposalDescriptionInfo` : icône en em, fond transparent, gris #6e6e73 */
+const SUIVRE_OFFRES_CARD_ICON_BTN: CSSProperties = {
+  flexShrink: 0,
+  padding: '0 0 0.04em 0',
+  margin: 0,
+  border: 'none',
+  borderRadius: 4,
+  backgroundColor: 'transparent',
+  color: '#6e6e73',
+  boxSizing: 'border-box',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: 0,
+  textDecoration: 'none',
+  fontSize: 'inherit',
+  transform: 'translateY(0.17em)',
+  cursor: 'pointer',
+};
+
+const SUIVRE_OFFRES_CARD_ICON_SVG: CSSProperties = {
+  width: '0.92em',
+  height: '0.92em',
+  display: 'block',
+};
+
+const SUIVRE_OFFRES_CARD_ICON_SVG_DELETE: CSSProperties = {
+  width: '1.02em',
+  height: '1.02em',
+  display: 'block',
+};
 
 export default function SuivreMesOffresPage() {
   const router = useRouter();
@@ -43,7 +76,6 @@ export default function SuivreMesOffresPage() {
   const [rows, setRows] = useState<SaleProposalRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [expandedDisclaimerById, setExpandedDisclaimerById] = useState<Record<string, boolean>>({});
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recent' | 'oldest'>('recent');
   const [sortOpen, setSortOpen] = useState(false);
@@ -357,9 +389,6 @@ export default function SuivreMesOffresPage() {
             style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}
           >
             {filteredSorted.map((r) => {
-              const bestCents = bestEstimatedOfferCents(r.invites);
-              const bestOfferSellerIds = sellerIdsWithBestOffer(r.invites, bestCents);
-              const disclaimerExpanded = !!expandedDisclaimerById[r.id];
               return (
               <article
                 key={r.id}
@@ -384,38 +413,6 @@ export default function SuivreMesOffresPage() {
                     overflow: 'hidden',
                   }}
                 >
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      openProposalDeleteModal(r.id);
-                    }}
-                    disabled={deletingProposal && proposalToDeleteId === r.id}
-                    aria-label="Supprimer l'offre"
-                    style={{
-                      position: 'absolute',
-                      top: 6,
-                      left: 6,
-                      zIndex: 2,
-                      padding: 3,
-                      width: 20,
-                      height: 20,
-                      boxSizing: 'border-box',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      borderRadius: 4,
-                      backgroundColor: 'rgba(240,240,240,0.95)',
-                      color: '#1d1d1f',
-                      cursor: deletingProposal && proposalToDeleteId === r.id ? 'not-allowed' : 'pointer',
-                      opacity: deletingProposal && proposalToDeleteId === r.id ? 0.7 : 1,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                    }}
-                  >
-                    <X size={13} strokeWidth={2.5} />
-                  </button>
                   {r.photo_urls?.length ? (
                     <CatalogueCardPhotos photos={r.photo_urls} alt={r.title || ''} sizes="(max-width: 768px) 42vw, 200px" />
                   ) : (
@@ -439,36 +436,99 @@ export default function SuivreMesOffresPage() {
                     flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    padding: '0 12px 2px 12px',
+                    justifyContent: 'flex-start',
+                    alignSelf: 'stretch',
+                    padding: '0 12px 0 12px',
                     minWidth: 0,
+                    minHeight: 0,
                     overflow: 'hidden',
                   }}
                 >
-                  <div className="catalogue-line-title-block" style={{ paddingBottom: 2, minWidth: 0, overflow: 'hidden' }}>
-                    <h3
-                      title={r.title || ''}
-                      className="catalogue-line-title"
-                      style={{
-                        fontSize: 18,
-                        fontWeight: 600,
-                        color: '#1d1d1f',
-                        margin: 0,
-                        marginBottom: 6,
-                        minWidth: 0,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {r.title}
-                    </h3>
+                  <div className="catalogue-line-title-block" style={{ paddingBottom: 0, minWidth: 0, overflow: 'visible', flexShrink: 0 }}>
+                    <div style={{ fontSize: 18, width: '100%', minWidth: 0, marginBottom: 6 }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 8,
+                          maxWidth: '100%',
+                          minWidth: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'row',
+                            alignItems: 'baseline',
+                            gap: '0.28em',
+                            minWidth: 0,
+                            flex: '1 1 auto',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          <h3
+                            title={r.title || ''}
+                            className="catalogue-line-title"
+                            style={{
+                              fontSize: 'inherit',
+                              fontWeight: 600,
+                              color: '#1d1d1f',
+                              margin: 0,
+                              flex: '0 1 auto',
+                              minWidth: 0,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.3,
+                            }}
+                          >
+                            {r.title}
+                          </h3>
+                          <ProposalDescriptionInfo description={r.description} />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <Link
+                            href={`/proposer-vente?modifier=${encodeURIComponent(r.id)}`}
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label="Modifier l'offre"
+                            className="suivre-mes-offres-card-action-btn"
+                            style={SUIVRE_OFFRES_CARD_ICON_BTN}
+                          >
+                            <SquarePen strokeWidth={2} aria-hidden style={SUIVRE_OFFRES_CARD_ICON_SVG} />
+                          </Link>
+                          <button
+                            type="button"
+                            className="suivre-mes-offres-card-action-btn"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openProposalDeleteModal(r.id);
+                            }}
+                            disabled={deletingProposal && proposalToDeleteId === r.id}
+                            aria-label="Supprimer l'offre"
+                            style={{
+                              ...SUIVRE_OFFRES_CARD_ICON_BTN,
+                              cursor: deletingProposal && proposalToDeleteId === r.id ? 'not-allowed' : 'pointer',
+                              opacity: deletingProposal && proposalToDeleteId === r.id ? 0.7 : 1,
+                            }}
+                          >
+                            <X strokeWidth={2} aria-hidden style={SUIVRE_OFFRES_CARD_ICON_SVG_DELETE} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <ListingCaracteristiques
+                      listing={saleProposalRowToListing(r)}
+                      variant="lineCatalogue"
+                      className="catalogue-listing-caracteristiques"
+                    />
                     <div
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 6,
+                        gap: 3,
+                        marginTop: 18,
                         marginBottom: 8,
                         minWidth: 0,
                         maxWidth: '100%',
@@ -478,182 +538,107 @@ export default function SuivreMesOffresPage() {
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 6,
+                          gap: 4,
                           flexWrap: 'nowrap',
                           minWidth: 0,
                           maxWidth: '100%',
                           overflow: 'hidden',
                           whiteSpace: 'nowrap',
                           textOverflow: 'ellipsis',
-                          fontSize: 12,
+                          fontSize: 14,
                           color: '#6e6e73',
-                          lineHeight: 1.25,
+                          lineHeight: 1.35,
+                          fontWeight: 400,
                         }}
                       >
-                        <Calendar size={13} color="#6e6e73" style={{ flexShrink: 0 }} />
+                        <Calendar size={15} color="#6e6e73" style={{ flexShrink: 0 }} />
                         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           Demande faite le {formatDate(new Date(r.created_at))}
                         </span>
-                        <span style={{ flexShrink: 0, color: '#86868b' }}> - </span>
-                        <span style={{ flexShrink: 0, fontWeight: 500, color: '#86868b' }}>Prix souhaité</span>
-                        <p
-                          className="catalogue-listing-prix"
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 600,
-                            color: '#1d1d1f',
-                            margin: 0,
-                            lineHeight: 1.25,
-                            flexShrink: 0,
-                          }}
-                        >
+                        <span style={{ flexShrink: 0, color: '#6e6e73' }}> - </span>
+                        <span style={{ flexShrink: 0, color: '#6e6e73' }}>Prix souhaité</span>
+                        <p className="catalogue-listing-prix suivre-mes-offres-meta-prix" style={SUIVRE_MES_OFFRES_MONTANT_STYLE}>
                           {formatPrice(r.wish_price_cents / 100)}
                         </p>
                       </div>
-
                       <div
+                        className="catalogue-listing-vendeur-block"
                         style={{
                           display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          flexWrap: 'nowrap',
+                          flexDirection: 'column',
+                          gap: 4,
+                          alignItems: 'stretch',
                           minWidth: 0,
                           maxWidth: '100%',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
+                          paddingTop: 0,
+                          paddingBottom: 2,
                         }}
                       >
-                        <span style={{ flexShrink: 0, fontSize: 12, fontWeight: 500, color: '#86868b' }}>
-                          Meilleure offre à ce jour
-                        </span>
                         <div
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'baseline',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
                             flexWrap: 'nowrap',
-                            gap: 6,
+                            minWidth: 0,
+                            fontSize: 14,
+                            color: '#6e6e73',
+                            lineHeight: 1.35,
+                            fontWeight: 400,
+                          }}
+                        >
+                          <Store size={15} color="#6e6e73" style={{ flexShrink: 0 }} aria-hidden />
+                          <span>Vendeurs sélectionnés :</span>
+                        </div>
+                        <div
+                          style={{
+                            paddingLeft: 19,
                             minWidth: 0,
                             maxWidth: '100%',
-                            overflow: 'hidden',
+                            display: 'flex',
+                            alignItems: 'center',
+                            boxSizing: 'border-box',
                           }}
                         >
-                          <p
-                            className="catalogue-listing-prix"
-                            style={{
-                              fontSize: 16,
-                              fontWeight: 600,
-                              color: bestCents != null ? '#1d1d1f' : '#8e8e93',
-                              margin: 0,
-                              lineHeight: 1.25,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {bestCents != null ? formatPrice(bestCents / 100) : '...'}
-                          </p>
-                          {bestCents != null && bestOfferSellerIds.length > 0 ? (
-                            <BestOfferSellerNames sellerIds={bestOfferSellerIds} />
-                          ) : null}
+                          {r.invites && r.invites.length > 0 ? (
+                            <InvitedSellersCatalogueLine invites={r.invites} />
+                          ) : (
+                            <span style={{ fontSize: 13, color: '#86868b', lineHeight: 1.25 }}>
+                              Aucun vendeur invité pour le moment
+                            </span>
+                          )}
                         </div>
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 8, position: 'relative', maxWidth: '100%' }}>
-                      <Info size={14} color="#86868b" style={{ position: 'absolute', left: 0, top: 0.5 }} aria-hidden />
-                      <div style={{ paddingLeft: 20 }}>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: 11,
-                            fontWeight: 400,
-                            color: '#86868b',
-                            lineHeight: 1.45,
-                            maxWidth: '100%',
-                          }}
-                        >
-                          Les offres proposées sur la plateforme sont fournies à titre indicatif et ne sont pas contractuelles.
-                          {!disclaimerExpanded ? (
-                            <>
-                              {' '}
-                              <button
-                                type="button"
-                                onClick={() => setExpandedDisclaimerById((prev) => ({ ...prev, [r.id]: true }))}
-                                style={{
-                                  border: 'none',
-                                  background: 'none',
-                                  padding: 0,
-                                  margin: 0,
-                                  font: 'inherit',
-                                  fontWeight: 600,
-                                  color: '#6e6e73',
-                                  textDecoration: 'underline',
-                                  cursor: 'pointer',
-                                }}
-                              >
-                                Voir plus
-                              </button>
-                            </>
-                          ) : null}
-                        </p>
-                        {disclaimerExpanded ? (
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 11,
-                              fontWeight: 400,
-                              color: '#86868b',
-                              lineHeight: 1.45,
-                              maxWidth: '100%',
-                            }}
-                          >
-                            Elles sont basées uniquement sur les informations transmises par l&apos;utilisateur et peuvent être ajustées
-                            après vérification du produit. Toute transaction est réalisée directement en boutique entre le vendeur et
-                            l&apos;utilisateur.
-                            <br />
-                            La plateforme agit uniquement comme intermédiaire de mise en relation.{' '}
-                            <button
-                              type="button"
-                              onClick={() => setExpandedDisclaimerById((prev) => ({ ...prev, [r.id]: false }))}
-                              style={{
-                                border: 'none',
-                                background: 'none',
-                                padding: 0,
-                                margin: 0,
-                                font: 'inherit',
-                                fontWeight: 600,
-                                color: '#6e6e73',
-                                textDecoration: 'underline',
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Voir moins
-                            </button>
-                          </p>
-                        ) : null}
                       </div>
                     </div>
                   </div>
                   <div
-                    className="catalogue-listing-vendeur-block"
+                    className="suivre-mes-offres-disclaimer-bas"
                     style={{
+                      marginTop: 'auto',
                       borderTop: '1px solid #e8e6e3',
                       paddingTop: 6,
-                      paddingBottom: 4,
-                      marginTop: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      minHeight: 28,
-                      backgroundColor: '#fff',
+                      paddingBottom: 6,
+                      marginBottom: 0,
                       width: '100%',
-                      minWidth: 0,
+                      maxWidth: '100%',
+                      flexShrink: 0,
+                      alignSelf: 'stretch',
                     }}
                   >
-                    {r.invites && r.invites.length > 0 ? (
-                      <InvitedSellersCatalogueLine invites={r.invites} />
-                    ) : (
-                      <span style={{ fontSize: 12, color: '#86868b', lineHeight: 1.2 }}>
-                        Aucun vendeur invité pour le moment
-                      </span>
-                    )}
+                    <p
+                      style={{
+                        margin: 0,
+                        paddingBottom: 0,
+                        fontSize: 11.5,
+                        fontWeight: 400,
+                        color: '#86868b',
+                        lineHeight: 1.4,
+                        maxWidth: '100%',
+                      }}
+                    >
+                      La plateforme a pour unique but de mettre en relation vendeurs et acheteurs; toute transaction est sous la
+                      responsabilité exclusive des deux parties.
+                    </p>
                   </div>
                 </div>
               </article>
@@ -744,48 +729,6 @@ export default function SuivreMesOffresPage() {
   );
 }
 
-/** Noms des vendeurs à côté du montant « meilleure offre » (chargement async). */
-function BestOfferSellerNames({ sellerIds }: { sellerIds: string[] }) {
-  const [label, setLabel] = useState<string | null>(null);
-  const sellerIdsKey = sellerIds.join('\0');
-
-  useEffect(() => {
-    if (sellerIds.length === 0) {
-      setLabel('');
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const rows = await Promise.all(sellerIds.map((id) => getSellerData(id)));
-      const names = rows.map((s) => ((s?.companyName || 'Vendeur').trim() || 'Vendeur').toUpperCase());
-      if (!cancelled) setLabel(names.join(' ; '));
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [sellerIdsKey, sellerIds]);
-
-  if (!label) return null;
-
-  return (
-    <span
-      style={{
-        fontSize: 12,
-        fontWeight: 500,
-        color: '#86868b',
-        lineHeight: 1.25,
-        minWidth: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-      }}
-      title={label}
-    >
-      de {label}
-    </span>
-  );
-}
-
 /** Noms des vendeurs invités : une ligne, style catalogue ; chaque nom lien vers le catalogue du vendeur. */
 function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SaleProposalRow['invites']> }) {
   const [sellers, setSellers] = useState<{ uid: string; companyName: string }[] | null>(null);
@@ -823,10 +766,10 @@ function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SalePro
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: 400,
     color: '#86868b',
-    lineHeight: 1.2,
+    lineHeight: 1.25,
   };
 
   if (sellers === null) {

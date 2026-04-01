@@ -65,7 +65,9 @@ export default function RootLayout({
         <AuthProvider>
           <FirebaseWarning />
           <Header />
-          <div className="flex-1" style={{ backgroundColor: '#fff' }}>{children}</div>
+          <div className="site-main min-h-0 w-full min-w-0 flex-1" style={{ backgroundColor: '#fff' }}>
+            {children}
+          </div>
           <div style={{ flexShrink: 0 }}>
             <Footer />
           </div>

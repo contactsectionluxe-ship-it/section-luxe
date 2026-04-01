@@ -235,6 +235,7 @@ function HeaderMobileNavLinks({
               width: 'max-content',
               maxWidth: '100%',
               boxSizing: 'border-box',
+              textDecoration: 'none',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#e8e8ed';
@@ -662,7 +663,7 @@ function HeaderMain() {
             top: 'calc(var(--header-height) + 1px)',
             right: mobileMenuRight,
             width: 'max-content',
-            maxWidth: 'calc(100vw - 20px)',
+            maxWidth: 'calc(100% - 20px)',
             minWidth: 0,
             backgroundColor: '#fbfbfb',
             borderTopLeftRadius: 0,

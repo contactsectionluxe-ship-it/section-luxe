@@ -1,3 +1,4 @@
+import type { Listing } from '@/types';
 import { supabase, isSupabaseConfigured } from './client';
 import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
 
@@ -90,8 +91,9 @@ export async function createSaleProposalWithInvites(input: CreateSaleProposalInp
   }
 
   const proposalId = row.id as string;
-  if (input.invitedSellerIds.length > 0) {
-    const invites = input.invitedSellerIds.map((seller_id) => ({ proposal_id: proposalId, seller_id }));
+  const uniqueInvitedSellerIds = [...new Set(input.invitedSellerIds)];
+  if (uniqueInvitedSellerIds.length > 0) {
+    const invites = uniqueInvitedSellerIds.map((seller_id) => ({ proposal_id: proposalId, seller_id }));
     const { error: invErr } = await client.from('sale_proposal_invited_sellers').insert(invites);
     if (invErr) {
       throwSaleProposalDbError(invErr);
@@ -101,12 +103,100 @@ export async function createSaleProposalWithInvites(input: CreateSaleProposalInp
   return proposalId;
 }
 
+export type UpdateSaleProposalPayload = Omit<CreateSaleProposalInput, 'visitorId'>;
+
+/**
+ * Remplace les invitations via l’API serveur (service role) : le DELETE sous RLS client ne supprime souvent aucune ligne
+ * sans politique dédiée, ce qui provoquait une erreur de clé dupliquée à l’insert.
+ */
+async function replaceSaleProposalInvitesViaApi(proposalId: string, sellerIds: string[]): Promise<void> {
+  const { supabase, isSupabaseConfigured } = await import('@/lib/supabase/client');
+  if (!isSupabaseConfigured || !supabase) {
+    throw new Error('Supabase non configuré');
+  }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error('Session expirée. Reconnectez-vous.');
+  }
+  const base =
+    typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  if (!base) {
+    throw new Error("Impossible de joindre l'API (origine inconnue).");
+  }
+  const uniqueSellerIds = [...new Set(sellerIds)];
+  const res = await fetch(`${base}/api/replace-sale-proposal-invites`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ proposalId, sellerIds: uniqueSellerIds }),
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(body.error || `Mise à jour des vendeurs invités impossible (${res.status})`);
+  }
+}
+
+/**
+ * Met à jour une proposition du visiteur, supprime toutes les lignes d’invitation (offres vendeurs)
+ * puis réinsère les vendeurs sélectionnés (sans estimation).
+ */
+export async function updateVisitorSaleProposalWithInvites(
+  proposalId: string,
+  visitorId: string,
+  input: UpdateSaleProposalPayload,
+): Promise<void> {
+  const client = checkClient();
+  const { error: updErr } = await client
+    .from('sale_proposals')
+    .update({
+      title: input.title,
+      description: input.description,
+      category: input.category,
+      genre: input.genre ?? [],
+      article_type: input.articleType,
+      brand: input.brand,
+      model: input.model,
+      condition: input.condition,
+      material: input.material,
+      color: input.color,
+      size: input.size,
+      height_cm: input.heightCm,
+      width_cm: input.widthCm,
+      year: input.year,
+      packaging: input.packaging,
+      wish_price_cents: input.wishPriceCents,
+      locations: input.locations as unknown as Record<string, unknown>,
+    })
+    .eq('id', proposalId)
+    .eq('visitor_id', visitorId);
+
+  if (updErr) throwSaleProposalDbError(updErr);
+
+  await replaceSaleProposalInvitesViaApi(proposalId, input.invitedSellerIds);
+}
+
 export type SaleProposalRow = {
   id: string;
   visitor_id: string;
   title: string;
   description: string;
   category: string;
+  genre?: ('homme' | 'femme')[] | string[] | null;
+  article_type?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  condition?: string | null;
+  material?: string | null;
+  color?: string | null;
+  size?: string | null;
+  height_cm?: number | null;
+  width_cm?: number | null;
+  year?: number | null;
+  packaging?: string[] | null;
   wish_price_cents: number;
   locations: SaleProposalLocationEntry[];
   photo_urls: string[];
@@ -118,6 +208,42 @@ export type SaleProposalRow = {
     updated_at: string | null;
   }[];
 };
+
+/** Pour réutiliser `ListingCaracteristiques` (vue ligne catalogue) sur une proposition de vente. */
+export function saleProposalRowToListing(p: SaleProposalRow): Listing {
+  const created = new Date(p.created_at);
+  const rawGenre = p.genre;
+  const genre =
+    Array.isArray(rawGenre) && rawGenre.length > 0
+      ? (rawGenre.filter((x): x is 'homme' | 'femme' => x === 'homme' || x === 'femme') as ('homme' | 'femme')[])
+      : null;
+  return {
+    id: p.id,
+    sellerId: '',
+    sellerName: '',
+    title: p.title,
+    description: p.description ?? '',
+    price: Number(p.wish_price_cents) / 100,
+    category: p.category as Listing['category'],
+    genre: genre?.length ? genre : null,
+    photos: p.photo_urls ?? [],
+    likesCount: 0,
+    isActive: true,
+    createdAt: created,
+    updatedAt: created,
+    brand: p.brand ?? null,
+    model: p.model ?? null,
+    condition: p.condition ?? null,
+    material: p.material ?? null,
+    color: p.color ?? null,
+    heightCm: p.height_cm ?? null,
+    widthCm: p.width_cm ?? null,
+    year: p.year ?? null,
+    packaging: p.packaging ?? null,
+    size: p.size ?? null,
+    articleType: p.article_type ?? null,
+  };
+}
 
 /** Supprime une proposition créée par l’acheteur (invitations et conversations liées en cascade). */
 export async function deleteVisitorSaleProposal(visitorId: string, proposalId: string): Promise<void> {
@@ -132,7 +258,8 @@ export async function fetchVisitorSaleProposals(visitorId: string): Promise<Sale
     .from('sale_proposals')
     .select(
       `
-      id, visitor_id, title, description, category, wish_price_cents, locations, photo_urls, created_at,
+      id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
+      wish_price_cents, locations, photo_urls, created_at,
       sale_proposal_invited_sellers(seller_id, estimated_price_cents, seller_note, updated_at)
     `,
     )
@@ -147,6 +274,32 @@ export async function fetchVisitorSaleProposals(visitorId: string): Promise<Sale
     ...rest,
     invites: sale_proposal_invited_sellers,
   }));
+}
+
+/** Une proposition du visiteur (pour préremplir « Proposer une pièce » depuis Suivre mes offres). */
+export async function fetchVisitorSaleProposalById(visitorId: string, proposalId: string): Promise<SaleProposalRow | null> {
+  const client = checkClient();
+  const { data, error } = await client
+    .from('sale_proposals')
+    .select(
+      `
+      id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
+      wish_price_cents, locations, photo_urls, created_at,
+      sale_proposal_invited_sellers(seller_id, estimated_price_cents, seller_note, updated_at)
+    `,
+    )
+    .eq('id', proposalId)
+    .eq('visitor_id', visitorId)
+    .maybeSingle();
+
+  if (error) throwSaleProposalDbError(error);
+  if (!data) return null;
+  const raw = data as unknown as SaleProposalRow & { sale_proposal_invited_sellers?: SaleProposalRow['invites'] };
+  const { sale_proposal_invited_sellers, ...rest } = raw;
+  return {
+    ...rest,
+    invites: sale_proposal_invited_sellers,
+  };
 }
 
 export type InvitedProposalRow = {
@@ -170,7 +323,8 @@ export async function fetchSellerInvitedProposals(sellerId: string): Promise<Inv
       seller_note,
       updated_at,
       sale_proposals(
-        id, visitor_id, title, description, category, wish_price_cents, locations, photo_urls, created_at
+        id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
+        wish_price_cents, locations, photo_urls, created_at
       )
     `,
     )
@@ -210,3 +364,4 @@ export async function updateSellerProposalOffer(
 
   if (error) throwSaleProposalDbError(error);
 }
+

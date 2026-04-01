@@ -1,21 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MessageCircle, Search, ChevronDown, Store, Calendar, Info, Handbag, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
-import { fetchSellerInvitedProposals, updateSellerProposalOffer, type InvitedProposalRow } from '@/lib/supabase/saleProposals';
+import { fetchSellerInvitedProposals, saleProposalRowToListing, type InvitedProposalRow } from '@/lib/supabase/saleProposals';
 import { getUserData } from '@/lib/supabase/auth';
 import { getOrCreateProposalConversation } from '@/lib/supabase/messaging';
-import {
-  formatPrice,
-  formatDate,
-  parseListingPriceInputToNumber,
-  sanitizeListingPriceInputWhileTyping,
-} from '@/lib/utils';
+import { formatPrice, formatDate } from '@/lib/utils';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
+import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
+import { ProposalDescriptionInfo } from '@/components/ProposalDescriptionInfo';
 
 /** Aligné sur « Suivre mes offres » (vue liste catalogue). */
 const CATALOGUE_LINE_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
@@ -92,31 +89,6 @@ export default function SourcingPage() {
     });
     return list;
   }, [rows, searchQuery, sortBy]);
-
-  const saveOffer = async (proposalId: string, priceInput: string, note: string) => {
-    if (!user) return;
-    const n = parseListingPriceInputToNumber(priceInput);
-    try {
-      await updateSellerProposalOffer(user.uid, proposalId, {
-        estimatedPriceCents: n != null ? Math.round(n * 100) : null,
-        sellerNote: note.trim() || null,
-      });
-      setRows((prev) =>
-        prev.map((r) =>
-          r.proposal_id === proposalId
-            ? {
-                ...r,
-                estimated_price_cents: n != null ? Math.round(n * 100) : null,
-                seller_note: note.trim() || null,
-                updated_at: new Date().toISOString(),
-              }
-            : r,
-        ),
-      );
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Enregistrement impossible');
-    }
-  };
 
   const openMessage = async (row: InvitedProposalRow) => {
     if (!user || !seller) return;
@@ -218,7 +190,7 @@ export default function SourcingPage() {
                 Sourcing
               </h1>
               <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.45 }}>
-                Propositions de particuliers qui vous ont sélectionné — estimation indicative, note et messagerie.
+                Propositions de particuliers qui vous ont sélectionné — contactez-les par messagerie.
               </p>
             </div>
           </div>
@@ -371,7 +343,7 @@ export default function SourcingPage() {
             style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}
           >
             {filteredSorted.map((row) => (
-              <SourcingProposalCard key={row.proposal_id} row={row} onSave={saveOffer} onMessage={() => void openMessage(row)} />
+              <SourcingProposalCard key={row.proposal_id} row={row} onMessage={() => void openMessage(row)} />
             ))}
           </div>
         )}
@@ -382,34 +354,13 @@ export default function SourcingPage() {
 
 function SourcingProposalCard({
   row,
-  onSave,
   onMessage,
 }: {
   row: InvitedProposalRow;
-  onSave: (proposalId: string, price: string, note: string) => void | Promise<void>;
   onMessage: () => void | Promise<void>;
 }) {
   const p = row.proposal;
-  const [price, setPrice] = useState(
-    row.estimated_price_cents != null ? String(Math.round(row.estimated_price_cents / 100)) : '',
-  );
-  const [note, setNote] = useState(row.seller_note || '');
-  const [saving, setSaving] = useState(false);
   const [messaging, setMessaging] = useState(false);
-
-  useEffect(() => {
-    setPrice(row.estimated_price_cents != null ? String(Math.round(row.estimated_price_cents / 100)) : '');
-    setNote(row.seller_note || '');
-  }, [row.estimated_price_cents, row.seller_note, row.proposal_id]);
-
-  const handleSave = useCallback(async () => {
-    setSaving(true);
-    try {
-      await onSave(row.proposal_id, price, note);
-    } finally {
-      setSaving(false);
-    }
-  }, [onSave, row.proposal_id, price, note]);
 
   const handleMessage = useCallback(async () => {
     setMessaging(true);
@@ -419,17 +370,6 @@ function SourcingProposalCard({
       setMessaging(false);
     }
   }, [onMessage]);
-
-  const inputStyle: CSSProperties = {
-    width: '100%',
-    height: 40,
-    padding: '0 12px',
-    borderRadius: 10,
-    border: '1px solid #d2d2d7',
-    fontSize: 14,
-    boxSizing: 'border-box',
-    outline: 'none',
-  };
 
   return (
     <article
@@ -483,25 +423,44 @@ function SourcingProposalCard({
           overflow: 'hidden',
         }}
       >
-        <div className="catalogue-line-title-block" style={{ paddingBottom: 2, minWidth: 0, overflow: 'hidden' }}>
-          <h3
-            title={p.title || ''}
-            className="catalogue-line-title"
-            style={{
-              fontSize: 18,
-              fontWeight: 600,
-              color: '#1d1d1f',
-              margin: 0,
-              marginBottom: 6,
-              minWidth: 0,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              lineHeight: 1.3,
-            }}
-          >
-            {p.title}
-          </h3>
+        <div className="catalogue-line-title-block" style={{ paddingBottom: 2, minWidth: 0, overflow: 'visible' }}>
+          <div style={{ fontSize: 18, width: '100%', minWidth: 0, marginBottom: 6 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'baseline',
+                gap: '0.28em',
+                maxWidth: '100%',
+                minWidth: 0,
+              }}
+            >
+              <h3
+                title={p.title || ''}
+                className="catalogue-line-title"
+                style={{
+                  fontSize: 'inherit',
+                  fontWeight: 600,
+                  color: '#1d1d1f',
+                  margin: 0,
+                  flex: '0 1 auto',
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.3,
+                }}
+              >
+                {p.title}
+              </h3>
+              <ProposalDescriptionInfo description={p.description} />
+            </div>
+          </div>
+          <ListingCaracteristiques
+            listing={saleProposalRowToListing(p)}
+            variant="lineCatalogue"
+            className="catalogue-listing-caracteristiques"
+          />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 8, minWidth: 0, maxWidth: '100%' }}>
             <div
               style={{
@@ -539,25 +498,9 @@ function SourcingProposalCard({
                 {formatPrice(p.wish_price_cents / 100)}
               </p>
             </div>
-            {p.description ? (
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 12,
-                  color: '#6e6e73',
-                  lineHeight: 1.4,
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}
-              >
-                {p.description}
-              </p>
-            ) : null}
           </div>
 
-          <div style={{ marginTop: 4, marginBottom: 8, position: 'relative', maxWidth: '100%' }}>
+          <div style={{ marginTop: 4, marginBottom: 4, position: 'relative', maxWidth: '100%' }}>
             <Info size={14} color="#86868b" style={{ position: 'absolute', left: 0, top: 0.5 }} aria-hidden />
             <p
               style={{
@@ -570,35 +513,8 @@ function SourcingProposalCard({
                 maxWidth: '100%',
               }}
             >
-              Votre estimation est indicative et pourra être ajustée après vérification du produit en boutique.
+              Échangez par messagerie pour préciser la suite (disponibilité, rendez-vous en boutique, etc.).
             </p>
-          </div>
-
-          <div
-            className="sourcing-card-fields"
-            style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end', marginTop: 4, marginBottom: 4 }}
-          >
-            <div style={{ flex: '1 1 120px', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#86868b', marginBottom: 4 }}>Estimation (€)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={price}
-                onChange={(e) => setPrice(sanitizeListingPriceInputWhileTyping(e.target.value))}
-                placeholder="Ex. 1200"
-                style={inputStyle}
-              />
-            </div>
-            <div style={{ flex: '2 1 180px', minWidth: 0 }}>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 500, color: '#86868b', marginBottom: 4 }}>Note (optionnel)</label>
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="Précision pour le particulier"
-                style={inputStyle}
-              />
-            </div>
           </div>
         </div>
         <div
@@ -618,25 +534,6 @@ function SourcingProposalCard({
             minWidth: 0,
           }}
         >
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => void handleSave()}
-            style={{
-              height: 40,
-              padding: '0 18px',
-              backgroundColor: '#000',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 12,
-              fontWeight: 500,
-              fontSize: 14,
-              cursor: saving ? 'wait' : 'pointer',
-              opacity: saving ? 0.85 : 1,
-            }}
-          >
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
           <button
             type="button"
             disabled={messaging}

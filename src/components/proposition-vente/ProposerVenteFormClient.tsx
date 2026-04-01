@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef, type RefObject } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, type RefObject } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,7 +9,12 @@ import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { PageLoader } from '@/components/ui';
 import { uploadSaleProposalPhotos } from '@/lib/supabase/storage';
-import { createSaleProposalWithInvites } from '@/lib/supabase/saleProposals';
+import {
+  createSaleProposalWithInvites,
+  fetchVisitorSaleProposalById,
+  updateVisitorSaleProposalWithInvites,
+  type SaleProposalRow,
+} from '@/lib/supabase/saleProposals';
 import { MultiLocationPicker } from '@/components/proposition-vente/MultiLocationPicker';
 import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
 import { unionPrefixes, sellerPostcodeMatchesPrefixes } from '@/lib/saleProposalLocations';
@@ -28,6 +33,15 @@ import {
 } from '@/lib/file-validation';
 import { BRANDS_BY_CATEGORY_AND_GENRE, CHAUSSURES_MODELES_FEMME_ONLY, CHAUSSURES_MODELES_HOMME_ONLY, CLOTHING_SIZES, COLORS, COLORS_BY_CATEGORY, CONDITIONS, getAccessoiresTypesForGenre, getArticleTypeLabelsForCategory, getArticleTypeOptionsForForm, getArticleTypeSingleLabelForTitle, getBijouxTypesForGenre, getChaussuresTypesForGenre, getJeanSizesForGenre, isModelNameATypeLabel, modelMatchesArticleType, getPantSizesForGenre, getSacsTypesForGenre, getShoeSizesForGenre, getVetementsTypesForGenre, MATIERES_BY_CATEGORY, MATERIALS, MODELE_EXCLU_QUAND_IDENTIQUE_CATEGORIE, MODELE_VETEMENTS_GENERIQUES_EXCLUS, MODELES_EXCLUS_DEPOT_ANNONCE, MODELS_BY_CATEGORY_BRAND_AND_GENRE, MONTRES_MODELES_FEMME_ONLY, MONTRES_MODELES_HOMME_ONLY, SACS_MODELES_FEMME_ONLY, SACS_MODELES_HOMME_ONLY, BIJOUX_MODELES_FEMME_ONLY, BIJOUX_MODELES_HOMME_ONLY, VETEMENTS_MODELES_FEMME_ONLY, VETEMENTS_MODELES_HOMME_ONLY, VETEMENTS_MODELES_TOUJOURS_PROPOSES, VETEMENTS_MARQUES_UNIQUEMENT_MODELES_MARQUE, ROBE_SIZES } from '@/lib/constants';
 import { ListingCategory } from '@/types';
+
+const KNOWN_LISTING_CATEGORIES = new Set<ListingCategory>([
+  'sacs',
+  'montres',
+  'bijoux',
+  'vetements',
+  'chaussures',
+  'accessoires',
+]);
 
 const ETAT_OPTIONS = [
   { value: 'new', label: 'Neuf' },
@@ -91,14 +105,84 @@ type NewListingDraft = {
 /** Listes déroulantes étape 1 : une seule ouverte à la fois. */
 type Step1DropdownId = 'category' | 'type' | 'marque' | 'modele' | 'size' | 'condition' | 'material' | 'color';
 
+/** Photo déjà enregistrée (URL publique) ou fichier ajouté dans la session. */
+type PropositionPhotoItem = { kind: 'remote'; url: string } | { kind: 'file'; file: File };
+
+function maxSaleProposalPhotoIndexFromUrls(urls: string[]): number {
+  let max = -1;
+  for (const u of urls) {
+    const m = u.match(/photo_(\d+)\./i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return max;
+}
+
+/**
+ * Réaligne la valeur BDD sur la valeur attendue par les listes du formulaire.
+ * Quand plusieurs options partagent la même clé BDD (ex. maille_sweatshirt::Mailles vs ::Sweatshirts),
+ * le texte modèle/titre aide à retrouver le bon sous-type ; sinon on enregistre désormais la valeur complète avec :: en BDD.
+ */
+function articleTypeDbToFormValue(
+  category: ListingCategory | '' | 'autre',
+  genre: ('homme' | 'femme')[],
+  stored: string | null | undefined,
+  disambiguationText?: string | null,
+): string {
+  const raw = (stored || '').trim();
+  if (!raw || category === 'autre' || !category) return raw;
+  const typed =
+    category === 'vetements' ||
+    category === 'sacs' ||
+    category === 'bijoux' ||
+    category === 'chaussures' ||
+    category === 'accessoires';
+  if (!typed || genre.length === 0) return raw;
+  const options =
+    category === 'vetements'
+      ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre))
+      : category === 'sacs'
+        ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre))
+        : category === 'bijoux'
+          ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre))
+          : category === 'chaussures'
+            ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre))
+            : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
+
+  if (options.some((o) => o.value === raw)) return raw;
+
+  const base = raw.includes('::') ? (raw.split('::')[0] || '').trim() : raw;
+  if (!base) return raw;
+  if (options.some((o) => o.value === base)) return base;
+
+  const composites = options.filter((o) => o.value.startsWith(`${base}::`));
+  if (composites.length === 0) return raw;
+  if (composites.length === 1) return composites[0].value;
+
+  const t = (disambiguationText || '').toLowerCase();
+  const sweatHint = /sweat|hoodie|molleton|capuche|crewneck|sweatshirt|\bhood\b/i.test(t);
+  const mailleHint = /\bmaille\b|\bpull\b|\bcardigan\b|\bgilet\b|\btricot\b/i.test(t);
+  if (sweatHint && !mailleHint) {
+    const hit = composites.find((c) => /sweatshirt|sweat/i.test(c.value) || /sweatshirt|sweat/i.test(c.label));
+    if (hit) return hit.value;
+  }
+  if (mailleHint && !sweatHint) {
+    const hit = composites.find((c) => /maille/i.test(c.value) || /maille/i.test(c.label));
+    if (hit) return hit.value;
+  }
+  return composites[0].value;
+}
+
 export function ProposerVenteFormClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isSeller, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
+  /** Proposition existante chargée via ?modifier= (mise à jour au lieu de création). */
+  const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
   const [selectedLocations, setSelectedLocations] = useState<SaleProposalLocationEntry[]>([]);
   const [radiusKm, setRadiusKm] = useState(0);
   const [buyerLatLon, setBuyerLatLon] = useState<{ lat: number; lon: number } | null>(null);
@@ -146,6 +230,25 @@ export function ProposerVenteFormClient() {
   const [year, setYear] = useState('');
   const [contenuInclus, setContenuInclusState] = useState<Record<string, true | false | null>>({ box: null, certificat: null, facture: null });
   const [price, setPrice] = useState('');
+  const [photoItems, setPhotoItems] = useState<PropositionPhotoItem[]>([]);
+  const proposalPhotoBlobUrlsRef = useRef<string[]>([]);
+  const photoDisplayUrls = useMemo(() => {
+    proposalPhotoBlobUrlsRef.current.forEach(URL.revokeObjectURL);
+    proposalPhotoBlobUrlsRef.current = [];
+    return photoItems.map((item) => {
+      if (item.kind === 'remote') return item.url;
+      const u = URL.createObjectURL(item.file);
+      proposalPhotoBlobUrlsRef.current.push(u);
+      return u;
+    });
+  }, [photoItems]);
+
+  useEffect(() => {
+    return () => {
+      proposalPhotoBlobUrlsRef.current.forEach(URL.revokeObjectURL);
+      proposalPhotoBlobUrlsRef.current = [];
+    };
+  }, []);
 
   // Remonter le formulaire en haut à chaque changement d'étape
   useEffect(() => {
@@ -155,6 +258,8 @@ export function ProposerVenteFormClient() {
   // Restaurer le brouillon complet au chargement (sessionStorage : survit au changement d'onglet/fenêtre)
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Ne pas écraser avec un brouillon partiel quand on arrive pour modifier (URL initiale, pas après replace)
+    if (new URLSearchParams(window.location.search).get('modifier')?.trim()) return;
     try {
       const raw = sessionStorage.getItem(DRAFT_KEY_NEW);
       if (!raw) return;
@@ -199,6 +304,123 @@ export function ProposerVenteFormClient() {
   const draftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Si false, le titre est resynchronisé avec le titre suggéré quand marque / modèle / type changent. */
   const titleManuallyEditedRef = useRef(false);
+  const modifierHydratedRef = useRef<string | null>(null);
+  /** En modification : vendeurs invités au chargement (réaffichés même si hors filtre géo). */
+  const inviteSellerIdsFromLoadedProposalRef = useRef<string[]>([]);
+  /** Proposition chargée pour aligner modèle / champs recherche après le calcul de modelOptions. */
+  const lastLoadedProposalRowRef = useRef<SaleProposalRow | null>(null);
+  const pendingProposalFieldSyncRef = useRef(false);
+  const modifierProposalId = searchParams.get('modifier')?.trim() || null;
+
+  const applyLoadedProposalRow = useCallback((row: SaleProposalRow) => {
+    titleManuallyEditedRef.current = true;
+    const rawCat = (row.category || '').trim();
+    let cat: ListingCategory | '' | 'autre' = '';
+    if (KNOWN_LISTING_CATEGORIES.has(rawCat as ListingCategory)) {
+      cat = rawCat as ListingCategory;
+      setCategory(cat);
+      setCustomCategory('');
+    } else if (rawCat) {
+      cat = 'autre';
+      setCategory('autre');
+      setCustomCategory(rawCat);
+    } else {
+      setCategory('');
+      setCustomCategory('');
+    }
+    const rawGenre = row.genre;
+    const genreArr =
+      Array.isArray(rawGenre)
+        ? (rawGenre.filter((x): x is 'homme' | 'femme' => x === 'homme' || x === 'femme') as ('homme' | 'femme')[])
+        : [];
+    setGenre(genreArr);
+    setArticleType(
+      articleTypeDbToFormValue(cat, genreArr, row.article_type, [row.model, row.title].filter(Boolean).join(' ')),
+    );
+    const brandStr = (row.brand || '').trim();
+    setBrand(brandStr);
+    setMarqueSearchQuery(brandStr);
+    setCustomBrand('');
+    setCondition(row.condition || '');
+    const mat = (row.material || '').trim();
+    const materialOpts =
+      cat && cat !== 'autre' ? (MATIERES_BY_CATEGORY[cat] ?? MATERIALS).filter((o) => o.value !== 'other') : [];
+    const matOpt = materialOpts.find((o) => o.value === mat);
+    if (matOpt) {
+      setMaterial(matOpt.value);
+      setMaterialSearchQuery(matOpt.label);
+    } else {
+      setMaterial('');
+      setMaterialSearchQuery(mat);
+    }
+    const col = (row.color || '').trim();
+    const colorOpts =
+      cat && cat !== 'autre' ? (COLORS_BY_CATEGORY[cat] ?? COLORS).filter((o) => o.value !== 'other') : [];
+    const colOpt = colorOpts.find((o) => o.value === col);
+    if (colOpt) {
+      setColor(colOpt.value);
+      setColorSearchQuery(colOpt.label);
+    } else {
+      setColor('');
+      setColorSearchQuery(col);
+    }
+    const sz = (row.size || '').trim();
+    setSize(sz);
+    setSizeSearchQuery(sz);
+    const b = (row.brand || '').trim();
+    const t = (row.title || '').trim();
+    setTitleSuffix(b && t.startsWith(`${b} - `) ? t.slice(b.length + 3).trim() : t);
+    setDescription(row.description || '');
+    setHeightCm(row.height_cm != null ? String(row.height_cm) : '');
+    setWidthCm(row.width_cm != null ? String(row.width_cm) : '');
+    setYear(row.year != null ? String(row.year) : '');
+    const pack = row.packaging ?? [];
+    setContenuInclusState({
+      box: pack.includes('box'),
+      certificat: pack.includes('certificat'),
+      facture: pack.includes('facture'),
+    });
+    setPrice(sanitizeListingPriceInputWhileTyping(String(Number(row.wish_price_cents) / 100)));
+    setSelectedLocations(Array.isArray(row.locations) ? row.locations : []);
+    setSelectedSellerIds(row.invites?.map((i) => i.seller_id) ?? []);
+    setStep(1);
+  }, []);
+
+  useEffect(() => {
+    if (authLoading || !user?.uid || !modifierProposalId) return;
+    if (modifierHydratedRef.current === modifierProposalId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const row = await fetchVisitorSaleProposalById(user.uid, modifierProposalId);
+        if (cancelled) return;
+        if (!row) {
+          setError("Proposition introuvable ou vous n'avez pas accès à cette offre.");
+          return;
+        }
+        modifierHydratedRef.current = modifierProposalId;
+        lastLoadedProposalRowRef.current = row;
+        pendingProposalFieldSyncRef.current = true;
+        inviteSellerIdsFromLoadedProposalRef.current =
+          row.invites?.map((i) => i.seller_id).filter((id): id is string => typeof id === 'string' && id.length > 0) ?? [];
+        setEditingProposalId(row.id);
+        applyLoadedProposalRow(row);
+        const urls = Array.isArray(row.photo_urls) ? row.photo_urls : [];
+        setPhotoItems(
+          urls
+            .filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
+            .map((u) => ({ kind: 'remote' as const, url: u.trim() })),
+        );
+        router.replace('/proposer-vente', { scroll: false });
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Impossible de charger la proposition.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user?.uid, modifierProposalId, router, applyLoadedProposalRow]);
+
   draftPayloadRef.current = {
     step, category, genre, articleType, customCategory, brand, customBrand, marqueSearchQuery,
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
@@ -293,8 +515,6 @@ export function ProposerVenteFormClient() {
   }, [step1Dropdown]);
 
   // Étape 2
-  const [photos, setPhotos] = useState<File[]>([]);
-  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const [hoveredPhotoIndex, setHoveredPhotoIndex] = useState<number | null>(null);
   const [photoDropTargetIndex, setPhotoDropTargetIndex] = useState<number | null>(null);
   const [draggingPhotoIndex, setDraggingPhotoIndex] = useState<number | null>(null);
@@ -303,7 +523,7 @@ export function ProposerVenteFormClient() {
   const maxPhotos = 9;
   const appendProposalPhotos = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
     let rejectedCountForMessage = 0;
-    setPhotos((prev) => {
+    setPhotoItems((prev) => {
       const remaining = maxPhotos - prev.length;
       if (remaining <= 0) {
         rejectedCountForMessage = acceptedFiles.length + fileRejections.length;
@@ -315,7 +535,7 @@ export function ProposerVenteFormClient() {
         fileRejections.length +
         (acceptedFiles.length - validFiles.length) +
         Math.max(0, validFiles.length - remaining);
-      return [...prev, ...toAdd];
+      return [...prev, ...toAdd.map((file) => ({ kind: 'file' as const, file }))];
     });
     if (rejectedCountForMessage > 0) {
       if (photoAdditionHasOversizeFile(acceptedFiles, fileRejections)) {
@@ -346,21 +566,16 @@ export function ProposerVenteFormClient() {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: onDropPhotos,
     accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'] },
-    maxFiles: maxPhotos - photos.length,
+    maxFiles: maxPhotos - photoItems.length,
     maxSize: MAX_FILE_SIZE_BYTES,
-    disabled: photos.length >= maxPhotos,
+    disabled: photoItems.length >= maxPhotos,
   });
-  useEffect(() => {
-    const urls = photos.map((file) => URL.createObjectURL(file));
-    setPhotoPreviews(urls);
-    return () => urls.forEach((url) => URL.revokeObjectURL(url));
-  }, [photos]);
   const handleRemovePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setPhotoItems((prev) => prev.filter((_, i) => i !== index));
   };
   const handleMovePhoto = (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex) return;
-    setPhotos((prev) => {
+    setPhotoItems((prev) => {
       const next = [...prev];
       const [removed] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, removed);
@@ -462,6 +677,26 @@ export function ProposerVenteFormClient() {
     return raw;
   })();
 
+  const modelOptionsKey = modelOptions.join('\u0001');
+
+  useLayoutEffect(() => {
+    if (!pendingProposalFieldSyncRef.current || !editingProposalId) return;
+    const row = lastLoadedProposalRowRef.current;
+    if (!row || row.id !== editingProposalId) return;
+    pendingProposalFieldSyncRef.current = false;
+
+    const m = (row.model || '').trim();
+    if (modelOptions.length > 0) {
+      setModel(modelOptions.includes(m) ? m : '');
+      setModeleSearchQuery(m);
+      setCustomModel('');
+    } else {
+      setCustomModel(m);
+      setModel('');
+      setModeleSearchQuery('');
+    }
+  }, [editingProposalId, modelOptionsKey, modelOptions.length]);
+
   // Matières selon catégorie (sans "Autre" : saisie libre dans le champ comme marque/modèle)
   const materialOptions = category ? (MATIERES_BY_CATEGORY[category] ?? MATERIALS).filter((o) => o.value !== 'other') : [];
 
@@ -545,9 +780,69 @@ export function ProposerVenteFormClient() {
       setEligibleLoading(false);
       return;
     }
+    const sb = supabase;
+
+    type EligibleRow = {
+      id: string;
+      companyName: string;
+      addressLine: string;
+      subscriptionTier: string;
+      avatarUrl: string | null;
+    };
+
+    const mergeInvitedIntoRows = async (rows: EligibleRow[]): Promise<EligibleRow[]> => {
+      if (!editingProposalId) return rows;
+      const inviteIds = inviteSellerIdsFromLoadedProposalRef.current;
+      if (inviteIds.length === 0) return rows;
+      const have = new Set(rows.map((r) => r.id));
+      const missing = inviteIds.filter((id) => !have.has(id));
+      if (missing.length === 0) return rows;
+      const { data: extraData, error: extraErr } = await sb
+        .from('sellers')
+        .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
+        .in('id', missing)
+        .eq('status', 'approved');
+      if (extraErr || !extraData?.length) return rows;
+      const extra = extraData
+        .filter(
+          (s) =>
+            normalizeSubscriptionTier(s.subscription_tier) === 'plus' ||
+            normalizeSubscriptionTier(s.subscription_tier) === 'pro',
+        )
+        .map(
+          (s): EligibleRow => ({
+            id: s.id,
+            companyName: s.company_name?.trim() || 'Vendeur',
+            addressLine: sellerRowToPropositionAddressLine(s as Record<string, unknown>),
+            subscriptionTier: s.subscription_tier || 'plus',
+            avatarUrl: s.avatar_url,
+          }),
+        );
+      const byId = new Map(rows.map((r) => [r.id, r] as const));
+      for (const r of extra) byId.set(r.id, r);
+      return [...byId.values()];
+    };
+
+    const finishWithRows = (rows: EligibleRow[]) => {
+      setEligibleSellers(rows);
+      setSelectedSellerIds((prev) => prev.filter((id) => rows.some((r) => r.id === id)));
+      setEligibleLoading(false);
+    };
 
     if (radiusKm > 0) {
       if (!buyerLatLon) {
+        if (editingProposalId && inviteSellerIdsFromLoadedProposalRef.current.length > 0) {
+          let cancelled = false;
+          setEligibleLoading(true);
+          void (async () => {
+            const merged = await mergeInvitedIntoRows([]);
+            if (cancelled) return;
+            finishWithRows(merged);
+          })();
+          return () => {
+            cancelled = true;
+          };
+        }
         setEligibleSellers([]);
         setEligibleLoading(false);
         return;
@@ -555,15 +850,16 @@ export function ProposerVenteFormClient() {
       let cancelled = false;
       setEligibleLoading(true);
       void (async () => {
-        const { data, error } = await supabase
+        const { data, error } = await sb
           .from('sellers')
           .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
           .eq('status', 'approved')
           .in('subscription_tier', ['plus', 'pro']);
         if (cancelled) return;
         if (error || !data) {
-          setEligibleSellers([]);
-          setEligibleLoading(false);
+          const merged = await mergeInvitedIntoRows([]);
+          if (cancelled) return;
+          finishWithRows(merged);
           return;
         }
         const raw = data as {
@@ -576,13 +872,7 @@ export function ProposerVenteFormClient() {
           avatar_url: string | null;
         }[];
         const cache = new Map<string, { lat: number; lon: number } | null>();
-        const rows: {
-          id: string;
-          companyName: string;
-          addressLine: string;
-          subscriptionTier: string;
-          avatarUrl: string | null;
-        }[] = [];
+        const rows: EligibleRow[] = [];
         for (const s of raw) {
           if (
             normalizeSubscriptionTier(s.subscription_tier) !== 'plus' &&
@@ -609,11 +899,9 @@ export function ProposerVenteFormClient() {
             });
           }
         }
-        if (!cancelled) {
-          setEligibleSellers(rows);
-          setEligibleLoading(false);
-          setSelectedSellerIds((prev) => prev.filter((id) => rows.some((r) => r.id === id)));
-        }
+        const merged = await mergeInvitedIntoRows(rows);
+        if (cancelled) return;
+        finishWithRows(merged);
       })();
       return () => {
         cancelled = true;
@@ -622,55 +910,71 @@ export function ProposerVenteFormClient() {
 
     const prefixes = unionPrefixes(selectedLocations);
     if (prefixes.length === 0) {
+      if (editingProposalId && inviteSellerIdsFromLoadedProposalRef.current.length > 0) {
+        let cancelled = false;
+        setEligibleLoading(true);
+        void (async () => {
+          const merged = await mergeInvitedIntoRows([]);
+          if (cancelled) return;
+          finishWithRows(merged);
+        })();
+        return () => {
+          cancelled = true;
+        };
+      }
       setEligibleSellers([]);
       setEligibleLoading(false);
       return;
     }
     let cancelled = false;
     setEligibleLoading(true);
-    void supabase
-      .from('sellers')
-      .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
-      .eq('status', 'approved')
-      .in('subscription_tier', ['plus', 'pro'])
-      .then(({ data, error }) => {
+    void (async () => {
+      const { data, error } = await sb
+        .from('sellers')
+        .select('id, company_name, address, city, postcode, subscription_tier, avatar_url')
+        .eq('status', 'approved')
+        .in('subscription_tier', ['plus', 'pro']);
+      if (cancelled) return;
+      if (error || !data) {
+        const merged = await mergeInvitedIntoRows([]);
         if (cancelled) return;
-        setEligibleLoading(false);
-        if (error || !data) {
-          setEligibleSellers([]);
-          return;
-        }
-        const rows = (
-          data as {
-            id: string;
-            company_name: string | null;
-            address: string | null;
-            city: string | null;
-            postcode: string | null;
-            subscription_tier: string | null;
-            avatar_url: string | null;
-          }[]
+        finishWithRows(merged);
+        return;
+      }
+      const rows = (
+        data as {
+          id: string;
+          company_name: string | null;
+          address: string | null;
+          city: string | null;
+          postcode: string | null;
+          subscription_tier: string | null;
+          avatar_url: string | null;
+        }[]
+      )
+        .filter(
+          (s) =>
+            (normalizeSubscriptionTier(s.subscription_tier) === 'plus' ||
+              normalizeSubscriptionTier(s.subscription_tier) === 'pro') &&
+            sellerPostcodeMatchesPrefixes(s.postcode, prefixes),
         )
-          .filter(
-            (s) =>
-              (normalizeSubscriptionTier(s.subscription_tier) === 'plus' ||
-                normalizeSubscriptionTier(s.subscription_tier) === 'pro') &&
-              sellerPostcodeMatchesPrefixes(s.postcode, prefixes),
-          )
-          .map((s) => ({
+        .map(
+          (s): EligibleRow => ({
             id: s.id,
             companyName: s.company_name?.trim() || 'Vendeur',
             addressLine: sellerRowToPropositionAddressLine(s as Record<string, unknown>),
             subscriptionTier: s.subscription_tier || 'plus',
             avatarUrl: s.avatar_url,
-          }));
-        setEligibleSellers(rows);
-        setSelectedSellerIds((prev) => prev.filter((id) => rows.some((r) => r.id === id)));
-      });
+          }),
+        );
+      const merged = await mergeInvitedIntoRows(rows);
+      if (cancelled) return;
+      finishWithRows(merged);
+    })();
     return () => {
       cancelled = true;
     };
-  }, [step, selectedLocations, radiusKm, buyerLatLon]);
+  }, [step, selectedLocations, radiusKm, buyerLatLon, editingProposalId]);
 
   if (authLoading) return <PageLoader />;
   if (!user) {
@@ -726,7 +1030,7 @@ export function ProposerVenteFormClient() {
   };
 
   const validateStep2 = () => {
-    if (photos.length < 1) {
+    if (photoItems.length < 1) {
       setError('Ajoutez au moins une photo (minimum 1, maximum 9)');
       return false;
     }
@@ -757,12 +1061,15 @@ export function ProposerVenteFormClient() {
         );
         return false;
       }
-    } else if (selectedLocations.length === 0) {
-      setError('Ajoutez au moins une localisation (ville, code postal ou région)');
-      return false;
     }
     if (selectedSellerIds.length === 0) {
-      setError('Sélectionnez au moins un vendeur professionnel (Plus ou Pro) dans la zone choisie');
+      setError(
+        'Sélectionnez au moins un vendeur professionnel (Plus ou Pro). Si la liste est vide, définissez une zone (localisation ou rayon) pour afficher les vendeurs éligibles.',
+      );
+      return false;
+    }
+    if (!editingProposalId && selectedLocations.length === 0) {
+      setError('Ajoutez au moins une localisation (ville, code postal ou région)');
       return false;
     }
     setError('');
@@ -810,17 +1117,14 @@ export function ProposerVenteFormClient() {
         return;
       }
 
-      const proposalId = await createSaleProposalWithInvites({
-        visitorId: user!.uid,
+      const payload = {
         title: finalTitle,
         description: description.trim() || '',
         category: category === 'autre' ? customCategory.trim().toLowerCase() : category,
         genre: genre.length > 0 ? genre : null,
         articleType:
           (category === 'vetements' || category === 'sacs' || category === 'bijoux' || category === 'chaussures' || category === 'accessoires') && articleType
-            ? articleType.includes('::')
-              ? articleType.split('::')[0]
-              : articleType
+            ? articleType
             : null,
         brand: brandToSave || null,
         model: modelToSave || null,
@@ -855,16 +1159,36 @@ export function ProposerVenteFormClient() {
         wishPriceCents: Math.round(priceNum * 100),
         locations: selectedLocations,
         invitedSellerIds: selectedSellerIds,
-      });
+      };
 
-      let photoUrls: string[] = [];
-      if (photos.length > 0) {
-        photoUrls = await uploadSaleProposalPhotos(user!.uid, proposalId, photos);
+      let proposalId: string;
+      if (editingProposalId) {
+        await updateVisitorSaleProposalWithInvites(editingProposalId, user!.uid, payload);
+        proposalId = editingProposalId;
+      } else {
+        proposalId = await createSaleProposalWithInvites({
+          visitorId: user!.uid,
+          ...payload,
+        });
       }
-      if (photoUrls.length > 0) {
+
+      const remoteUrlsForIndex = photoItems
+        .filter((i): i is { kind: 'remote'; url: string } => i.kind === 'remote')
+        .map((i) => i.url);
+      const uploadStartIndex = maxSaleProposalPhotoIndexFromUrls(remoteUrlsForIndex) + 1;
+      const filesToUpload = photoItems
+        .filter((i): i is { kind: 'file'; file: File } => i.kind === 'file')
+        .map((i) => i.file);
+      let uploadedNew: string[] = [];
+      if (filesToUpload.length > 0) {
+        uploadedNew = await uploadSaleProposalPhotos(user!.uid, proposalId, filesToUpload, uploadStartIndex);
+      }
+      let u = 0;
+      const finalPhotoUrls = photoItems.map((item) => (item.kind === 'remote' ? item.url : uploadedNew[u++]));
+      if (finalPhotoUrls.length > 0) {
         const { supabase: sb } = await import('@/lib/supabase/client');
         if (sb) {
-          await sb.from('sale_proposals').update({ photo_urls: photoUrls }).eq('id', proposalId).eq('visitor_id', user!.uid);
+          await sb.from('sale_proposals').update({ photo_urls: finalPhotoUrls }).eq('id', proposalId).eq('visitor_id', user!.uid);
         }
       }
 
@@ -882,6 +1206,8 @@ export function ProposerVenteFormClient() {
         body: JSON.stringify({ userId: user!.uid, context: 'proposition_vente' }),
       });
 
+      setEditingProposalId(null);
+      inviteSellerIdsFromLoadedProposalRef.current = [];
       router.push('/suivre-mes-offres');
     } catch (err: unknown) {
       const message =
@@ -891,7 +1217,7 @@ export function ProposerVenteFormClient() {
             ? (err as { message: string }).message
             : 'Une erreur est survenue';
       if (process.env.NODE_ENV === 'development' && err instanceof Error) {
-        console.error('[createSaleProposal]', message, err);
+        console.error(editingProposalId ? '[updateSaleProposal]' : '[createSaleProposal]', message, err);
       }
       const storageObjectTooLarge = /exceeded the maximum allowed size/i.test(message);
       setError(
@@ -1868,7 +2194,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     La première photo sera l&apos;image principale.
                   </p>
 
-                  {photos.length < maxPhotos && (
+                  {photoItems.length < maxPhotos && (
                     <div
                       {...getRootProps()}
                       style={{
@@ -1880,7 +2206,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                         alignItems: 'center',
                         justifyContent: 'center',
                         textAlign: 'center',
-                        cursor: photos.length >= maxPhotos ? 'not-allowed' : 'pointer',
+                        cursor: photoItems.length >= maxPhotos ? 'not-allowed' : 'pointer',
                         backgroundColor: isDragActive ? '#f5f5f7' : 'transparent',
                         borderColor: isDragActive ? '#1d1d1f' : '#d2d2d7',
                         transition: 'background-color 0.2s, border-color 0.2s',
@@ -1905,30 +2231,36 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     </p>
                   )}
 
-                  {photos.length > 0 && (
+                  {photoItems.length > 0 && (
                     <p style={{ fontSize: 12, color: '#86868b', marginTop: 8, marginBottom: 0 }}>
                       Glissez une photo pour modifier l&apos;ordre
                     </p>
                   )}
-                  {photos.length > 0 && (() => {
+                  {photoItems.length > 0 && (() => {
                     const isDragging = draggingPhotoIndex !== null && photoDropTargetIndex !== null;
                     const displaySlots: Array<{ type: 'photo'; url: string; originalIndex: number } | { type: 'placeholder' }> = isDragging
                       ? (() => {
-                          const rest = photos.map((_, origIndex) => ({ type: 'photo' as const, url: photoPreviews[origIndex], originalIndex: origIndex })).filter((x) => x.originalIndex !== draggingPhotoIndex);
+                          const rest = photoItems
+                            .map((_, origIndex) => ({
+                              type: 'photo' as const,
+                              url: photoDisplayUrls[origIndex],
+                              originalIndex: origIndex,
+                            }))
+                            .filter((x) => x.originalIndex !== draggingPhotoIndex);
                           return [
                             ...rest.slice(0, photoDropTargetIndex),
                             { type: 'placeholder' as const },
                             ...rest.slice(photoDropTargetIndex),
                           ];
                         })()
-                      : photos.map((_, i) => ({ type: 'photo' as const, url: photoPreviews[i], originalIndex: i }));
+                      : photoItems.map((_, i) => ({ type: 'photo' as const, url: photoDisplayUrls[i], originalIndex: i }));
                     return (
                     <div
                       style={{
                         display: 'grid',
                         gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
                         gap: 12,
-                        marginTop: photos.length < maxPhotos ? 16 : 0,
+                        marginTop: photoItems.length < maxPhotos ? 16 : 0,
                       }}
                       onDragOver={(e) => {
                         if ([...e.dataTransfer.types].includes('Files')) {
@@ -2098,7 +2430,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                   <button
                     type="button"
                     onClick={handleNext}
-                    disabled={photos.length < 1}
+                    disabled={photoItems.length < 1}
                     style={{
                       flex: 1,
                       height: 50,
@@ -2108,8 +2440,8 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       fontWeight: 500,
                       border: 'none',
                       borderRadius: 980,
-                      cursor: photos.length < 1 ? 'not-allowed' : 'pointer',
-                      opacity: photos.length < 1 ? 0.6 : 1,
+                      cursor: photoItems.length < 1 ? 'not-allowed' : 'pointer',
+                      opacity: photoItems.length < 1 ? 0.6 : 1,
                     }}
                   >
                     Continuer
@@ -2334,6 +2666,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
 
             {step === 4 && (
               <motion.form
+                id="proposer-vente-final-form"
                 key="step4"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -2474,7 +2807,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       opacity: loading ? 0.7 : 1,
                     }}
                   >
-                    {loading ? 'Envoi…' : 'Envoyer'}
+                    {loading ? 'Envoi…' : editingProposalId ? 'Enregistrer' : 'Envoyer'}
                   </button>
                 </div>
               </motion.form>

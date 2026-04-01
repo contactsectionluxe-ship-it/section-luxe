@@ -31,6 +31,34 @@
   display: none;
 }
 
+/* Icône « i » description (cartes) : pas d’assombrissement au survol / actif / ouvert */
+button.proposal-description-info-btn,
+button.proposal-description-info-btn:hover,
+button.proposal-description-info-btn:active {
+  background-color: transparent !important;
+  color: #6e6e73 !important;
+}
+button.proposal-description-info-btn:focus-visible {
+  outline: 2px solid #86868b;
+  outline-offset: 2px;
+}
+
+/* Suivre mes offres : modifier / supprimer — même logique que l’icône « i » description */
+a.suivre-mes-offres-card-action-btn,
+a.suivre-mes-offres-card-action-btn:hover,
+a.suivre-mes-offres-card-action-btn:active,
+button.suivre-mes-offres-card-action-btn,
+button.suivre-mes-offres-card-action-btn:hover,
+button.suivre-mes-offres-card-action-btn:active {
+  background-color: transparent !important;
+  color: #6e6e73 !important;
+}
+a.suivre-mes-offres-card-action-btn:focus-visible,
+button.suivre-mes-offres-card-action-btn:focus-visible {
+  outline: 2px solid #86868b;
+  outline-offset: 2px;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -352,28 +380,7 @@ a:focus-visible {
   transform: scaleX(1);
 }
 
-/* Même logique dans le menu mobile (drawer) */
-.header-center-nav-link-mobile {
-  position: relative;
-}
-.header-center-nav-link-mobile::after {
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 10px;
-  height: 1px;
-  background-color: currentColor;
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.55s cubic-bezier(0.25, 0.8, 0.25, 1);
-  pointer-events: none;
-}
-.header-center-nav-link-mobile:hover::after,
-.header-center-nav-link-mobile:focus-visible::after,
-.header-center-nav-link-mobile.header-center-nav-link--active::after {
-  transform: scaleX(1);
-}
+/* Menu burger (téléphone) : pas de soulignement animé — fond au survol / actif suffit */
 
 /* Page produit : Informations, Description, Vendeur professionnel sur 50 % à gauche sur desktop */
 @media (min-width: 768px) {
@@ -511,6 +518,15 @@ a:focus-visible {
 .suivre-mes-offres-page .suivre-mes-offres-seller-link:hover {
   text-decoration: underline;
   color: #1d1d1f;
+}
+
+/* Suivre mes offres : montants sur la même typo que ListingCaracteristiques (lineCatalogue), y compris sous .catalogue-results-line mobile */
+.suivre-mes-offres-page .mes-annonces-card .suivre-mes-offres-meta-prix {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 1.35 !important;
+  color: #6e6e73 !important;
+  font-family: var(--font-inter), var(--font-sans), system-ui, sans-serif !important;
 }
 
 /* Suivre mes offres : cartes vue ligne plus compactes (hauteur) — sans toucher au catalogue */
@@ -747,15 +763,15 @@ a:focus-visible {
   }
 }
 
-/* Page d'accueil : dézoomer la photo hero uniquement sur les très grands écrans (petit/moyen desktop : voir inline ~56%) */
+/* Page d'accueil : sur très grands écrans, image hero plus large (éviter un rendu trop « dézoomé » / étroit) */
 @media (min-width: 1600px) {
   .hero-section {
-    background-size: 48% !important;
+    background-size: 62% auto !important;
   }
 }
 @media (min-width: 2000px) {
   .hero-section {
-    background-size: 38% !important;
+    background-size: 72% auto !important;
   }
 }
 
@@ -1420,10 +1436,10 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     padding-right: 24px !important;
     padding-top: 12px !important;
     padding-bottom: 12px !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin-left: calc(50% - 50vw) !important;
-    margin-right: calc(50% - 50vw) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
     box-sizing: border-box !important;
   }
   .catalogue-page-search > div {
@@ -1543,6 +1559,14 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-banner-skeleton-avatar {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-banner-skeleton-loc {
+    height: 36px !important;
+    width: min(180px, 42vw) !important;
   }
   /* Vue vendeur (mobile): harmoniser l’espace bannière / filtres / annonces */
   .catalogue-page-main--seller .catalogue-barre-tri--seller {
@@ -2469,9 +2493,26 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
 
 /* ========== Mobile uniquement (≤767px) — aucun impact desktop ========== */
 @media (max-width: 767px) {
-  /* Éviter tout débordement horizontal */
+  /* Pleine largeur propre : pas de bande qui défile ni décalage gauche/droite */
+  html {
+    overflow-x: clip;
+    max-width: 100%;
+  }
   body {
-    overflow-x: hidden;
+    overflow-x: clip;
+    max-width: 100%;
+    width: 100%;
+  }
+  .site-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .site-header {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   /* Éviter le zoom iOS/Android au focus sur les barres de recherche (font-size >= 16px) */
@@ -2560,8 +2601,8 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     align-items: center !important;
     justify-content: space-between !important;
     gap: 12px !important;
-    padding-left: 24px !important;
-    padding-right: calc(12px - 2mm) !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
   }
   .header-logo-link {
     justify-self: start !important;
@@ -2588,10 +2629,10 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .header-actions {
     display: flex !important;
     gap: 0 !important;
-    margin-right: -6px !important;
+    margin-right: 0 !important;
   }
   .header-right > button.hide-desktop {
-    margin-left: -4px !important;
+    margin-left: 0 !important;
   }
   .header-actions > a:nth-child(2) {
     margin-left: 0 !important;

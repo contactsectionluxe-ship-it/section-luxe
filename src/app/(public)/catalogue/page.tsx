@@ -766,6 +766,13 @@ function CatalogueContent() {
   const [loadingFavoriteId, setLoadingFavoriteId] = useState<string | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
+  /** Bannière boutique : affichée dès l’URL /catalogue/vendeur/… valide, y compris avant résolution du sellerId */
+  const showVendeurStoreBanner = useMemo(
+    () =>
+      Boolean(filters.sellerId) ||
+      (isVendeurCataloguePath && Boolean(parsedVendeurSlug) && !vendeurParseInvalid && !vendeurSlugError),
+    [filters.sellerId, isVendeurCataloguePath, parsedVendeurSlug, vendeurParseInvalid, vendeurSlugError]
+  );
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false);
@@ -1074,6 +1081,8 @@ function CatalogueContent() {
     const loadId = ++loadListingsIdRef.current;
     setLoading(true);
     setDealByListingId({});
+    /** Si true, le `finally` ne force pas `loading` à false (ex. attente résolution slug → sellerId sur /catalogue/vendeur/…). */
+    let skipLoadingOffInFinally = false;
     try {
       if (vendeurParseInvalid) {
         setListings([]);
@@ -1088,6 +1097,7 @@ function CatalogueContent() {
         }
         if (!filters.sellerId) {
           setLoading(true);
+          skipLoadingOffInFinally = true;
           return;
         }
       }
@@ -1273,7 +1283,9 @@ function CatalogueContent() {
       const msg = error instanceof Error ? error.message : (error && typeof error === 'object' && 'message' in error ? String((error as { message?: unknown }).message) : null);
       if (msg) console.error('Catalogue loadListings:', msg);
     } finally {
-      if (loadId === loadListingsIdRef.current) setLoading(false);
+      if (loadId === loadListingsIdRef.current && !skipLoadingOffInFinally) {
+        setLoading(false);
+      }
     }
   }, [filters, radiusKm, userCoords, isVendeurCataloguePath, parsedVendeurSlug, vendeurParseInvalid, vendeurSlugError]);
 
@@ -3512,7 +3524,7 @@ function CatalogueContent() {
     <>
       {loading && <div className="catalogue-loading-bar" aria-hidden />}
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 'var(--header-height)' }}>
-      <div className="catalogue-page-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 calc(24px - 0.5mm) 0 24px', boxSizing: 'border-box' }}>
+      <div className="catalogue-page-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 24px', boxSizing: 'border-box' }}>
         <div className="catalogue-page-inner" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 'calc(1100px + 1cm)', width: '100%', margin: '0 auto' }}>
         {/* Contenu catalogue : 1100px + 0,5cm de chaque côté */}
         <div
@@ -3525,7 +3537,7 @@ function CatalogueContent() {
           }}
         >
           {/* Barre de recherche — même espace au-dessus (header) et en dessous (ligne) */}
-          <div className="catalogue-page-search" style={{ padding: '24px calc(24px - 0.5mm) 24px 20px', flexShrink: 0 }}>
+          <div className="catalogue-page-search" style={{ padding: 24, flexShrink: 0 }}>
           <div style={{ borderBottom: '1px solid #e8e6e3', paddingBottom: 24, marginBottom: -24, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0 }}>
               <div ref={searchBarRef} style={{ flex: 1, minWidth: 0, position: 'relative' }}>
@@ -3743,9 +3755,9 @@ function CatalogueContent() {
           </aside>
 
           {/* Main */}
-            <main className={`catalogue-page-main${filters.sellerId ? ' catalogue-page-main--seller' : ''}`} style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
+            <main className={`catalogue-page-main${showVendeurStoreBanner ? ' catalogue-page-main--seller' : ''}`} style={{ flex: 1, minWidth: 0, padding: '24px calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
             {/* Bloc vendeur : nom, logo, annonces */}
-            {filters.sellerId && (
+            {showVendeurStoreBanner && (
             <div
               className="catalogue-seller-banner catalogue-seller-store-banner"
               style={{
@@ -3759,15 +3771,41 @@ function CatalogueContent() {
                 justifyContent: 'space-between',
                 gap: 12,
                   flexWrap: 'nowrap',
+                  minWidth: 0,
               }}
             >
-                {sellerLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <div style={{ width: 64, height: 64, borderRadius: 10, backgroundColor: '#f0f0f2' }} />
-              <div>
-                      <div style={{ width: 180, height: 20, backgroundColor: '#f0f0f2', marginBottom: 8, borderRadius: 4 }} />
-                      <div style={{ width: 120, height: 14, backgroundColor: '#f0f0f2', borderRadius: 4 }} />
+                {!filters.sellerId || sellerLoading ? (
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      width: '100%',
+                      minWidth: 0,
+                      flexWrap: 'nowrap',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+                      <div
+                        className="catalogue-skeleton catalogue-seller-banner-skeleton-avatar"
+                        style={{ width: 64, height: 64, borderRadius: 10, flexShrink: 0, ['--skeleton-index' as string]: 0 }}
+                      />
+                      <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div
+                          className="catalogue-skeleton"
+                          style={{ height: 24, width: 'min(100%, 280px)', maxWidth: '75%', borderRadius: 4, ['--skeleton-index' as string]: 1 }}
+                        />
+                        <div
+                          className="catalogue-skeleton"
+                          style={{ height: 16, width: 140, borderRadius: 4, ['--skeleton-index' as string]: 2 }}
+                        />
+                      </div>
                     </div>
+                    <div
+                      className="catalogue-skeleton catalogue-seller-banner-skeleton-loc"
+                      style={{ height: 44, width: 180, borderRadius: 10, flexShrink: 0, ['--skeleton-index' as string]: 3 }}
+                    />
                   </div>
                 ) : seller ? (
                   <>
@@ -3877,7 +3915,7 @@ function CatalogueContent() {
 
             {/* Barre tri + filtre : même espace en dessous qu'entre "Plus récents" et la ligne au-dessus */}
             <div
-              className={`catalogue-barre-tri${filters.sellerId ? ' catalogue-barre-tri--seller' : ''}`}
+              className={`catalogue-barre-tri${showVendeurStoreBanner ? ' catalogue-barre-tri--seller' : ''}`}
               style={{
                 display: 'flex',
                 alignItems: 'center',
