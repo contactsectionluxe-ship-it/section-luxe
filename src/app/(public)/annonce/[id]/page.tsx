@@ -2049,19 +2049,13 @@ export default function ProductPage() {
               <p style={{ fontSize: 11, color: '#666', marginBottom: 16, whiteSpace: 'pre-line' }}>
                 {!showLegalMore ? (
                   <>
-                    {`Obligatoire *
-
-Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
-
+                    {`Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
 Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. `}
                     <button type="button" onClick={() => setShowLegalMore(true)} style={{ background: 'none', border: 'none', fontSize: 11, color: '#1d1d1f', fontWeight: 600, cursor: 'pointer', padding: 0, marginLeft: 4, textDecoration: 'underline' }}>Afficher plus</button>
                   </>
                 ) : (
                   <>
-                    {`Obligatoire *
-
-Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
-
+                    {`Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
 Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. Elles sont transmises directement au vendeur que vous souhaitez contacter et le cas échéant, aux vendeurs professionnels. Ces données sont utilisées à des fins de : mise en relation avec le vendeur que vous souhaitez contacter ; mesure et étude de l'audience du site, évaluer son utilisation et améliorer ses services ; lutte anti-fraude ; gestion de vos demandes d'exercice de vos droits. Vous disposez d'un droit d'accès, de rectification, d'effacement de ces données, d'un droit de limitation du traitement, d'un droit d'opposition, du droit à la portabilité de vos données et du droit d'introduire une réclamation auprès d'une autorité de contrôle (en France, la CNIL). Vous pouvez également retirer à tout moment votre consentement au traitement de vos données. Pour en savoir plus sur le traitement de vos données : `}
                     <a href="https://www.sectionluxe.fr/politique-confidentialite" target="_blank" rel="noopener noreferrer" style={{ color: '#1d1d1f', textDecoration: 'underline' }}>https://www.sectionluxe.fr/politique-confidentialite</a>
                     {' '}

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSPr
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, FileText, PlusCircle, BarChart2, Send, CreditCard, Search, Info } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, FileText, PlusCircle, BarChart2, Send, CreditCard, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
@@ -21,7 +21,6 @@ function getHeaderNavItems(isAuthenticated: boolean): HeaderNavItem[] {
       href: isAuthenticated ? '/proposer-vente' : '/connexion?redirect=/proposer-vente',
       mobileIcon: PlusCircle,
     },
-    { name: 'Section Luxe', href: '/a-propos', mobileIcon: Info },
   ];
 }
 
@@ -58,6 +57,12 @@ function matchNavActive(
 
 /** Couleur alignée sur les icônes Favoris / Messages / User du header (#1d1d1f). */
 const HEADER_ACTION_ICON_COLOR = '#1d1d1f';
+
+/** Espacement horizontal entre les liens de la navigation centrale desktop. */
+const HEADER_CENTER_NAV_GAP_PX = 64;
+
+/** Espacement vertical entre les mêmes liens dans le menu burger mobile. */
+const HEADER_MOBILE_NAV_GAP_PX = 14;
 
 /** Même police / cassage que `.listing-grid-vendeur` des cartes « À la une » (accueil). */
 const CENTER_NAV_LINK_STYLE: CSSProperties = {
@@ -153,7 +158,7 @@ function HeaderAccountIcon({
 
 function HeaderDesktopNavFallback({ items }: { items: HeaderNavItem[] }) {
   return (
-    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, marginTop: '1mm' }}>
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: HEADER_CENTER_NAV_GAP_PX, marginTop: '1mm' }}>
       {items.map((item) => (
         <Link
           key={item.name}
@@ -180,7 +185,7 @@ function HeaderDesktopNavWithParams({ items }: { items: HeaderNavItem[] }) {
     [pathname, searchParams]
   );
   return (
-    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 40, marginTop: '1mm' }}>
+    <nav className="hide-mobile" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: HEADER_CENTER_NAV_GAP_PX, marginTop: '1mm' }}>
       {items.map((item) => {
         const active = isNavActive(item.href);
         return (
@@ -212,7 +217,15 @@ function HeaderMobileNavLinks({
   onItemClick: () => void;
 }) {
   return (
-    <>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: HEADER_MOBILE_NAV_GAP_PX,
+        width: '100%',
+      }}
+    >
       {items.map((item) => {
         const active = isNavActive(item.href);
         const ItemIcon = item.mobileIcon;
@@ -249,7 +262,7 @@ function HeaderMobileNavLinks({
           </Link>
         );
       })}
-    </>
+    </div>
   );
 }
 

@@ -56,7 +56,7 @@ export function MultiLocationPicker({
         Trouver des vendeurs selon la localisation <span style={{ color: '#1d1d1f' }}>*</span>
       </label>
 
-      {selected.length > 0 && radiusKm === 0 && (
+      {selected.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
           {selected.map((loc, idx) => (
             <span
@@ -102,7 +102,6 @@ export function MultiLocationPicker({
             }
             placeholder="Ville, code postal, région…"
             autoComplete="off"
-            disabled={radiusKm > 0}
             style={{
               flex: 1,
               width: '100%',
@@ -111,15 +110,13 @@ export function MultiLocationPicker({
               fontSize: 15,
               border: '1px solid #d2d2d7',
               borderRadius: 12,
-              backgroundColor: radiusKm > 0 ? '#f5f5f7' : '#fff',
+              backgroundColor: '#fff',
               outline: 'none',
               boxSizing: 'border-box',
             }}
           />
         </div>
-        {locationSuggestionsOpen &&
-          radiusKm === 0 &&
-          (locationSuggestions.length > 0 || locationCityLoading) && (
+        {locationSuggestionsOpen && (locationSuggestions.length > 0 || locationCityLoading) && (
             <div
               style={{
                 position: 'absolute',

@@ -210,11 +210,6 @@ export default function ConversationPage() {
     !conversation.saleProposalId &&
     (!conversation.listingId || listingInCatalog === false);
 
-  const listingCatalogStatusLine =
-    conversation.saleProposalId || conversation.listingId
-      ? null
-      : 'Annonce supprimée — la conversation reste accessible';
-
   const handleShowPartyInfo = async () => {
     setShowPartyPopup(true);
     setPopupUser(null);
@@ -341,14 +336,23 @@ export default function ConversationPage() {
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  {listingOffCatalog ? "L'annonce a été supprimée" : conversation.listingTitle || 'Annonce'}
+                  {listingOffCatalog
+                    ? "L'annonce a été supprimée"
+                    : conversation.saleProposalId
+                      ? `Proposition : ${conversation.listingTitle || 'Annonce'}`
+                      : conversation.listingTitle || 'Annonce'}
                 </h2>
-                {listingCatalogStatusLine ? (
-                  <p style={{ fontSize: 12, color: '#86868b', margin: '6px 0 0', lineHeight: 1.35 }}>
-                    {listingCatalogStatusLine}
-                  </p>
-                ) : null}
-                <p style={{ fontSize: 13, color: '#6e6e73', margin: 0, marginTop: listingCatalogStatusLine ? 6 : 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <p
+                  style={{
+                    fontSize: 13,
+                    color: '#6e6e73',
+                    margin: 0,
+                    marginTop: 2,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {otherPartyName}
                 </p>
           </div>

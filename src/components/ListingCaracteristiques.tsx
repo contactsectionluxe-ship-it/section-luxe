@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Tag, Calendar, CheckCircle, Palette, Layers, Ruler } from 'lucide-react';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
@@ -8,20 +8,32 @@ import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
 const iconColor = '#6e6e73';
 
+/** Texte des pastilles en variante `homeFeatured` (Neuf, Taille L, couleur…). */
+export const LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE: CSSProperties = {
+  fontFamily: 'var(--font-inter), var(--font-sans)',
+  fontSize: 12.5,
+  fontWeight: 400,
+  color: '#6e6e73',
+  lineHeight: 1.33,
+};
+
 export function ListingCaracteristiques({
   listing,
   className,
   style,
   variant = 'full',
+  allowMultiLineWrap = false,
 }: {
   listing: Listing;
   className?: string;
-  style?: React.CSSProperties;
+  style?: CSSProperties;
   /** En mode "grid" (catalogue en cases) : état, taille, couleur, matière — pas catégorie ni année */
   /** En mode "line" (catalogue en ligne) : état, taille (si présent), date, couleur, matière */
   /** "homeFeatured" : comme grid, texte et icônes plus compacts (page d’accueil À la une). */
   /** "lineCatalogue" : même rendu compact + ordre ligne catalogue (avec année). */
   variant?: 'full' | 'grid' | 'line' | 'homeFeatured' | 'lineCatalogue';
+  /** Si vrai : toutes les pastilles visibles, retour à la ligne sur plusieurs lignes (cartes étroites / mobile). */
+  allowMultiLineWrap?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const iconSize =
@@ -148,6 +160,7 @@ export function ListingCaracteristiques({
   }, [listing.id, items.length]);
 
   const measureAndFit = useCallback(() => {
+    if (allowMultiLineWrap) return;
     const el = ref.current;
     if (!el || items.length === 0) return;
     const containerRight = el.getBoundingClientRect().left + el.clientWidth;
@@ -162,18 +175,20 @@ export function ListingCaracteristiques({
       }
     }
     setVisibleCount((prev) => (fitCount < prev ? fitCount : prev));
-  }, [items.length]);
+  }, [items.length, allowMultiLineWrap]);
 
   useLayoutEffect(() => {
+    if (allowMultiLineWrap) return;
     if (!ref.current || items.length === 0) return;
     measureAndFit();
     const raf = requestAnimationFrame(() => {
       measureAndFit();
     });
     return () => cancelAnimationFrame(raf);
-  }, [visibleCount, items.length, listing.id, measureAndFit]);
+  }, [allowMultiLineWrap, visibleCount, items.length, listing.id, measureAndFit]);
 
   useEffect(() => {
+    if (allowMultiLineWrap) return;
     const el = ref.current;
     if (!el || items.length === 0) return;
     const ro = new ResizeObserver(() => {
@@ -186,13 +201,14 @@ export function ListingCaracteristiques({
     lastWidthRef.current = el.clientWidth;
     ro.observe(el);
     return () => ro.disconnect();
-  }, [items.length, listing.id]);
+  }, [allowMultiLineWrap, items.length, listing.id]);
 
   useEffect(() => {
+    if (allowMultiLineWrap) return;
     const onResize = () => setVisibleCount(items.length);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
-  }, [items.length]);
+  }, [allowMultiLineWrap, items.length]);
 
   if (items.length === 0 || visibleCount === 0) return null;
 
@@ -200,6 +216,11 @@ export function ListingCaracteristiques({
 
   const compact = variant === 'homeFeatured' || variant === 'lineCatalogue';
   const lineCatalogue = variant === 'lineCatalogue';
+  /** 12,5px / 1,33 : uniquement `homeFeatured` (grille « À la une », Suivre mes offres). `grid` favoris = 13px. */
+  const listingTextStyle: CSSProperties =
+    variant === 'homeFeatured'
+      ? LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE
+      : { fontSize: 13, color: '#6e6e73', lineHeight: 1.35 };
 
   return (
     <div
@@ -207,16 +228,15 @@ export function ListingCaracteristiques({
       className={className}
       style={{
         display: 'flex',
-        flexWrap: 'nowrap',
+        flexWrap: allowMultiLineWrap ? 'wrap' : 'nowrap',
         gap: lineCatalogue ? '7px 12px' : compact ? '6px 12px' : '11px 15px',
         marginBottom: lineCatalogue ? 6 : compact ? 5 : 6,
-        fontSize: lineCatalogue ? 13 : compact ? 12.5 : 13,
-        color: '#6e6e73',
-        lineHeight: lineCatalogue ? 1.35 : compact ? 1.33 : 1.35,
+        ...listingTextStyle,
         minWidth: 0,
         maxWidth: '100%',
         width: '100%',
-        overflow: 'hidden',
+        overflow: allowMultiLineWrap ? 'visible' : 'hidden',
+        rowGap: allowMultiLineWrap ? 4 : undefined,
         ...style,
       }}
     >

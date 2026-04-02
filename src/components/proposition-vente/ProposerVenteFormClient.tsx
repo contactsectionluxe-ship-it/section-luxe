@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, type RefObject } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef, type RefObject } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDropzone, type FileRejection } from 'react-dropzone';
@@ -14,6 +14,7 @@ import {
   fetchVisitorSaleProposalById,
   updateVisitorSaleProposalWithInvites,
   type SaleProposalRow,
+  type SaleProposalBuyerContact,
 } from '@/lib/supabase/saleProposals';
 import { MultiLocationPicker } from '@/components/proposition-vente/MultiLocationPicker';
 import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
@@ -64,7 +65,7 @@ const CONTENU_INCLUS_OPTIONS = [
   { value: 'facture', label: 'Facture' },
 ];
 
-const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix & vendeurs'];
+const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix & vendeurs', 'Message aux vendeurs'];
 
 const DRAFT_KEY_NEW = 'luxe-proposition-vente-draft';
 
@@ -100,6 +101,11 @@ type NewListingDraft = {
   contenuInclus?: Record<string, true | false | null>;
   price?: string;
   acceptCguCgv?: boolean;
+  contactFirstName?: string;
+  contactLastName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  contactMessage?: string;
 };
 
 /** Listes déroulantes étape 1 : une seule ouverte à la fois. */
@@ -172,6 +178,22 @@ function articleTypeDbToFormValue(
   return composites[0].value;
 }
 
+function buyerContactFromRow(row: SaleProposalRow): SaleProposalBuyerContact | null {
+  const raw = row.buyer_contact as unknown;
+  if (raw == null || typeof raw !== 'object') return null;
+  const o = raw as Record<string, unknown>;
+  const s = (k: string) => (typeof o[k] === 'string' ? (o[k] as string) : '');
+  const firstName = s('firstName');
+  const lastName = s('lastName');
+  const email = s('email');
+  const message = s('message');
+  const phone = s('phone');
+  if (!firstName && !lastName && !email && !message && !phone) return null;
+  const out: SaleProposalBuyerContact = { firstName, lastName, email, message };
+  if (phone.trim()) out.phone = phone;
+  return out;
+}
+
 export function ProposerVenteFormClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -230,23 +252,44 @@ export function ProposerVenteFormClient() {
   const [year, setYear] = useState('');
   const [contenuInclus, setContenuInclusState] = useState<Record<string, true | false | null>>({ box: null, certificat: null, facture: null });
   const [price, setPrice] = useState('');
+  const [contactFirstName, setContactFirstName] = useState('');
+  const [contactLastName, setContactLastName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactLegalExpanded, setContactLegalExpanded] = useState(false);
   const [photoItems, setPhotoItems] = useState<PropositionPhotoItem[]>([]);
-  const proposalPhotoBlobUrlsRef = useRef<string[]>([]);
-  const photoDisplayUrls = useMemo(() => {
-    proposalPhotoBlobUrlsRef.current.forEach(URL.revokeObjectURL);
-    proposalPhotoBlobUrlsRef.current = [];
-    return photoItems.map((item) => {
-      if (item.kind === 'remote') return item.url;
-      const u = URL.createObjectURL(item.file);
-      proposalPhotoBlobUrlsRef.current.push(u);
-      return u;
+  /** Cache blob: URL par `File` — synchrone avec `photoItems` (pas de useMemo avec revoke, pas d’un rendu « vide » avant setState). */
+  const proposalPhotoBlobUrlByFileRef = useRef<Map<File, string>>(new Map());
+
+  const photoDisplayUrls = photoItems.map((item) => {
+    if (item.kind === 'remote') return item.url;
+    const cache = proposalPhotoBlobUrlByFileRef.current;
+    let u = cache.get(item.file);
+    if (!u) {
+      u = URL.createObjectURL(item.file);
+      cache.set(item.file, u);
+    }
+    return u;
+  });
+
+  useLayoutEffect(() => {
+    const filesInList = new Set(
+      photoItems.filter((p): p is Extract<PropositionPhotoItem, { kind: 'file' }> => p.kind === 'file').map((p) => p.file)
+    );
+    const cache = proposalPhotoBlobUrlByFileRef.current;
+    cache.forEach((url, file) => {
+      if (!filesInList.has(file)) {
+        URL.revokeObjectURL(url);
+        cache.delete(file);
+      }
     });
   }, [photoItems]);
 
   useEffect(() => {
     return () => {
-      proposalPhotoBlobUrlsRef.current.forEach(URL.revokeObjectURL);
-      proposalPhotoBlobUrlsRef.current = [];
+      proposalPhotoBlobUrlByFileRef.current.forEach(URL.revokeObjectURL);
+      proposalPhotoBlobUrlByFileRef.current.clear();
     };
   }, []);
 
@@ -264,7 +307,7 @@ export function ProposerVenteFormClient() {
       const raw = sessionStorage.getItem(DRAFT_KEY_NEW);
       if (!raw) return;
       const d = JSON.parse(raw) as NewListingDraft;
-      if (d.step != null && d.step >= 1 && d.step <= 4) setStep(d.step);
+      if (d.step != null && d.step >= 1 && d.step <= 5) setStep(d.step);
       if (d.category != null) setCategory(d.category as ListingCategory | '' | 'autre');
       if (Array.isArray(d.genre)) setGenre(d.genre);
       if (d.articleType != null) setArticleType(d.articleType);
@@ -294,10 +337,27 @@ export function ProposerVenteFormClient() {
       if (d.acceptCguCgv != null) setAcceptCguCgv(d.acceptCguCgv);
       if (Array.isArray(d.selectedLocations)) setSelectedLocations(d.selectedLocations);
       if (Array.isArray(d.selectedSellerIds)) setSelectedSellerIds(d.selectedSellerIds);
+      if (d.contactFirstName != null) setContactFirstName(d.contactFirstName);
+      if (d.contactLastName != null) setContactLastName(d.contactLastName);
+      if (d.contactEmail != null) setContactEmail(d.contactEmail);
+      if (d.contactPhone != null) setContactPhone(d.contactPhone);
+      if (d.contactMessage != null) setContactMessage(d.contactMessage);
     } catch {
       // ignore
     }
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    setContactEmail((e) => (e.trim() ? e : user.email || ''));
+    const parts = (user.displayName || '').trim().split(/\s+/).filter(Boolean);
+    setContactFirstName((f) => (f.trim() ? f : parts[0] ?? ''));
+    setContactLastName((l) => (l.trim() ? l : parts.slice(1).join(' ') ?? ''));
+    const p = user.phone;
+    if (typeof p === 'string' && p.trim()) {
+      setContactPhone((ph) => (ph.trim() ? ph : p));
+    }
+  }, [user]);
 
   // Sauvegarder le brouillon complet (sessionStorage) à chaque modification + quand on quitte l'onglet
   const draftPayloadRef = useRef<NewListingDraft>({});
@@ -383,6 +443,12 @@ export function ProposerVenteFormClient() {
     setPrice(sanitizeListingPriceInputWhileTyping(String(Number(row.wish_price_cents) / 100)));
     setSelectedLocations(Array.isArray(row.locations) ? row.locations : []);
     setSelectedSellerIds(row.invites?.map((i) => i.seller_id) ?? []);
+    const bc = buyerContactFromRow(row);
+    setContactFirstName(bc?.firstName ?? '');
+    setContactLastName(bc?.lastName ?? '');
+    setContactEmail(bc?.email ?? '');
+    setContactPhone(bc?.phone ?? '');
+    setContactMessage(bc?.message ?? '');
     setStep(1);
   }, []);
 
@@ -426,6 +492,7 @@ export function ProposerVenteFormClient() {
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
     color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     contenuInclus, price, acceptCguCgv,
+    contactFirstName, contactLastName, contactEmail, contactPhone, contactMessage,
     selectedLocations,
     selectedSellerIds,
   };
@@ -449,6 +516,7 @@ export function ProposerVenteFormClient() {
     model, customModel, modeleSearchQuery, condition, material, materialSearchQuery, customMaterial,
     color, colorSearchQuery, customColor, size, sizeSearchQuery, titleSuffix, description, heightCm, widthCm, year,
     JSON.stringify(contenuInclus), price, acceptCguCgv,
+    contactFirstName, contactLastName, contactEmail, contactPhone, contactMessage,
     JSON.stringify(selectedLocations), selectedSellerIds.join(','),
   ]);
   useEffect(() => {
@@ -765,9 +833,23 @@ export function ProposerVenteFormClient() {
     );
   }, []);
 
+  const handleLocationsChange = useCallback(
+    (next: SaleProposalLocationEntry[]) => {
+      setSelectedLocations(next);
+      if (next.length > 0) {
+        setRadiusKm(0);
+        clearPropositionGeolocation();
+      }
+    },
+    [clearPropositionGeolocation],
+  );
+
   const handlePropositionRadiusKmChange = useCallback(
     (km: number) => {
       setRadiusKm(km);
+      if (km > 0) {
+        setSelectedLocations([]);
+      }
       if (km === 0) clearPropositionGeolocation();
     },
     [clearPropositionGeolocation],
@@ -1068,8 +1150,30 @@ export function ProposerVenteFormClient() {
       );
       return false;
     }
-    if (!editingProposalId && selectedLocations.length === 0) {
+    if (!editingProposalId && selectedLocations.length === 0 && radiusKm === 0) {
       setError('Ajoutez au moins une localisation (ville, code postal ou région)');
+      return false;
+    }
+    setError('');
+    return true;
+  };
+
+  const validateStep5 = () => {
+    if (!contactFirstName.trim()) {
+      setError('Indiquez votre prénom');
+      return false;
+    }
+    if (!contactLastName.trim()) {
+      setError('Indiquez votre nom');
+      return false;
+    }
+    const em = contactEmail.trim();
+    if (!em) {
+      setError('Indiquez votre e-mail');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+      setError('E-mail invalide');
       return false;
     }
     setError('');
@@ -1080,8 +1184,9 @@ export function ProposerVenteFormClient() {
     if (step === 1 && !validateStep1()) return;
     if (step === 2 && !validateStep2()) return;
     if (step === 3 && !validateStep3()) return;
+    if (step === 4 && !validateStep4()) return;
     setError('');
-    setStep((s) => Math.min(s + 1, 4));
+    setStep((s) => Math.min(s + 1, 5));
   };
 
   const handleBack = () => {
@@ -1097,6 +1202,7 @@ export function ProposerVenteFormClient() {
       return;
     }
     if (!validateStep4()) return;
+    if (!validateStep5()) return;
 
     setLoading(true);
     setError('');
@@ -1116,6 +1222,15 @@ export function ProposerVenteFormClient() {
         setLoading(false);
         return;
       }
+
+      const buyerContactPayload: SaleProposalBuyerContact = {
+        firstName: contactFirstName.trim(),
+        lastName: contactLastName.trim(),
+        email: contactEmail.trim(),
+        message: contactMessage.trim(),
+      };
+      const phoneTrim = contactPhone.trim();
+      if (phoneTrim) buyerContactPayload.phone = phoneTrim;
 
       const payload = {
         title: finalTitle,
@@ -1159,6 +1274,7 @@ export function ProposerVenteFormClient() {
         wishPriceCents: Math.round(priceNum * 100),
         locations: selectedLocations,
         invitedSellerIds: selectedSellerIds,
+        buyerContact: buyerContactPayload,
       };
 
       let proposalId: string;
@@ -1294,8 +1410,8 @@ export function ProposerVenteFormClient() {
       </div>
 
       <div className="deposer-annonce-form-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
-        <div className="deposer-annonce-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-          {[1, 2, 3, 4].map((s, i) => (
+        <div className="deposer-annonce-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 4 }}>
+          {[1, 2, 3, 4, 5].map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
               <div
                 className="deposer-annonce-step-circle"
@@ -1315,14 +1431,14 @@ export function ProposerVenteFormClient() {
               >
                 {step > s ? <Check size={18} /> : s}
               </div>
-              {i < 3 && (
+              {i < 4 && (
                 <div
                   className="deposer-annonce-steps-connector"
                   style={{
-                    width: 56,
+                    width: 28,
                     height: 2,
                     backgroundColor: step > s ? '#1d1d1f' : '#d2d2d7',
-                    margin: '0 10px',
+                    margin: '0 6px',
                     borderRadius: 1,
                   }}
                 />
@@ -1330,6 +1446,9 @@ export function ProposerVenteFormClient() {
             </div>
           ))}
         </div>
+        <p style={{ textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#6e6e73', margin: '0 0 28px' }}>
+          {STEP_TITLES[step - 1] ?? ''}
+        </p>
 
         <style dangerouslySetInnerHTML={{ __html: '.listing-dropdown-list button:hover { background: #e8e8ed !important; }' }} />
         <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
@@ -2503,7 +2622,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     style={{
                       width: '100%',
                       minHeight: 100,
-                      padding: 14,
+                      padding: '8px 14px 14px',
                       fontSize: 15,
                       border: '1px solid #d2d2d7',
                       borderRadius: 12,
@@ -2665,14 +2784,12 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
             )}
 
             {step === 4 && (
-              <motion.form
-                id="proposer-vente-final-form"
+              <motion.div
                 key="step4"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.25 }}
-                onSubmit={handleSubmit}
               >
                 <div style={{ marginBottom: 24 }}>
                   <label style={labelStyle}>Prix souhaité <span style={{ color: '#1d1d1f' }}>*</span></label>
@@ -2704,7 +2821,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                 </div>
                 <MultiLocationPicker
                   selected={selectedLocations}
-                  onChange={setSelectedLocations}
+                  onChange={handleLocationsChange}
                   radiusKm={radiusKm}
                   onRadiusKmChange={handlePropositionRadiusKmChange}
                   geoError={geoError}
@@ -2767,16 +2884,180 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                     )}
                   </div>
                 )}
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={handleBack}
+                    style={{
+                      flex: 1,
+                      height: 50,
+                      fontSize: 15,
+                      fontWeight: 500,
+                      border: '1px solid #d2d2d7',
+                      borderRadius: 980,
+                      cursor: 'pointer',
+                      backgroundColor: '#fff',
+                      color: '#1d1d1f',
+                    }}
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    style={{
+                      flex: 1,
+                      height: 50,
+                      backgroundColor: '#1d1d1f',
+                      color: '#fff',
+                      fontSize: 15,
+                      fontWeight: 500,
+                      border: 'none',
+                      borderRadius: 980,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Continuer
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {step === 5 && (
+              <motion.form
+                id="proposer-vente-final-form"
+                key="step5"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.25 }}
+                onSubmit={handleSubmit}
+              >
+                <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label style={labelStyle}>Prénom <span style={{ color: '#1d1d1f' }}>*</span></label>
+                    <input
+                      required
+                      value={contactFirstName}
+                      onChange={(e) => setContactFirstName(e.target.value)}
+                      placeholder="Prénom"
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <label style={labelStyle}>Nom <span style={{ color: '#1d1d1f' }}>*</span></label>
+                    <input
+                      required
+                      value={contactLastName}
+                      onChange={(e) => setContactLastName(e.target.value)}
+                      placeholder="Nom"
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>E-mail <span style={{ color: '#1d1d1f' }}>*</span></label>
+                  <input
+                    type="email"
+                    required
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="email@exemple.fr"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Téléphone</label>
+                  <input
+                    type="tel"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="+33 6 12 34 56 78"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={labelStyle}>Message</label>
+                  <textarea
+                    value={contactMessage}
+                    onChange={(e) => setContactMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Votre message aux vendeurs"
+                    style={{
+                      ...inputStyle,
+                      height: 'auto',
+                      minHeight: 120,
+                      padding: '12px 16px',
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
+                <p style={{ fontSize: 11, color: '#666', marginBottom: 20, whiteSpace: 'pre-line' }}>
+                  {!contactLegalExpanded ? (
+                    <>
+                      {`Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
+Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. `}
+                      <button
+                        type="button"
+                        onClick={() => setContactLegalExpanded(true)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          fontSize: 11,
+                          color: '#1d1d1f',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                          marginLeft: 4,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Afficher plus
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {`Le vendeur pourra vous répondre directement depuis sa messagerie Section Luxe, veuillez ne pas mentionner vos données personnelles dans le contenu de votre message.
+Les données que vous renseignez dans ce formulaire sont traitées par Section Luxe en qualité de responsable de traitement. Elles sont transmises directement au vendeur que vous souhaitez contacter et le cas échéant, aux vendeurs professionnels. Ces données sont utilisées à des fins de : mise en relation avec le vendeur que vous souhaitez contacter ; mesure et étude de l'audience du site, évaluer son utilisation et améliorer ses services ; lutte anti-fraude ; gestion de vos demandes d'exercice de vos droits. Vous disposez d'un droit d'accès, de rectification, d'effacement de ces données, d'un droit de limitation du traitement, d'un droit d'opposition, du droit à la portabilité de vos données et du droit d'introduire une réclamation auprès d'une autorité de contrôle (en France, la CNIL). Vous pouvez également retirer à tout moment votre consentement au traitement de vos données. Pour en savoir plus sur le traitement de vos données : `}
+                      <a
+                        href="https://www.sectionluxe.fr/politique-confidentialite"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: '#1d1d1f', textDecoration: 'underline' }}
+                      >
+                        https://www.sectionluxe.fr/politique-confidentialite
+                      </a>
+                      {' '}
+                      <button
+                        type="button"
+                        onClick={() => setContactLegalExpanded(false)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          fontSize: 11,
+                          color: '#1d1d1f',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          padding: 0,
+                          marginLeft: 4,
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        Afficher moins
+                      </button>
+                    </>
+                  )}
+                </p>
                 <CguCgvCheckbox
                   id="nouvelle-annonce-cgu-cgv"
                   checked={acceptCguCgv}
                   onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
                   error={cguCgvError}
                 />
-                <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                   <button
                     type="button"
-                    onClick={handleBack}
+                    onClick={() => { setError(''); setCguCgvError(''); handleBack(); }}
                     style={{
                       flex: 1,
                       height: 50,

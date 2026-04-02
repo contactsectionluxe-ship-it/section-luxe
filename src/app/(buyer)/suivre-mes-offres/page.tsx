@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Package, Search, ChevronDown, X, Calendar, SquarePen, Store } from 'lucide-react';
+import { Package, Search, ChevronDown, X, Calendar, SquarePen } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMatchMaxWidth } from '@/hooks/useMatchMaxWidth';
 import {
   deleteVisitorSaleProposal,
   fetchVisitorSaleProposals,
@@ -12,62 +13,79 @@ import {
   type SaleProposalRow,
 } from '@/lib/supabase/saleProposals';
 import { getSellerData } from '@/lib/supabase/auth';
-import { formatPrice, formatDate } from '@/lib/utils';
+import { formatPrice, formatDateShort } from '@/lib/utils';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
-import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
-import { ProposalDescriptionInfo } from '@/components/ProposalDescriptionInfo';
+import {
+  ListingCaracteristiques,
+  LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE,
+} from '@/components/ListingCaracteristiques';
 import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
+import { SaleProposalGridDescriptionAccordion } from '@/components/sale-proposals/SaleProposalGridDescriptionAccordion';
 
-/** Même carte que le catalogue (vue liste). */
-const CATALOGUE_LINE_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
-const CATALOGUE_LINE_CARD_RADIUS = 18;
+/** Même carte que le catalogue (vue grille), alignée sur `catalogue/page.tsx`. */
+const CATALOGUE_GRID_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
+const CATALOGUE_GRID_CARD_RADIUS = 18;
 
 const SORT_OPTIONS = [
   { value: 'recent' as const, label: 'Plus récents' },
   { value: 'oldest' as const, label: 'Plus anciens' },
 ];
 
-/** Même rendu typographique pour le prix souhaité (méta ligne catalogue). */
-const SUIVRE_MES_OFFRES_MONTANT_STYLE: CSSProperties = {
-  fontSize: 14,
-  fontWeight: 400,
-  color: '#6e6e73',
-  margin: 0,
-  lineHeight: 1.35,
-  flexShrink: 0,
-  fontFamily: 'var(--font-inter), var(--font-sans), system-ui, sans-serif',
+/** Boutons modifier / supprimer sur la photo (même idée que le cœur favori en grille catalogue). */
+const SUIVRE_OFFRES_GRID_PHOTO_ACTION_WRAP: CSSProperties = {
+  position: 'absolute',
+  top: 8,
+  right: 8,
+  zIndex: 1,
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
 };
 
-/** Même principe que `ProposalDescriptionInfo` : icône en em, fond transparent, gris #6e6e73 */
-const SUIVRE_OFFRES_CARD_ICON_BTN: CSSProperties = {
-  flexShrink: 0,
-  padding: '0 0 0.04em 0',
-  margin: 0,
-  border: 'none',
-  borderRadius: 4,
-  backgroundColor: 'transparent',
-  color: '#6e6e73',
-  boxSizing: 'border-box',
+const SUIVRE_OFFRES_GRID_PHOTO_ACTION_BTN: CSSProperties = {
+  width: 32,
+  height: 32,
+  borderRadius: '50%',
+  backgroundColor: 'rgba(255,255,255,0.95)',
+  border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  lineHeight: 0,
-  textDecoration: 'none',
-  fontSize: 'inherit',
-  transform: 'translateY(0.17em)',
+  padding: 0,
   cursor: 'pointer',
+  textDecoration: 'none',
+  color: '#6e6e73',
+  flexShrink: 0,
+  boxSizing: 'border-box',
 };
 
-const SUIVRE_OFFRES_CARD_ICON_SVG: CSSProperties = {
-  width: '0.92em',
-  height: '0.92em',
-  display: 'block',
+/** Même objet que le texte des pastilles `homeFeatured` (Neuf, Taille L…). */
+const SUIVRE_OFFRES_GRID_CARAC_TYPO = LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE;
+const SUIVRE_OFFRES_GRID_CARAC_ICON_SIZE = 13.5;
+const SUIVRE_OFFRES_GRID_CARAC_ICON_COLOR = '#6e6e73';
+
+/** Comme `<h3 className="listing-grid-title" style={{ fontSize: 16, … }}>` en grille catalogue (`catalogue/page.tsx`). */
+const SUIVRE_OFFRES_GRID_CATALOGUE_LISTING_TITLE_TYPO: CSSProperties = {
+  fontSize: 16,
+  fontWeight: 500,
+  color: '#1d1d1f',
+  lineHeight: 1.3,
 };
 
-const SUIVRE_OFFRES_CARD_ICON_SVG_DELETE: CSSProperties = {
-  width: '1.02em',
-  height: '1.02em',
-  display: 'block',
+/** Libellé « Prix souhaité » : même corps que le titre, Playfair explicite (les `<span>` n’ont pas la règle globale `h3`). */
+const SUIVRE_OFFRES_GRID_PRIX_SOUHAITE_LABEL_TYPO: CSSProperties = {
+  ...SUIVRE_OFFRES_GRID_CATALOGUE_LISTING_TITLE_TYPO,
+  fontFamily: 'var(--font-playfair), var(--font-serif)',
+};
+
+/** Proche du prix grille catalogue, un peu plus petit que les 18px du catalogue. */
+const SUIVRE_OFFRES_GRID_CATALOGUE_PRICE_TYPO: CSSProperties = {
+  fontFamily: 'var(--font-inter), var(--font-sans)',
+  fontSize: 16,
+  fontWeight: 600,
+  color: '#1d1d1f',
+  lineHeight: 1.3,
 };
 
 export default function SuivreMesOffresPage() {
@@ -83,6 +101,7 @@ export default function SuivreMesOffresPage() {
   const [proposalToDeleteId, setProposalToDeleteId] = useState<string | null>(null);
   const [deleteProposalError, setDeleteProposalError] = useState<string | null>(null);
   const [deletingProposal, setDeletingProposal] = useState(false);
+  const isNarrowViewport = useMatchMaxWidth(767);
 
   useEffect(() => {
     if (authLoading || !isAuthenticated || !user) return;
@@ -171,50 +190,49 @@ export default function SuivreMesOffresPage() {
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
           <div
-            className="catalogue-results catalogue-results-line suivre-mes-offres-catalogue-line"
-            style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}
+            className="catalogue-results catalogue-results-grid suivre-mes-offres-catalogue-grid"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, alignItems: 'start' }}
           >
-            {Array.from({ length: 5 }, (_, i) => (
+            {Array.from({ length: 6 }, (_, i) => (
               <article
                 key={i}
-                className="catalogue-line-card catalogue-skeleton-card"
+                className="catalogue-skeleton-card"
                 style={{
                   position: 'relative',
                   display: 'flex',
-                  flexDirection: 'row',
+                  flexDirection: 'column',
                   backgroundColor: '#fff',
-                  borderRadius: CATALOGUE_LINE_CARD_RADIUS,
+                  borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                   overflow: 'hidden',
-                  boxShadow: CATALOGUE_LINE_CARD_SHADOW,
-                  minHeight: 48,
+                  boxShadow: CATALOGUE_GRID_CARD_SHADOW,
                   minWidth: 0,
+                  ['--skeleton-index' as string]: i,
                 }}
               >
-                <div className="catalogue-line-photo">
-                  <div className="catalogue-skeleton" style={{ width: '100%', height: '100%', minHeight: 40 }} />
-                </div>
+                <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1' }} />
                 <div
-                  className="catalogue-line-content"
                   style={{
-                    flex: 1,
+                    borderTop: '1px solid #e8e6e3',
+                    padding: '14px 14px 10px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    padding: '0 12px 2px 12px',
-                    minWidth: 0,
-                    overflow: 'hidden',
+                    gap: 6,
+                    minHeight: 'calc(112px + 2mm)',
+                    backgroundColor: '#fff',
                   }}
                 >
-                  <div className="catalogue-line-title-block" style={{ paddingBottom: 2, minWidth: 0 }}>
-                    <div className="catalogue-skeleton" style={{ height: 18, width: '75%', maxWidth: 400, marginBottom: 6 }} />
-                    <div className="catalogue-skeleton" style={{ height: 12, width: '40%', maxWidth: 180, marginBottom: 6 }} />
-                    <div className="catalogue-skeleton" style={{ height: 18, width: 100 }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 12 }}>
+                    <div className="catalogue-skeleton" style={{ height: 12, width: '50%' }} />
+                    <div className="catalogue-skeleton" style={{ height: 12, width: 60, flexShrink: 0 }} />
                   </div>
-                  <div
-                    className="catalogue-listing-vendeur-block"
-                    style={{ borderTop: '1px solid #e8e6e3', paddingTop: 6, paddingBottom: 4, marginTop: 2 }}
-                  >
-                    <div className="catalogue-skeleton" style={{ height: 12, width: '55%' }} />
+                  <div className="catalogue-skeleton" style={{ height: 16, width: '92%' }} />
+                  <div style={{ display: 'flex', gap: '6px 12px', flexWrap: 'wrap', marginBottom: 5 }}>
+                    <div className="catalogue-skeleton" style={{ height: 13, width: 60 }} />
+                    <div className="catalogue-skeleton" style={{ height: 13, width: 70 }} />
+                    <div className="catalogue-skeleton" style={{ height: 13, width: 55 }} />
+                  </div>
+                  <div style={{ marginTop: -5, minHeight: 24, display: 'flex', alignItems: 'center' }}>
+                    <div className="catalogue-skeleton" style={{ height: 18, width: '38%' }} />
                   </div>
                 </div>
               </article>
@@ -385,263 +403,206 @@ export default function SuivreMesOffresPage() {
           </div>
         ) : (
           <div
-            className="catalogue-results catalogue-results-line suivre-mes-offres-catalogue-line"
-            style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}
+            className="catalogue-results catalogue-results-grid suivre-mes-offres-catalogue-grid"
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, alignItems: 'start' }}
           >
             {filteredSorted.map((r) => {
               return (
-              <article
-                key={r.id}
-                className="catalogue-line-card mes-annonces-card"
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'row',
-                  backgroundColor: '#fff',
-                  borderRadius: CATALOGUE_LINE_CARD_RADIUS,
-                  overflow: 'hidden',
-                  boxShadow: CATALOGUE_LINE_CARD_SHADOW,
-                  minHeight: 48,
-                  minWidth: 0,
-                }}
-              >
-                <div
-                  className="catalogue-line-photo"
+                <article
+                  key={r.id}
+                  className="mes-annonces-card suivre-mes-offres-grid-card"
                   style={{
                     position: 'relative',
-                    backgroundColor: '#fff',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {r.photo_urls?.length ? (
-                    <CatalogueCardPhotos photos={r.photo_urls} alt={r.title || ''} sizes="(max-width: 768px) 42vw, 200px" />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: '#f5f5f7',
-                      }}
-                    >
-                      <Package size={28} color="#ccc" strokeWidth={1.25} />
-                    </div>
-                  )}
-                </div>
-                <div
-                  className="catalogue-line-content"
-                  style={{
-                    flex: 1,
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'flex-start',
-                    alignSelf: 'stretch',
-                    padding: '0 12px 0 12px',
-                    minWidth: 0,
-                    minHeight: 0,
+                    backgroundColor: '#fff',
+                    borderRadius: CATALOGUE_GRID_CARD_RADIUS,
                     overflow: 'hidden',
+                    boxShadow: CATALOGUE_GRID_CARD_SHADOW,
+                    minWidth: 0,
                   }}
                 >
-                  <div className="catalogue-line-title-block" style={{ paddingBottom: 0, minWidth: 0, overflow: 'visible', flexShrink: 0 }}>
-                    <div style={{ fontSize: 18, width: '100%', minWidth: 0, marginBottom: 6 }}>
-                      <div
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1', backgroundColor: '#fff', overflow: 'hidden' }}>
+                    <div style={SUIVRE_OFFRES_GRID_PHOTO_ACTION_WRAP}>
+                      <Link
+                        href={`/proposer-vente?modifier=${encodeURIComponent(r.id)}`}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label="Modifier l'offre"
+                        style={SUIVRE_OFFRES_GRID_PHOTO_ACTION_BTN}
+                      >
+                        <SquarePen size={15} strokeWidth={2} aria-hidden />
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openProposalDeleteModal(r.id);
+                        }}
+                        disabled={deletingProposal && proposalToDeleteId === r.id}
+                        aria-label="Supprimer l'offre"
                         style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 8,
-                          maxWidth: '100%',
-                          minWidth: 0,
+                          ...SUIVRE_OFFRES_GRID_PHOTO_ACTION_BTN,
+                          cursor: deletingProposal && proposalToDeleteId === r.id ? 'not-allowed' : 'pointer',
+                          opacity: deletingProposal && proposalToDeleteId === r.id ? 0.7 : 1,
+                          border: '1px solid rgba(0,0,0,0.06)',
                         }}
                       >
-                        <div
-                          style={{
-                            display: 'flex',
-                            flexDirection: 'row',
-                            alignItems: 'baseline',
-                            gap: '0.28em',
-                            minWidth: 0,
-                            flex: '1 1 auto',
-                            overflow: 'hidden',
-                          }}
-                        >
-                          <h3
-                            title={r.title || ''}
-                            className="catalogue-line-title"
-                            style={{
-                              fontSize: 'inherit',
-                              fontWeight: 600,
-                              color: '#1d1d1f',
-                              margin: 0,
-                              flex: '0 1 auto',
-                              minWidth: 0,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              lineHeight: 1.3,
-                            }}
-                          >
-                            {r.title}
-                          </h3>
-                          <ProposalDescriptionInfo description={r.description} />
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                          <Link
-                            href={`/proposer-vente?modifier=${encodeURIComponent(r.id)}`}
-                            onClick={(e) => e.stopPropagation()}
-                            aria-label="Modifier l'offre"
-                            className="suivre-mes-offres-card-action-btn"
-                            style={SUIVRE_OFFRES_CARD_ICON_BTN}
-                          >
-                            <SquarePen strokeWidth={2} aria-hidden style={SUIVRE_OFFRES_CARD_ICON_SVG} />
-                          </Link>
-                          <button
-                            type="button"
-                            className="suivre-mes-offres-card-action-btn"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              openProposalDeleteModal(r.id);
-                            }}
-                            disabled={deletingProposal && proposalToDeleteId === r.id}
-                            aria-label="Supprimer l'offre"
-                            style={{
-                              ...SUIVRE_OFFRES_CARD_ICON_BTN,
-                              cursor: deletingProposal && proposalToDeleteId === r.id ? 'not-allowed' : 'pointer',
-                              opacity: deletingProposal && proposalToDeleteId === r.id ? 0.7 : 1,
-                            }}
-                          >
-                            <X strokeWidth={2} aria-hidden style={SUIVRE_OFFRES_CARD_ICON_SVG_DELETE} />
-                          </button>
-                        </div>
+                        <X size={15} strokeWidth={2} aria-hidden />
+                      </button>
+                    </div>
+                    {r.photo_urls?.length ? (
+                      <CatalogueCardPhotos
+                        photos={r.photo_urls}
+                        alt={r.title || ''}
+                        sizes="(max-width: 768px) 50vw, (max-width: 1400px) 33vw, min(440px, 28vw)"
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: '#f5f5f7',
+                        }}
+                      >
+                        <Package size={40} color="#ccc" strokeWidth={1.25} />
                       </div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      borderTop: '1px solid #e8e6e3',
+                      padding: '14px 14px 10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 6,
+                      minWidth: 0,
+                      backgroundColor: '#fff',
+                      flex: 1,
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, minWidth: 0 }}>
+                      <h3
+                        className="listing-grid-title"
+                        title={r.title || ''}
+                        style={{
+                          ...SUIVRE_OFFRES_GRID_CATALOGUE_LISTING_TITLE_TYPO,
+                          margin: 0,
+                          minWidth: 0,
+                          flex: '1 1 auto',
+                          overflow: 'hidden',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                        }}
+                      >
+                        {r.title}
+                      </h3>
                     </div>
                     <ListingCaracteristiques
                       listing={saleProposalRowToListing(r)}
-                      variant="lineCatalogue"
+                      variant="homeFeatured"
                       className="catalogue-listing-caracteristiques"
+                      allowMultiLineWrap={isNarrowViewport}
                     />
                     <div
+                      className="sale-proposal-grid-price-date"
                       style={{
                         display: 'flex',
-                        flexDirection: 'column',
-                        gap: 3,
-                        marginTop: 18,
-                        marginBottom: 8,
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 10,
+                        marginTop: -5,
                         minWidth: 0,
-                        maxWidth: '100%',
                       }}
                     >
                       <div
+                        className="listing-grid-price suivre-mes-offres-grid-wish"
                         style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 4,
-                          flexWrap: 'nowrap',
+                          flexWrap: 'wrap',
                           minWidth: 0,
-                          maxWidth: '100%',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                          textOverflow: 'ellipsis',
-                          fontSize: 14,
-                          color: '#6e6e73',
-                          lineHeight: 1.35,
-                          fontWeight: 400,
+                          flex: '1 1 auto',
                         }}
                       >
-                        <Calendar size={15} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          Demande faite le {formatDate(new Date(r.created_at))}
-                        </span>
-                        <span style={{ flexShrink: 0, color: '#6e6e73' }}> - </span>
-                        <span style={{ flexShrink: 0, color: '#6e6e73' }}>Prix souhaité</span>
-                        <p className="catalogue-listing-prix suivre-mes-offres-meta-prix" style={SUIVRE_MES_OFFRES_MONTANT_STYLE}>
-                          {formatPrice(r.wish_price_cents / 100)}
-                        </p>
-                      </div>
-                      <div
-                        className="catalogue-listing-vendeur-block"
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: 4,
-                          alignItems: 'stretch',
-                          minWidth: 0,
-                          maxWidth: '100%',
-                          paddingTop: 0,
-                          paddingBottom: 2,
-                        }}
-                      >
-                        <div
+                        <span
                           style={{
-                            display: 'flex',
+                            display: 'inline-flex',
                             alignItems: 'center',
                             gap: 4,
-                            flexWrap: 'nowrap',
+                            whiteSpace: 'nowrap',
                             minWidth: 0,
-                            fontSize: 14,
-                            color: '#6e6e73',
-                            lineHeight: 1.35,
-                            fontWeight: 400,
                           }}
                         >
-                          <Store size={15} color="#6e6e73" style={{ flexShrink: 0 }} aria-hidden />
-                          <span>Vendeurs sélectionnés :</span>
-                        </div>
-                        <div
-                          style={{
-                            paddingLeft: 19,
-                            minWidth: 0,
-                            maxWidth: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            boxSizing: 'border-box',
-                          }}
-                        >
-                          {r.invites && r.invites.length > 0 ? (
-                            <InvitedSellersCatalogueLine invites={r.invites} />
-                          ) : (
-                            <span style={{ fontSize: 13, color: '#86868b', lineHeight: 1.25 }}>
-                              Aucun vendeur invité pour le moment
-                            </span>
-                          )}
-                        </div>
+                          <span style={SUIVRE_OFFRES_GRID_PRIX_SOUHAITE_LABEL_TYPO}>Prix souhaité</span>
+                          <span
+                            style={{
+                              ...SUIVRE_OFFRES_GRID_CATALOGUE_PRICE_TYPO,
+                              transform: 'translateY(0.2mm)',
+                            }}
+                          >
+                            {formatPrice(r.wish_price_cents / 100)}
+                          </span>
+                        </span>
                       </div>
+                      <span
+                        className="suivre-mes-offres-grid-meta-date"
+                        style={{
+                          ...SUIVRE_OFFRES_GRID_CARAC_TYPO,
+                          lineHeight: 1.3,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          flexShrink: 0,
+                          justifyContent: 'flex-end',
+                          whiteSpace: 'nowrap',
+                          transform: 'translateY(0.55mm)',
+                        }}
+                      >
+                        <Calendar
+                          size={SUIVRE_OFFRES_GRID_CARAC_ICON_SIZE}
+                          color={SUIVRE_OFFRES_GRID_CARAC_ICON_COLOR}
+                          style={{ flexShrink: 0, display: 'block', transform: 'translateY(-0.2mm)' }}
+                          aria-hidden
+                        />
+                        {formatDateShort(new Date(r.created_at))}
+                      </span>
                     </div>
-                  </div>
-                  <div
-                    className="suivre-mes-offres-disclaimer-bas"
-                    style={{
-                      marginTop: 'auto',
-                      borderTop: '1px solid #e8e6e3',
-                      paddingTop: 6,
-                      paddingBottom: 6,
-                      marginBottom: 0,
-                      width: '100%',
-                      maxWidth: '100%',
-                      flexShrink: 0,
-                      alignSelf: 'stretch',
-                    }}
-                  >
-                    <p
+                    <SaleProposalGridDescriptionAccordion
+                      proposalId={r.id}
+                      description={r.description}
+                      packaging={r.packaging}
+                    />
+                    <div
+                      className="suivre-mes-offres-vendeurs-grid-zone"
                       style={{
-                        margin: 0,
-                        paddingBottom: 0,
-                        fontSize: 11.5,
-                        fontWeight: 400,
-                        color: '#86868b',
-                        lineHeight: 1.4,
-                        maxWidth: '100%',
+                        flex: 1,
+                        minHeight: 0,
+                        width: '100%',
+                        borderTop: '1px solid #f0f0f0',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'stretch',
+                        justifyContent: 'center',
+                        padding: '8px 0 max(0px, calc(3px - 1.5mm))',
+                        marginBottom: 'min(0px, calc(3px - 1.5mm))',
+                        boxSizing: 'border-box',
                       }}
                     >
-                      La plateforme a pour unique but de mettre en relation vendeurs et acheteurs; toute transaction est sous la
-                      responsabilité exclusive des deux parties.
-                    </p>
+                      {r.invites && r.invites.length > 0 ? (
+                        <InvitedSellersCatalogueLine invites={r.invites} />
+                      ) : (
+                        <span style={{ fontSize: 12, color: '#86868b', lineHeight: 1.25, textAlign: 'left' }}>
+                          Aucun vendeur invité pour le moment
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </article>
+                </article>
               );
             })}
           </div>
@@ -695,7 +656,7 @@ export default function SuivreMesOffresPage() {
                   fontSize: 14,
                   fontWeight: 500,
                   border: '1.5px solid #d2d2d7',
-                  borderRadius: 980,
+                  borderRadius: 10,
                   cursor: deletingProposal ? 'not-allowed' : 'pointer',
                   opacity: deletingProposal ? 0.7 : 1,
                 }}
@@ -714,7 +675,7 @@ export default function SuivreMesOffresPage() {
                   fontSize: 14,
                   fontWeight: 500,
                   border: 'none',
-                  borderRadius: 980,
+                  borderRadius: 10,
                   cursor: deletingProposal ? 'not-allowed' : 'pointer',
                   opacity: deletingProposal ? 0.7 : 1,
                 }}
@@ -729,7 +690,7 @@ export default function SuivreMesOffresPage() {
   );
 }
 
-/** Noms des vendeurs invités : une ligne, style catalogue ; chaque nom lien vers le catalogue du vendeur. */
+/** Noms des vendeurs invités ; retour à la ligne si besoin ; chaque nom lien vers le catalogue du vendeur. */
 function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SaleProposalRow['invites']> }) {
   const [sellers, setSellers] = useState<{ uid: string; companyName: string }[] | null>(null);
   const sellerIdsKey = invites.map((i) => i.seller_id).join('\0');
@@ -753,29 +714,37 @@ function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SalePro
 
   const vendeursOuterStyle: CSSProperties = {
     display: 'flex',
-    alignItems: 'center',
-    flex: '1 1 0%',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    width: '100%',
     minWidth: 0,
-    overflow: 'hidden',
+    overflow: 'visible',
+    /* Même base que <p className="listing-grid-vendeur" style={{ fontSize: 12, … }}> (catalogue grille) ; mobile 11px via globals */
+    fontSize: 12,
+    fontWeight: 400,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: '#86868b',
+    lineHeight: 1.35,
   };
 
-  const ellipsisInnerStyle: CSSProperties = {
-    display: 'block',
-    flex: '1 1 0%',
+  const vendeursNamesStyle: CSSProperties = {
+    flex: '1 1 auto',
     minWidth: 0,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-    fontSize: 13,
-    fontWeight: 400,
-    color: '#86868b',
-    lineHeight: 1.25,
+    width: '100%',
+    maxWidth: '100%',
+    overflow: 'visible',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word',
+    overflowWrap: 'anywhere',
+    textAlign: 'left',
+    lineHeight: 1.35,
   };
 
   if (sellers === null) {
     return (
-      <div className="suivre-mes-offres-vendeurs-outer" style={vendeursOuterStyle}>
-        <span className="catalogue-listing-vendeur-nom-row suivre-mes-offres-vendeurs-ligne" style={{ ...ellipsisInnerStyle, letterSpacing: 0.5 }}>
+      <div className="suivre-mes-offres-vendeurs-outer listing-grid-vendeur" style={vendeursOuterStyle}>
+        <span className="catalogue-listing-vendeur-nom-row suivre-mes-offres-vendeurs-ligne listing-grid-vendeur-nom" style={vendeursNamesStyle}>
           …
         </span>
       </div>
@@ -785,8 +754,8 @@ function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SalePro
   const fullVendorsTitle = sellers.map((s) => s.companyName.toUpperCase()).join(' ; ');
 
   return (
-    <div className="suivre-mes-offres-vendeurs-outer" style={vendeursOuterStyle} title={fullVendorsTitle}>
-      <span className="catalogue-listing-vendeur-nom-row suivre-mes-offres-vendeurs-ligne" style={ellipsisInnerStyle}>
+    <div className="suivre-mes-offres-vendeurs-outer listing-grid-vendeur" style={vendeursOuterStyle} title={fullVendorsTitle}>
+      <span className="catalogue-listing-vendeur-nom-row suivre-mes-offres-vendeurs-ligne listing-grid-vendeur-nom" style={vendeursNamesStyle}>
         {sellers.map((seller, i) => (
           <span key={seller.uid}>
             {i > 0 ? <span aria-hidden> ; </span> : null}
@@ -796,6 +765,9 @@ function InvitedSellersCatalogueLine({ invites }: { invites: NonNullable<SalePro
               title={`Voir les annonces de ${seller.companyName}`}
               style={{
                 display: 'inline',
+                whiteSpace: 'normal',
+                wordBreak: 'break-word',
+                overflowWrap: 'anywhere',
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 color: 'inherit',

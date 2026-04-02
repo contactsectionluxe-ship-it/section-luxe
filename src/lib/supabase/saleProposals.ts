@@ -35,6 +35,15 @@ function checkClient() {
   return supabase;
 }
 
+/** Saisie finale « Contacter le vendeur » (proposer une pièce, dernière étape). */
+export type SaleProposalBuyerContact = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  message: string;
+};
+
 export type CreateSaleProposalInput = {
   visitorId: string;
   title: string;
@@ -55,6 +64,7 @@ export type CreateSaleProposalInput = {
   wishPriceCents: number;
   locations: SaleProposalLocationEntry[];
   invitedSellerIds: string[];
+  buyerContact: SaleProposalBuyerContact;
 };
 
 export async function createSaleProposalWithInvites(input: CreateSaleProposalInput): Promise<string> {
@@ -81,6 +91,7 @@ export async function createSaleProposalWithInvites(input: CreateSaleProposalInp
       wish_price_cents: input.wishPriceCents,
       locations: input.locations as unknown as Record<string, unknown>,
       photo_urls: [],
+      buyer_contact: input.buyerContact as unknown as Record<string, unknown>,
     })
     .select('id')
     .single();
@@ -170,6 +181,7 @@ export async function updateVisitorSaleProposalWithInvites(
       packaging: input.packaging,
       wish_price_cents: input.wishPriceCents,
       locations: input.locations as unknown as Record<string, unknown>,
+      buyer_contact: input.buyerContact as unknown as Record<string, unknown>,
     })
     .eq('id', proposalId)
     .eq('visitor_id', visitorId);
@@ -200,6 +212,7 @@ export type SaleProposalRow = {
   wish_price_cents: number;
   locations: SaleProposalLocationEntry[];
   photo_urls: string[];
+  buyer_contact?: SaleProposalBuyerContact | null;
   created_at: string;
   invites?: {
     seller_id: string;
@@ -259,7 +272,7 @@ export async function fetchVisitorSaleProposals(visitorId: string): Promise<Sale
     .select(
       `
       id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
-      wish_price_cents, locations, photo_urls, created_at,
+      wish_price_cents, locations, photo_urls, buyer_contact, created_at,
       sale_proposal_invited_sellers(seller_id, estimated_price_cents, seller_note, updated_at)
     `,
     )
@@ -284,7 +297,7 @@ export async function fetchVisitorSaleProposalById(visitorId: string, proposalId
     .select(
       `
       id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
-      wish_price_cents, locations, photo_urls, created_at,
+      wish_price_cents, locations, photo_urls, buyer_contact, created_at,
       sale_proposal_invited_sellers(seller_id, estimated_price_cents, seller_note, updated_at)
     `,
     )
@@ -324,7 +337,7 @@ export async function fetchSellerInvitedProposals(sellerId: string): Promise<Inv
       updated_at,
       sale_proposals(
         id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
-        wish_price_cents, locations, photo_urls, created_at
+        wish_price_cents, locations, photo_urls, buyer_contact, created_at
       )
     `,
     )
@@ -359,6 +372,18 @@ export async function updateSellerProposalOffer(
       seller_note: payload.sellerNote,
       updated_at: new Date().toISOString(),
     })
+    .eq('proposal_id', proposalId)
+    .eq('seller_id', sellerId);
+
+  if (error) throwSaleProposalDbError(error);
+}
+
+/** Retire l’invitation pour ce vendeur uniquement (Sourcing) ; la proposition reste pour l’acheteur et les autres vendeurs. */
+export async function deleteSellerOwnProposalInvite(sellerId: string, proposalId: string): Promise<void> {
+  const client = checkClient();
+  const { error } = await client
+    .from('sale_proposal_invited_sellers')
+    .delete()
     .eq('proposal_id', proposalId)
     .eq('seller_id', sellerId);
 

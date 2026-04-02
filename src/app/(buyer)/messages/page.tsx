@@ -464,7 +464,11 @@ export default function MessagesPage() {
                           </span>
                         </div>
                         <p style={{ fontSize: 13, color: '#6e6e73', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {listingOffCatalog ? "L'annonce a été supprimée" : conversation.listingTitle || 'Annonce'}
+                          {listingOffCatalog
+                            ? "L'annonce a été supprimée"
+                            : conversation.saleProposalId
+                              ? `Proposition : ${conversation.listingTitle || 'Annonce'}`
+                              : conversation.listingTitle || 'Annonce'}
                         </p>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                           <p style={{ fontSize: 13, color: isUnread ? '#1d1d1f' : '#86868b', fontWeight: isUnread ? 500 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Sourcing',
-  description: 'Propositions de particuliers qui vous ont sélectionné — messagerie.',
+  description: 'Gérez vos propositions reçues.',
 };
 
 export default function SourcingLayout({ children }: { children: React.ReactNode }) {
