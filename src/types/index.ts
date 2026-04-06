@@ -1,6 +1,7 @@
 // Types pour la marketplace luxe
 
 import type { SubscriptionTier } from '@/lib/subscription';
+import type { WeeklyOpeningHours } from '@/lib/opening-hours';
 
 export type { SubscriptionTier } from '@/lib/subscription';
 export type UserRole = 'buyer' | 'seller' | 'admin';
@@ -36,6 +37,8 @@ export interface Seller {
   postcode: string;
   phone: string;
   description: string;
+  /** Horaires d’ouverture (profil vendeur), normalisés après lecture BDD */
+  openingHours?: WeeklyOpeningHours;
   status: SellerStatus;
   idCardFrontUrl: string;
   idCardBackUrl: string | null;

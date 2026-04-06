@@ -117,8 +117,8 @@ export function TruncatedInfoValue({ text, fontSize }: TruncatedInfoValueProps) 
               borderRadius: 8,
               boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
               fontSize,
-              fontWeight: 600,
-              color: '#1d1d1f',
+              fontWeight: 400,
+              color: '#555',
               lineHeight: 1.4,
               wordBreak: 'break-word',
               whiteSpace: 'normal',
@@ -139,8 +139,8 @@ export function TruncatedInfoValue({ text, fontSize }: TruncatedInfoValueProps) 
           onToggle();
         }}
         style={{
-          fontWeight: 600,
-          color: '#1d1d1f',
+          fontWeight: 400,
+          color: '#555',
           fontSize,
           minWidth: 0,
           overflow: 'hidden',

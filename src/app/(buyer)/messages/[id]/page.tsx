@@ -17,6 +17,8 @@ import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
 import { formatRelativeTime, formatDate, formatDateShort, getSellerAvatarUrl } from '@/lib/utils';
+import { SellerVisitOpeningHoursBlock } from '@/components/SellerVisitOpeningHoursBlock';
+import { SellerVisitDescriptionInfo } from '@/components/SellerVisitDescriptionInfo';
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -686,7 +688,18 @@ export default function ConversationPage() {
                   <X size={20} />
                 </button>
               </div>
-              <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, marginBottom: 8 }}>{popupSeller.companyName}</p>
+              <SellerVisitDescriptionInfo
+                description={popupSeller.description}
+                rowStyle={{
+                  fontFamily: 'var(--font-inter), var(--font-sans)',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  color: '#1d1d1f',
+                }}
+              >
+                <p style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', margin: 0, minWidth: 0, flex: '1 1 auto' }}>{popupSeller.companyName}</p>
+              </SellerVisitDescriptionInfo>
+              <SellerVisitOpeningHoursBlock hours={popupSeller.openingHours} />
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[popupSeller.address, popupSeller.postcode, popupSeller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe

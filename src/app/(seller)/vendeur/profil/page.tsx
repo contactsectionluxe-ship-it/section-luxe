@@ -10,14 +10,11 @@ import { formatDate } from '@/lib/utils';
 import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { ACCEPT_IMAGES, validateImageFile } from '@/lib/file-validation';
+import { createDefaultWeeklyOpeningHours, type WeeklyOpeningHours } from '@/lib/opening-hours';
+import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHoursEditor';
+import { profilVendeurLabelStyle } from '@/components/profile/profilVendeurFormStyles';
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 13,
-  fontWeight: 500,
-  marginBottom: 8,
-  color: '#333',
-};
+const labelStyle = profilVendeurLabelStyle;
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -47,12 +44,15 @@ export default function ProfilVendeurPage() {
   const [city, setCity] = useState('');
   const [postcode, setPostcode] = useState('');
   const [description, setDescription] = useState('');
+  const [openingHours, setOpeningHours] = useState<WeeklyOpeningHours>(() => createDefaultWeeklyOpeningHours());
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null); // aperçu local avant envoi
   const [avatarUploading, setAvatarUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   /** Après un upload réussi, ne pas écraser avatarUrl avec seller (refreshUser peut renvoyer l’ancienne valeur). */
   const skipNextAvatarSyncRef = useRef(false);
+  /** Après enregistrement profil : ne pas réinjecter openingHours depuis seller (évite un flash ~1s / normalisation BDD). */
+  const skipNextOpeningHoursSyncRef = useRef(false);
   /** Cache buster pour forcer l’affichage de la nouvelle photo après upload (même URL Supabase). */
   const avatarDisplayKeyRef = useRef<number | null>(null);
 
@@ -81,6 +81,11 @@ export default function ProfilVendeurPage() {
       setCity(seller.city ?? '');
       setPostcode(seller.postcode ?? '');
       setDescription(seller.description);
+      if (skipNextOpeningHoursSyncRef.current) {
+        skipNextOpeningHoursSyncRef.current = false;
+      } else {
+        setOpeningHours(seller.openingHours ?? createDefaultWeeklyOpeningHours());
+      }
       if (skipNextAvatarSyncRef.current) {
         skipNextAvatarSyncRef.current = false;
       } else {
@@ -164,7 +169,9 @@ export default function ProfilVendeurPage() {
         city: city.trim(),
         postcode: postcode.trim(),
         description: description.trim(),
+        openingHours,
       });
+      skipNextOpeningHoursSyncRef.current = true;
       await refreshUser();
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -479,6 +486,7 @@ export default function ProfilVendeurPage() {
                 }}
                 placeholder="Présentez votre activité..."
               />
+              <SellerOpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
             </div>
           </div>
 

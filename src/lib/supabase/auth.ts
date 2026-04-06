@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from './client';
 import { User, Seller } from '@/types';
 import { slugifyCompanyName } from '@/lib/sellerCatalogueUrl';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
+import { parseOpeningHoursFromDb, weeklyOpeningHoursToDbJson, type WeeklyOpeningHours } from '@/lib/opening-hours';
 
 function checkSupabase(): SupabaseClient {
   if (!isSupabaseConfigured || !supabase) {
@@ -370,6 +371,7 @@ export async function getSellerData(uid: string): Promise<Seller | null> {
     postcode: (row.postcode as string) ?? '',
     phone: data.phone,
     description: data.description,
+    openingHours: parseOpeningHoursFromDb(row.opening_hours),
     status: data.status,
     idCardFrontUrl: data.id_card_front_url,
     idCardBackUrl: data.id_card_back_url,
@@ -411,7 +413,16 @@ export async function updateUserProfile(
 // Mise à jour du profil vendeur (sellers) — modifiable par le vendeur
 export async function updateSellerProfile(
   uid: string,
-  data: { companyName?: string; phone?: string; address?: string; city?: string; postcode?: string; description?: string; avatarUrl?: string | null }
+  data: {
+    companyName?: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    postcode?: string;
+    description?: string;
+    avatarUrl?: string | null;
+    openingHours?: WeeklyOpeningHours;
+  }
 ): Promise<void> {
   const client = checkSupabase();
   const updateData: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -422,6 +433,9 @@ export async function updateSellerProfile(
   if (data.avatarUrl !== undefined) (updateData as Record<string, unknown>).avatar_url = data.avatarUrl;
   if (data.city !== undefined) (updateData as Record<string, unknown>).city = data.city;
   if (data.postcode !== undefined) (updateData as Record<string, unknown>).postcode = data.postcode;
+  if (data.openingHours !== undefined) {
+    updateData.opening_hours = weeklyOpeningHoursToDbJson(data.openingHours);
+  }
 
   const { error } = await client.from('sellers').update(updateData).eq('id', uid);
   if (error) throw error;

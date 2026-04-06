@@ -24,6 +24,8 @@ import { getDealLevel, getBarPositionFromDeal, DEAL_MARKET_BAR_SEGMENT_COLORS } 
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
+import { SellerVisitOpeningHoursBlock } from '@/components/SellerVisitOpeningHoursBlock';
+import { SellerVisitDescriptionInfo } from '@/components/SellerVisitDescriptionInfo';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 
 /** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
@@ -57,6 +59,9 @@ const ETAT_DEFINITIONS: { title: string; text: string }[] = [
   { title: 'Bon état', text: 'Article porté et bien entretenu. Peut présenter des traces d\'usage visibles liées à une utilisation normale.' },
   { title: 'État correct', text: 'Article régulièrement porté. Présente des signes d\'usure visibles liés à l\'usage, sans défaut majeur ni détérioration importante.' },
 ];
+
+/** Aligné sur les cartes grille du catalogue (`CATALOGUE_GRID_CARD_SHADOW`). */
+const PRODUIT_VENDEUR_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
 
 export default function ProductPage() {
   const params = useParams();
@@ -814,7 +819,7 @@ export default function ProductPage() {
                   </Link>
                 )}
               </div>
-              <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 16, color: '#0a0a0a' }}>
+              <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 25, fontWeight: 500, marginBottom: 6, color: '#0a0a0a' }}>
                 {getListingDisplayTitle(listing)}
               </h1>
               <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
@@ -823,7 +828,7 @@ export default function ProductPage() {
               )}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 'calc(6px + 1mm)', marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <p style={{ fontSize: 28, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                  <p style={{ fontSize: 25, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
                   {priceStats && (() => {
                     const deal = getDealLevel(listing.price, priceStats.average);
                     return (
@@ -846,33 +851,33 @@ export default function ProductPage() {
                       onClick={handleFavoriteClick}
                       disabled={favoriteLoading}
                       style={{
-                        height: 44,
-                        paddingLeft: 14,
-                        paddingRight: 14,
-                        borderRadius: 22,
+                        height: 40,
+                        paddingLeft: 12,
+                        paddingRight: 12,
+                        borderRadius: 20,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 6,
+                        gap: 5,
                         backgroundColor: '#fff',
                         color: '#1d1d1f',
                         border: '1.5px solid #d2d2d7',
                         cursor: 'pointer',
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: 500,
                       }}
                       title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                     >
                       <span>{likesCount}</span>
-                      <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
+                      <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
                     </button>
                   ) : (
                     <button
                       onClick={handleFavoriteClick}
                       disabled={favoriteLoading}
                       style={{
-                        width: 44,
-                        height: 44,
+                        width: 40,
+                        height: 40,
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -884,14 +889,14 @@ export default function ProductPage() {
                       }}
                       title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                     >
-                      <Heart size={20} fill={isFavorited ? 'currentColor' : 'none'} />
+                      <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
                     </button>
                   )}
                   <button
                     onClick={handleShare}
                     style={{
-                      width: 44,
-                      height: 44,
+                      width: 40,
+                      height: 40,
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
@@ -903,13 +908,13 @@ export default function ProductPage() {
                     }}
                     title="Partager"
                   >
-                    <Share2 size={20} />
+                    <Share2 size={18} />
                   </button>
                 </div>
               </div>
 
               {seller && (
-                <div style={{ marginTop: 'auto', padding: 28, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                <div style={{ marginTop: 'auto', padding: '22px 28px 28px', backgroundColor: '#fff', borderRadius: 18, boxShadow: PRODUIT_VENDEUR_CARD_SHADOW }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                     <div style={{ width: 64, height: 64, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                       {seller.avatarUrl ? (
@@ -1013,36 +1018,36 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Tag size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
                         <TruncatedInfoValue text={categoryLabel || listing.category} fontSize={14} />
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
+                        <span style={{ fontWeight: 400, color: '#555', fontSize: 14 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Award size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Marque</span>
                       </div>
                       {listing.brand ? (
                         <TruncatedInfoValue text={listing.brand} fontSize={14} />
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14 }}> </span>
+                        <span style={{ fontWeight: 400, color: '#555', fontSize: 14 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Modèle</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Modèle</span>
                       </div>
                       <TruncatedInfoValue text={listing.model ?? ''} fontSize={14} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Année</span>
                       </div>
                       <TruncatedInfoValue text={listing.year != null ? String(listing.year) : ' '} fontSize={14} />
                     </div>
@@ -1051,7 +1056,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div ref={etatInfoRefDesktop} style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, position: 'relative' }}>
                         <CheckCircle size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>État</span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1104,7 +1109,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Layers size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Matière</span>
                       </div>
                       <TruncatedInfoValue
                         text={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
@@ -1114,7 +1119,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Palette size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Couleur</span>
                       </div>
                       <TruncatedInfoValue
                         text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
@@ -1125,7 +1130,7 @@ export default function ProductPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                           <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                          <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
+                          <span style={{ color: '#555', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
                         <TruncatedInfoValue
                           text={
@@ -1145,7 +1150,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                         <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>Dimension</span>
+                        <span style={{ color: '#555', fontSize: 14 }}>Dimension</span>
                       </div>
                       <TruncatedInfoValue text={formatDimensionsCmValue(listing.widthCm, listing.heightCm)} fontSize={14} />
                     </div>
@@ -1267,7 +1272,7 @@ export default function ProductPage() {
           {/* Section Vendeur Professionnel — même largeur que les autres (100 % colonne gauche) */}
           {seller && (
             <div style={{ marginTop: 24, borderTop: '1px solid #e5e5e7', paddingTop: 24, width: '100%' }}>
-              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 18 }}>
+              <h2 className="produit-section-title produit-section-title-vendeur" style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.2, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 12 }}>
                 <Store size={21} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                 Vendeur professionnel
               </h2>
@@ -1424,11 +1429,11 @@ export default function ProductPage() {
                     <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
                   )}
                 </div>
-                <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, marginBottom: 14, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
+                <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, marginBottom: 5, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
                 <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 24, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <p style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
+                    <p style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>{formatPrice(listing.price)}</p>
                     {priceStats && (() => {
                       const deal = getDealLevel(listing.price, priceStats.average);
                       return (
@@ -1451,33 +1456,33 @@ export default function ProductPage() {
                         onClick={handleFavoriteClick}
                         disabled={favoriteLoading}
                         style={{
-                          height: 40,
-                          paddingLeft: 12,
-                          paddingRight: 12,
-                          borderRadius: 20,
+                          height: 36,
+                          paddingLeft: 10,
+                          paddingRight: 10,
+                          borderRadius: 18,
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 5,
+                          gap: 4,
                           backgroundColor: '#fff',
                           color: '#1d1d1f',
                           border: '1.5px solid #d2d2d7',
                           cursor: 'pointer',
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: 500,
                         }}
                         title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                       >
                         <span>{likesCount}</span>
-                        <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                        <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
                       </button>
                     ) : (
                       <button
                         onClick={handleFavoriteClick}
                         disabled={favoriteLoading}
                         style={{
-                          width: 40,
-                          height: 40,
+                          width: 36,
+                          height: 36,
                           borderRadius: '50%',
                           display: 'flex',
                           alignItems: 'center',
@@ -1489,14 +1494,14 @@ export default function ProductPage() {
                         }}
                         title={isFavorited ? 'Retirer des favoris' : 'Ajouter aux favoris'}
                       >
-                        <Heart size={18} fill={isFavorited ? 'currentColor' : 'none'} />
+                        <Heart size={16} fill={isFavorited ? 'currentColor' : 'none'} />
                       </button>
                     )}
                     <button
                       onClick={handleShare}
                       style={{
-                        width: 40,
-                        height: 40,
+                        width: 36,
+                        height: 36,
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -1508,13 +1513,13 @@ export default function ProductPage() {
                       }}
                       title="Partager"
                     >
-                      <Share2 size={18} />
+                      <Share2 size={16} />
                     </button>
                   </div>
                 </div>
 
                 {seller && (
-                  <div style={{ padding: 24, backgroundColor: '#f5f5f7', borderRadius: 18, border: '1px solid #e8e6e3' }}>
+                  <div style={{ padding: '20px 24px 24px', backgroundColor: '#fff', borderRadius: 18, boxShadow: PRODUIT_VENDEUR_CARD_SHADOW }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
                       <div style={{ width: 56, height: 56, borderRadius: 10, overflow: 'hidden', backgroundColor: '#f0f0f2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {seller.avatarUrl ? (
@@ -1577,36 +1582,36 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Tag size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Catégorie</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Catégorie</span>
                       </div>
                       {listing.category ? (
                         <TruncatedInfoValue text={categoryLabel || listing.category} fontSize={13} />
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
+                        <span style={{ fontWeight: 400, color: '#555', fontSize: 13 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Award size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Marque</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Marque</span>
                       </div>
                       {listing.brand ? (
                         <TruncatedInfoValue text={listing.brand} fontSize={13} />
                       ) : (
-                        <span style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 13 }}> </span>
+                        <span style={{ fontWeight: 400, color: '#555', fontSize: 13 }}> </span>
                       )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Package size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Modèle</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Modèle</span>
                       </div>
                       <TruncatedInfoValue text={listing.model || ' '} fontSize={13} />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Calendar size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Année</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Année</span>
                       </div>
                       <TruncatedInfoValue text={listing.year != null ? String(listing.year) : ' '} fontSize={13} />
                     </div>
@@ -1615,7 +1620,7 @@ export default function ProductPage() {
                     <div ref={etatInfoRefMobile} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0, position: 'relative' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <CheckCircle size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>État</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>État</span>
                         <button
                           type="button"
                           onClick={(e) => {
@@ -1694,7 +1699,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Layers size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Matière</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Matière</span>
                       </div>
                       <TruncatedInfoValue
                         text={listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : ' '}
@@ -1704,7 +1709,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Palette size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Couleur</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Couleur</span>
                       </div>
                       <TruncatedInfoValue
                         text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
@@ -1715,7 +1720,7 @@ export default function ProductPage() {
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                           <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                          <span style={{ color: '#1d1d1f', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
+                          <span style={{ color: '#555', fontSize: 13 }}>{listing.category === 'chaussures' ? 'Pointure' : listing.category === 'montres' ? 'Dimension' : 'Taille'}</span>
                         </div>
                         <TruncatedInfoValue
                           text={
@@ -1735,7 +1740,7 @@ export default function ProductPage() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                         <Ruler size={16} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 13 }}>Dimension</span>
+                        <span style={{ color: '#555', fontSize: 13 }}>Dimension</span>
                       </div>
                       <TruncatedInfoValue text={formatDimensionsCmValue(listing.widthCm, listing.heightCm)} fontSize={13} />
                     </div>
@@ -1855,8 +1860,8 @@ export default function ProductPage() {
 
                 {/* Section Vendeur professionnel (mobile) — sous Indicateur de marché */}
                 {seller && (
-                  <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>
-                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
+                  <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 16, marginTop: 20 }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: 6, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 5 }}>
                       <Store size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                       Vendeur professionnel
                     </h2>
@@ -1961,12 +1966,13 @@ export default function ProductPage() {
                   <X size={20} />
                 </button>
               </div>
-              <p className="produit-vendeur-map-seller-row">
+              <SellerVisitDescriptionInfo description={seller.description} rowClassName="produit-vendeur-map-seller-row">
                 <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-map-seller-link" title={seller.companyName}>
                   {seller.companyName}
                 </Link>
                 <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
-              </p>
+              </SellerVisitDescriptionInfo>
+              <SellerVisitOpeningHoursBlock hours={seller.openingHours} />
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
                 <iframe

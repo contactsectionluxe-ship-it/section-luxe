@@ -52,6 +52,8 @@ import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
+import { SellerVisitOpeningHoursBlock } from '@/components/SellerVisitOpeningHoursBlock';
+import { SellerVisitDescriptionInfo } from '@/components/SellerVisitDescriptionInfo';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
@@ -4240,7 +4242,7 @@ function CatalogueContent() {
                         <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                           <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                             <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
-                            <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant={filters.sellerId ? 'produit' : 'homeFeatured'} />
+                            <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="homeFeatured" />
                           </span>
                           {listing.sellerPostcode && (
                             <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
@@ -4424,7 +4426,7 @@ function CatalogueContent() {
                               <span className="catalogue-listing-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {listing.sellerName}
                               </span>
-                              <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant={filters.sellerId ? 'produit' : 'homeFeatured'} />
+                              <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="homeFeatured" />
                             </span>
                           {listing.sellerPostcode && (
                               <span className="catalogue-listing-codepostal" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, lineHeight: 1.2, fontWeight: 400, flexShrink: 0, letterSpacing: 0.5 }}>
@@ -4577,14 +4579,10 @@ function CatalogueContent() {
                   <X size={20} />
                 </button>
               </div>
-              <div
-                className="catalogue-seller-banner-title-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '0.35em',
-                  marginBottom: 8,
+              <SellerVisitDescriptionInfo
+                description={seller.description}
+                rowClassName="catalogue-seller-banner-title-row"
+                rowStyle={{
                   fontFamily: 'var(--font-inter), var(--font-sans)',
                   fontSize: 18,
                   fontWeight: 600,
@@ -4595,7 +4593,8 @@ function CatalogueContent() {
                   {seller.companyName}
                 </Link>
                 <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
-              </div>
+              </SellerVisitDescriptionInfo>
+              <SellerVisitOpeningHoursBlock hours={seller.openingHours} />
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
               <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe

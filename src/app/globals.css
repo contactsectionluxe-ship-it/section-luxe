@@ -415,9 +415,9 @@ a:focus-visible {
 
 /* Page produit : les 4 titres de section (Informations, Description, Prix, Vendeur professionnel) même taille sur mobile */
 @media (max-width: 767px) {
-  /* Téléphone : nom vendeur (carte Téléphone / Message) — un peu sous le titre produit (24px) */
+  /* Téléphone : nom vendeur (carte Téléphone / Message) */
   .produit-vendeur-nom-badge-row--mobile-card {
-    font-size: 22px;
+    font-size: 21px;
   }
   .produit-section-title {
     font-size: 20px !important;
@@ -579,10 +579,17 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
 }
 .produit-vendeur-nom-badge-row--desktop {
   margin-bottom: 2px;
-  font-size: clamp(14px, 6.8cqi, 28px);
+  font-size: clamp(14px, 6cqi, 25px);
 }
 .produit-vendeur-nom-badge-row--mobile-card {
   margin-bottom: 2px;
+}
+
+/* Carte vendeur (photo) : badge Plus/Pro proche du défaut composant (0,88em) */
+.produit-vendeur-nom-badge-row--desktop .seller-verified-subscription-badge svg,
+.produit-vendeur-nom-badge-row--mobile-card .seller-verified-subscription-badge svg {
+  width: 0.84em !important;
+  height: 0.84em !important;
 }
 
 /* Section « Vendeur professionnel » (page produit) : nom seul, sans photo ni badge — typo un peu plus petite */
@@ -680,6 +687,11 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
 /* Liste annonces d’un vendeur : bannière uniquement (pas la popup carte) — badge très légèrement plus bas */
 .catalogue-page-main--seller .catalogue-seller-banner .catalogue-seller-banner-title-row .seller-verified-subscription-badge {
   transform: translateY(0.08em) !important;
+}
+/* Même bannière : icône un peu plus petite que le variant produit (0,88em → 0,8em) */
+.catalogue-page-main--seller .catalogue-seller-banner .catalogue-seller-banner-title-row .seller-verified-subscription-badge svg {
+  width: 0.8em !important;
+  height: 0.8em !important;
 }
 
 /* Page d'accueil « À la une » : même ligne et même corps visuel sous-titre + « Voir tout » (tous écrans ; mobile surcharge ci-dessous) */
