@@ -14,6 +14,41 @@ type Props = {
   hours?: WeeklyOpeningHours | null;
 };
 
+function OpeningHoursChevronButton({ weekOpen, onToggle }: { weekOpen: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={weekOpen}
+      aria-label={weekOpen ? 'Masquer les horaires de la semaine' : 'Afficher les horaires de la semaine'}
+      title="Horaires de la semaine"
+      style={{
+        flexShrink: 0,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: 'none',
+        background: 'transparent',
+        padding: 2,
+        margin: 0,
+        cursor: 'pointer',
+        color: '#444',
+        lineHeight: 0,
+      }}
+    >
+      <ChevronDown
+        size={16}
+        strokeWidth={2}
+        style={{
+          transform: weekOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s ease',
+        }}
+        aria-hidden
+      />
+    </button>
+  );
+}
+
 export function SellerVisitOpeningHoursBlock({ hours }: Props) {
   const [weekOpen, setWeekOpen] = useState(false);
   const h = hours ?? createDefaultWeeklyOpeningHours();
@@ -33,48 +68,50 @@ export function SellerVisitOpeningHoursBlock({ hours }: Props) {
           rowGap: 4,
         }}
       >
-        <span style={{ margin: 0, fontSize: 14, color: '#444', lineHeight: 1.45 }}>
-          {closedToday ? (
-            "Fermé aujourd'hui"
-          ) : (
-            <>
-              Ouvert aujourd&apos;hui
-              {' : '}
-              {todayText}
-            </>
-          )}
-        </span>
-        <button
-          type="button"
-          onClick={() => setWeekOpen((v) => !v)}
-          aria-expanded={weekOpen}
-          aria-label={weekOpen ? 'Masquer les horaires de la semaine' : 'Afficher les horaires de la semaine'}
-          title="Horaires de la semaine"
-          style={{
-            flexShrink: 0,
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: 'none',
-            background: 'transparent',
-            padding: 2,
-            margin: 0,
-            marginLeft: 6,
-            cursor: 'pointer',
-            color: '#444',
-            lineHeight: 0,
-          }}
-        >
-          <ChevronDown
-            size={16}
-            strokeWidth={2}
+        {closedToday ? (
+          <span
             style={{
-              transform: weekOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-              transition: 'transform 0.2s ease',
+              display: 'inline-flex',
+              flexWrap: 'nowrap',
+              alignItems: 'center',
+              gap: 6,
+              minWidth: 0,
+              maxWidth: '100%',
             }}
-            aria-hidden
-          />
-        </button>
+          >
+            <span style={{ margin: 0, fontSize: 14, color: '#444', lineHeight: 1.45 }}>Fermé aujourd&apos;hui</span>
+            <OpeningHoursChevronButton weekOpen={weekOpen} onToggle={() => setWeekOpen((v) => !v)} />
+          </span>
+        ) : (
+          <>
+            <span style={{ margin: 0, fontSize: 14, color: '#444', lineHeight: 1.45 }}>Ouvert aujourd&apos;hui : </span>
+            <span
+              style={{
+                display: 'inline-flex',
+                flexWrap: 'nowrap',
+                alignItems: 'center',
+                gap: 4,
+                minWidth: 0,
+                maxWidth: '100%',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+              }}
+            >
+              <span
+                style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#444',
+                  lineHeight: 1.45,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {todayText}
+              </span>
+              <OpeningHoursChevronButton weekOpen={weekOpen} onToggle={() => setWeekOpen((v) => !v)} />
+            </span>
+          </>
+        )}
       </div>
       {weekOpen && (
         <ul

@@ -12,47 +12,60 @@ type Props = {
   rowStyle?: CSSProperties;
 };
 
-/** Même bouton (i) et panneau que le tooltip « État » sur la page produit (annonce). */
+/** Icône (i) ; panneau description en pleine largeur sous le titre (comme la carte), tous écrans. */
 export function SellerVisitDescriptionInfo({ description, children, rowClassName, rowStyle }: Props) {
-  const [clickedOpen, setClickedOpen] = useState(false);
-  const [hoverOpen, setHoverOpen] = useState(false);
+  const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
   const triggerId = useId();
   const text = typeof description === 'string' ? description.trim() : '';
   const hasDesc = Boolean(text);
-  const visible = clickedOpen || hoverOpen;
-  const active = visible;
 
   useEffect(() => {
-    if (!visible) return;
+    if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setClickedOpen(false);
-        setHoverOpen(false);
-      }
+      if (e.key === 'Escape') setOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [visible]);
+  }, [open]);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!open) return;
     const onDoc = (e: MouseEvent) => {
       const el = wrapRef.current;
-      if (el && !el.contains(e.target as Node)) {
-        setClickedOpen(false);
-        setHoverOpen(false);
-      }
+      if (el && !el.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
-  }, [visible]);
+  }, [open]);
+
+  const rowClass = [rowClassName, 'seller-visit-title-row'].filter(Boolean).join(' ');
+
+  const panelStyle: CSSProperties = {
+    width: '100%',
+    maxWidth: '100%',
+    marginTop: 10,
+    padding: 16,
+    backgroundColor: '#fff',
+    border: '1px solid #e8e6e3',
+    borderRadius: 12,
+    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    fontSize: 13,
+    lineHeight: 1.5,
+    color: '#1d1d1f',
+    boxSizing: 'border-box',
+    wordBreak: 'break-word',
+  };
 
   return (
-    <div style={{ width: '100%', marginBottom: 8 }}>
+    <div
+      ref={wrapRef}
+      className="seller-visit-description-block"
+      style={{ position: 'relative', zIndex: 3, width: '100%', marginBottom: 8 }}
+    >
       <div
-        className={rowClassName}
+        className={rowClass}
         style={{
           margin: 0,
           display: 'flex',
@@ -65,24 +78,27 @@ export function SellerVisitDescriptionInfo({ description, children, rowClassName
       >
         {hasDesc && (
           <div
-            ref={wrapRef}
-            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-            onMouseEnter={() => setHoverOpen(true)}
-            onMouseLeave={() => setHoverOpen(false)}
+            className="seller-visit-info-wrap"
+            style={{
+              position: 'relative',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              margin: 0,
+              padding: 0,
+              lineHeight: 0,
+            }}
           >
             <button
               type="button"
+              className="seller-visit-info-btn"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (visible) {
-                  setClickedOpen(false);
-                  setHoverOpen(false);
-                } else {
-                  setClickedOpen(true);
-                }
+                setOpen((v) => !v);
               }}
-              aria-expanded={visible}
+              aria-expanded={open}
               aria-controls={panelId}
               id={triggerId}
               aria-label="Description du vendeur"
@@ -91,70 +107,43 @@ export function SellerVisitDescriptionInfo({ description, children, rowClassName
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 22,
-                height: 22,
+                border: 'none',
+                background: 'transparent',
                 padding: 0,
-                lineHeight: 0,
-                fontSize: 0,
-                boxSizing: 'border-box',
-                border: '1px solid #d2d2d7',
-                borderRadius: '50%',
-                backgroundColor: active ? '#1d1d1f' : '#fff',
-                color: active ? '#fff' : '#6e6e73',
+                margin: 0,
                 cursor: 'pointer',
-                transition: 'background-color 0.2s, color 0.2s',
-                boxShadow: active ? '0 1px 3px rgba(0,0,0,0.12)' : '0 1px 2px rgba(0,0,0,0.04)',
+                fontSize: 'inherit',
+                color: open ? '#1d1d1f' : '#aeaeb2',
+                lineHeight: 0,
+                transition: 'color 0.15s ease',
               }}
             >
-              <Info size={13} strokeWidth={2.2} style={{ display: 'block', flexShrink: 0 }} aria-hidden />
+              <Info
+                strokeWidth={2}
+                aria-hidden
+                style={{
+                  display: 'block',
+                  flexShrink: 0,
+                  width: '1em',
+                  height: '1em',
+                }}
+              />
             </button>
-            {visible && (
-              <>
-                {/* Pont sous le (i) : même logique que la fiche produit pour ne pas perdre le survol entre le bouton et le panneau */}
-                <div
-                  aria-hidden
-                  onMouseEnter={() => setHoverOpen(true)}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: '100%',
-                    width: 'min(360px, calc(100vw - 48px))',
-                    minWidth: 320,
-                    height: 6,
-                  }}
-                />
-                <div
-                  id={panelId}
-                  role="tooltip"
-                  aria-labelledby={triggerId}
-                  onMouseEnter={() => setHoverOpen(true)}
-                  style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 'calc(100% + 6px)',
-                    zIndex: 30,
-                    minWidth: 320,
-                    maxWidth: 'min(360px, calc(100vw - 48px))',
-                    padding: 16,
-                    backgroundColor: '#fff',
-                    border: '1px solid #e8e6e3',
-                    borderRadius: 12,
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                    fontSize: 13,
-                    lineHeight: 1.5,
-                    color: '#1d1d1f',
-                    boxSizing: 'border-box',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  <p style={{ margin: 0, color: '#6e6e73', whiteSpace: 'pre-wrap' }}>{text}</p>
-                </div>
-              </>
-            )}
           </div>
         )}
         {children}
       </div>
+      {open && hasDesc && (
+        <div
+          id={panelId}
+          role="region"
+          aria-labelledby={triggerId}
+          className="seller-visit-desc-panel"
+          style={panelStyle}
+        >
+          <p style={{ margin: 0, color: '#6e6e73', whiteSpace: 'pre-wrap' }}>{text}</p>
+        </div>
+      )}
     </div>
   );
 }

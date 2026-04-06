@@ -4596,7 +4596,7 @@ function CatalogueContent() {
               </SellerVisitDescriptionInfo>
               <SellerVisitOpeningHoursBlock hours={seller.openingHours} />
               <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{[seller.address, seller.postcode, seller.city].filter(Boolean).join(', ')}</p>
-              <div style={{ position: 'relative', width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ position: 'relative', zIndex: 0, width: '100%', height: 220, borderRadius: 12, overflow: 'hidden' }}>
                 <iframe
                   title="Carte du vendeur"
                   src={`https://www.google.com/maps?q=${encodeURIComponent([seller.address, seller.postcode, seller.city].filter(Boolean).join(', '))}&z=${mapZoom}&output=embed`}

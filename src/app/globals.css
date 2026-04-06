@@ -684,6 +684,47 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   text-decoration: none;
 }
 
+/* Popup « Rendre visite » : (i) + badge rond = 1em (même échelle que le nom) ; surcharge locale uniquement, sans toucher au composant Badge ailleurs */
+.seller-visit-title-row .seller-verified-subscription-badge svg {
+  width: 1em !important;
+  height: 1em !important;
+}
+.seller-visit-title-row .seller-visit-info-btn svg {
+  width: 1em !important;
+  height: 1em !important;
+}
+/* Même boîte 1×1em + même décalage vertical pour (i) et badge (évite le min-height natif du bouton) */
+.seller-visit-title-row .seller-verified-subscription-badge {
+  box-sizing: border-box !important;
+  width: 1em !important;
+  height: 1em !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  transform: translateY(calc(0.05em - 0.2mm)) !important;
+}
+.seller-visit-title-row .seller-visit-info-wrap {
+  box-sizing: border-box;
+  width: 1em;
+  height: 1em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transform: translateY(calc(0.05em - 0.2mm));
+  overflow: visible;
+}
+.seller-visit-title-row .seller-visit-info-btn {
+  box-sizing: border-box !important;
+  width: 1em !important;
+  height: 1em !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  flex-shrink: 0;
+}
+
 /* Liste annonces d’un vendeur : bannière uniquement (pas la popup carte) — badge très légèrement plus bas */
 .catalogue-page-main--seller .catalogue-seller-banner .catalogue-seller-banner-title-row .seller-verified-subscription-badge {
   transform: translateY(0.08em) !important;
