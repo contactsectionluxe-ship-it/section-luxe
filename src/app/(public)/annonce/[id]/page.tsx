@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Plus, Minus, Euro, Info, FileText, X, LineChart } from 'lucide-react';
+import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Euro, Info, FileText, X, LineChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, getSellerListings, getListings, incrementPhoneReveals, getVisitorId } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
@@ -24,8 +24,7 @@ import { getDealLevel, getBarPositionFromDeal, DEAL_MARKET_BAR_SEGMENT_COLORS } 
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
-import { SellerVisitOpeningHoursBlock } from '@/components/SellerVisitOpeningHoursBlock';
-import { SellerVisitDescriptionInfo } from '@/components/SellerVisitDescriptionInfo';
+import { SellerVisitMapPopup } from '@/components/SellerVisitMapPopup';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 
 /** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
@@ -1955,63 +1954,21 @@ export default function ProductPage() {
       </div>
 
       {/* Popup Rendre visite au vendeur */}
-      {showMapPopup && seller && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={() => setShowMapPopup(false)} />
-          <div style={{ position: 'relative', width: '100%', maxWidth: 560, maxHeight: '90vh', overflow: 'auto', backgroundColor: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
-            <div style={{ padding: 24 }}>
-              <div style={{ position: 'relative', display: 'flex', alignItems: 'center', marginBottom: 16, paddingRight: 36 }}>
-                <h2 style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, margin: 0, color: '#0a0a0a', textAlign: 'center', paddingBottom: 16, borderBottom: '1px solid #e5e5e7' }}>Rendre visite au vendeur</h2>
-                <button type="button" onClick={() => setShowMapPopup(false)} style={{ position: 'absolute', right: 0, top: -6, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: '#f5f5f7', borderRadius: 10, cursor: 'pointer' }} aria-label="Fermer">
-                  <X size={20} />
-                </button>
-              </div>
-              <SellerVisitDescriptionInfo description={seller.description} rowClassName="produit-vendeur-map-seller-row">
-                <Link href={`${sellerCataloguePath(seller)}`} className="produit-vendeur-map-seller-link" title={seller.companyName}>
-                  {seller.companyName}
-                </Link>
-                <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
-              </SellerVisitDescriptionInfo>
-              <SellerVisitOpeningHoursBlock hours={seller.openingHours} />
-              <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{seller.address}</p>
-              <div style={{ position: 'relative', zIndex: 0, width: '100%', height: 220, borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-                <iframe
-                  title="Carte du vendeur"
-                  src={`https://www.google.com/maps?q=${encodeURIComponent([seller.address, seller.postcode, seller.city].filter(Boolean).join(', '))}&z=${mapZoom}&output=embed`}
-                  style={{ width: '100%', height: '100%', border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.min(20, z + 1)); }}
-                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
-                    title="Zoom avant"
-                  >
-                    <Plus size={18} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setMapZoom((z) => Math.max(10, z - 1)); }}
-                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', border: '1px solid #d2d2d7', borderRadius: 10, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.1)' }}
-                    title="Zoom arrière"
-                  >
-                    <Minus size={18} />
-                  </button>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => { setShowMapPopup(false); if (!isAuthenticated) setShowAuthModal(true); else setShowContactForm(true); }}
-                style={{ width: '100%', height: 48, backgroundColor: '#1d1d1f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 500, cursor: 'pointer' }}
-              >
-                Contacter le vendeur
-              </button>
-            </div>
-          </div>
-        </div>
+      {seller && (
+        <SellerVisitMapPopup
+          seller={seller}
+          open={showMapPopup}
+          onClose={() => setShowMapPopup(false)}
+          mapZoom={mapZoom}
+          setMapZoom={setMapZoom}
+          showBackButton={false}
+          showContactButton
+          onContactClick={() => {
+            setShowMapPopup(false);
+            if (!isAuthenticated) setShowAuthModal(true);
+            else setShowContactForm(true);
+          }}
+        />
       )}
 
       {/* Popup Message / Contacter le vendeur */}
