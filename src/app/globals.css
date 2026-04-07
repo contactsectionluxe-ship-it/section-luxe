@@ -869,9 +869,26 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   }
   .hero-sous-titre {
     display: block !important;
-    font-size: 14px !important;
-    margin-bottom: 20px !important;
+    font-size: clamp(11px, 3.1vw, 14px) !important;
+    margin-bottom: 3px !important;
     text-align: left !important;
+    white-space: nowrap !important;
+  }
+  .hero-numbered-steps {
+    column-gap: 9px !important;
+    row-gap: 4px !important;
+    margin-top: 0 !important;
+    margin-bottom: 20px !important;
+    font-size: clamp(11px, 3.1vw, 14px) !important;
+    color: #6e6e73 !important;
+  }
+  .hero-numbered-steps .hero-step-icon {
+    width: clamp(11px, 3.1vw, 14px) !important;
+    height: clamp(11px, 3.1vw, 14px) !important;
+  }
+  .hero-numbered-steps li > span:last-of-type {
+    font-size: clamp(11px, 3.1vw, 14px) !important;
+    color: #6e6e73 !important;
   }
   /* Page d'accueil mobile : remonter la section Catégories */
   .home-section-categories {

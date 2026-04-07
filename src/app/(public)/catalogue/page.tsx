@@ -332,6 +332,11 @@ function filtersToParams(filters: Filters, page: number, opts?: { omitSellerId?:
   return params;
 }
 
+/** Empreinte des filtres telle qu’en URL (sans `page`), pour éviter setFilters inutile au retour arrière. */
+function catalogueFiltersUrlSignature(f: Filters, opts?: { omitSellerId?: boolean }): string {
+  return normalizeQueryString(filtersToParams(f, 1, opts));
+}
+
 /** Reconstruit les filtres à partir des paramètres URL (retour arrière, lien partagé). */
 function paramsToFilters(params: URLSearchParams): Filters {
   const initial: Filters = { ...defaultFilters };
@@ -427,7 +432,7 @@ function CatalogueContent() {
           setVendeurSlugError(true);
           return;
         }
-        setFilters((prev) => ({ ...prev, sellerId: id }));
+        setFilters((prev) => (prev.sellerId === id ? prev : { ...prev, sellerId: id }));
       })
       .catch(() => {
         if (!cancelled) setVendeurSlugError(true);
@@ -865,7 +870,11 @@ function CatalogueContent() {
   const pageSize =
     isMobile && viewMode === 'grid' ? PAGE_SIZE_MOBILE_GRID : PAGE_SIZE_DEFAULT;
   const totalPages = Math.max(1, Math.ceil(listings.length / pageSize));
-  const effectivePage = Math.min(Math.max(page, 1), totalPages);
+  /** Tant que les résultats ne sont pas chargés (liste vide + loading), garder la page de l’URL — sinon totalPages=1 et on écrasait ?page=2 au retour arrière. */
+  const effectivePage =
+    loading && listings.length === 0
+      ? Math.max(page, 1)
+      : Math.min(Math.max(page, 1), totalPages);
   const paginatedListings = useMemo(() => {
     const start = (effectivePage - 1) * pageSize;
     return listings.slice(start, start + pageSize);
@@ -925,28 +934,40 @@ function CatalogueContent() {
     });
   }, []);
 
-  // Reset page à 1 et synchroniser les filtres vers l'URL dès que les filtres changent (useLayoutEffect pour que l'URL soit à jour avant que l'utilisateur puisse cliquer sur un article).
-  const didMountRef = useRef(false);
+  // Reset page à 1 seulement quand les critères de filtre « utiles » changent vraiment (empreinte URL), pas à chaque nouveau objet filters (retour arrière, injection sellerId vendeur, etc.).
+  const catalogueFilterSigSnapshotRef = useRef<{ pathname: string; sig: string } | null>(null);
   useLayoutEffect(() => {
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      return;
-    }
+    const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
+    const sig = catalogueFiltersUrlSignature(filters, { omitSellerId: omitSellerInQuery });
+
     if (justSetFiltersFromConditionRef.current) {
       justSetFiltersFromConditionRef.current = false;
+      catalogueFilterSigSnapshotRef.current = { pathname, sig };
       return;
     }
+
+    const snap = catalogueFilterSigSnapshotRef.current;
+    if (!snap || snap.pathname !== pathname) {
+      catalogueFilterSigSnapshotRef.current = { pathname, sig };
+      return;
+    }
+    if (snap.sig === sig) {
+      return;
+    }
+
+    catalogueFilterSigSnapshotRef.current = { pathname, sig };
     setPage(1);
     navigateToPage(1, true);
-  }, [filters, navigateToPage]);
+  }, [filters, navigateToPage, pathname]);
 
-  // Clamp si la page dépasse le nombre total de pages après un changement de résultats.
+  // Clamp si la page dépasse le nombre total de pages après un changement de résultats (pas pendant le chargement initial : liste vide).
   useEffect(() => {
+    if (loading && listings.length === 0) return;
     if (page !== effectivePage) {
       setPage(effectivePage);
       navigateToPage(effectivePage, true);
     }
-  }, [page, effectivePage, navigateToPage]);
+  }, [page, effectivePage, navigateToPage, loading, listings.length]);
 
   // Synchroniser depuis l'URL. Clic sur Catalogue dans le header (reset=1) : tout réinitialiser. Clic sur Neuf/Occasion : tout réinitialiser + présélectionner l'état. Sinon (ex. retour depuis page produit) : restaurer les filtres depuis l'URL.
   useEffect(() => {
@@ -1008,12 +1029,17 @@ function CatalogueContent() {
     lastSyncedUrlRef.current = null;
     // Retour depuis page produit ou autre : restaurer filtres et page depuis l'URL
     const fromUrl = paramsToFilters(searchParams);
-    if (pathname.startsWith('/catalogue/vendeur/')) {
-      setFilters((prev) => ({ ...fromUrl, sellerId: prev.sellerId ?? fromUrl.sellerId }));
-    } else {
-      setFilters(fromUrl);
-    }
-    setPage(parsePositiveInt(searchParams.get('page'), 1));
+    const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
+    setFilters((prev) => {
+      const merged = omitSellerInQuery
+        ? { ...fromUrl, sellerId: prev.sellerId ?? fromUrl.sellerId }
+        : fromUrl;
+      const prevSig = catalogueFiltersUrlSignature(prev, { omitSellerId: omitSellerInQuery });
+      const nextSig = catalogueFiltersUrlSignature(merged, { omitSellerId: omitSellerInQuery });
+      return prevSig === nextSig ? prev : merged;
+    });
+    const pageFromUrl = parsePositiveInt(searchParams.get('page'), 1);
+    setPage((p) => (p === pageFromUrl ? p : pageFromUrl));
     setLocalPriceMin(fromUrl.priceMin != null ? String(fromUrl.priceMin) : '');
     setLocalPriceMax(fromUrl.priceMax != null ? String(fromUrl.priceMax) : '');
     setLocalYearMin(fromUrl.yearMin != null ? String(fromUrl.yearMin) : '');
@@ -4234,7 +4260,7 @@ function CatalogueContent() {
                         <CatalogueCardPhotos
                           photos={listing.photos}
                           alt={listing.title}
-                          sizes="(max-width: 768px) 50vw, (max-width: 1400px) 33vw, min(440px, 28vw)"
+                          sizes="(max-width: 640px) 50vw, 25vw"
                         />
                       </div>
                       <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
@@ -4345,7 +4371,7 @@ function CatalogueContent() {
                         <CatalogueCardPhotos
                           photos={listing.photos}
                           alt={listing.title}
-                          sizes="(max-width: 768px) 42vw, 200px"
+                          sizes="(max-width: 640px) 50vw, min(480px, 40vw)"
                         />
                       </div>
                             <div

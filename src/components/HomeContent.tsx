@@ -11,6 +11,7 @@ import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
+import { HeroNumberedSteps } from '@/components/HeroNumberedSteps';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -129,23 +130,22 @@ export default function HomeContent() {
               color: '#1d1d1f',
             }}
           >
-            <span className="hide-mobile">Trouvez la pièce de luxe qui vous correspond</span>
-            <span className="hide-desktop">Trouvez la pièce de luxe<br />qui vous correspond</span>
+            <span className="hide-mobile">L’excellence du luxe, à portée de main</span>
+            <span className="hide-desktop">L’excellence du luxe,<br />à portée de main</span>
           </h1>
           <p
             className="hero-sous-titre"
             style={{
               fontSize: 16,
               color: '#6e6e73',
-              maxWidth: 400,
-              marginBottom: 24,
+              marginBottom: 3,
               lineHeight: 1.5,
+              whiteSpace: 'nowrap',
             }}
           >
-            Une vision claire du marché professionnel.
-            <br />
-            Comparez, analysez, choisissez
+            Explorez les offres de professionnels près de chez vous.
           </p>
+          <HeroNumberedSteps />
           <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
             <Link
               href="/catalogue"
