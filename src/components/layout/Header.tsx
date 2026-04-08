@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
@@ -61,8 +61,13 @@ const HEADER_ACTION_ICON_COLOR = '#1d1d1f';
 /** Espacement horizontal entre les liens de la navigation centrale desktop. */
 const HEADER_CENTER_NAV_GAP_PX = 64;
 
-/** Espacement vertical entre les mêmes liens dans le menu burger mobile. */
-const HEADER_MOBILE_NAV_GAP_PX = 14;
+/** Séparateur entre entrées du menu burger (même trait que sous-menu compte : Admin / Se déconnecter). */
+const HEADER_MOBILE_NAV_DIVIDER_STYLE: CSSProperties = {
+  height: 1,
+  backgroundColor: 'rgba(0,0,0,0.06)',
+  margin: '8px 0',
+  flexShrink: 0,
+};
 
 /** Même police / cassage que `.listing-grid-vendeur` des cartes « À la une » (accueil). */
 const CENTER_NAV_LINK_STYLE: CSSProperties = {
@@ -221,45 +226,47 @@ function HeaderMobileNavLinks({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'flex-start',
-        gap: HEADER_MOBILE_NAV_GAP_PX,
+        alignItems: 'stretch',
+        gap: 0,
         width: '100%',
       }}
     >
-      {items.map((item) => {
+      {items.map((item, index) => {
         const active = isNavActive(item.href);
         const ItemIcon = item.mobileIcon;
         return (
-          <Link
-            key={item.name}
-            href={item.href}
-            onClick={onItemClick}
-            className={`header-center-nav-link-mobile${active ? ' header-center-nav-link--active' : ''}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              padding: '12px 14px',
-              ...HEADER_MOBILE_BURGER_NAV_TEXT_STYLE,
-              borderRadius: 10,
-              transition: 'background-color 0.15s, color 0.2s',
-              backgroundColor: active ? '#e8e8ed' : 'transparent',
-              whiteSpace: 'nowrap',
-              width: 'max-content',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-              textDecoration: 'none',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#e8e8ed';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent';
-            }}
-          >
-            <ItemIcon size={18} color="#1d1d1f" style={{ flexShrink: 0 }} aria-hidden />
-            {item.name}
-          </Link>
+          <Fragment key={item.name}>
+            <Link
+              href={item.href}
+              onClick={onItemClick}
+              className={`header-center-nav-link-mobile${active ? ' header-center-nav-link--active' : ''}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 14px',
+                ...HEADER_MOBILE_BURGER_NAV_TEXT_STYLE,
+                borderRadius: 10,
+                transition: 'background-color 0.15s, color 0.2s',
+                backgroundColor: active ? '#e8e8ed' : 'transparent',
+                whiteSpace: 'nowrap',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#e8e8ed';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent';
+              }}
+            >
+              <ItemIcon size={18} color="#1d1d1f" style={{ flexShrink: 0 }} aria-hidden />
+              {item.name}
+            </Link>
+            {index === 0 && items.length > 1 ? <div style={HEADER_MOBILE_NAV_DIVIDER_STYLE} aria-hidden /> : null}
+          </Fragment>
         );
       })}
     </div>

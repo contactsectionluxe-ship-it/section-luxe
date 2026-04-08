@@ -6,7 +6,7 @@ import {
   ARTICLE_TYPES,
   LUXURY_BRANDS,
   CONDITIONS,
-  COLORS,
+  getColorLabel,
   MATERIALS,
   REGIONS,
 } from '@/lib/constants';
@@ -41,7 +41,7 @@ function getFilterLabel(key: string, value: any): string | null {
     case 'deliveryAvailable':
       return 'Livraison';
     case 'color':
-      return COLORS.find(c => c.value === value)?.label || value;
+      return getColorLabel(value) || value;
     case 'material':
       return MATERIALS.find(m => m.value === value)?.label || value;
     case 'firstHand':

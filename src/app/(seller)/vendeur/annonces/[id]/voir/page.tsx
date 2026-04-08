@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, Tag, Award, Calendar, CheckCircle, Layers, Palette, Ruler, FileText, Gift, Euro } from 'lucide-react';
+import { ArrowLeft, Heart, MessageCircle, Phone, Package, ChevronLeft, ChevronRight, Trash2, Pencil, Info, FileText, Euro } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, deleteListing, updateListing } from '@/lib/supabase/listings';
 import { recordListingDeletion, getSellerDeletionsByReason } from '@/lib/supabase/sales';
 import { getConversationsCountForListing } from '@/lib/supabase/messaging';
 import { Listing } from '@/types';
 import { isSubscriptionLimitError } from '@/lib/subscription';
-import { formatPrice, formatDate, CATEGORIES, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
+import { formatPrice, formatDate, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput } from '@/lib/utils';
+import { ListingCharacteristicsProductStyle } from '@/components/listings/ListingCharacteristicsProductStyle';
+import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
+import { getListingDisplayTitle } from '@/lib/listingDisplayTitle';
 
 const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
 
@@ -164,11 +166,8 @@ export default function VoirAnnoncePage() {
     return null;
   }
 
-  const categoryLabel = CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category;
-  const conditionLabel = listing.condition ? CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition : null;
-  const colorLabel = listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : null;
-  const materialLabel = listing.material ? (MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material) : null;
   const hasPackaging = Array.isArray(listing.packaging) ? listing.packaging : [];
+  const packagingTagKeys = hasPackaging.filter((key) => CONTENU_INCLUS_LABELS[key]);
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
@@ -323,120 +322,37 @@ export default function VoirAnnoncePage() {
               <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
               Détails de l&apos;annonce
             </h2>
-            <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{listing.title}</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px', minWidth: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Tag size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Catégorie</span>
-                  </div>
-                  <span title={categoryLabel} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{categoryLabel}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Award size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Marque</span>
-                  </div>
-                  <span title={listing.brand ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.brand ?? '…'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Modèle</span>
-                  </div>
-                  <span title={listing.model ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.model ?? '…'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Calendar size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Année</span>
-                  </div>
-                  <span title={listing.year != null ? String(listing.year) : ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.year != null ? listing.year : '…'}</span>
-                </div>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <CheckCircle size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>État</span>
-                  </div>
-                  <span title={conditionLabel ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{conditionLabel ?? '…'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Layers size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Matière</span>
-                  </div>
-                  <span title={materialLabel ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{materialLabel ?? '…'}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                    <Palette size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                    <span style={{ color: '#1d1d1f', fontSize: 14 }}>Couleur</span>
-                  </div>
-                  <span title={colorLabel ?? ''} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{colorLabel ?? '…'}</span>
-                </div>
-                {listing.size && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                      <Package size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                      <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'chaussures' ? 'Pointure' : 'Taille'}</span>
-                    </div>
-                    <span title={listing.size} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(listing.category === 'chaussures' || (listing.category === 'vetements' && listing.size != null && !CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]))) ? `${listing.size} EU` : listing.size}</span>
-                  </div>
-                )}
-{(listing.category !== 'chaussures' && listing.category !== 'vetements' && (listing.widthCm != null || listing.heightCm != null)) && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                        <Ruler size={18} color="#6e6e73" style={{ flexShrink: 0 }} />
-                        <span style={{ color: '#1d1d1f', fontSize: 14 }}>{listing.category === 'montres' ? 'Dimension' : 'Dimensions'}</span>
-                      </div>
-                    <span title={listing.category === 'montres' ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm` : `L. ${listing.widthCm ?? '—'} × H. ${listing.heightCm ?? '—'} cm`} style={{ fontWeight: 600, color: '#1d1d1f', fontSize: 14, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {listing.category === 'montres'
-                        ? `${Math.round((listing.widthCm ?? listing.heightCm ?? 0) * 10)} mm`
-                        : `L. ${listing.widthCm ?? '—'} × H. ${listing.heightCm ?? '—'} cm`}
-                    </span>
-                  </div>
-                )}
-              </div>
+            <div style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0, minWidth: 0 }}>
+              <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={13} color="#6e6e73" valueTextAlign="left" />
             </div>
+            <ListingCharacteristicsProductStyle listing={listing} />
           </div>
 
-          {listing.description && (
+          {(listing.description?.trim() || packagingTagKeys.length > 0) && (
             <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
               <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
                 <FileText size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                 Description
               </h2>
-              <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
-            </div>
-          )}
-
-          {hasPackaging.length > 0 && (
-            <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24 }}>
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
-                <Gift size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
-                Contenu inclus :
-              </h2>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 0 }}>
-                {hasPackaging.filter((key) => CONTENU_INCLUS_LABELS[key]).map((key) => (
-                  <span
-                    key={key}
-                    style={{
-                      display: 'inline-block',
-                      padding: '6px 12px',
-                      backgroundColor: '#e8f5e9',
-                      fontSize: 13,
-                      fontWeight: 500,
-                      color: '#2e7d32',
-                      borderRadius: 4,
-                    }}
-                  >
-                    {CONTENU_INCLUS_LABELS[key]} : Oui
-                  </span>
-                ))}
-              </div>
+              {packagingTagKeys.length > 0 && (
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 8,
+                    paddingTop: 6,
+                    marginBottom: listing.description?.trim() ? 12 : 0,
+                    minWidth: 0,
+                  }}
+                >
+                  {packagingTagKeys.map((key) => (
+                    <TruncatedInfoValue key={key} text={`${CONTENU_INCLUS_LABELS[key]} : Oui`} fontSize={13} variant="tag" />
+                  ))}
+                </div>
+              )}
+              {listing.description?.trim() ? (
+                <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
+              ) : null}
             </div>
           )}
 

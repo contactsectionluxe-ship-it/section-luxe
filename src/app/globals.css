@@ -23,6 +23,11 @@
   --shadow-lg: 0 8px 30px rgba(0, 0, 0, 0.1);
 }
 
+/* Modales plein écran (PortalModal) : évite le scroll chaîné / élastique sur le fond */
+.portal-modal-root {
+  overscroll-behavior: none;
+}
+
 .header-filters-bar::-webkit-scrollbar {
   display: none;
 }
@@ -293,6 +298,29 @@ a:focus-visible {
 
 /* Hero : libellé court « Voir le catalogue » masqué par défaut (affiché uniquement sur mobile) */
 .hero-catalogue-label-mobile {
+  display: none;
+}
+
+/* Hero : sous-titre « Explorez… » et ligne « 1. Trouvez… » — même police (Inter) et même taille */
+.hero-sous-titre,
+.hero-numbered-steps {
+  font-family: var(--font-inter), var(--font-sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #6e6e73;
+}
+.hero-sous-titre {
+  margin-bottom: 3px;
+  white-space: nowrap;
+}
+.hero-numbered-steps {
+  margin: 0 0 24px;
+  padding: 0;
+}
+
+/* Page Mes annonces : icônes Partager + Déposer (mobile uniquement ; le JSX est toujours dans le DOM) */
+.mes-annonces-header-icons-mobile-wrap {
   display: none;
 }
 
@@ -814,12 +842,12 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
 /* Page d'accueil : sur très grands écrans, image hero plus large (éviter un rendu trop « dézoomé » / étroit) */
 @media (min-width: 1600px) {
   .hero-section {
-    background-size: 62% auto !important;
+    background-size: 66% auto !important;
   }
 }
 @media (min-width: 2000px) {
   .hero-section {
-    background-size: 72% auto !important;
+    background-size: 76% auto !important;
   }
 }
 
@@ -828,8 +856,8 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   .hero-section {
     background-image: none !important;
     background-color: #ffffff !important;
-    padding-top: calc(var(--header-height) + 40px) !important;
-    padding-bottom: 40px !important;
+    padding-top: calc(var(--header-height) + 48px) !important;
+    padding-bottom: 32px !important;
   }
   .hero-section > div:first-of-type {
     display: none !important;
@@ -867,28 +895,22 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   .hero-catalogue-label-mobile {
     display: inline !important;
   }
+  .hero-sous-titre,
+  .hero-numbered-steps {
+    font-family: var(--font-inter), var(--font-sans) !important;
+    font-size: clamp(11px, 3.1vw, 14px) !important;
+    line-height: 1.5 !important;
+    font-weight: 400 !important;
+    color: #6e6e73 !important;
+  }
   .hero-sous-titre {
     display: block !important;
-    font-size: clamp(11px, 3.1vw, 14px) !important;
     margin-bottom: 3px !important;
     text-align: left !important;
     white-space: nowrap !important;
   }
   .hero-numbered-steps {
-    column-gap: 9px !important;
-    row-gap: 4px !important;
-    margin-top: 0 !important;
     margin-bottom: 20px !important;
-    font-size: clamp(11px, 3.1vw, 14px) !important;
-    color: #6e6e73 !important;
-  }
-  .hero-numbered-steps .hero-step-icon {
-    width: clamp(11px, 3.1vw, 14px) !important;
-    height: clamp(11px, 3.1vw, 14px) !important;
-  }
-  .hero-numbered-steps li > span:last-of-type {
-    font-size: clamp(11px, 3.1vw, 14px) !important;
-    color: #6e6e73 !important;
   }
   /* Page d'accueil mobile : remonter la section Catégories */
   .home-section-categories {
@@ -1836,30 +1858,41 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     grid-template-columns: 1fr !important;
     gap: 12px !important;
   }
-  /* Page Mes ventes : une ligne (Date + Entre + dates) sauf Réinitialiser ; pas d’icône calendrier dans les champs date */
+  /* Page Mes ventes : ligne filtres = même largeur utile que la grille des cases sous-jacentes */
   .mes-ventes-filtres-row {
+    width: 100% !important;
+    box-sizing: border-box !important;
     gap: 6px 0 !important;
     margin-bottom: 20px !important;
     align-items: flex-start !important;
   }
+  /* Même grille 2 col + gap que .mes-ventes-stats-grid : « Réinitialiser » dans la colonne des Likes */
   .mes-ventes-filtres-left {
     flex: 1 1 100% !important;
+    width: 100% !important;
     min-width: 0 !important;
-    display: flex !important;
-    flex-wrap: wrap !important;
-    gap: 6px 8px !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    row-gap: 4px !important;
+    column-gap: 8px !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
   }
   .mes-ventes-filtres-dates {
-    flex-wrap: nowrap !important;
-    width: auto !important;
+    grid-column: 1 / -1 !important;
+    display: grid !important;
+    grid-template-columns: auto auto minmax(0, 1fr) auto minmax(0, 1fr) !important;
+    align-items: center !important;
+    width: 100% !important;
     max-width: 100% !important;
     min-width: 0 !important;
     gap: 6px !important;
     box-sizing: border-box !important;
   }
   .mes-ventes-filtres-dates .mes-ventes-date-input {
-    width: 110px !important;
+    width: 100% !important;
     min-width: 0 !important;
+    max-width: 100% !important;
   }
   .mes-ventes-date-input {
     height: 36px !important;
@@ -1886,9 +1919,11 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     font-size: 13px !important;
   }
   .mes-ventes-filtres-reset-wrap {
-    flex-basis: 100% !important;
-    width: 100% !important;
-    margin-top: 2px !important;
+    grid-column: 2 !important;
+    justify-self: end !important;
+    width: auto !important;
+    margin: 0 !important;
+    transform: translate(-1mm, -3px) !important;
   }
   .mes-ventes-filtres-reset-wrap button {
     font-size: 12px !important;
@@ -2146,7 +2181,18 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     width: 100% !important;
     max-width: 100% !important;
   }
+  .mes-annonces-header-icons-mobile-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    flex-shrink: 0 !important;
+  }
   .mes-annonces-catalogue-share-icon-mobile {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  .mes-annonces-deposer-icon-mobile {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -2173,7 +2219,9 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   /* Suivre mes offres + Sourcing : pleine largeur (via .mes-annonces-page-inner), 2 cartes par ligne */
   .suivre-mes-offres-page .suivre-mes-offres-catalogue-grid,
-  .sourcing-page .suivre-mes-offres-catalogue-grid {
+  .suivre-mes-offres-page .mes-annonces-list-grid,
+  .sourcing-page .suivre-mes-offres-catalogue-grid,
+  .sourcing-page .mes-annonces-list-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
     width: 100% !important;

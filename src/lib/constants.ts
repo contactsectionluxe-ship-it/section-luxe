@@ -117,6 +117,19 @@ export const COLORS_BY_CATEGORY: Record<string, { value: string; label: string }
   ],
 };
 
+/** Libellé français pour une valeur de couleur (liste générale + couleurs par catégorie, ex. `blue` → Bleu). */
+export function getColorLabel(value: string | null | undefined): string {
+  if (value == null || String(value).trim() === '') return '';
+  const v = String(value).trim();
+  const fromBase = COLORS.find((c) => c.value === v)?.label;
+  if (fromBase) return fromBase;
+  for (const list of Object.values(COLORS_BY_CATEGORY)) {
+    const found = list.find((c) => c.value === v);
+    if (found) return found.label;
+  }
+  return v;
+}
+
 /** Types d'article vêtements Homme (catalogue = pluriel). */
 export const VETEMENTS_TYPES_HOMME: { value: string; label: string }[] = [
   { value: 'tshirt_polo', label: 'T-shirts & Polos' },

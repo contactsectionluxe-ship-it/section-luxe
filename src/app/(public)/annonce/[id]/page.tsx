@@ -19,24 +19,14 @@ import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
+import { CONDITIONS, getColorLabel, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal, DEAL_MARKET_BAR_SEGMENT_COLORS } from '@/lib/deal';
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { SellerVisitMapPopup } from '@/components/SellerVisitMapPopup';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
-
-/** Titre d’annonce : celui enregistré (avec texte personnalisé) ou recalcul marque - type/modèle en secours. */
-function getListingDisplayTitle(listing: Listing): string {
-  if (listing.title && listing.title.trim()) return listing.title;
-  const typeLabel = getArticleTypeLabel(listing.category, listing.genre ?? ['femme', 'homme'], listing.articleType);
-  const marque = listing.brand || listing.title;
-  const typeModel = (listing.category === 'vetements' && typeLabel.includes(' & '))
-    ? (listing.model ?? '')
-    : [typeLabel, listing.model].filter(Boolean).join(' ');
-  return typeModel ? `${marque} - ${typeModel}` : marque;
-}
+import { getListingDisplayTitle } from '@/lib/listingDisplayTitle';
 
 /** Affiche le téléphone au format 00 00 00 00 00 */
 function formatPhoneDisplay(phone: string): string {
@@ -616,7 +606,7 @@ export default function ProductPage() {
     return (
       <div className="annonce-produit-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="produit-page-container" style={{ maxWidth: 'calc(1100px + 1cm)', margin: '0 auto', padding: '30px calc(24px - 1mm) 60px calc(24px - 1mm)' }}>
-          <Link href={fromVendeurParam ? '/vendeur' : returnBackHref} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
+          <Link href={fromVendeurParam ? '/vendeur' : returnBackHref} scroll={false} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}>
             <ArrowLeft size={16} />
             {returnBackLabel}
           </Link>
@@ -749,6 +739,7 @@ export default function ProductPage() {
         {/* Back button */}
         <Link
           href={fromVendeurParam ? '/vendeur' : returnBackHref}
+          scroll={false}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#666', marginBottom: 24 }}
         >
           <ArrowLeft size={16} />
@@ -818,8 +809,8 @@ export default function ProductPage() {
                   </Link>
                 )}
               </div>
-              <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 25, fontWeight: 500, marginBottom: 6, color: '#0a0a0a' }}>
-                {getListingDisplayTitle(listing)}
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 25, fontWeight: 500, margin: 0, marginBottom: 6, color: '#0a0a0a', minWidth: 0 }}>
+                <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={25} lineClamp={3} color="#0a0a0a" />
               </h1>
               <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
               {listing.listingNumber && (
@@ -1011,7 +1002,9 @@ export default function ProductPage() {
                   <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
-                <p style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0 }}>{getListingDisplayTitle(listing)}</p>
+                <div style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0, minWidth: 0 }}>
+                  <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={13} color="#6e6e73" valueTextAlign="left" />
+                </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px', minWidth: 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, minWidth: 0 }}>
@@ -1121,7 +1114,7 @@ export default function ProductPage() {
                         <span style={{ color: '#555', fontSize: 14 }}>Couleur</span>
                       </div>
                       <TruncatedInfoValue
-                        text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
+                        text={listing.color ? getColorLabel(listing.color) : ' '}
                         fontSize={14}
                       />
                     </div>
@@ -1169,6 +1162,19 @@ export default function ProductPage() {
                     </Link>
                   </p>
                 )}
+                {(() => {
+                  const has = Array.isArray(listing.packaging) ? listing.packaging : [];
+                  const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
+                  const included = has.filter((key) => labels[key]);
+                  if (included.length === 0) return null;
+                  return (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, paddingTop: 6, marginBottom: listing.description?.trim() ? 12 : 0, minWidth: 0 }}>
+                      {included.map((key) => (
+                        <TruncatedInfoValue key={key} text={`${labels[key]} : Oui`} fontSize={13} variant="tag" />
+                      ))}
+                    </div>
+                  );
+                })()}
                 <div ref={descriptionRefDesktop} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                   <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                 </div>
@@ -1177,21 +1183,6 @@ export default function ProductPage() {
                     {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
                   </button>
                 )}
-                {(() => {
-                  const has = Array.isArray(listing.packaging) ? listing.packaging : [];
-                  const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
-                  const included = has.filter((key) => labels[key]);
-                  if (included.length === 0) return null;
-                  return (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-                      {included.map((key) => (
-                        <span key={key} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#e8f5e9', fontSize: 13, fontWeight: 500, color: '#2e7d32', borderRadius: 4 }}>
-                          {labels[key]} : Oui
-                        </span>
-                      ))}
-                    </div>
-                  );
-                })()}
               </div>
               {/* Section Prix — design type barre de comparaison (offre et prix) */}
               <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 24, marginTop: 24 }}>
@@ -1428,7 +1419,9 @@ export default function ProductPage() {
                     <Link href={`/catalogue?brand=${encodeURIComponent(listing.brand)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{listing.brand}</Link>
                   )}
                 </div>
-                <h1 className="produit-annonce-titre" title={getListingDisplayTitle(listing)} style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, marginBottom: 5, color: '#0a0a0a' }}>{getListingDisplayTitle(listing)}</h1>
+                <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 22, fontWeight: 500, margin: 0, marginBottom: 5, color: '#0a0a0a', minWidth: 0 }}>
+                  <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={22} lineClamp={3} color="#0a0a0a" />
+                </h1>
                 <ListingCaracteristiques listing={listing} variant="line" style={{ marginBottom: 12 }} />
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 24, marginBottom: 24, flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1575,7 +1568,9 @@ export default function ProductPage() {
                   <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
                   Informations
                 </h2>
-                  <p style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0 }}>{getListingDisplayTitle(listing)}</p>
+                  <div style={{ fontSize: 12, color: '#6e6e73', marginBottom: 14, marginTop: 0, minWidth: 0 }}>
+                    <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={12} color="#6e6e73" valueTextAlign="left" />
+                  </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 20px', minWidth: 0 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
@@ -1711,7 +1706,7 @@ export default function ProductPage() {
                         <span style={{ color: '#555', fontSize: 13 }}>Couleur</span>
                       </div>
                       <TruncatedInfoValue
-                        text={listing.color ? (COLORS.find((c) => c.value === listing.color)?.label ?? listing.color) : ' '}
+                        text={listing.color ? getColorLabel(listing.color) : ' '}
                         fontSize={13}
                       />
                     </div>
@@ -1759,6 +1754,19 @@ export default function ProductPage() {
                       </Link>
                     </p>
                   )}
+                  {(() => {
+                    const has = Array.isArray(listing.packaging) ? listing.packaging : [];
+                    const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
+                    const included = has.filter((key) => labels[key]);
+                    if (included.length === 0) return null;
+                    return (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 6, marginBottom: listing.description?.trim() ? 12 : 0, minWidth: 0 }}>
+                        {included.map((key) => (
+                          <TruncatedInfoValue key={key} text={`${labels[key]} : Oui`} fontSize={12} variant="tag" />
+                        ))}
+                      </div>
+                    );
+                  })()}
                   <div ref={descriptionRefMobile} style={descriptionExpanded ? undefined : { overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 5, WebkitBoxOrient: 'vertical' as 'vertical' }}>
                     <p style={{ fontSize: 13, color: '#555', lineHeight: 1.7, whiteSpace: 'pre-line', margin: 0 }}>{listing.description}</p>
                   </div>
@@ -1767,21 +1775,6 @@ export default function ProductPage() {
                       {descriptionExpanded ? 'Voir moins' : 'Voir plus'}
                     </button>
                   )}
-                  {(() => {
-                    const has = Array.isArray(listing.packaging) ? listing.packaging : [];
-                    const labels: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
-                    const included = has.filter((key) => labels[key]);
-                    if (included.length === 0) return null;
-                    return (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 14 }}>
-                        {included.map((key) => (
-                          <span key={key} style={{ display: 'inline-block', padding: '5px 10px', backgroundColor: '#e8f5e9', fontSize: 12, fontWeight: 500, color: '#2e7d32', borderRadius: 4 }}>
-                            {labels[key]} : Oui
-                          </span>
-                        ))}
-                      </div>
-                    );
-                  })()}
                 </div>
                 {/* Section Prix - mobile */}
                 <div style={{ borderTop: '1px solid #e5e5e7', paddingTop: 20, marginTop: 20 }}>

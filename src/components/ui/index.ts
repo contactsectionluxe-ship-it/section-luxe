@@ -20,6 +20,9 @@ export type { BadgeProps } from './Badge';
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
+export { PortalModal } from './PortalModal';
+export type { PortalModalProps } from './PortalModal';
+
 export { FileUpload } from './FileUpload';
 export type { FileUploadProps } from './FileUpload';
 

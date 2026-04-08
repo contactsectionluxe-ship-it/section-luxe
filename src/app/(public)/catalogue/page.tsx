@@ -7,7 +7,7 @@ import { Search, SlidersHorizontal, X, ChevronRight, ChevronLeft, ChevronDown, H
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings, getDistinctSizesForCategory, getDistinctSizesForCategoryAndArticleTypes } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
-import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
+import { setAnnonceReturnUrlForNextNavigation, consumeCatalogueScrollRestore } from '@/lib/annonceReturnUrl';
 import { sellerCataloguePath, parseVendeurCatalogueSlug } from '@/lib/sellerCatalogueUrl';
 import { getSellerData, getSellerIdByVendeurSlug } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
@@ -402,7 +402,17 @@ function CatalogueContent() {
   const vendeurParseInvalid = isVendeurCataloguePath && Boolean(slugParam) && !parsedVendeurSlug;
   const [vendeurSlugError, setVendeurSlugError] = useState(false);
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''))}` : '';
+
+  /** Retour depuis la fiche produit via « Retour au catalogue » : même défilement que le bouton retour du navigateur. */
+  useLayoutEffect(() => {
+    const currentHref = (pathname || '') + (searchParamsString ? `?${searchParamsString}` : '');
+    const y = consumeCatalogueScrollRestore(currentHref);
+    if (y != null) {
+      window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+    }
+  }, [pathname, searchParamsString]);
 
   const [filters, setFilters] = useState<Filters>(() => {
     const reset = searchParams.get('reset');

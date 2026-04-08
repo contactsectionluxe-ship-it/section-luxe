@@ -288,34 +288,64 @@ function MesVentesPageContent() {
             </button>
           </div>
         ) : null}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-          <div>
-            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
-              Mes ventes
-            </h1>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
-              {seller.status === 'approved' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <CheckCircle size={12} /> Validé
-                </span>
-              )}
-              {seller.status === 'pending' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <Clock size={12} /> En attente
-                </span>
-              )}
-              {seller.status === 'rejected' && (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                  <XCircle size={12} /> Refusé
-                </span>
-              )}
+        <div className="mes-annonces-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px', color: '#1d1d1f' }}>
+                Mes ventes
+              </h1>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
+                {seller.status === 'approved' && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                    <CheckCircle size={12} /> Validé
+                  </span>
+                )}
+                {seller.status === 'pending' && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                    <Clock size={12} /> En attente
+                  </span>
+                )}
+                {seller.status === 'rejected' && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                    <XCircle size={12} /> Refusé
+                  </span>
+                )}
+              </div>
             </div>
+            {isApprovedSeller && (
+              <div className="mes-annonces-header-icons-mobile-wrap">
+                <Link
+                  href="/vendeur/annonces/nouvelle?from=ventes"
+                  className="mes-annonces-deposer-icon-mobile"
+                  aria-label="Déposer une annonce"
+                  title="Déposer une annonce"
+                  style={{
+                    display: 'none',
+                    flexShrink: 0,
+                    width: 44,
+                    height: 44,
+                    padding: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#000',
+                    color: '#fff',
+                    borderRadius: 12,
+                    textDecoration: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Plus size={22} strokeWidth={2} />
+                </Link>
+              </div>
+            )}
           </div>
           {isApprovedSeller && (
-            <Link href="/vendeur/annonces/nouvelle?from=ventes" className="mes-ventes-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
-              <Plus size={18} /> Déposer une annonce
-            </Link>
+            <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
+              <Link href="/vendeur/annonces/nouvelle?from=ventes" className="mes-ventes-deposer-link mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
+                <Plus size={18} /> Déposer une annonce
+              </Link>
+            </div>
           )}
         </div>
 

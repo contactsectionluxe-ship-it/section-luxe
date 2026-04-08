@@ -99,12 +99,12 @@ export default function HomePage() {
         className="hero-section"
         style={{
           position: 'relative',
-          paddingTop: 'calc(var(--header-height) + 48px + 1cm)',
-          paddingBottom: 100,
+          paddingTop: 'calc(var(--header-height) + 68px + 1cm)',
+          paddingBottom: 128,
           paddingLeft: 24,
           paddingRight: 24,
           backgroundImage: 'url(/banniere-hero.png)',
-          backgroundSize: '56%',
+          backgroundSize: '60%',
           backgroundPosition: '100% center',
           backgroundRepeat: 'no-repeat',
         }}
@@ -133,16 +133,7 @@ export default function HomePage() {
             <span className="hide-mobile">L’excellence du luxe, à portée de main</span>
             <span className="hide-desktop">L’excellence du luxe,<br />à portée de main</span>
           </h1>
-          <p
-            className="hero-sous-titre"
-            style={{
-              fontSize: 16,
-              color: '#6e6e73',
-              marginBottom: 3,
-              lineHeight: 1.5,
-              whiteSpace: 'nowrap',
-            }}
-          >
+          <p className="hero-sous-titre">
             Explorez les offres de professionnels près de chez vous.
           </p>
           <HeroNumberedSteps />

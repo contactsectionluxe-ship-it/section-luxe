@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE } from '@/components/ListingCaracteristiques';
+import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 
 const CARAC_TYPO = LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE;
 const ICON_SIZE = 13.5;
@@ -111,23 +112,16 @@ export function SaleProposalGridDescriptionAccordion({
           style={{ marginTop: 6, minWidth: 0 }}
         >
           {hasPackaging ? (
-            <div style={{ marginBottom: hasDescriptionText ? 10 : 0 }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            <div style={{ marginBottom: hasDescriptionText ? 10 : 0, paddingTop: 4 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, minWidth: 0 }}>
                 {includedPackagingKeys.map((key) => (
-                  <span
+                  <TruncatedInfoValue
                     key={key}
-                    style={{
-                      display: 'inline-block',
-                      padding: '5px 10px',
-                      backgroundColor: '#e8f5e9',
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: '#2e7d32',
-                      borderRadius: 4,
-                    }}
-                  >
-                    {PACKAGING_INCLUDED_LABELS[key]} : Oui
-                  </span>
+                    text={`${PACKAGING_INCLUDED_LABELS[key]} : Oui`}
+                    fontSize={12}
+                    variant="tag"
+
+                  />
                 ))}
               </div>
             </div>

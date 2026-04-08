@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { Tag, Calendar, CheckCircle, Palette, Layers, Ruler } from 'lucide-react';
 import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
-import { CONDITIONS, COLORS, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
+import { CONDITIONS, getColorLabel, MATERIALS, CLOTHING_SIZES } from '@/lib/constants';
 
 const iconColor = '#6e6e73';
 
@@ -114,7 +114,7 @@ export function ListingCaracteristiques({
         node: (
           <>
             <Palette size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
-            {COLORS.find((c) => c.value === listing.color)?.label ?? listing.color}
+            {getColorLabel(listing.color)}
           </>
         ),
       });

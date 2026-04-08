@@ -415,30 +415,54 @@ export default function SellerDashboardPage() {
               </div>
             </div>
             {!showSkeletons && isApprovedSeller && seller && (
-              <button
-                type="button"
-                className="mes-annonces-catalogue-share-icon-mobile"
-                onClick={() => shareSellerCatalogue()}
-                aria-label={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
-                title={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
-                style={{
-                  display: 'none',
-                  flexShrink: 0,
-                  width: 44,
-                  height: 44,
-                  padding: 0,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: '#fff',
-                  color: '#1d1d1f',
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
-              >
-                {catalogueShareFeedback ? <CheckCircle size={22} strokeWidth={2} color="#166534" /> : <Share2 size={22} strokeWidth={2} />}
-              </button>
+              <div className="mes-annonces-header-icons-mobile-wrap">
+                <Link
+                  href="/vendeur/annonces/nouvelle"
+                  className="mes-annonces-deposer-icon-mobile"
+                  aria-label="Déposer une annonce"
+                  title="Déposer une annonce"
+                  style={{
+                    display: 'none',
+                    flexShrink: 0,
+                    width: 44,
+                    height: 44,
+                    padding: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#000',
+                    color: '#fff',
+                    borderRadius: 12,
+                    textDecoration: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <Plus size={22} strokeWidth={2} />
+                </Link>
+                <button
+                  type="button"
+                  className="mes-annonces-catalogue-share-icon-mobile"
+                  onClick={() => shareSellerCatalogue()}
+                  aria-label={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
+                  title={catalogueShareFeedback ? 'Lien copié' : 'Partager mon catalogue'}
+                  style={{
+                    display: 'none',
+                    flexShrink: 0,
+                    width: 44,
+                    height: 44,
+                    padding: 0,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fff',
+                    color: '#1d1d1f',
+                    border: '1px solid #d2d2d7',
+                    borderRadius: 12,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {catalogueShareFeedback ? <CheckCircle size={22} strokeWidth={2} color="#166534" /> : <Share2 size={22} strokeWidth={2} />}
+                </button>
+              </div>
             )}
           </div>
           {!showSkeletons && isApprovedSeller && seller && (

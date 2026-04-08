@@ -359,6 +359,47 @@ export async function fetchSellerInvitedProposals(sellerId: string): Promise<Inv
     }));
 }
 
+/** Détail d’une proposition pour le vendeur invité (page Sourcing). */
+export async function fetchSellerInvitedProposalById(
+  sellerId: string,
+  proposalId: string,
+): Promise<InvitedProposalRow | null> {
+  const client = checkClient();
+  const { data, error } = await client
+    .from('sale_proposal_invited_sellers')
+    .select(
+      `
+      proposal_id,
+      seller_id,
+      estimated_price_cents,
+      seller_note,
+      updated_at,
+      sale_proposals(
+        id, visitor_id, title, description, category, genre, article_type, brand, model, condition, material, color, size, height_cm, width_cm, year, packaging,
+        wish_price_cents, locations, photo_urls, buyer_contact, created_at
+      )
+    `,
+    )
+    .eq('seller_id', sellerId)
+    .eq('proposal_id', proposalId)
+    .maybeSingle();
+
+  if (error) throwSaleProposalDbError(error);
+  if (!data) return null;
+  const raw = data as unknown as Omit<InvitedProposalRow, 'proposal'> & {
+    sale_proposals: SaleProposalRow | null;
+  };
+  if (!raw.sale_proposals) return null;
+  return {
+    proposal_id: raw.proposal_id,
+    seller_id: raw.seller_id,
+    estimated_price_cents: raw.estimated_price_cents,
+    seller_note: raw.seller_note,
+    updated_at: raw.updated_at,
+    proposal: raw.sale_proposals,
+  };
+}
+
 export async function updateSellerProposalOffer(
   sellerId: string,
   proposalId: string,

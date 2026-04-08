@@ -5,6 +5,31 @@
 
 export const ANNONCE_RETURN_URL_STORAGE_KEY = 'luxe-annonce-return-url';
 
+/** Position de scroll à restaurer sur le catalogue (même effet que le retour navigateur). */
+export const CATALOGUE_SCROLL_RESTORE_KEY = 'luxe-catalogue-scroll-restore';
+
+type CatalogueScrollPayload = { y: number; href: string };
+
+function catalogueHrefsEquivalent(stored: string, current: string): boolean {
+  const a = normalizeInternalPath(stored);
+  const b = normalizeInternalPath(current);
+  if (a === b) return true;
+  try {
+    const ua = new URL(a, 'https://local.invalid');
+    const ub = new URL(b, 'https://local.invalid');
+    if (ua.pathname !== ub.pathname) return false;
+    const sa = new URLSearchParams(ua.search);
+    const sb = new URLSearchParams(ub.search);
+    const keys = new Set([...sa.keys(), ...sb.keys()]);
+    for (const k of keys) {
+      if (sa.getAll(k).join('\0') !== sb.getAll(k).join('\0')) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function normalizeInternalPath(path: string): string {
   const p = (path || '').trim();
   if (!p) return '/catalogue';
@@ -27,10 +52,52 @@ export function isSafeInternalReturnUrl(path: string): boolean {
 export function setAnnonceReturnUrlForNextNavigation(url: string): void {
   if (typeof window === 'undefined') return;
   if (!isSafeInternalReturnUrl(url)) return;
+  const normalized = normalizeInternalPath(url);
   try {
-    sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, normalizeInternalPath(url));
+    sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, normalized);
+    /* Depuis une page catalogue : mémoriser le scroll pour « Retour au catalogue » (équivalent au bouton retour du navigateur). */
+    if (normalized.startsWith('/catalogue') && window.location.pathname.startsWith('/catalogue')) {
+      const payload: CatalogueScrollPayload = { y: window.scrollY, href: normalized };
+      sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
+    }
   } catch {
     // quota / mode privé
+  }
+}
+
+/**
+ * Si l’URL courante correspond à celle mémorisée avec le scroll, retourne `y` et supprime l’entrée.
+ * Sinon supprime l’entrée si elle ne correspond pas (évite une restauration plus tard par erreur).
+ */
+export function consumeCatalogueScrollRestore(currentHref: string): number | null {
+  if (typeof window === 'undefined') return null;
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(CATALOGUE_SCROLL_RESTORE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CatalogueScrollPayload;
+    if (typeof parsed.y !== 'number' || typeof parsed.href !== 'string') {
+      sessionStorage.removeItem(CATALOGUE_SCROLL_RESTORE_KEY);
+      return null;
+    }
+    const cur = normalizeInternalPath(currentHref);
+    if (!catalogueHrefsEquivalent(parsed.href, cur)) {
+      sessionStorage.removeItem(CATALOGUE_SCROLL_RESTORE_KEY);
+      return null;
+    }
+    sessionStorage.removeItem(CATALOGUE_SCROLL_RESTORE_KEY);
+    return Math.max(0, parsed.y);
+  } catch {
+    try {
+      sessionStorage.removeItem(CATALOGUE_SCROLL_RESTORE_KEY);
+    } catch {
+      /* ignore */
+    }
+    return null;
   }
 }
 

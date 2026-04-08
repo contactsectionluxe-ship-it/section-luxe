@@ -1,52 +1,20 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, Store, Calendar, Handbag, Package } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { useMatchMaxWidth } from '@/hooks/useMatchMaxWidth';
-import { PageLoader } from '@/components/ui';
 import {
   deleteSellerOwnProposalInvite,
   fetchSellerInvitedProposals,
-  saleProposalRowToListing,
   type InvitedProposalRow,
 } from '@/lib/supabase/saleProposals';
 import { getUserData } from '@/lib/supabase/auth';
 import { getOrCreateProposalConversation } from '@/lib/supabase/messaging';
-import { formatPrice, formatDateShort } from '@/lib/utils';
+import { formatPrice, formatDate } from '@/lib/utils';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
-import { ListingCaracteristiques, LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE } from '@/components/ListingCaracteristiques';
-import { SaleProposalGridDescriptionAccordion } from '@/components/sale-proposals/SaleProposalGridDescriptionAccordion';
-
-/** Même grille que « Suivre mes offres » (`suivre-mes-offres/page.tsx`). */
-const CATALOGUE_GRID_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
-const CATALOGUE_GRID_CARD_RADIUS = 18;
-
-const SOURCING_GRID_CARAC_TYPO = LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE;
-const SOURCING_GRID_CARAC_ICON_SIZE = 13.5;
-const SOURCING_GRID_CARAC_ICON_COLOR = '#6e6e73';
-
-const SOURCING_GRID_TITLE_TYPO: CSSProperties = {
-  fontSize: 16,
-  fontWeight: 500,
-  color: '#1d1d1f',
-  lineHeight: 1.3,
-};
-
-const SOURCING_GRID_PRIX_LABEL_TYPO: CSSProperties = {
-  ...SOURCING_GRID_TITLE_TYPO,
-  fontFamily: 'var(--font-playfair), var(--font-serif)',
-};
-
-const SOURCING_GRID_PRICE_TYPO: CSSProperties = {
-  fontFamily: 'var(--font-inter), var(--font-sans)',
-  fontSize: 16,
-  fontWeight: 600,
-  color: '#1d1d1f',
-  lineHeight: 1.3,
-};
+import { PortalModal } from '@/components/ui/PortalModal';
 
 const SORT_OPTIONS = [
   { value: 'recent' as const, label: 'Plus récents' },
@@ -171,55 +139,7 @@ export default function SourcingPage() {
     return (
       <div className="sourcing-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
-          <div
-            className="catalogue-results catalogue-results-grid suivre-mes-offres-catalogue-grid"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, alignItems: 'start' }}
-          >
-            {Array.from({ length: 6 }, (_, i) => (
-              <article
-                key={i}
-                className="catalogue-skeleton-card"
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  backgroundColor: '#fff',
-                  borderRadius: CATALOGUE_GRID_CARD_RADIUS,
-                  overflow: 'hidden',
-                  boxShadow: CATALOGUE_GRID_CARD_SHADOW,
-                  minWidth: 0,
-                  ['--skeleton-index' as string]: i,
-                }}
-              >
-                <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1' }} />
-                <div
-                  style={{
-                    borderTop: '1px solid #e8e6e3',
-                    padding: '14px 14px 10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 6,
-                    minHeight: 'calc(112px + 2mm)',
-                    backgroundColor: '#fff',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, height: 12 }}>
-                    <div className="catalogue-skeleton" style={{ height: 12, width: '50%' }} />
-                    <div className="catalogue-skeleton" style={{ height: 12, width: 60, flexShrink: 0 }} />
-                  </div>
-                  <div className="catalogue-skeleton" style={{ height: 16, width: '92%' }} />
-                  <div style={{ display: 'flex', gap: '6px 12px', flexWrap: 'wrap', marginBottom: 5 }}>
-                    <div className="catalogue-skeleton" style={{ height: 13, width: 60 }} />
-                    <div className="catalogue-skeleton" style={{ height: 13, width: 70 }} />
-                    <div className="catalogue-skeleton" style={{ height: 13, width: 55 }} />
-                  </div>
-                  <div style={{ marginTop: -5, minHeight: 24, display: 'flex', alignItems: 'center' }}>
-                    <div className="catalogue-skeleton" style={{ height: 18, width: '38%' }} />
-                  </div>
-                </div>
-              </article>
-            ))}
-          </div>
+          <SourcingListSkeleton />
         </div>
       </div>
     );
@@ -382,7 +302,7 @@ export default function SourcingPage() {
         )}
 
         {loadError ? null : loading ? (
-          <PageLoader />
+          <SourcingListSkeleton />
         ) : rows.length === 0 ? (
           <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
             <Handbag size={48} color="#ccc" style={{ margin: '0 auto 16px' }} />
@@ -394,10 +314,7 @@ export default function SourcingPage() {
             <p style={{ fontSize: 15, color: '#6e6e73' }}>Aucun résultat pour « {searchQuery.trim()} »</p>
           </div>
         ) : (
-          <div
-            className="catalogue-results catalogue-results-grid suivre-mes-offres-catalogue-grid"
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, alignItems: 'start' }}
-          >
+          <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, minWidth: 0, alignItems: 'start' }}>
             {filteredSorted.map((row) => (
               <SourcingProposalCard
                 key={row.proposal_id}
@@ -414,19 +331,17 @@ export default function SourcingPage() {
       </div>
 
       {declineInviteRow && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)' }} onClick={closeDeclineInviteModal} aria-hidden />
+      <PortalModal open={true} onClose={closeDeclineInviteModal} zIndex={120}>
           <div
             style={{
-              position: 'relative',
               width: '100%',
               maxWidth: 440,
+              margin: '0 auto',
               backgroundColor: '#fff',
               padding: '24px 20px',
               borderRadius: 16,
               boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
             }}
-            onClick={(e) => e.stopPropagation()}
           >
             <h2
               style={{
@@ -502,8 +417,45 @@ export default function SourcingPage() {
               </button>
             </div>
           </div>
-        </div>
+      </PortalModal>
       )}
+    </div>
+  );
+}
+
+function SourcingListSkeleton() {
+  return (
+    <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, minWidth: 0, alignItems: 'start' }}>
+      {Array.from({ length: 8 }, (_, i) => (
+        <div
+          key={i}
+          className="catalogue-skeleton-card"
+          style={{
+            border: '1px solid #e8e6e3',
+            borderRadius: 12,
+            overflow: 'hidden',
+            backgroundColor: '#fff',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            ['--skeleton-index' as string]: i,
+          }}
+        >
+          <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
+          <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 88, backgroundColor: '#fff' }}>
+            <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
+            <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
+            <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
+              <div className="catalogue-skeleton" style={{ height: 14, width: 48 }} />
+              <div className="catalogue-skeleton" style={{ height: 14, width: 72 }} />
+            </div>
+          </div>
+          <div style={{ padding: '0 16px 16px', display: 'flex', gap: 8 }}>
+            <div className="catalogue-skeleton" style={{ flex: 1, height: 36, borderRadius: 6 }} />
+            <div className="catalogue-skeleton" style={{ flex: 1, height: 36, borderRadius: 6 }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -517,9 +469,9 @@ function SourcingProposalCard({
   onContact: () => void | Promise<void>;
   onRequestDecline: () => void;
 }) {
+  const router = useRouter();
   const p = row.proposal;
   const [contacting, setContacting] = useState(false);
-  const isNarrowViewport = useMatchMaxWidth(767);
 
   const handleContact = useCallback(async () => {
     setContacting(true);
@@ -530,18 +482,43 @@ function SourcingProposalCard({
     }
   }, [onContact]);
 
+  const goToDetail = useCallback(
+    (e: ReactMouseEvent<HTMLElement>) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      router.push(`/vendeur/demandes-mise-en-vente/${row.proposal_id}`);
+    },
+    [router, row.proposal_id],
+  );
+
   return (
-    <article
-      className="mes-annonces-card suivre-mes-offres-grid-card sourcing-grid-card"
+    <div
+      className="mes-annonces-card"
+      role="button"
+      tabIndex={0}
+      onClick={goToDetail}
+      onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (!(e.target as HTMLElement).closest('button')) router.push(`/vendeur/demandes-mise-en-vente/${row.proposal_id}`);
+        }
+      }}
       style={{
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#fff',
-        borderRadius: CATALOGUE_GRID_CARD_RADIUS,
+        border: '1px solid #eee',
+        borderRadius: 12,
         overflow: 'hidden',
-        boxShadow: CATALOGUE_GRID_CARD_SHADOW,
+        backgroundColor: '#fff',
         minWidth: 0,
+        cursor: 'pointer',
+        transition: 'box-shadow 0.2s',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = 'none';
       }}
     >
       <div style={{ position: 'relative', width: '100%', aspectRatio: '1', backgroundColor: '#fff', overflow: 'hidden' }}>
@@ -549,7 +526,7 @@ function SourcingProposalCard({
           <CatalogueCardPhotos
             photos={p.photo_urls}
             alt={p.title || ''}
-            sizes="(max-width: 768px) 50vw, (max-width: 1400px) 33vw, min(440px, 28vw)"
+            sizes="(max-width: 768px) 50vw, 25vw"
           />
         ) : (
           <div
@@ -566,195 +543,82 @@ function SourcingProposalCard({
           </div>
         )}
       </div>
-      <div
-        style={{
-          borderTop: '1px solid #e8e6e3',
-          padding: '14px 14px 10px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          minWidth: 0,
-          backgroundColor: '#fff',
-          flex: 1,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, minWidth: 0 }}>
-          <h3
-            className="listing-grid-title"
-            title={p.title || ''}
-            style={{
-              ...SOURCING_GRID_TITLE_TYPO,
-              margin: 0,
-              minWidth: 0,
-              flex: '1 1 auto',
-              overflow: 'hidden',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-            }}
-          >
-            {p.title}
-          </h3>
-        </div>
-        <ListingCaracteristiques
-          listing={saleProposalRowToListing(p)}
-          variant="homeFeatured"
-          className="catalogue-listing-caracteristiques"
-          allowMultiLineWrap={isNarrowViewport}
-        />
-        <div
-          className="sale-proposal-grid-price-date"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 10,
-            marginTop: -5,
-            minWidth: 0,
-          }}
-        >
-          <div
-            className="listing-grid-price"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              minWidth: 0,
-              flex: '1 1 auto',
-            }}
-          >
-            <span
+      <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', backgroundColor: '#fff' }}>
+        <div style={{ marginBottom: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3
+              className="listing-grid-title mes-annonces-grid-title"
+              title={p.title || ''}
               style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                whiteSpace: 'nowrap',
+                fontSize: 15,
+                fontWeight: 500,
+                color: '#1d1d1f',
+                margin: '0 0 4px 0',
                 minWidth: 0,
+                overflow: 'hidden',
+                lineHeight: 1.3,
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
               }}
             >
-              <span style={SOURCING_GRID_PRIX_LABEL_TYPO}>Prix souhaité</span>
-              <span style={{ ...SOURCING_GRID_PRICE_TYPO, transform: 'translateY(0.2mm)' }}>
-                {formatPrice(p.wish_price_cents / 100)}
-              </span>
-            </span>
+              {p.title}
+            </h3>
+            <p style={{ fontSize: 11, color: '#888', margin: '0 0 2px', fontWeight: 400 }}>Prix souhaité</p>
+            <p style={{ fontSize: 18, fontWeight: 600, color: '#000', margin: 0 }}>{formatPrice(p.wish_price_cents / 100)}</p>
           </div>
-          <span
-            style={{
-              ...SOURCING_GRID_CARAC_TYPO,
-              lineHeight: 1.3,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              flexShrink: 0,
-              justifyContent: 'flex-end',
-              whiteSpace: 'nowrap',
-              transform: 'translateY(0.55mm)',
-            }}
-          >
-            <Calendar
-              size={SOURCING_GRID_CARAC_ICON_SIZE}
-              color={SOURCING_GRID_CARAC_ICON_COLOR}
-              style={{ flexShrink: 0, display: 'block', transform: 'translateY(-0.2mm)' }}
-              aria-hidden
-            />
-            {formatDateShort(new Date(p.created_at))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: 12, color: '#888' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Calendar size={12} aria-hidden />
+            {formatDate(new Date(p.created_at))}
           </span>
         </div>
-        <SaleProposalGridDescriptionAccordion proposalId={p.id} description={p.description} packaging={p.packaging} />
-        <div
-          className="sourcing-grid-card-footer"
-          style={{
-            flex: 1,
-            minHeight: 0,
-            width: '100%',
-            borderTop: '1px solid #f0f0f0',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'stretch',
-            justifyContent: 'center',
-            gap: 6,
-            padding: '8px 0 max(0px, calc(3px - 1.5mm))',
-            marginBottom: 'min(0px, calc(3px - 1.5mm))',
-            boxSizing: 'border-box',
-          }}
-        >
-          {row.estimated_price_cents != null && (
-            <span style={{ ...SOURCING_GRID_CARAC_TYPO, fontWeight: 500, color: '#1d1d1f' }}>
-              Votre offre : {formatPrice(row.estimated_price_cents / 100)}
-            </span>
-          )}
-          {row.seller_note?.trim() ? (
-            <p
-              style={{
-                ...SOURCING_GRID_CARAC_TYPO,
-                margin: 0,
-                lineHeight: 1.35,
-                display: '-webkit-box',
-                WebkitLineClamp: 3,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden',
-              }}
-              title={row.seller_note}
-            >
-              {row.seller_note.trim()}
-            </p>
-          ) : null}
-          <div style={{ display: 'flex', gap: 6, marginTop: 2, width: '100%' }}>
-            <button
-              type="button"
-              disabled={contacting}
-              onClick={() => void handleContact()}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                minHeight: 32,
-                height: 32,
-                padding: '0 10px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                lineHeight: 1,
-                backgroundColor: '#1d1d1f',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 10,
-                fontWeight: 500,
-                fontSize: 13,
-                cursor: contacting ? 'wait' : 'pointer',
-                opacity: contacting ? 0.85 : 1,
-              }}
-            >
-              Contacter
-            </button>
-            <button
-              type="button"
-              onClick={onRequestDecline}
-              disabled={contacting}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                minHeight: 32,
-                height: 32,
-                padding: '0 10px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                backgroundColor: '#fff',
-                color: '#dc2626',
-                border: '1.5px solid #fecaca',
-                borderRadius: 10,
-                fontWeight: 500,
-                fontSize: 13,
-                cursor: contacting ? 'not-allowed' : 'pointer',
-                opacity: contacting ? 0.6 : 1,
-              }}
-            >
-              Supprimer
-            </button>
-          </div>
+      </div>
+      <div className="mes-annonces-card-actions" style={{ padding: '0 16px 16px' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
+          <button
+            type="button"
+            disabled={contacting}
+            onClick={() => void handleContact()}
+            style={{
+              flex: 1,
+              padding: '8px 14px',
+              backgroundColor: '#000',
+              color: '#fff',
+              fontSize: 13,
+              textAlign: 'center',
+              borderRadius: 6,
+              border: 'none',
+              fontWeight: 500,
+              cursor: contacting ? 'wait' : 'pointer',
+              opacity: contacting ? 0.85 : 1,
+            }}
+          >
+            Contacter
+          </button>
+          <button
+            type="button"
+            onClick={onRequestDecline}
+            disabled={contacting}
+            style={{
+              flex: 1,
+              padding: '8px 14px',
+              border: '1px solid #ddd',
+              fontSize: 13,
+              textAlign: 'center',
+              borderRadius: 6,
+              color: '#dc2626',
+              backgroundColor: '#fff',
+              fontWeight: 500,
+              cursor: contacting ? 'not-allowed' : 'pointer',
+              opacity: contacting ? 0.6 : 1,
+            }}
+          >
+            Supprimer
+          </button>
         </div>
       </div>
-    </article>
+    </div>
   );
 }
