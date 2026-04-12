@@ -361,6 +361,8 @@ function MesVentesPageContent() {
     endMonth: evolutionWindowEnd.month,
   });
 
+  if (!showMainSkeleton && !seller) return null;
+
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff' }}>
       <div className="mes-ventes-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
@@ -417,7 +419,7 @@ function MesVentesPageContent() {
                   <div className="catalogue-skeleton" style={{ height: 16, width: 200, maxWidth: '100%', borderRadius: 4 }} />
                   <div className="catalogue-skeleton" style={{ height: 24, width: 76, borderRadius: 8 }} />
                 </div>
-              ) : (
+              ) : seller ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
                   {seller.status === 'approved' && (
@@ -436,7 +438,7 @@ function MesVentesPageContent() {
                     </span>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
             {!showMainSkeleton && isApprovedSeller && (
               <div className="mes-annonces-header-icons-mobile-wrap">
@@ -480,7 +482,7 @@ function MesVentesPageContent() {
 
         {showMainSkeleton ? (
           <MesVentesBodySkeleton />
-        ) : (
+        ) : seller ? (
           <>
         {seller.status === 'pending' && (
           <div
@@ -1461,7 +1463,7 @@ function MesVentesPageContent() {
 
         </div>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );

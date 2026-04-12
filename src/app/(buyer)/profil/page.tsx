@@ -168,6 +168,8 @@ export default function ProfilPage() {
     );
   }
 
+  if (!user) return null;
+
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="mon-profil-page-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '30px 24px 80px' }}>
