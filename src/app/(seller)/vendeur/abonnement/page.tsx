@@ -15,8 +15,28 @@ import { Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
 import { getSession } from '@/lib/supabase/auth';
+import {
+  StripeSubscriptionInvoicesPanel,
+  StripeSubscriptionInvoicesPanelChromeSkeleton,
+  type StripeSubscriptionInvoicesHeadlineMeta,
+} from '@/components/seller/StripeSubscriptionInvoicesPanel';
 
 type PlanFeatureLine = string | { readonly text: string; readonly tone: 'red' };
+
+/** Titres / sous-titres de page (Mon abonnement, Mes factures) — hors cartes */
+const abonnementPageTitleStyle: CSSProperties = {
+  fontFamily: 'var(--font-playfair), Georgia, serif',
+  fontSize: 28,
+  fontWeight: 500,
+  marginBottom: 8,
+  color: '#1d1d1f',
+  letterSpacing: '-0.02em',
+};
+const abonnementPageSubtitleStyle: CSSProperties = {
+  fontSize: 15,
+  color: '#6e6e73',
+  fontFamily: 'var(--font-inter), var(--font-sans)',
+};
 
 const plans: readonly {
   id: string;
@@ -126,6 +146,45 @@ function paidPlanCtaDetailContent(
   return null;
 }
 
+function AbonnementPlansSkeleton() {
+  const cardKeys = ['sk-start', 'sk-plus', 'sk-pro'] as const;
+  const featureWidths = ['92%', '88%', '90%', '72%', '85%', '70%'] as const;
+  return (
+    <>
+      {cardKeys.map((key) => (
+        <div key={key} className="abonnement-plan-card abonnement-plan-card--skeleton" aria-hidden>
+          <div className="abonnement-plan-header">
+            <div className="catalogue-skeleton abonnement-plan-skeleton-title" />
+            <div className="catalogue-skeleton abonnement-plan-skeleton-badge" />
+          </div>
+          <div className="abonnement-plan-price-block">
+            <div className="catalogue-skeleton abonnement-plan-skeleton-price-main" />
+            <div className="catalogue-skeleton abonnement-plan-skeleton-price-sub" />
+          </div>
+          <div className="abonnement-plan-skeleton-desc">
+            <div className="catalogue-skeleton abonnement-plan-skeleton-desc-line abonnement-plan-skeleton-desc-line--full" />
+            <div className="catalogue-skeleton abonnement-plan-skeleton-desc-line abonnement-plan-skeleton-desc-line--short" />
+          </div>
+          <ul className="abonnement-plan-features">
+            {featureWidths.map((w, j) => (
+              <li key={j}>
+                <div className="catalogue-skeleton abonnement-plan-skeleton-check" />
+                <div
+                  className="catalogue-skeleton abonnement-plan-skeleton-feature-line"
+                  style={{ width: w }}
+                />
+              </li>
+            ))}
+          </ul>
+          <div className="abonnement-plan-cta">
+            <div className="catalogue-skeleton abonnement-plan-skeleton-cta" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function AbonnementVendeurContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -153,6 +212,16 @@ function AbonnementVendeurContent() {
     changeInProgress?: boolean;
     cancelAtPeriodEnd?: boolean;
   } | null>(null);
+
+  /** Sous-titre « N facture(s) » : alimenté par le panneau factures (un seul fetch / refresh JWT). */
+  const [invoiceHeadlineState, setInvoiceHeadlineState] = useState<
+    { status: 'loading' } | { status: 'ok'; count: number } | { status: 'error'; message: string }
+  >({ status: 'loading' });
+
+  const onInvoicesHeadlineMeta = useCallback((meta: StripeSubscriptionInvoicesHeadlineMeta) => {
+    if (meta.kind === 'count') setInvoiceHeadlineState({ status: 'ok', count: meta.count });
+    else setInvoiceHeadlineState({ status: 'error', message: meta.message });
+  }, []);
 
   useEffect(() => {
     if (!authLoading && (!user || !seller)) {
@@ -492,17 +561,13 @@ function AbonnementVendeurContent() {
     }
   };
 
-  if (authLoading || !ready) {
-    return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
-      </div>
-    );
-  }
+  const initialAuthOrReady = authLoading || !ready;
+  if (!initialAuthOrReady && (!user || !seller)) return null;
 
-  if (!user || !seller) return null;
+  const showPlansSkeleton = initialAuthOrReady || subscriptionsEnabled === null;
 
-  const subTier = checkoutSyncedTier ?? normalizeSubscriptionTier(seller.subscriptionTier);
+  const subTier =
+    seller != null ? checkoutSyncedTier ?? normalizeSubscriptionTier(seller.subscriptionTier) : 'start';
   /** Carte encadrée : Plus + « Populaire » par défaut ; si abonné Plus ou Pro → encadrer cette formule + « Actuel ». */
   const featuredPlanId = subTier === 'plus' || subTier === 'pro' ? subTier : 'plus';
   const featuredBadgeLabel = subTier === 'plus' || subTier === 'pro' ? 'Actuel' : 'Populaire';
@@ -510,17 +575,17 @@ function AbonnementVendeurContent() {
   /** Portail Stripe : client connu + formule Plus/Pro + abonnement enregistré côté Stripe */
   const showPortal =
     stripeReady &&
-    seller.stripeCustomerRegistered &&
+    Boolean(seller?.stripeCustomerRegistered) &&
     (subTier === 'plus' || subTier === 'pro') &&
-    Boolean(seller.stripeSubscriptionId);
+    Boolean(seller?.stripeSubscriptionId);
 
   /** Colonne Start : portail facturation uniquement si l’utilisateur est réellement en Start (pas encore en cours de résiliation Plus/Pro). */
   const showBillingPortalOnStart =
-    stripeReady && seller.stripeCustomerRegistered && subTier === 'start';
+    stripeReady && Boolean(seller?.stripeCustomerRegistered) && subTier === 'start';
 
   /** Abonnement Stripe encore présent (ex. résiliation en fin de période) : « Gérer » ; sinon « Actuel » sur la carte gratuite. */
   const startHasOngoingStripeSubscription = Boolean(
-    seller.stripeSubscriptionId?.startsWith('sub_'),
+    seller?.stripeSubscriptionId?.startsWith('sub_'),
   );
 
   /** Plus ↔ Pro : ouvrir le portail Stripe (modifier l’abonnement), pas le Checkout / mise à jour API silencieuse. */
@@ -529,6 +594,7 @@ function AbonnementVendeurContent() {
 
   const paidPlanForSubTier = plans.find((p) => p.id === subTier);
   const rowHasCtaMeta =
+    !showPlansSkeleton &&
     subscriptionActuel != null &&
     paidPlanForSubTier != null &&
     (subTier === 'plus' || subTier === 'pro') &&
@@ -543,6 +609,13 @@ function AbonnementVendeurContent() {
     fontFamily: 'var(--font-inter), var(--font-sans)',
   };
 
+  const mesFacturesSubtitle =
+    invoiceHeadlineState.status === 'loading'
+      ? 'Chargement des factures...'
+      : invoiceHeadlineState.status === 'error'
+        ? invoiceHeadlineState.message
+        : `${invoiceHeadlineState.count} ${invoiceHeadlineState.count === 1 ? 'facture' : 'factures'}`;
+
   return (
     <div
       className="abonnement-page-bg"
@@ -551,21 +624,8 @@ function AbonnementVendeurContent() {
       <div className="abonnement-page-inner">
         <div>
           <div className="abonnement-page-title-block" style={{ textAlign: 'left', marginBottom: 36 }}>
-            <h1
-              style={{
-                fontFamily: 'var(--font-playfair), Georgia, serif',
-                fontSize: 28,
-                fontWeight: 500,
-                marginBottom: 8,
-                color: '#1d1d1f',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              Mon abonnement
-            </h1>
-            <p style={{ fontSize: 15, color: '#6e6e73', fontFamily: 'var(--font-inter), var(--font-sans)' }}>
-              L’offre adaptée à la taille de votre activité.
-            </p>
+            <h1 style={abonnementPageTitleStyle}>Mon abonnement</h1>
+            <p style={abonnementPageSubtitleStyle}>L’offre adaptée à la taille de votre activité.</p>
           </div>
 
         <div className="abonnement-shell">
@@ -618,7 +678,10 @@ function AbonnementVendeurContent() {
           <div
             className={`abonnement-plans-row${rowHasCtaMeta ? ' abonnement-plans-row--has-cta-meta' : ''}`}
           >
-            {plans.map((plan) => {
+            {showPlansSkeleton ? (
+              <AbonnementPlansSkeleton />
+            ) : (
+            plans.map((plan) => {
               const isFeatured = plan.id === featuredPlanId;
               const ctaDetail =
                 subscriptionActuel &&
@@ -718,9 +781,7 @@ function AbonnementVendeurContent() {
                         <div className="abonnement-plan-cta-btn abonnement-plan-cta-btn--muted">Actuel</div>
                       )
                     ) : plan.id === 'start' ? (
-                      subscriptionsEnabled === null ? (
-                        <div className="abonnement-plan-cta-btn abonnement-plan-cta-btn--muted">…</div>
-                      ) : stripeReady && seller.stripeCustomerRegistered ? (
+                      stripeReady && seller!.stripeCustomerRegistered ? (
                         <button
                           type="button"
                           className={`abonnement-plan-cta-btn abonnement-plan-cta-btn--primary${
@@ -787,8 +848,6 @@ function AbonnementVendeurContent() {
                             ? 'Passer à Plus'
                             : 'Passer à Pro'}
                       </button>
-                    ) : subscriptionsEnabled === null ? (
-                      <div className="abonnement-plan-cta-btn abonnement-plan-cta-btn--muted">…</div>
                     ) : (
                       <Link href="/contact" className="abonnement-plan-cta-btn abonnement-plan-cta-btn--primary">
                         Nous contacter
@@ -805,9 +864,27 @@ function AbonnementVendeurContent() {
                 </div>
               </div>
             );
-            })}
+            })
+            )}
           </div>
         </div>
+
+          <section className="abonnement-mes-factures-region" aria-labelledby="abonnement-mes-factures-heading">
+            <div className="abonnement-mes-factures-title-block">
+              <h2 id="abonnement-mes-factures-heading" style={abonnementPageTitleStyle}>
+                Mes factures
+              </h2>
+              <p style={{ ...abonnementPageSubtitleStyle, margin: 0 }}>{mesFacturesSubtitle}</p>
+            </div>
+            <div
+              className="abonnement-mes-factures-shell"
+              style={{ fontFamily: 'var(--font-inter), var(--font-sans)' }}
+            >
+              <div className="abonnement-factures-embed">
+                <StripeSubscriptionInvoicesPanel onHeadlineMeta={onInvoicesHeadlineMeta} />
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </div>
@@ -818,8 +895,43 @@ export default function AbonnementVendeurPage() {
   return (
     <Suspense
       fallback={
-        <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
+        <div
+          className="abonnement-page-bg"
+          style={{
+            paddingTop: 'var(--header-height)',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+          }}
+        >
+          <div className="abonnement-page-inner">
+            <div className="abonnement-page-title-block" style={{ textAlign: 'left', marginBottom: 36 }}>
+              <h1 style={abonnementPageTitleStyle}>Mon abonnement</h1>
+              <p style={abonnementPageSubtitleStyle}>L’offre adaptée à la taille de votre activité.</p>
+            </div>
+            <div className="abonnement-shell">
+              <div className="abonnement-plans-row">
+                <AbonnementPlansSkeleton />
+              </div>
+            </div>
+            <section className="abonnement-mes-factures-region" aria-labelledby="abonnement-mes-factures-heading-fallback">
+              <div className="abonnement-mes-factures-title-block">
+                <h2 id="abonnement-mes-factures-heading-fallback" style={abonnementPageTitleStyle}>
+                  Mes factures
+                </h2>
+                <p style={{ ...abonnementPageSubtitleStyle, margin: 0 }}>Chargement des factures…</p>
+              </div>
+              <div
+                className="abonnement-mes-factures-shell"
+                style={{ fontFamily: 'var(--font-inter), var(--font-sans)' }}
+              >
+                <div className="abonnement-factures-embed">
+                  <StripeSubscriptionInvoicesPanelChromeSkeleton />
+                </div>
+              </div>
+            </section>
+          </div>
         </div>
       }
     >

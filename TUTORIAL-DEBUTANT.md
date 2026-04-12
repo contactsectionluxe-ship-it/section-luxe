@@ -80,7 +80,7 @@ Pour **chaque ligne** du tableau ci‑dessous :
 - Attendez 1 à 2 minutes. Un cercle ou une barre de progression s’affiche.
 
 #### Étape 6 – Ouvrir le site
-- Quand le statut est **vert** (Ready / Déployé), cliquez sur **Visit** (ou sur l’URL affichée, ex. `section-luxe.vercel.app`).
+- Quand le statut est **vert** (Ready / Déployé), cliquez sur **Visit** (URL de prévisualisation Vercel du type `*.vercel.app`). Le site public est **https://www.sectionluxe.com/**.
 - Votre site est en ligne. Les demandes « Devenir vendeur » enverront un email à l’adresse indiquée dans `SMTP_USER` / `SMTP_FROM`.
 
 Dès qu’un visiteur remplit « Devenir vendeur » sur ce site, l’email part vers `contact.sectionluxe@gmail.com` avec les infos et les pièces jointes. **Aucune installation de Node.js sur votre Mac n’est nécessaire.**

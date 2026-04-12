@@ -33,8 +33,11 @@ function SuivreMesOffresListSkeleton() {
             ['--skeleton-index' as string]: i,
           }}
         >
-          <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
-          <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 88, backgroundColor: '#fff' }}>
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '1', overflow: 'hidden' }}>
+            <div className="catalogue-skeleton" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+            <div className="listing-card-photo-fade" aria-hidden />
+          </div>
+          <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 88, backgroundColor: '#fff' }}>
             <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
             <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
             <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
@@ -69,7 +72,7 @@ export default function SuivreMesOffresPage() {
   useEffect(() => {
     if (authLoading || !isAuthenticated || !user) return;
     if (isSeller) {
-      router.replace('/vendeur');
+      router.replace('/vendeur/annonces');
       return;
     }
     let cancelled = false;
@@ -81,7 +84,7 @@ export default function SuivreMesOffresPage() {
           setLoadError(null);
         }
       } catch (e) {
-        const message = e instanceof Error ? e.message : 'Impossible de charger vos offres.';
+        const message = e instanceof Error ? e.message : 'Impossible de charger vos propositions.';
         const isKnownConfigMessage =
           message.includes('Les tables des propositions de vente ne sont pas installées') ||
           message.includes('Récursion infinie des politiques RLS');
@@ -112,7 +115,7 @@ export default function SuivreMesOffresPage() {
 
   const filteredSorted = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    let list = q ? rows.filter((r) => (r.title || '').toLowerCase().includes(q)) : [...rows];
+    const list = q ? rows.filter((r) => (r.title || '').toLowerCase().includes(q)) : [...rows];
     list.sort((a, b) => {
       const ta = new Date(a.created_at).getTime();
       const tb = new Date(b.created_at).getTime();
@@ -142,42 +145,34 @@ export default function SuivreMesOffresPage() {
       setProposalToDeleteId(null);
     } catch (e) {
       console.error(e);
-      setDeleteProposalError(e instanceof Error ? e.message : 'Impossible de supprimer l’offre. Réessayez ou contactez le support.');
+      setDeleteProposalError(e instanceof Error ? e.message : 'Impossible de supprimer la proposition. Réessayez ou contactez le support.');
     } finally {
       setDeletingProposal(false);
     }
   };
 
-  if (authLoading) {
-    return (
-      <div className="suivre-mes-offres-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-        <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
-          <SuivreMesOffresListSkeleton />
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    router.replace('/connexion?redirect=/suivre-mes-offres');
+  if (!authLoading && (!isAuthenticated || !user)) {
+    router.replace('/connexion?redirect=/propositions');
     return null;
   }
-  if (isSeller) return null;
+  if (!authLoading && isSeller) return null;
+
+  const showListSkeleton = authLoading || loading;
 
   return (
-    <div className="suivre-mes-offres-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+    <div className="propositions-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
         <div className="mes-annonces-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
             <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px' }}>Suivre mes offres</h1>
+              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px' }}>Mes propositions</h1>
               <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.45 }}>
                 Suivez vos propositions de mise en vente
               </p>
             </div>
             <div className="mes-annonces-header-icons-mobile-wrap">
               <Link
-                href="/proposer-vente"
+                href="/proposer-piece"
                 className="mes-annonces-deposer-icon-mobile"
                 aria-label="Proposer une pièce"
                 title="Proposer une pièce"
@@ -202,7 +197,7 @@ export default function SuivreMesOffresPage() {
           </div>
           <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
             <Link
-              href="/proposer-vente"
+              href="/proposer-piece"
               className="mes-annonces-deposer-link"
               style={{
                 display: 'inline-flex',
@@ -240,7 +235,7 @@ export default function SuivreMesOffresPage() {
           </div>
         )}
 
-        {!loadError && !loading && (
+        {!loadError && (
           <div className="mes-annonces-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
             <div className="mes-annonces-search-input-wrap" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
               <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
@@ -248,7 +243,7 @@ export default function SuivreMesOffresPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher dans mes offres…"
+                placeholder="Rechercher dans mes propositions…"
                 autoComplete="off"
                 style={{
                   width: '100%',
@@ -331,7 +326,7 @@ export default function SuivreMesOffresPage() {
           </div>
         )}
 
-        {loadError ? null : loading ? (
+        {loadError ? null : showListSkeleton ? (
           <SuivreMesOffresListSkeleton />
         ) : rows.length === 0 ? (
           <div style={{ padding: 60, border: '1px solid #eee', textAlign: 'center', borderRadius: 12 }}>
@@ -381,10 +376,10 @@ export default function SuivreMesOffresPage() {
                 borderBottom: '1px solid #e5e5e7',
               }}
             >
-              Supprimer l&apos;offre
+              Supprimer la proposition
             </h2>
             <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
-              Supprimer cette offre ? Elle disparaîtra pour vous et pour les vendeurs concernés.
+              Supprimer cette proposition ? Elle disparaîtra pour vous et pour les vendeurs concernés.
             </p>
             {deleteProposalError && (
               <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteProposalError}</p>
@@ -450,7 +445,7 @@ function SuivreMesOffresProposalCard({
 
   const goToDetail = (e: ReactMouseEvent<HTMLElement>) => {
     if ((e.target as HTMLElement).closest('button, a')) return;
-    router.push(`/suivre-mes-offres/${r.id}`);
+    router.push(`/propositions/${r.id}`);
   };
 
   return (
@@ -462,7 +457,7 @@ function SuivreMesOffresProposalCard({
       onKeyDown={(e: KeyboardEvent<HTMLElement>) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
-          if (!(e.target as HTMLElement).closest('button, a')) router.push(`/suivre-mes-offres/${r.id}`);
+          if (!(e.target as HTMLElement).closest('button, a')) router.push(`/propositions/${r.id}`);
         }
       }}
       style={{
@@ -494,7 +489,7 @@ function SuivreMesOffresProposalCard({
               onOpenDelete();
             }}
             disabled={deletingProposal && proposalToDeleteId === r.id}
-            aria-label="Supprimer l'offre"
+            aria-label="Supprimer la proposition"
             style={{
               padding: 4,
               width: 22,
@@ -530,8 +525,9 @@ function SuivreMesOffresProposalCard({
             <Package size={40} color="#ccc" strokeWidth={1.25} />
           </div>
         )}
+        <div className="listing-card-photo-fade" aria-hidden />
       </div>
-      <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', backgroundColor: '#fff' }}>
+      <div style={{ padding: '16px 16px 12px', backgroundColor: '#fff' }}>
         <div style={{ marginBottom: 8 }}>
           <h3
             className="listing-grid-title mes-annonces-grid-title"
@@ -564,7 +560,7 @@ function SuivreMesOffresProposalCard({
       <div className="mes-annonces-card-actions" style={{ padding: '0 16px 16px' }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <Link
-            href={`/proposer-vente?modifier=${encodeURIComponent(r.id)}`}
+            href={`/proposer-piece?modifier=${encodeURIComponent(r.id)}`}
             onClick={(e) => e.stopPropagation()}
             style={{
               flex: 1,
@@ -580,7 +576,7 @@ function SuivreMesOffresProposalCard({
             Modifier
           </Link>
           <Link
-            href={`/suivre-mes-offres/${r.id}`}
+            href={`/propositions/${r.id}`}
             onClick={(e) => e.stopPropagation()}
             style={{
               flex: 1,

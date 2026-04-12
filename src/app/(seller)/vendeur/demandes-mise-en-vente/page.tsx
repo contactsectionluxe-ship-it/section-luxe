@@ -1,6 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent as ReactMouseEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  type RefObject,
+} from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, ChevronDown, Store, Calendar, Handbag, Package } from 'lucide-react';
@@ -21,6 +30,157 @@ const SORT_OPTIONS = [
   { value: 'oldest' as const, label: 'Plus anciens' },
 ];
 
+function SourcingPageToolbar({
+  showSearchRow,
+  searchQuery,
+  setSearchQuery,
+  sortBy,
+  setSortBy,
+  sortOpen,
+  setSortOpen,
+  sortRef,
+}: {
+  showSearchRow: boolean;
+  searchQuery: string;
+  setSearchQuery: (v: string) => void;
+  sortBy: 'recent' | 'oldest';
+  setSortBy: (v: 'recent' | 'oldest') => void;
+  sortOpen: boolean;
+  setSortOpen: (v: boolean | ((b: boolean) => boolean)) => void;
+  sortRef: RefObject<HTMLDivElement | null>;
+}) {
+  return (
+    <>
+      <div
+        className="mes-annonces-header"
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}
+      >
+        <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
+            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px' }}>
+              Sourcing
+            </h1>
+            <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.45 }}>
+              Gérez vos propositions reçues
+            </p>
+          </div>
+        </div>
+        <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
+          <Link
+            href="/vendeur/annonces"
+            className="mes-annonces-deposer-link"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '12px 20px',
+              backgroundColor: '#000',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 500,
+              borderRadius: 12,
+              textDecoration: 'none',
+            }}
+          >
+            <Store size={18} /> Espace vendeur
+          </Link>
+        </div>
+      </div>
+
+      {showSearchRow && (
+        <div className="mes-annonces-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div className="mes-annonces-search-input-wrap" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
+            <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher dans le sourcing…"
+              autoComplete="off"
+              style={{
+                width: '100%',
+                height: 48,
+                padding: '0 16px 0 44px',
+                fontSize: 14,
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                backgroundColor: '#fff',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div className="mes-annonces-sort-dropdown" ref={sortRef} style={{ position: 'relative', flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => setSortOpen((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                height: 48,
+                padding: '0 14px 0 16px',
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                backgroundColor: '#fff',
+                fontSize: 14,
+                color: '#1d1d1f',
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: 160,
+              }}
+            >
+              <span style={{ flex: 1, textAlign: 'left' }}>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Trier'}</span>
+              <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
+            </button>
+            {sortOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  right: 0,
+                  marginTop: 4,
+                  backgroundColor: '#fff',
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 12,
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  zIndex: 9999,
+                  overflow: 'hidden',
+                }}
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      setSortBy(opt.value);
+                      setSortOpen(false);
+                    }}
+                    style={{
+                      display: 'block',
+                      width: '100%',
+                      padding: '12px 16px',
+                      border: 'none',
+                      background: sortBy === opt.value ? '#f5f5f7' : '#fff',
+                      fontSize: 14,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      color: '#1d1d1f',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function SourcingPage() {
   const router = useRouter();
   const { user, seller, isApprovedSeller, loading: authLoading } = useAuth();
@@ -39,7 +199,7 @@ export default function SourcingPage() {
     if (authLoading || !user || !seller || !isApprovedSeller) return;
     const tier = seller.subscriptionTier;
     if (tier !== 'plus' && tier !== 'pro') {
-      router.replace('/vendeur');
+      router.replace('/vendeur/annonces');
       return;
     }
     let cancelled = false;
@@ -139,6 +299,16 @@ export default function SourcingPage() {
     return (
       <div className="sourcing-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
+          <SourcingPageToolbar
+            showSearchRow
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            sortBy={sortBy}
+            setSortBy={setSortBy}
+            sortOpen={sortOpen}
+            setSortOpen={setSortOpen}
+            sortRef={sortRef}
+          />
           <SourcingListSkeleton />
         </div>
       </div>
@@ -156,41 +326,16 @@ export default function SourcingPage() {
   return (
     <div className="sourcing-page" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div className="mes-annonces-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
-        <div
-          className="mes-annonces-header"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}
-        >
-          <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
-            <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
-              <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px' }}>
-                Sourcing
-              </h1>
-              <p style={{ fontSize: 14, color: '#666', margin: 0, lineHeight: 1.45 }}>
-                Gérez vos propositions reçues
-              </p>
-            </div>
-          </div>
-          <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
-            <Link
-              href="/vendeur"
-              className="mes-annonces-deposer-link"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '12px 20px',
-                backgroundColor: '#000',
-                color: '#fff',
-                fontSize: 14,
-                fontWeight: 500,
-                borderRadius: 12,
-                textDecoration: 'none',
-              }}
-            >
-              <Store size={18} /> Espace vendeur
-            </Link>
-          </div>
-        </div>
+        <SourcingPageToolbar
+          showSearchRow={!loadError}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          sortOpen={sortOpen}
+          setSortOpen={setSortOpen}
+          sortRef={sortRef}
+        />
 
         {loadError && (
           <div
@@ -207,97 +352,6 @@ export default function SourcingPage() {
             }}
           >
             {loadError}
-          </div>
-        )}
-
-        {!loadError && !loading && (
-          <div className="mes-annonces-search-row" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-            <div className="mes-annonces-search-input-wrap" style={{ flex: 1, position: 'relative', minWidth: 0 }}>
-              <Search size={18} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#86868b', pointerEvents: 'none' }} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher dans le sourcing…"
-                autoComplete="off"
-                style={{
-                  width: '100%',
-                  height: 48,
-                  padding: '0 16px 0 44px',
-                  fontSize: 14,
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  backgroundColor: '#fff',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-            <div className="mes-annonces-sort-dropdown" ref={sortRef} style={{ position: 'relative', flexShrink: 0 }}>
-              <button
-                type="button"
-                onClick={() => setSortOpen((v) => !v)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  height: 48,
-                  padding: '0 14px 0 16px',
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 12,
-                  backgroundColor: '#fff',
-                  fontSize: 14,
-                  color: '#1d1d1f',
-                  cursor: 'pointer',
-                  outline: 'none',
-                  minWidth: 160,
-                }}
-              >
-                <span style={{ flex: 1, textAlign: 'left' }}>{SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Trier'}</span>
-                <ChevronDown size={16} style={{ color: '#86868b', flexShrink: 0 }} />
-              </button>
-              {sortOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    marginTop: 4,
-                    backgroundColor: '#fff',
-                    border: '1px solid #d2d2d7',
-                    borderRadius: 12,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                    zIndex: 9999,
-                    overflow: 'hidden',
-                  }}
-                >
-                  {SORT_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        setSortBy(opt.value);
-                        setSortOpen(false);
-                      }}
-                      style={{
-                        display: 'block',
-                        width: '100%',
-                        padding: '12px 16px',
-                        border: 'none',
-                        background: sortBy === opt.value ? '#f5f5f7' : '#fff',
-                        fontSize: 14,
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        color: '#1d1d1f',
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
@@ -441,8 +495,11 @@ function SourcingListSkeleton() {
             ['--skeleton-index' as string]: i,
           }}
         >
-          <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
-          <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 88, backgroundColor: '#fff' }}>
+          <div style={{ position: 'relative', width: '100%', aspectRatio: '1', overflow: 'hidden' }}>
+            <div className="catalogue-skeleton" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+            <div className="listing-card-photo-fade" aria-hidden />
+          </div>
+          <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: 88, backgroundColor: '#fff' }}>
             <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
             <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
             <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
@@ -542,8 +599,9 @@ function SourcingProposalCard({
             <Package size={40} color="#ccc" strokeWidth={1.25} />
           </div>
         )}
+        <div className="listing-card-photo-fade" aria-hidden />
       </div>
-      <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', backgroundColor: '#fff' }}>
+      <div style={{ padding: '16px 16px 12px', backgroundColor: '#fff' }}>
         <div style={{ marginBottom: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h3

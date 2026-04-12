@@ -43,6 +43,7 @@ export function isSafeInternalReturnUrl(path: string): boolean {
   const p = normalizeInternalPath(path);
   if (p.startsWith('/catalogue')) return true;
   if (p === '/favoris' || p.startsWith('/favoris?')) return true;
+  if (p === '/' || p.startsWith('/?')) return true;
   return false;
 }
 
@@ -55,8 +56,13 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
   const normalized = normalizeInternalPath(url);
   try {
     sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, normalized);
-    /* Depuis une page catalogue : mémoriser le scroll pour « Retour au catalogue » (équivalent au bouton retour du navigateur). */
-    if (normalized.startsWith('/catalogue') && window.location.pathname.startsWith('/catalogue')) {
+    /* Mémoriser le scroll pour retour catalogue / accueil (même repère que la grille catalogue : URL complète incl. view=line si besoin). */
+    const path = window.location.pathname;
+    const onCatalogue = path.startsWith('/catalogue');
+    const onHome = path === '/' || path === '';
+    const targetsCatalogue = normalized.startsWith('/catalogue');
+    const targetsHome = normalized === '/' || normalized.startsWith('/?');
+    if ((targetsCatalogue && onCatalogue) || (targetsHome && onHome)) {
       const payload: CatalogueScrollPayload = { y: window.scrollY, href: normalized };
       sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
     }
@@ -69,6 +75,31 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
  * Si l’URL courante correspond à celle mémorisée avec le scroll, retourne `y` et supprime l’entrée.
  * Sinon supprime l’entrée si elle ne correspond pas (évite une restauration plus tard par erreur).
  */
+/** Lit la position à restaurer sans retirer l’entrée (pour reporter le scroll après le chargement des annonces). */
+export function peekCatalogueScrollRestore(currentHref: string): number | null {
+  if (typeof window === 'undefined') return null;
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(CATALOGUE_SCROLL_RESTORE_KEY);
+  } catch {
+    return null;
+  }
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as CatalogueScrollPayload;
+    if (typeof parsed.y !== 'number' || typeof parsed.href !== 'string') {
+      return null;
+    }
+    const cur = normalizeInternalPath(currentHref);
+    if (!catalogueHrefsEquivalent(parsed.href, cur)) {
+      return null;
+    }
+    return Math.max(0, parsed.y);
+  } catch {
+    return null;
+  }
+}
+
 export function consumeCatalogueScrollRestore(currentHref: string): number | null {
   if (typeof window === 'undefined') return null;
   let raw: string | null = null;

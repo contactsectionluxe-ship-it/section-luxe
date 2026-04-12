@@ -20,7 +20,7 @@ function packagingIncludedKeys(packaging: string[] | null | undefined): string[]
   return raw.filter((key) => PACKAGING_INCLUDED_LABELS[key]);
 }
 
-/** Grille « Suivre mes offres » / Sourcing : description + contenu inclus (fiche produit). */
+/** Grille « Propositions » / Sourcing : description + contenu inclus (fiche produit). */
 export function SaleProposalGridDescriptionAccordion({
   proposalId,
   description,
@@ -56,7 +56,7 @@ export function SaleProposalGridDescriptionAccordion({
         </span>
         <button
           type="button"
-          className="suivre-mes-offres-desc-toggle"
+          className="propositions-desc-toggle"
           aria-disabled={!canExpand}
           tabIndex={canExpand ? undefined : -1}
           aria-expanded={canExpand ? open : false}

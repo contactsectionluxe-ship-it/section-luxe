@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
@@ -103,21 +104,53 @@ export default function HomePage() {
           paddingBottom: 128,
           paddingLeft: 24,
           paddingRight: 24,
-          backgroundImage: 'url(/banniere-hero.png)',
-          backgroundSize: '60%',
-          backgroundPosition: '100% center',
-          backgroundRepeat: 'no-repeat',
+          backgroundColor: '#ffffff',
+          overflow: 'hidden',
         }}
       >
         <div
+          className="hero-section-backdrop"
+          aria-hidden
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to right, #ffffff 0%, #ffffff 45%, rgba(255,255,255,0.85) 55%, transparent 75%)',
+            zIndex: 0,
             pointerEvents: 'none',
           }}
-        />
-        <div style={{ position: 'relative', maxWidth: 1100, margin: '0 auto' }}>
+        >
+          <div
+            className="hero-bg-image-wrap"
+            style={{
+              position: 'absolute',
+              right: 0,
+              top: 0,
+              bottom: 0,
+              width: '60%',
+              zIndex: 0,
+            }}
+          >
+            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+              <Image
+                src="/banniere-hero.png"
+                alt=""
+                fill
+                priority
+                unoptimized
+                sizes="60vw"
+                style={{ objectFit: 'contain', objectPosition: 'right center' }}
+              />
+            </div>
+          </div>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 1,
+              background: 'linear-gradient(to right, #ffffff 0%, #ffffff 45%, rgba(255,255,255,0.85) 55%, transparent 75%)',
+            }}
+          />
+        </div>
+        <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto' }}>
           <h1
             style={{
               fontFamily: 'var(--font-playfair), Georgia, serif',
@@ -137,7 +170,7 @@ export default function HomePage() {
             Explorez les offres de professionnels près de chez vous.
           </p>
           <HeroNumberedSteps />
-          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14 }}>
+          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: '1cm' }}>
             <Link
               href="/catalogue"
               style={{
@@ -469,7 +502,7 @@ export default function HomePage() {
       </section>
 
       {/* Featured Products */}
-      <section className="home-section-padded home-section-featured" style={{ padding: '80px 24px 80px' }}>
+      <section className="home-section-padded home-section-featured" style={{ padding: '80px 24px 104px' }}>
         <div style={{ maxWidth: 1100, margin: '0 auto' }}>
           <div className="home-featured-section-head" style={{ marginBottom: 36 }}>
             <h2
@@ -521,18 +554,26 @@ export default function HomePage() {
                   }}
                 >
                   <div
-                    className="catalogue-skeleton"
                     style={{
                       position: 'relative',
                       width: '100%',
                       aspectRatio: '1',
-                      borderRadius: 0,
                       flexShrink: 0,
+                      overflow: 'hidden',
                     }}
-                  />
+                  >
+                    <div
+                      className="catalogue-skeleton"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: 0,
+                      }}
+                    />
+                    <div className="listing-card-photo-fade" aria-hidden />
+                  </div>
                   <div
                     style={{
-                      borderTop: '1px solid #e8e6e3',
                       padding: '14px 14px 10px',
                       display: 'flex',
                       flexDirection: 'column',
@@ -565,7 +606,11 @@ export default function HomePage() {
                 <Link
                   key={listing.id}
                   href={listingAnnoncePath(listing)}
-                  onClick={() => setAnnonceReturnUrlForNextNavigation('/catalogue')}
+                  onClick={() => {
+                    if (typeof window === 'undefined') return;
+                    const h = window.location.pathname + (window.location.search || '');
+                    setAnnonceReturnUrlForNextNavigation(h || '/');
+                  }}
                   style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                 >
                   <article
@@ -590,8 +635,9 @@ export default function HomePage() {
                       }}
                     >
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} priority={i < 6} sizes="(max-width: 640px) 50vw, 25vw" />
+                      <div className="listing-card-photo-fade" aria-hidden />
                     </div>
-                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
+                    <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
                       <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                         <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                           <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
@@ -663,36 +709,17 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA — fond marbre */}
+      {/* CTA vendeur — fond gris */}
       <section
         className="home-section-padded home-section-vendeur-cta"
         style={{
           position: 'relative',
-          marginTop: -24,
-          padding: '120px 24px 108px',
-          backgroundImage: 'url(/section-vendeur-bg.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 50%',
-          backgroundRepeat: 'no-repeat',
+          marginTop: 0,
+          padding: 'calc(76px + 2mm) 24px 76px',
+          backgroundColor: '#f5f5f7',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.6) 45%, transparent 75%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(ellipse 72% 42% at 50% 50%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 55%, rgba(255,255,255,0.15) 85%, transparent 100%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', textAlign: 'center' }}>
           <FluidOneLineHeading
             className="home-section-vendeur-cta-title"
             style={{
@@ -705,7 +732,7 @@ export default function HomePage() {
           >
             Vous êtes un vendeur professionnel ?
           </FluidOneLineHeading>
-          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
+          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link
@@ -725,8 +752,12 @@ export default function HomePage() {
               borderRadius: 980,
               transition: 'opacity 0.2s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
           >
             Devenir partenaire
             <ArrowRight size={18} strokeWidth={2} />

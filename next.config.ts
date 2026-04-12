@@ -38,6 +38,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
+    /** Aligné sur `ListingPhoto` (quality 92) — Next 16 n’autorise que les qualités listées ici. */
+    qualities: [75, 92],
     /** AVIF/WebP en priorité : meilleure qualité par octet pour le même poids que du JPEG. */
     formats: ['image/avif', 'image/webp'],
     /** Cache long des variantes optimisées (répétitions / navigation : pas de re-téléchargement inutile). */
@@ -56,8 +58,53 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/mes-propositions-vente',
-        destination: '/suivre-mes-offres',
+        destination: '/propositions',
         permanent: true,
+      },
+      {
+        source: '/mes-propositions/:proposalId',
+        destination: '/propositions/:proposalId',
+        permanent: true,
+      },
+      {
+        source: '/mes-propositions',
+        destination: '/propositions',
+        permanent: true,
+      },
+      {
+        source: '/suivre-mes-offres/:proposalId',
+        destination: '/propositions/:proposalId',
+        permanent: true,
+      },
+      {
+        source: '/suivre-mes-offres',
+        destination: '/propositions',
+        permanent: true,
+      },
+      {
+        source: '/proposer-vente',
+        destination: '/proposer-piece',
+        permanent: true,
+      },
+      {
+        source: '/vendeur',
+        destination: '/vendeur/annonces',
+        permanent: true,
+      },
+      {
+        source: '/vendeur/factures',
+        destination: '/vendeur/abonnement',
+        permanent: false,
+      },
+      {
+        source: '/vendeur/factures/:id',
+        destination: '/vendeur/abonnement',
+        permanent: false,
+      },
+      {
+        source: '/vendeur/abonnement/factures-stripe',
+        destination: '/vendeur/abonnement',
+        permanent: false,
       },
     ];
   },

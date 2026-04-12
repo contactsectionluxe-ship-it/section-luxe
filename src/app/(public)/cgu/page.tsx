@@ -129,7 +129,7 @@ export default function CGUPage() {
             RCS Paris : en création<br />
             SIRET : en création<br />
             TVA intracommunautaire : en création<br />
-            Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+            Email : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
           </p>
 
           <h3 style={articleTitleStyle}>Article 2 – Acceptation et opposabilité</h3>
@@ -209,7 +209,7 @@ export default function CGUPage() {
             Sa responsabilité ne peut être engagée qu&apos;en cas de connaissance effective d&apos;un contenu manifestement illicite et d&apos;absence de retrait prompt.
           </p>
           <p style={paragraphStyle}>
-            Point de contact DSA : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+            Point de contact DSA : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
           </p>
 
           <h3 style={articleTitleStyle}>Article 6 – Classement des annonces</h3>
@@ -449,7 +449,7 @@ export default function CGUPage() {
 
           <h4 style={subSectionTitleStyle}>21.3 Contact médiation</h4>
           <p style={paragraphStyle}>
-            L&apos;utilisateur peut demander les coordonnées du médiateur à l&apos;adresse : contact.sectionluxe@gmail.com
+            L&apos;utilisateur peut demander les coordonnées du médiateur à l&apos;adresse : contact@sectionluxe.fr
           </p>
 
           <h3 style={articleTitleStyle}>Article 22 – Langue</h3>

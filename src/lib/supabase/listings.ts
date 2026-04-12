@@ -319,13 +319,21 @@ export async function getListing(publicId: string): Promise<Listing | null> {
     return merged[0] ?? null;
   }
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('listings')
     .select(LISTING_SELECT)
     .eq('listing_number', raw)
     .maybeSingle();
 
-  if (error || !data) return null;
+  if (error) return null;
+  if (!data) {
+    const esc = raw.replace(/\\/g, '\\\\').replace(/%/g, '\\%').replace(/_/g, '\\_');
+    const r2 = await supabase.from('listings').select(LISTING_SELECT).ilike('listing_number', esc).maybeSingle();
+    if (r2.error) return null;
+    data = r2.data;
+  }
+
+  if (!data) return null;
   const merged = await mergeSellerPublicFieldsIntoListings([rowToListing(data)]);
   return merged[0] ?? null;
 }

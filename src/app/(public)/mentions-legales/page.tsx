@@ -67,7 +67,7 @@ export default function MentionsLegalesPage() {
             Numéro SIRET : en création<br />
             Numéro de TVA intracommunautaire : en création<br />
             Directeur de la publication : Michael Labrador, Président<br />
-            Adresse de contact : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+            Adresse de contact : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
           </p>
 
           <h2 style={sectionTitleStyle}>2. Hébergement</h2>
@@ -116,7 +116,7 @@ export default function MentionsLegalesPage() {
           <h2 style={sectionTitleStyle}>5. Signalement de contenu illicite</h2>
           <p style={paragraphStyle}>
             Toute personne peut signaler un contenu manifestement illicite à l&apos;adresse suivante :{' '}
-            <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+            <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
           </p>
           <p style={paragraphStyle}>
             Le signalement doit comporter :

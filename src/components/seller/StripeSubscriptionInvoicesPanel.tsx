@@ -1,10 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, Search, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getValidAccessTokenForFetch } from '@/lib/supabase/auth';
+import { getSession, getValidAccessTokenForFetch } from '@/lib/supabase/auth';
+
+/** Renseigne le sous-titre « N facture(s) » sur Mon abonnement (évite un 2e fetch + 2e refreshSession). */
+export type StripeSubscriptionInvoicesHeadlineMeta =
+  | { kind: 'count'; count: number }
+  | { kind: 'error'; message: string };
 
 type StripeInvoiceRow = {
   id: string;
@@ -77,19 +82,83 @@ function rowHref(inv: StripeInvoiceRow): string | null {
   return inv.hostedInvoiceUrl || inv.invoicePdf || null;
 }
 
+function InvoiceListSkeletonRows({ rowCount = 6 }: { rowCount?: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      {Array.from({ length: rowCount }, (_, i) => (
+        <div
+          key={i}
+          className="mes-factures-invoice-row"
+          style={{ borderBottom: i < rowCount - 1 ? '1px solid #e8e6e3' : 'none' }}
+        >
+          <div
+            className="mes-factures-invoice-row__download"
+            style={{
+              width: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-start',
+            }}
+          >
+            <div className="catalogue-skeleton" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+          </div>
+          <div className="mes-factures-invoice-row__main" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div className="catalogue-skeleton" style={{ height: 15, width: '70%', borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 13, width: '90%', borderRadius: 4 }} />
+          </div>
+          <div className="mes-factures-invoice-row__price">
+            <div className="catalogue-skeleton" style={{ width: 72, height: 18, borderRadius: 4, flexShrink: 0 }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Barre de recherche + filtres approximatifs + liste en squelette (chargement auth / panneau). */
+export function StripeSubscriptionInvoicesPanelChromeSkeleton() {
+  return (
+    <div className="stripe-subscription-invoices-panel stripe-subscription-invoices-panel--embedded" style={{ width: '100%' }}>
+      <div style={{ marginBottom: 16 }}>
+        <div className="catalogue-skeleton" style={{ width: '100%', height: 48, borderRadius: 10 }} />
+      </div>
+      <div className="mes-factures-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <div className="catalogue-skeleton" style={{ height: 44, width: 100, borderRadius: 12, flexShrink: 0 }} />
+        <div className="catalogue-skeleton" style={{ height: 44, width: 120, borderRadius: 12, flexShrink: 0 }} />
+        <div className="catalogue-skeleton" style={{ height: 44, width: 120, borderRadius: 12, flexShrink: 0 }} />
+        <div
+          className="mes-factures-sort-dropdown"
+          style={{ marginLeft: 'auto', flexShrink: 0 }}
+        >
+          <div className="catalogue-skeleton" style={{ height: 44, width: 168, borderRadius: 12 }} />
+        </div>
+      </div>
+      <div
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 18,
+          boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+          border: '1px solid #e8e6e3',
+          overflow: 'hidden',
+        }}
+      >
+        <InvoiceListSkeletonRows />
+      </div>
+    </div>
+  );
+}
+
 /** PDF facture Stripe en priorité, sinon page facture hébergée. */
 function downloadHref(inv: StripeInvoiceRow): string | null {
   return inv.invoicePdf || inv.hostedInvoiceUrl || null;
 }
 
-export type StripeSubscriptionInvoicesPanelVariant = 'page' | 'embedded';
-
+/** Liste des factures d’abonnement Stripe (intégrée à Mon abonnement). */
 export function StripeSubscriptionInvoicesPanel({
-  variant = 'page',
+  onHeadlineMeta,
 }: {
-  variant?: StripeSubscriptionInvoicesPanelVariant;
+  onHeadlineMeta?: (meta: StripeSubscriptionInvoicesHeadlineMeta) => void;
 }) {
-  const embedded = variant === 'embedded';
   const router = useRouter();
   const { user, seller, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -102,6 +171,9 @@ export function StripeSubscriptionInvoicesPanel({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const [datePresetOpen, setDatePresetOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const headlineMetaRef = useRef(onHeadlineMeta);
+  headlineMetaRef.current = onHeadlineMeta;
 
   const toYMD = (d: Date) => {
     const y = d.getFullYear();
@@ -147,6 +219,7 @@ export function StripeSubscriptionInvoicesPanel({
     if (!seller?.stripeCustomerRegistered || loading) {
       if (!loading && seller && !seller.stripeCustomerRegistered) {
         setInvoicesLoading(false);
+        headlineMetaRef.current?.({ kind: 'count', count: 0 });
       }
       return;
     }
@@ -156,24 +229,42 @@ export function StripeSubscriptionInvoicesPanel({
     setLoadError(null);
     (async () => {
       try {
-        const accessToken = await getValidAccessTokenForFetch();
-        if (!accessToken) {
-          router.push('/connexion');
-          return;
+        let accessToken = (await getSession())?.access_token ?? null;
+        const doFetch = (token: string) =>
+          fetch('/api/vendeur/abonnement/stripe-invoices', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+        let r: Response;
+        if (accessToken) {
+          r = await doFetch(accessToken);
+        } else {
+          r = new Response('{}', { status: 401, headers: { 'Content-Type': 'application/json' } });
         }
-        const r = await fetch('/api/vendeur/abonnement/stripe-invoices', {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        if (r.status === 401) {
+          accessToken = (await getValidAccessTokenForFetch()) ?? null;
+          if (accessToken) r = await doFetch(accessToken);
+        }
+
         const data = (await r.json().catch(() => ({}))) as { invoices?: StripeInvoiceRow[]; error?: string };
         if (cancelled) return;
+
         if (!r.ok) {
-          setLoadError(typeof data.error === 'string' ? data.error : 'Erreur de chargement');
+          const msg = typeof data.error === 'string' ? data.error : 'Erreur de chargement';
+          setLoadError(msg);
           setInvoices([]);
+          headlineMetaRef.current?.({ kind: 'error', message: msg });
           return;
         }
-        setInvoices(Array.isArray(data.invoices) ? data.invoices : []);
+
+        const list = Array.isArray(data.invoices) ? data.invoices : [];
+        setInvoices(list);
+        headlineMetaRef.current?.({ kind: 'count', count: list.length });
       } catch {
-        if (!cancelled) setLoadError('Erreur réseau');
+        if (!cancelled) {
+          setLoadError('Erreur réseau');
+          headlineMetaRef.current?.({ kind: 'error', message: 'Erreur réseau' });
+        }
       } finally {
         if (!cancelled) setInvoicesLoading(false);
       }
@@ -182,7 +273,7 @@ export function StripeSubscriptionInvoicesPanel({
     return () => {
       cancelled = true;
     };
-  }, [seller?.stripeCustomerRegistered, loading, router]);
+  }, [seller?.stripeCustomerRegistered, loading]);
 
   const filteredAndSortedInvoices = useMemo(() => {
     let list = invoices.map((inv) => ({
@@ -221,47 +312,26 @@ export function StripeSubscriptionInvoicesPanel({
   }, [invoices, dateFrom, dateTo, sortOrder, searchQuery]);
 
   if (authLoading || loading) {
-    if (embedded) {
-      return (
-        <p
-          style={{
-            textAlign: 'center',
-            padding: '32px 16px',
-            fontSize: 15,
-            color: '#6e6e73',
-            fontFamily: 'var(--font-inter), var(--font-sans)',
-          }}
-        >
-          Chargement...
-        </p>
-      );
-    }
-    return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
-      </div>
-    );
+    return <StripeSubscriptionInvoicesPanelChromeSkeleton />;
   }
 
   if (!user || !seller) return null;
 
   if (!seller.stripeCustomerRegistered) {
-    if (embedded) {
-      return (
-        <p
-          style={{
-            fontSize: 14,
-            color: '#6e6e73',
-            textAlign: 'center',
-            lineHeight: 1.6,
-            fontFamily: 'var(--font-inter), var(--font-sans)',
-            padding: '8px 0 0',
-          }}
-        >
-          Aucune facturation Stripe n’est associée à votre compte pour l’instant. Les factures apparaîtront après souscription à Plus ou Pro.
-        </p>
-      );
-    }
+    return (
+      <p
+        style={{
+          fontSize: 14,
+          color: '#6e6e73',
+          textAlign: 'center',
+          lineHeight: 1.6,
+          fontFamily: 'var(--font-inter), var(--font-sans)',
+          padding: '8px 0 0',
+        }}
+      >
+        Aucune facturation Stripe n’est associée à votre compte pour l’instant. Les factures apparaîtront après souscription à Plus ou Pro.
+      </p>
+    );
   }
 
   const panelBody = (
@@ -538,34 +608,7 @@ export function StripeSubscriptionInvoicesPanel({
               <p style={{ fontSize: 15, color: '#991b1b' }}>{loadError}</p>
             </div>
           ) : invoicesLoading ? (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {Array.from({ length: 6 }, (_, i) => (
-                <div
-                  key={i}
-                  className="mes-factures-invoice-row"
-                  style={{ borderBottom: i < 5 ? '1px solid #e8e6e3' : 'none' }}
-                >
-                  <div
-                    className="mes-factures-invoice-row__download"
-                    style={{
-                      width: 40,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-start',
-                    }}
-                  >
-                    <div className="catalogue-skeleton" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
-                  </div>
-                  <div className="mes-factures-invoice-row__main" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div className="catalogue-skeleton" style={{ height: 15, width: '70%', borderRadius: 4 }} />
-                    <div className="catalogue-skeleton" style={{ height: 13, width: '90%', borderRadius: 4 }} />
-                  </div>
-                  <div className="mes-factures-invoice-row__price">
-                    <div className="catalogue-skeleton" style={{ width: 72, height: 18, borderRadius: 4, flexShrink: 0 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            <InvoiceListSkeletonRows />
           ) : filteredAndSortedInvoices.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {filteredAndSortedInvoices.map((inv) => {
@@ -687,32 +730,9 @@ export function StripeSubscriptionInvoicesPanel({
     </>
   );
 
-  if (embedded) {
-    return (
-      <div className="stripe-subscription-invoices-panel stripe-subscription-invoices-panel--embedded" style={{ width: '100%' }}>
-        {panelBody}
-      </div>
-    );
-  }
-
-  const pageSubtitle =
-    invoicesLoading
-      ? 'Chargement des factures...'
-      : loadError
-        ? loadError
-        : `${filteredAndSortedInvoices.length} ${filteredAndSortedInvoices.length === 1 ? 'facture' : 'factures'}`;
-
   return (
-    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
-      <div className="mes-factures-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f' }}>
-            Mes factures
-          </h1>
-          <p style={{ fontSize: 14, color: '#888' }}>{pageSubtitle}</p>
-        </div>
-        {panelBody}
-      </div>
+    <div className="stripe-subscription-invoices-panel stripe-subscription-invoices-panel--embedded" style={{ width: '100%' }}>
+      {panelBody}
     </div>
   );
 }

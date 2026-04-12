@@ -70,7 +70,7 @@ function NewListingSuccessContent() {
       setCountdown((c) => {
         if (c <= 1) {
           clearInterval(t);
-          router.replace('/vendeur');
+          router.replace('/vendeur/annonces');
           return 0;
         }
         return c - 1;
@@ -96,7 +96,7 @@ function NewListingSuccessContent() {
         <div style={cardStyle}>
           <p style={{ fontSize: 16, color: '#dc2626', marginBottom: 20 }}>Session de paiement invalide.</p>
           <Link
-            href="/vendeur"
+            href="/vendeur/annonces"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -173,7 +173,7 @@ function NewListingSuccessContent() {
           )}
         </p>
         <Link
-          href="/vendeur"
+          href="/vendeur/annonces"
           style={{
             display: 'inline-flex',
             alignItems: 'center',

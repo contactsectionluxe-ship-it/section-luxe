@@ -67,7 +67,7 @@ export default function SourcingProposalDetailPage() {
     if (authLoading || !user || !seller || !isApprovedSeller) return;
     const tier = seller.subscriptionTier;
     if (tier !== 'plus' && tier !== 'pro') {
-      router.replace('/vendeur');
+      router.replace('/vendeur/annonces');
       return;
     }
     let cancelled = false;

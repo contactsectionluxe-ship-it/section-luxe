@@ -55,13 +55,13 @@ export default function SuivreMesOffresDetailPage() {
 
   useEffect(() => {
     if (!authLoading && (!isAuthenticated || !user)) {
-      router.replace(`/connexion?redirect=/suivre-mes-offres/${encodeURIComponent(proposalId)}`);
+      router.replace(`/connexion?redirect=/propositions/${encodeURIComponent(proposalId)}`);
     }
   }, [authLoading, isAuthenticated, user, router, proposalId]);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && user && isSeller) {
-      router.replace('/vendeur');
+      router.replace('/vendeur/annonces');
     }
   }, [authLoading, isAuthenticated, user, isSeller, router]);
 
@@ -99,10 +99,10 @@ export default function SuivreMesOffresDetailPage() {
     setDeleteError(null);
     try {
       await deleteVisitorSaleProposal(user.uid, row.id);
-      router.push('/suivre-mes-offres');
+      router.push('/propositions');
     } catch (e) {
       console.error(e);
-      setDeleteError(e instanceof Error ? e.message : 'Impossible de supprimer l’offre.');
+      setDeleteError(e instanceof Error ? e.message : 'Impossible de supprimer la proposition.');
     } finally {
       setDeleting(false);
     }
@@ -131,10 +131,10 @@ export default function SuivreMesOffresDetailPage() {
     return (
       <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px 60px' }}>
-          <Link href="/suivre-mes-offres" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1d1d1f', marginBottom: 24 }}>
-            <ArrowLeft size={18} /> Retour à Suivre mes offres
+          <Link href="/propositions" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1d1d1f', marginBottom: 24 }}>
+            <ArrowLeft size={18} /> Retour à mes propositions
           </Link>
-          <p style={{ fontSize: 15, color: '#6e6e73' }}>Offre introuvable ou vous n’y avez plus accès.</p>
+          <p style={{ fontSize: 15, color: '#6e6e73' }}>Proposition introuvable ou vous n’y avez plus accès.</p>
         </div>
       </div>
     );
@@ -150,8 +150,8 @@ export default function SuivreMesOffresDetailPage() {
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px 60px' }}>
-        <Link href="/suivre-mes-offres" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1d1d1f', marginBottom: 24 }}>
-          <ArrowLeft size={18} /> Retour à Suivre mes offres
+        <Link href="/propositions" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1d1d1f', marginBottom: 24 }}>
+          <ArrowLeft size={18} /> Retour à mes propositions
         </Link>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -245,7 +245,7 @@ export default function SuivreMesOffresDetailPage() {
 
           <div>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: 0.4, margin: '0 0 6px' }}>
-              Mon offre
+              Ma proposition
             </p>
             <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 24, fontWeight: 500, margin: 0, color: '#1d1d1f' }}>
               {listing.title}
@@ -254,7 +254,7 @@ export default function SuivreMesOffresDetailPage() {
               Prix souhaité : <strong style={{ color: '#1d1d1f', fontWeight: 600 }}>{formatPrice(p.wish_price_cents / 100)}</strong>
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', fontSize: 12, color: '#86868b', marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
-              <span>Offre créée le {formatDate(new Date(p.created_at))}</span>
+              <span>Proposition créée le {formatDate(new Date(p.created_at))}</span>
             </div>
           </div>
 
@@ -305,7 +305,7 @@ export default function SuivreMesOffresDetailPage() {
           <div style={{ paddingTop: 4, marginTop: 0 }}>
             <h2 style={{ display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1, fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 19, fontWeight: 600, color: '#0a0a0a', margin: 0, marginBottom: 8 }}>
               <Info size={19} color="#0a0a0a" strokeWidth={2} style={{ flexShrink: 0, display: 'block', lineHeight: 1 }} />
-              Détails de l’offre
+              Détails de la proposition
             </h2>
             <div style={{ fontSize: 13, color: '#6e6e73', marginBottom: 20, marginTop: 0, minWidth: 0 }}>
               <TruncatedInfoValue text={getListingDisplayTitle(listing)} fontSize={13} color="#6e6e73" valueTextAlign="left" />
@@ -343,7 +343,7 @@ export default function SuivreMesOffresDetailPage() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, paddingTop: 8 }}>
             <Link
-              href={`/proposer-vente?modifier=${encodeURIComponent(p.id)}`}
+              href={`/proposer-piece?modifier=${encodeURIComponent(p.id)}`}
               style={{
                 flex: 1,
                 minWidth: 140,
@@ -419,10 +419,10 @@ export default function SuivreMesOffresDetailPage() {
                 borderBottom: '1px solid #e5e5e7',
               }}
             >
-              Supprimer l&apos;offre
+              Supprimer la proposition
             </h2>
             <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginTop: 16, marginBottom: 20, textAlign: 'center' }}>
-              Supprimer cette offre ? Elle disparaîtra pour vous et pour les vendeurs concernés.
+              Supprimer cette proposition ? Elle disparaîtra pour vous et pour les vendeurs concernés.
             </p>
             {deleteError && <p style={{ fontSize: 13, color: '#dc2626', marginBottom: 16, textAlign: 'center' }}>{deleteError}</p>}
             <div style={{ display: 'flex', gap: 10 }}>
@@ -648,7 +648,7 @@ function InvitedSellersDetailList({ invites }: { invites: NonNullable<SalePropos
             </Link>
             {inv.estimated_price_cents != null && (
               <p style={{ margin: '8px 0 0', fontSize: 13, color: '#374151' }}>
-                Offre indicative : <strong>{formatPrice(inv.estimated_price_cents / 100)}</strong>
+                Prix indicatif : <strong>{formatPrice(inv.estimated_price_cents / 100)}</strong>
               </p>
             )}
             {inv.seller_note?.trim() ? (

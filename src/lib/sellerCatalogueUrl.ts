@@ -28,6 +28,36 @@ export function sellerCataloguePath(seller: { uid: string; companyName: string }
   return `/catalogue/vendeur/${sellerCatalogueSlug(seller)}`;
 }
 
+/**
+ * URL absolue de la liste publique des annonces du vendeur (même page que les liens « boutique » du site).
+ * Ex. `https://…/catalogue/vendeur/section-luxe-b32c9dac`
+ */
+export function sellerCatalogueAbsoluteUrl(origin: string, seller: { uid: string; companyName: string }): string {
+  const path = sellerCataloguePath(seller);
+  try {
+    return new URL(path, origin.endsWith('/') ? origin : `${origin}/`).href;
+  } catch {
+    const base = origin.replace(/\/$/, '');
+    return `${base}${path}`;
+  }
+}
+
+/**
+ * Lien partagé / ouvert depuis un message : ajoute `sellerId` pour que le catalogue ait l’UUID vendeur
+ * dès le premier rendu (sans attendre la RPC slug → id). Le catalogue retire ensuite ce paramètre de l’URL.
+ */
+export function sellerCatalogueShareAbsoluteUrl(origin: string, seller: { uid: string; companyName: string }): string {
+  const base = sellerCatalogueAbsoluteUrl(origin, seller);
+  try {
+    const u = new URL(base);
+    u.searchParams.set('sellerId', seller.uid);
+    return u.href;
+  } catch {
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}sellerId=${encodeURIComponent(seller.uid)}`;
+  }
+}
+
 /** Alias pour les liens (<Link href={…}>). */
 export const sellerCatalogueHref = sellerCataloguePath;
 

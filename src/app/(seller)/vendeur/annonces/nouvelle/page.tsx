@@ -8,7 +8,6 @@ import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLoader } from '@/components/ui';
 import { createListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
 import { CguCgvCheckbox } from '@/components/ui';
@@ -83,6 +82,66 @@ type NewListingDraft = {
 
 /** Listes déroulantes étape 1 : une seule ouverte à la fois. */
 type Step1DropdownId = 'category' | 'type' | 'marque' | 'modele' | 'size' | 'condition' | 'material' | 'color';
+
+function NewListingPageShellSkeleton() {
+  return (
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+      <div
+        className="deposer-annonce-title-row"
+        style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}
+      >
+        <div className="catalogue-skeleton" style={{ width: 168, height: 22, borderRadius: 6, flexShrink: 0 }} />
+        <div className="deposer-annonce-title-center">
+          <h1
+            style={{
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              fontSize: 28,
+              fontWeight: 500,
+              margin: '0 0 8px',
+              color: '#1d1d1f',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Déposer une annonce
+          </h1>
+          <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>
+            <span className="deposer-annonce-subtitle-desktop">Créez une nouvelle annonce pour la publier</span>
+            <span className="deposer-annonce-subtitle-mobile">Créez une nouvelle annonce.</span>
+          </p>
+        </div>
+        <div className="deposer-annonce-title-spacer" aria-hidden />
+      </div>
+      <div className="deposer-annonce-form-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
+        <div className="deposer-annonce-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
+          {[1, 2, 3, 4].map((s, i) => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="catalogue-skeleton deposer-annonce-step-circle" style={{ width: 40, height: 40, borderRadius: 980, flexShrink: 0 }} />
+              {i < 3 && (
+                <div
+                  className="catalogue-skeleton deposer-annonce-steps-connector"
+                  style={{ width: 56, height: 2, margin: '0 10px', borderRadius: 1 }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div className="catalogue-skeleton" style={{ height: 14, width: 96, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+          <div className="catalogue-skeleton" style={{ height: 14, width: 120, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            <div className="catalogue-skeleton" style={{ height: 44, flex: 1, borderRadius: 12 }} />
+            <div className="catalogue-skeleton" style={{ height: 44, flex: 1, borderRadius: 12 }} />
+          </div>
+          <div className="catalogue-skeleton" style={{ height: 14, width: 72, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 24 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 980 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function NewListingContent() {
   const router = useRouter();
@@ -479,9 +538,11 @@ function NewListingContent() {
     setTitleSuffix(suggested);
   }, [category, customCategory, brand, marqueSearchQuery, model, modeleSearchQuery, customModel, genre, articleType, modelOptions.length]);
 
-  if (authLoading) return <PageLoader />;
+  if (authLoading) {
+    return <NewListingPageShellSkeleton />;
+  }
   if (!isApprovedSeller) {
-    router.push('/vendeur');
+    router.push('/vendeur/annonces');
     return null;
   }
 
@@ -650,7 +711,7 @@ if (modelOptions.length > 0) {
         body: JSON.stringify({ userId: user!.uid, context: 'publication_annonce' }),
       });
 
-      router.push(fromVentes ? '/vendeur/ventes' : '/vendeur');
+      router.push(fromVentes ? '/vendeur/ventes' : '/vendeur/annonces');
     } catch (err: unknown) {
       if (isSubscriptionLimitError(err)) {
         router.push('/vendeur/abonnement?limite=1');
@@ -707,7 +768,7 @@ if (modelOptions.length > 0) {
       {/* Ligne titre : Retour à gauche (comme Modifier l'annonce), Déposer une annonce au centre */}
       <div className="deposer-annonce-title-row" style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
-          href={fromVentes ? '/vendeur/ventes' : '/vendeur'}
+          href={fromVentes ? '/vendeur/ventes' : '/vendeur/annonces'}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
           className="hover:opacity-80 deposer-annonce-back-link"
           aria-label={fromVentes ? 'Retour à mes ventes' : 'Retour à mes annonces'}
@@ -2176,7 +2237,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
 
 export default function NewListingPage() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={<NewListingPageShellSkeleton />}>
       <NewListingContent />
     </Suspense>
   );

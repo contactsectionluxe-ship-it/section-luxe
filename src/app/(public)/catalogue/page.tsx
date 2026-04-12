@@ -3,11 +3,15 @@
 import { useEffect, useLayoutEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Search, SlidersHorizontal, X, ChevronRight, ChevronLeft, ChevronDown, Heart, Store, MapPin, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ChevronRight, ChevronLeft, ChevronDown, Heart, Store, MapPin, Tag, Calendar, CircleCheck, Palette, Layers, Euro, LayoutGrid, List, Info, ArrowRight } from 'lucide-react';
 import { SearchFilters as Filters, defaultFilters } from '@/types/filters';
 import { getListings, getDistinctSizesForCategory, getDistinctSizesForCategoryAndArticleTypes } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
-import { setAnnonceReturnUrlForNextNavigation, consumeCatalogueScrollRestore } from '@/lib/annonceReturnUrl';
+import {
+  setAnnonceReturnUrlForNextNavigation,
+  consumeCatalogueScrollRestore,
+  peekCatalogueScrollRestore,
+} from '@/lib/annonceReturnUrl';
 import { sellerCataloguePath, parseVendeurCatalogueSlug } from '@/lib/sellerCatalogueUrl';
 import { getSellerData, getSellerIdByVendeurSlug } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
@@ -53,6 +57,7 @@ import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubs
 import { ListingPhoto } from '@/components/ListingPhoto';
 import { CatalogueCardPhotos } from '@/components/CatalogueCardPhotos';
 import { SellerVisitMapPopup } from '@/components/SellerVisitMapPopup';
+import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
@@ -332,6 +337,20 @@ function filtersToParams(filters: Filters, page: number, opts?: { omitSellerId?:
   return params;
 }
 
+/** Vue liste desktop : `view=line` dans l’URL pour le même repère qu’au retour depuis une annonce (scroll + layout). */
+function appendCatalogueListViewParam(
+  params: URLSearchParams,
+  viewMode: 'horizontal' | 'grid',
+  isMobile: boolean
+) {
+  if (isMobile) {
+    params.delete('view');
+    return;
+  }
+  if (viewMode === 'horizontal') params.set('view', 'line');
+  else params.delete('view');
+}
+
 /** Empreinte des filtres telle qu’en URL (sans `page`), pour éviter setFilters inutile au retour arrière. */
 function catalogueFiltersUrlSignature(f: Filters, opts?: { omitSellerId?: boolean }): string {
   return normalizeQueryString(filtersToParams(f, 1, opts));
@@ -396,7 +415,20 @@ function CatalogueContent() {
   const router = useRouter();
   const pathname = usePathname();
   const paramsRoute = useParams();
-  const slugParam = typeof paramsRoute?.slug === 'string' ? paramsRoute.slug : undefined;
+  const slugFromPathname = useMemo(() => {
+    if (!pathname?.startsWith('/catalogue/vendeur/')) return undefined;
+    const raw = pathname.slice('/catalogue/vendeur/'.length).split('/')[0];
+    if (!raw) return undefined;
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }, [pathname]);
+  const slugParam =
+    typeof paramsRoute?.slug === 'string' && paramsRoute.slug.length > 0
+      ? paramsRoute.slug
+      : slugFromPathname;
   const isVendeurCataloguePath = Boolean(pathname?.startsWith('/catalogue/vendeur/'));
   const parsedVendeurSlug = useMemo(() => (slugParam ? parseVendeurCatalogueSlug(slugParam) : null), [slugParam]);
   const vendeurParseInvalid = isVendeurCataloguePath && Boolean(slugParam) && !parsedVendeurSlug;
@@ -405,12 +437,41 @@ function CatalogueContent() {
   const searchParamsString = searchParams.toString();
   const redirectUrl = pathname ? `?redirect=${encodeURIComponent(pathname + (searchParams.toString() ? `?${searchParams.toString()}` : ''))}` : '';
 
-  /** Retour depuis la fiche produit via « Retour au catalogue » : même défilement que le bouton retour du navigateur. */
+  /** Retour depuis la fiche annonce : après chargement, replacer le scroll à Y sans animation (pas de smooth / pas de passage par le haut). */
+  const catalogueRestoreScrollYRef = useRef<number | null>(null);
+
+  /** Évite que le navigateur restaure la position après un F5 alors que le squelette n’a pas la même hauteur que le catalogue final (saut / flash en bas de page). */
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    let previous: ScrollRestoration = 'auto';
+    try {
+      previous = history.scrollRestoration;
+      history.scrollRestoration = 'manual';
+    } catch {
+      /* ignore */
+    }
+    return () => {
+      try {
+        history.scrollRestoration = previous;
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
   useLayoutEffect(() => {
     const currentHref = (pathname || '') + (searchParamsString ? `?${searchParamsString}` : '');
-    const y = consumeCatalogueScrollRestore(currentHref);
-    if (y != null) {
-      window.scrollTo({ top: y, left: 0, behavior: 'auto' });
+    const pending = peekCatalogueScrollRestore(currentHref);
+    catalogueRestoreScrollYRef.current = pending;
+    if (typeof window === 'undefined') return;
+    if (pending != null) return;
+    try {
+      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+      if (nav?.type === 'reload') {
+        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+      }
+    } catch {
+      /* ignore */
     }
   }, [pathname, searchParamsString]);
 
@@ -782,13 +843,35 @@ function CatalogueContent() {
   const [loadingFavoriteId, setLoadingFavoriteId] = useState<string | null>(null);
   const [seller, setSeller] = useState<Seller | null>(null);
   const [sellerLoading, setSellerLoading] = useState(false);
+  /** false tant que la fiche vendeur n’a pas fini de charger. */
+  const [sellerProfileResolved, setSellerProfileResolved] = useState(false);
+  const sellerFetchIdRef = useRef(0);
   /** Bannière boutique : affichée dès l’URL /catalogue/vendeur/… valide, y compris avant résolution du sellerId */
-  const showVendeurStoreBanner = useMemo(
-    () =>
-      Boolean(filters.sellerId) ||
-      (isVendeurCataloguePath && Boolean(parsedVendeurSlug) && !vendeurParseInvalid && !vendeurSlugError),
-    [filters.sellerId, isVendeurCataloguePath, parsedVendeurSlug, vendeurParseInvalid, vendeurSlugError]
-  );
+  const showVendeurStoreBanner = useMemo(() => {
+    const slugOk = isVendeurCataloguePath && Boolean(parsedVendeurSlug) && !vendeurParseInvalid && !vendeurSlugError;
+    const base = Boolean(filters.sellerId) || slugOk;
+    if (!base) return false;
+    if (filters.sellerId && sellerProfileResolved && !seller) return false;
+    return true;
+  }, [
+    filters.sellerId,
+    isVendeurCataloguePath,
+    parsedVendeurSlug,
+    vendeurParseInvalid,
+    vendeurSlugError,
+    sellerProfileResolved,
+    seller,
+  ]);
+  /** Sous le nom vendeur : n’afficher le décompte que lorsque la liste reflète le filtre vendeur (évite apparition / disparition au passage catalogue → boutique). */
+  const sellerStoreBannerListingsLine = useMemo(() => {
+    if (!filters.sellerId) return '';
+    const listingsCoherentForSeller =
+      listings.length === 0
+        ? !loading
+        : listings.every((l) => l.sellerId === filters.sellerId);
+    if (!listingsCoherentForSeller) return '';
+    return `${listings.length} annonce${listings.length !== 1 ? 's' : ''}`;
+  }, [filters.sellerId, loading, listings]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchSuggestionsOpen, setSearchSuggestionsOpen] = useState(false);
@@ -799,17 +882,43 @@ function CatalogueContent() {
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRefMobile = useRef<HTMLDivElement>(null);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
-  /** Affichage des annonces : grille (défaut) ou horizontal — stocké en localStorage. Sur mobile toujours grille. */
+  /** Affichage des annonces : grille (défaut) ou horizontal — localStorage + `view=line` / `view=grid` dans l’URL (repère retour annonce). */
   const [viewMode, setViewMode] = useState<'horizontal' | 'grid'>('grid');
+  const catalogueListViewBootstrappedRef = useRef(false);
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.innerWidth <= 767) {
       setViewMode('grid');
+      catalogueListViewBootstrappedRef.current = true;
       return;
     }
-    const saved = localStorage.getItem('catalogue-view-mode');
-    if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
-  }, []);
+    const v = searchParams.get('view');
+    if (v === 'line' || v === 'list') {
+      setViewMode('horizontal');
+      catalogueListViewBootstrappedRef.current = true;
+      try {
+        localStorage.setItem('catalogue-view-mode', 'horizontal');
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (v === 'grid') {
+      setViewMode('grid');
+      catalogueListViewBootstrappedRef.current = true;
+      try {
+        localStorage.setItem('catalogue-view-mode', 'grid');
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+    if (!catalogueListViewBootstrappedRef.current) {
+      catalogueListViewBootstrappedRef.current = true;
+      const saved = localStorage.getItem('catalogue-view-mode');
+      if (saved === 'grid' || saved === 'horizontal') setViewMode(saved);
+    }
+  }, [searchParams]);
   /** Largeur téléphone (alignée sur globals.css / barre filtres). */
   const [isMobile, setIsMobile] = useState(false);
   useLayoutEffect(() => {
@@ -863,13 +972,14 @@ function CatalogueContent() {
     (nextPage: number, replace = false) => {
       const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
       const params = filtersToParams(filters, nextPage, { omitSellerId: omitSellerInQuery });
+      appendCatalogueListViewParam(params, viewMode, isMobile);
       const q = params.toString();
       lastSyncedUrlRef.current = q ? normalizeQueryString(params) : '';
       const url = q ? `${pathname}?${q}` : pathname;
       if (replace) router.replace(url, { scroll: false });
       else router.push(url, { scroll: false });
     },
-    [router, pathname, filters]
+    [router, pathname, filters, viewMode, isMobile]
   );
 
   // Sync état local page ← URL (back/forward, lien partagé, etc.)
@@ -890,17 +1000,18 @@ function CatalogueContent() {
     return listings.slice(start, start + pageSize);
   }, [listings, effectivePage, pageSize]);
 
-  /** URL du catalogue avec les filtres actuels (passée à la page produit pour "Retour au catalogue"). */
+  /** URL du catalogue avec les filtres actuels + vue liste/grille (même repère que la barre d’adresse pour le retour annonce). */
   const catalogueReturnUrl = useMemo(() => {
     const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
     const p = filtersToParams(filters, effectivePage, { omitSellerId: omitSellerInQuery });
+    appendCatalogueListViewParam(p, viewMode, isMobile);
     const q = p.toString();
     return pathname + (q ? '?' + q : '');
-  }, [pathname, filters, effectivePage]);
+  }, [pathname, filters, effectivePage, viewMode, isMobile]);
 
   // Ancienne URL ?sellerId= → /catalogue/vendeur/{slug} (plus lisible, sellerId hors query)
   useEffect(() => {
-    if (!filters.sellerId || sellerLoading) return;
+    if (!filters.sellerId || !sellerProfileResolved || sellerLoading) return;
     if (!seller) return;
     if (!pathname?.startsWith('/catalogue')) return;
     if (pathname.startsWith('/catalogue/vendeur/')) return;
@@ -908,10 +1019,11 @@ function CatalogueContent() {
     if (!q || q !== filters.sellerId) return;
     const pretty = sellerCataloguePath(seller);
     const p = filtersToParams(filters, effectivePage, { omitSellerId: true });
+    appendCatalogueListViewParam(p, viewMode, isMobile);
     const qs = p.toString();
     lastSyncedUrlRef.current = qs ? normalizeQueryString(p) : '';
     router.replace(qs ? `${pretty}?${qs}` : pretty, { scroll: false });
-  }, [filters.sellerId, seller, sellerLoading, pathname, searchParams, router, filters, effectivePage]);
+  }, [filters.sellerId, seller, sellerLoading, sellerProfileResolved, pathname, searchParams, router, filters, effectivePage, viewMode, isMobile]);
 
   const rangeStart =
     listings.length === 0 ? 0 : (effectivePage - 1) * pageSize + 1;
@@ -927,22 +1039,77 @@ function CatalogueContent() {
     [navigateToPage, totalPages, searchParams]
   );
 
-  // Remonter en haut à chaque changement de page (pagination, retour arrière, changement de filtres)
+  // Remonter en haut à chaque changement de page — sauf retour annonce avec restauration du scroll (évite d’écraser la position mémorisée).
   const prevEffectivePageRef = useRef(effectivePage);
+  /** Après le 1er chargement réel, ignorer le 1er écart URL → page effective (évite un smooth vers le haut au refresh / clamp pagination). */
+  const cataloguePaginationScrollPrimedRef = useRef(false);
   useEffect(() => {
+    if (catalogueRestoreScrollYRef.current != null) {
+      prevEffectivePageRef.current = effectivePage;
+      return;
+    }
+    if (loading) return;
+    if (!cataloguePaginationScrollPrimedRef.current) {
+      cataloguePaginationScrollPrimedRef.current = true;
+      prevEffectivePageRef.current = effectivePage;
+      return;
+    }
     if (prevEffectivePageRef.current !== effectivePage) {
       prevEffectivePageRef.current = effectivePage;
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [effectivePage]);
+  }, [effectivePage, loading]);
+
+  // Après chargement : replacer Y en une fois (instantané) ; recalage si la hauteur de page évolue encore (images, layout).
+  useEffect(() => {
+    if (loading) return;
+    const currentHref = (pathname || '') + (searchParamsString ? `?${searchParamsString}` : '');
+    if (catalogueRestoreScrollYRef.current == null) return;
+    catalogueRestoreScrollYRef.current = null;
+    const y = consumeCatalogueScrollRestore(currentHref);
+    if (y == null) return;
+    prevEffectivePageRef.current = effectivePage;
+
+    const applyY = (behavior: ScrollBehavior) => {
+      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      const target = Math.min(y, maxY);
+      window.scrollTo({ top: target, left: 0, behavior });
+    };
+
+    let cancelled = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        applyY('auto');
+      });
+    });
+    const snapTimer = window.setTimeout(() => {
+      if (cancelled) return;
+      applyY('auto');
+    }, 550);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(snapTimer);
+    };
+  }, [loading, pathname, searchParamsString, effectivePage]);
 
   const toggleViewMode = useCallback(() => {
     setViewMode((prev) => {
       const next: 'horizontal' | 'grid' = prev === 'horizontal' ? 'grid' : 'horizontal';
       if (typeof window !== 'undefined') window.localStorage.setItem('catalogue-view-mode', next);
+      if (typeof window !== 'undefined' && window.innerWidth > 767) {
+        queueMicrotask(() => {
+          const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
+          const params = filtersToParams(filters, effectivePage, { omitSellerId: omitSellerInQuery });
+          appendCatalogueListViewParam(params, next, false);
+          const q = params.toString();
+          lastSyncedUrlRef.current = q ? normalizeQueryString(params) : '';
+          router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+        });
+      }
       return next;
     });
-  }, []);
+  }, [pathname, filters, effectivePage, router]);
 
   // Reset page à 1 seulement quand les critères de filtre « utiles » changent vraiment (empreinte URL), pas à chaque nouveau objet filters (retour arrière, injection sellerId vendeur, etc.).
   const catalogueFilterSigSnapshotRef = useRef<{ pathname: string; sig: string } | null>(null);
@@ -1057,6 +1224,17 @@ function CatalogueContent() {
     setSearchQuery(fromUrl.query ?? '');
   }, [searchParams, pathname]);
 
+  /** Lien partagé avec `?sellerId=` : une fois le filtre connu, retirer le paramètre (URL lisible, état inchangé). */
+  useEffect(() => {
+    if (!pathname?.startsWith('/catalogue/vendeur/')) return;
+    const qSid = searchParams.get('sellerId');
+    if (!qSid || !filters.sellerId || qSid !== filters.sellerId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('sellerId');
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, filters.sellerId, searchParams, router]);
+
   // Si on était sur Neuf ou Occasion (lien header) et que l'utilisateur change le filtre état, repasser l'URL en /catalogue pour garder « Catalogue » actif. Ne pas retirer condition juste après un clic Neuf/Occasion (synchro URL → filtres).
   useEffect(() => {
     if (justSyncedConditionFromUrlRef.current) {
@@ -1084,18 +1262,37 @@ function CatalogueContent() {
       .catch(() => setAllListingTitlesForSearch([]));
   }, []);
 
-  // Charger les infos vendeur quand sellerId est présent
-  useEffect(() => {
+  /** Avant le paint : évite une frame avec sellerId connu mais état « résolu » obsolète. */
+  useLayoutEffect(() => {
     if (!filters.sellerId) {
       setSeller(null);
+      setSellerLoading(false);
+      setSellerProfileResolved(false);
       return;
     }
+    setSeller(null);
     setSellerLoading(true);
-    getSellerData(filters.sellerId)
+    setSellerProfileResolved(false);
+  }, [filters.sellerId]);
+
+  // Charger les infos vendeur quand sellerId est présent
+  useEffect(() => {
+    if (!filters.sellerId) return;
+    const fetchId = ++sellerFetchIdRef.current;
+    const id = filters.sellerId;
+    getSellerData(id)
       .then((data) => {
+        if (sellerFetchIdRef.current !== fetchId) return;
         setSeller(data || null);
+        setSellerLoading(false);
+        setSellerProfileResolved(true);
       })
-      .finally(() => setSellerLoading(false));
+      .catch(() => {
+        if (sellerFetchIdRef.current !== fetchId) return;
+        setSeller(null);
+        setSellerLoading(false);
+        setSellerProfileResolved(true);
+      });
   }, [filters.sellerId]);
 
   // Applique les filtres de prix et d'année (au blur)
@@ -1121,13 +1318,13 @@ function CatalogueContent() {
     /** Si true, le `finally` ne force pas `loading` à false (ex. attente résolution slug → sellerId sur /catalogue/vendeur/…). */
     let skipLoadingOffInFinally = false;
     try {
-      if (vendeurParseInvalid) {
+      if (vendeurParseInvalid && !filters.sellerId) {
         setListings([]);
         setLoading(false);
         return;
       }
       if (isVendeurCataloguePath && parsedVendeurSlug) {
-        if (vendeurSlugError) {
+        if (vendeurSlugError && !filters.sellerId) {
           setListings([]);
           setLoading(false);
           return;
@@ -1736,6 +1933,7 @@ function CatalogueContent() {
     if (urlCondition) params.set('condition', urlCondition);
     const sid = searchParams.get('sellerId') ?? (pathname.startsWith('/catalogue/vendeur/') ? filters.sellerId : undefined);
     if (sid && !pathname.startsWith('/catalogue/vendeur/')) params.set('sellerId', sid);
+    appendCatalogueListViewParam(params, viewMode, isMobile);
     const q = params.toString();
     const basePath = pathname.startsWith('/catalogue/vendeur/') ? pathname : '/catalogue';
     router.replace(q ? `${basePath}?${q}` : basePath, { scroll: false });
@@ -3278,31 +3476,32 @@ function CatalogueContent() {
       {/* Localisation — villes, codes postaux, régions (sélection multiple) */}
       <div style={{ borderBottom: '1px solid #e8e6e3' }}>
         <FilterSection title="Localisation" defaultOpen collapsible={false} noBorder>
-        <div ref={locationInputRef} style={{ position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="text"
-              value={locationQuery}
-              onChange={(e) => {
-                setLocationQuery(e.target.value);
-                setLocationSuggestionsOpen(true);
-              }}
-              onFocus={() => setLocationSuggestionsOpen(locationQuery.trim().length > 0 || locationSuggestions.length > 0)}
-              placeholder="Ville, code postal, région…"
-              autoComplete="off"
-              style={{
-                flex: 1,
-                height: 40,
-                padding: '8px 12px',
-                fontSize: 14,
-                border: '1px solid #d2d2d7',
-                borderRadius: 8,
-                backgroundColor: '#fff',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-          </div>
+        <div ref={locationInputRef} style={{ position: 'relative', width: '100%', minWidth: 0 }}>
+          <input
+            type="text"
+            value={locationQuery}
+            onChange={(e) => {
+              setLocationQuery(e.target.value);
+              setLocationSuggestionsOpen(true);
+            }}
+            onFocus={() => setLocationSuggestionsOpen(locationQuery.trim().length > 0 || locationSuggestions.length > 0)}
+            placeholder="Ville, code postal, région…"
+            autoComplete="off"
+            style={{
+              display: 'block',
+              width: '100%',
+              minWidth: 0,
+              maxWidth: '100%',
+              height: 44,
+              padding: '0 14px',
+              fontSize: 14,
+              border: '1px solid #d2d2d7',
+              borderRadius: 12,
+              backgroundColor: '#fff',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
           {locationSuggestionsOpen && (locationSuggestions.length > 0 || locationCityLoading) && (
             <div
               className="catalogue-seller-banner"
@@ -3559,7 +3758,6 @@ function CatalogueContent() {
 
   return (
     <>
-      {loading && <div className="catalogue-loading-bar" aria-hidden />}
     <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, paddingTop: 'var(--header-height)' }}>
       <div className="catalogue-page-wrap" style={{ flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '0 24px', boxSizing: 'border-box' }}>
         <div className="catalogue-page-inner" style={{ flex: 1, display: 'flex', flexDirection: 'column', maxWidth: 'calc(1100px + 1cm)', width: '100%', margin: '0 auto' }}>
@@ -3811,7 +4009,7 @@ function CatalogueContent() {
                   minWidth: 0,
               }}
             >
-                {!filters.sellerId || sellerLoading ? (
+                {!filters.sellerId || !sellerProfileResolved || sellerLoading || !seller ? (
                   <div
                     style={{
                       display: 'flex',
@@ -3844,7 +4042,7 @@ function CatalogueContent() {
                       style={{ height: 44, width: 180, borderRadius: 10, flexShrink: 0, ['--skeleton-index' as string]: 3 }}
                     />
                   </div>
-                ) : seller ? (
+                ) : (
                   <>
                     <div className="catalogue-seller-main-info" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div
@@ -3926,9 +4124,21 @@ function CatalogueContent() {
                           )}
                           <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
                         </div>
-                        <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>
-                          {listings.length} annonce{listings.length !== 1 ? 's' : ''}
-                </p>
+                        <p
+                          style={{
+                            fontSize: 14,
+                            lineHeight: '20px',
+                            height: 20,
+                            margin: 0,
+                            color: '#6e6e73',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '100%',
+                          }}
+                        >
+                          {sellerStoreBannerListingsLine}
+                        </p>
               </div>
                     </div>
                     {(seller.address || seller.city || seller.postcode) && (
@@ -3944,8 +4154,6 @@ function CatalogueContent() {
                           </button>
                     )}
                   </>
-                ) : (
-                  <p style={{ fontSize: 14, color: '#6e6e73', margin: 0 }}>Vendeur introuvable.</p>
                 )}
               </div>
             )}
@@ -4087,7 +4295,7 @@ function CatalogueContent() {
             {/* Results — marginTop 24 pour même espace qu'entre "Plus récents" et la ligne au-dessus */}
             {(() => {
               if (loading && listings.length === 0) {
-                const count = viewMode === 'grid' ? 9 : 6;
+                const count = pageSize;
                 return (
                   <div
                     className={
@@ -4119,14 +4327,30 @@ function CatalogueContent() {
                         }}
                       >
                         <div
-                          className={viewMode === 'grid' ? 'catalogue-skeleton' : 'catalogue-skeleton catalogue-line-photo'}
                           style={{
+                            position: 'relative',
                             width: viewMode === 'grid' ? '100%' : undefined,
                             aspectRatio: viewMode === 'grid' ? '1' : undefined,
                             flexShrink: 0,
+                            alignSelf: viewMode === 'grid' ? undefined : 'center',
+                            overflow: 'hidden',
                             borderRadius: viewMode === 'grid' ? 0 : 4,
                           }}
-                        />
+                        >
+                          <div
+                            className={viewMode === 'grid' ? 'catalogue-skeleton' : 'catalogue-skeleton catalogue-line-photo'}
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              borderRadius: viewMode === 'grid' ? 0 : 4,
+                            }}
+                          />
+                          {viewMode === 'grid' ? (
+                            <div className="listing-card-photo-fade" aria-hidden />
+                          ) : (
+                            <div className="listing-card-photo-fade listing-card-photo-fade--line" aria-hidden />
+                          )}
+                        </div>
                         <div
                           style={{
                             padding: viewMode === 'grid' ? '14px 14px 10px' : '10px 48px 10px 14px',
@@ -4137,7 +4361,7 @@ function CatalogueContent() {
                             flexDirection: 'column',
                             gap: viewMode === 'grid' ? 6 : 8,
                             justifyContent: viewMode === 'grid' ? undefined : 'space-between',
-                            ...(viewMode === 'grid' ? { borderTop: '1px solid #e8e6e3', backgroundColor: '#fff' } : { backgroundColor: '#fff' }),
+                            backgroundColor: '#fff',
                           }}
                         >
                           {viewMode === 'grid' ? (
@@ -4213,7 +4437,7 @@ function CatalogueContent() {
               }
               if (viewMode === 'grid') {
                 return (
-              <div className="catalogue-results catalogue-results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
+              <div className="catalogue-results catalogue-results-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, minWidth: 0 }}>
                 {paginatedListings.map((listing) => (
                   <Link
                     key={listing.id}
@@ -4272,8 +4496,9 @@ function CatalogueContent() {
                           alt={listing.title}
                           sizes="(max-width: 640px) 50vw, 25vw"
                         />
+                        <div className="listing-card-photo-fade" aria-hidden />
                       </div>
-                      <div style={{ borderTop: '1px solid #e8e6e3', padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
+                      <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
                         <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
                           <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
                             <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
@@ -4317,7 +4542,7 @@ function CatalogueContent() {
                 );
               }
               return (
-              <div className="catalogue-results catalogue-results-line" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0, opacity: loading ? 0.88 : 1, transition: 'opacity 0.2s ease' }}>
+              <div className="catalogue-results catalogue-results-line" style={{ display: 'flex', flexDirection: 'column', gap: 12, minWidth: 0 }}>
                 {paginatedListings.map((listing) => (
                   <Link
                     key={listing.id}
@@ -4383,6 +4608,7 @@ function CatalogueContent() {
                           alt={listing.title}
                           sizes="(max-width: 640px) 50vw, min(480px, 40vw)"
                         />
+                        <div className="listing-card-photo-fade listing-card-photo-fade--line" aria-hidden />
                       </div>
                             <div
                             className="catalogue-line-content"
@@ -4482,8 +4708,8 @@ function CatalogueContent() {
 
           </div>
 
-            {/* Pagination : Précédent, Page, Suivant — centrés, éléments proches */}
-            {!loading && listings.length > 0 && (
+            {/* Pagination : Précédent, Page, Suivant — centrés ; squelette identique au chargement initial */}
+            {loading && listings.length === 0 ? (
               <div style={{ padding: '0 calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
                 <div
                   style={{
@@ -4496,6 +4722,91 @@ function CatalogueContent() {
                     marginBottom: 80,
                     width: '100%',
                   }}
+                  aria-hidden
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 14, color: '#1d1d1f', fontWeight: 500 }}>Page</span>
+                    <div
+                      className="catalogue-skeleton"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 32,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        border: '1px solid #e8e6e3',
+                        boxSizing: 'border-box',
+                        ['--skeleton-index' as string]: 24,
+                      }}
+                    />
+                    <div
+                      className="catalogue-skeleton"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 32,
+                        height: 32,
+                        padding: '0 10px',
+                        borderRadius: 8,
+                        border: '1px solid #e8e6e3',
+                        boxSizing: 'border-box',
+                        width: 40,
+                        ['--skeleton-index' as string]: 25,
+                      }}
+                    />
+                    <div
+                      className="catalogue-skeleton"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 32,
+                        height: 32,
+                        padding: '0 10px',
+                        borderRadius: 8,
+                        border: '1px solid #e8e6e3',
+                        boxSizing: 'border-box',
+                        width: 40,
+                        ['--skeleton-index' as string]: 26,
+                      }}
+                    />
+                    <div
+                      className="catalogue-skeleton"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 32,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        border: '1px solid #e8e6e3',
+                        boxSizing: 'border-box',
+                        ['--skeleton-index' as string]: 27,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : listings.length > 0 ? (
+              <div style={{ padding: '0 calc(24px - 0.5mm) 0 var(--catalogue-line-gap, 24px)' }}>
+                <div
+                  aria-busy={loading}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                    marginTop: 48,
+                    marginBottom: 80,
+                    width: '100%',
+                    opacity: loading ? 0.72 : 1,
+                    transition: 'opacity 0.2s ease',
+                  }}
                 >
                   {totalPages > 1 ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -4503,7 +4814,7 @@ function CatalogueContent() {
                       <button
                         type="button"
                         onClick={() => goToPage(effectivePage - 1)}
-                        disabled={effectivePage <= 1}
+                        disabled={loading || effectivePage <= 1}
                         aria-label="Page précédente"
                         style={{
                           display: 'inline-flex',
@@ -4515,9 +4826,9 @@ function CatalogueContent() {
                           padding: 0,
                           borderRadius: 8,
                           border: '1px solid #d2d2d7',
-                          backgroundColor: effectivePage <= 1 ? '#f5f5f7' : '#fff',
-                          color: effectivePage <= 1 ? '#9b9ba0' : '#1d1d1f',
-                          cursor: effectivePage <= 1 ? 'not-allowed' : 'pointer',
+                          backgroundColor: loading || effectivePage <= 1 ? '#f5f5f7' : '#fff',
+                          color: loading || effectivePage <= 1 ? '#9b9ba0' : '#1d1d1f',
+                          cursor: loading || effectivePage <= 1 ? 'not-allowed' : 'pointer',
                         }}
                       >
                         <ChevronLeft size={18} strokeWidth={2.5} />
@@ -4527,6 +4838,7 @@ function CatalogueContent() {
                           key={p}
                           type="button"
                           onClick={() => goToPage(p)}
+                          disabled={loading}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -4540,7 +4852,7 @@ function CatalogueContent() {
                             border: p === effectivePage ? '1px solid #1d1d1f' : '1px solid #d2d2d7',
                             borderRadius: 8,
                             backgroundColor: '#fff',
-                            cursor: 'pointer',
+                            cursor: loading ? 'not-allowed' : 'pointer',
                           }}
                         >
                           {p}
@@ -4549,7 +4861,7 @@ function CatalogueContent() {
                       <button
                         type="button"
                         onClick={() => goToPage(effectivePage + 1)}
-                        disabled={effectivePage >= totalPages}
+                        disabled={loading || effectivePage >= totalPages}
                         aria-label="Page suivante"
                         style={{
                           display: 'inline-flex',
@@ -4561,9 +4873,9 @@ function CatalogueContent() {
                           padding: 0,
                           borderRadius: 8,
                           border: '1px solid #d2d2d7',
-                          backgroundColor: effectivePage >= totalPages ? '#f5f5f7' : '#fff',
-                          color: effectivePage >= totalPages ? '#9b9ba0' : '#1d1d1f',
-                          cursor: effectivePage >= totalPages ? 'not-allowed' : 'pointer',
+                          backgroundColor: loading || effectivePage >= totalPages ? '#f5f5f7' : '#fff',
+                          color: loading || effectivePage >= totalPages ? '#9b9ba0' : '#1d1d1f',
+                          cursor: loading || effectivePage >= totalPages ? 'not-allowed' : 'pointer',
                         }}
                       >
                         <ChevronRight size={18} strokeWidth={2.5} />
@@ -4594,10 +4906,66 @@ function CatalogueContent() {
                   )}
                 </div>
               </div>
-            )}
+            ) : null}
         </div>
         </div>
       </div>
+
+      {/* CTA vendeur — aligné sur l’accueil */}
+      <section
+        className="home-section-padded home-section-vendeur-cta"
+        style={{
+          position: 'relative',
+          marginTop: 0,
+          padding: 'calc(76px + 2mm) 24px 76px',
+          backgroundColor: '#f5f5f7',
+        }}
+      >
+        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', textAlign: 'center' }}>
+          <FluidOneLineHeading
+            className="home-section-vendeur-cta-title"
+            style={{
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              fontWeight: 500,
+              color: '#1d1d1f',
+              marginBottom: 16,
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Vous êtes un vendeur professionnel ?
+          </FluidOneLineHeading>
+          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5 }}>
+            Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
+          </p>
+          <Link
+            className="home-section-vendeur-cta-btn"
+            href="/inscription-vendeur"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              height: 50,
+              padding: '0 28px',
+              backgroundColor: '#1d1d1f',
+              color: '#fff',
+              fontSize: 15,
+              fontWeight: 500,
+              borderRadius: 980,
+              transition: 'opacity 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
+          >
+            Devenir partenaire
+            <ArrowRight size={18} strokeWidth={2} />
+          </Link>
+        </div>
+      </section>
 
       {/* Popup Rendre visite au vendeur (même composant que annonce / messages) */}
       {seller && (

@@ -74,7 +74,7 @@ function BulletItem({ children, centered }: { children: React.ReactNode; centere
 export default function AProposPage() {
   return (
     <main style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }}>
-      <div className="a-propos-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
+      <div className="a-propos-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 80px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 28, flexWrap: 'wrap' }}>
           <div style={{ textAlign: 'center' }}>
             <h1
@@ -196,36 +196,17 @@ export default function AProposPage() {
         </section>
       </div>
 
-      {/* CTA vendeur — même section, même taille et même dégradé que la page d'accueil (pleine largeur) */}
+      {/* CTA vendeur — aligné sur l’accueil : fond gris */}
       <section
-        className="home-section-vendeur-cta"
+        className="home-section-padded home-section-vendeur-cta"
         style={{
           position: 'relative',
-          marginTop: -40,
-          padding: '120px 24px 108px',
-          backgroundImage: 'url(/section-vendeur-bg.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 50%',
-          backgroundRepeat: 'no-repeat',
+          marginTop: 0,
+          padding: 'calc(76px + 2mm) 24px 76px',
+          backgroundColor: '#f5f5f7',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.6) 45%, transparent 75%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(ellipse 72% 42% at 50% 50%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.5) 55%, rgba(255,255,255,0.15) 85%, transparent 100%)',
-            pointerEvents: 'none',
-          }}
-        />
-        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', maxWidth: 520, margin: '0 auto', textAlign: 'center' }}>
+        <div className="home-section-vendeur-cta-inner" style={{ position: 'relative', textAlign: 'center' }}>
           <FluidOneLineHeading
             className="home-section-vendeur-cta-title"
             style={{
@@ -238,7 +219,7 @@ export default function AProposPage() {
           >
             Vous êtes un vendeur professionnel ?
           </FluidOneLineHeading>
-          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 32, lineHeight: 1.5 }}>
+          <p className="home-section-vendeur-cta-desc" style={{ fontSize: 16, color: '#6e6e73', marginBottom: 24, lineHeight: 1.5 }}>
             Rejoignez notre réseau de vendeurs partenaires et donnez de la visibilité à vos articles.
           </p>
           <Link
@@ -258,8 +239,12 @@ export default function AProposPage() {
               borderRadius: 980,
               transition: 'opacity 0.2s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
           >
             Devenir partenaire
             <ArrowRight size={18} strokeWidth={2} />

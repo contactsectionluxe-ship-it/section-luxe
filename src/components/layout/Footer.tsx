@@ -3,8 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function Footer() {
+  const { isAuthenticated } = useAuth();
   const year = new Date().getFullYear();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [newsletterLoading, setNewsletterLoading] = useState(false);
@@ -119,6 +121,12 @@ export function Footer() {
               <Link href="/catalogue" style={{ fontSize: 14, color: '#6e6e73' }}>Catalogue</Link>
               <Link href="/catalogue?condition=occasion" style={{ fontSize: 14, color: '#6e6e73' }}>Occasion</Link>
               <Link href="/catalogue?condition=new" style={{ fontSize: 14, color: '#6e6e73' }}>Neuf</Link>
+              <Link
+                href={isAuthenticated ? '/proposer-piece' : '/connexion?redirect=/proposer-piece'}
+                style={{ fontSize: 14, color: '#6e6e73' }}
+              >
+                Proposer ma pièce
+              </Link>
               <Link href="/a-propos" style={{ fontSize: 14, color: '#6e6e73' }}>À propos</Link>
               <Link href="/contact" style={{ fontSize: 14, color: '#6e6e73' }}>Contact</Link>
             </nav>
@@ -130,7 +138,7 @@ export function Footer() {
               Newsletter
             </h4>
             <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 14 }}>
-              Inscrivez-vous pour recevoir les actualités Section Luxe.
+              Inscrivez-vous pour recevoir les actualités.
             </p>
             <form onSubmit={handleNewsletterSubmit} className="footer-newsletter-form">
               <div className="footer-newsletter-field">
@@ -174,6 +182,22 @@ export function Footer() {
                 {newsletterMessage.text}
               </p>
             )}
+
+            <div style={{ marginTop: 'calc(18px + 1mm)' }}>
+              <h4 style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1, color: '#86868b', marginBottom: 16 }}>
+                Partenariat
+              </h4>
+              <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, margin: 0 }}>
+                Contactez-nous{' '}
+                <Link
+                  href={`/contact?objet=${encodeURIComponent('Demande de partenariat')}`}
+                  style={{ color: '#6e6e73', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                >
+                  ici
+                </Link>{' '}
+                pour toute demande de partenariat.
+              </p>
+            </div>
           </div>
         </div>
 

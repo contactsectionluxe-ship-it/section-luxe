@@ -24,6 +24,70 @@ const labelStyle: React.CSSProperties = {
   color: '#333',
 };
 
+function ContactPageSuspenseSkeleton() {
+  return (
+    <div
+      style={{
+        paddingTop: 'var(--header-height)',
+        minHeight: '100vh',
+        backgroundColor: '#fff',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+      }}
+    >
+      <div
+        className="contact-page-inner"
+        style={{ width: '100%', maxWidth: 640, margin: 0, padding: '30px 24px 80px', boxSizing: 'border-box' }}
+      >
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <h1
+            style={{
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              fontSize: 28,
+              fontWeight: 500,
+              marginBottom: 8,
+              color: '#1d1d1f',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Contact
+          </h1>
+          <p style={{ fontSize: 15, color: '#6e6e73' }}>Une question ? Écrivez-nous.</p>
+        </div>
+        <div
+          style={{
+            backgroundColor: '#fff',
+            padding: '32px 28px',
+            borderRadius: 18,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            marginTop: '-1mm',
+          }}
+        >
+          <div style={{ marginBottom: 20 }}>
+            <div className="catalogue-skeleton" style={{ height: 14, width: 40, marginBottom: 8, borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12 }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <div className="catalogue-skeleton" style={{ height: 14, width: 48, marginBottom: 8, borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12 }} />
+          </div>
+          <div style={{ marginBottom: 20 }}>
+            <div className="catalogue-skeleton" style={{ height: 14, width: 52, marginBottom: 8, borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12 }} />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <div className="catalogue-skeleton" style={{ height: 14, width: 64, marginBottom: 8, borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 120, width: '100%', borderRadius: 12 }} />
+          </div>
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12 }} />
+        </div>
+        <div className="catalogue-skeleton" style={{ height: 16, width: 200, margin: '28px auto 0', borderRadius: 4 }} />
+      </div>
+    </div>
+  );
+}
+
 function ContactPageInner() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -34,9 +98,9 @@ function ContactPageInner() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const subjectParam = searchParams.get('subject');
-    if (subjectParam?.trim()) {
-      setForm((prev) => ({ ...prev, subject: subjectParam.trim() }));
+    const subjectParam = searchParams.get('subject')?.trim() || searchParams.get('objet')?.trim();
+    if (subjectParam) {
+      setForm((prev) => ({ ...prev, subject: subjectParam }));
       setSubjectLocked(true);
     } else {
       setSubjectLocked(false);
@@ -169,7 +233,7 @@ function ContactPageInner() {
               </div>
               <div style={{ marginBottom: 20 }}>
                 <label htmlFor="contact-subject" style={labelStyle}>
-                  Sujet
+                  Objet
                 </label>
                 <input
                   id="contact-subject"
@@ -240,11 +304,7 @@ function ContactPageInner() {
 
 export default function ContactPage() {
   return (
-    <Suspense
-      fallback={
-        <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fff' }} />
-      }
-    >
+    <Suspense fallback={<ContactPageSuspenseSkeleton />}>
       <ContactPageInner />
     </Suspense>
   );

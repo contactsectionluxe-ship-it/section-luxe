@@ -63,7 +63,7 @@ export default function VoirAnnoncePage() {
           getSellerDeletionsByReason(user.uid, 'reserve'),
         ]);
         if (data && data.sellerId !== user.uid) {
-          router.replace('/vendeur');
+          router.replace('/vendeur/annonces');
           return;
         }
         setListing(data || null);
@@ -72,7 +72,7 @@ export default function VoirAnnoncePage() {
         setIsReserved(reserveDeletions.some((d) => d.listingId === listingId));
       } catch (e) {
         console.error(e);
-        router.replace('/vendeur');
+        router.replace('/vendeur/annonces');
       } finally {
         setLoading(false);
       }
@@ -111,7 +111,7 @@ export default function VoirAnnoncePage() {
         console.warn('Enregistrement Mes ventes (listing_deletions) ignoré:', recordErr);
       }
       await deleteListing(listingId);
-      router.push('/vendeur');
+      router.push('/vendeur/annonces');
     } catch (error) {
       console.error('Erreur lors de la suppression de l\'annonce:', error);
       setDeleteError('Impossible de supprimer l\'annonce. Réessayez ou contactez le support.');
@@ -173,7 +173,7 @@ export default function VoirAnnoncePage() {
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '24px 20px 60px' }}>
         <Link
-          href="/vendeur"
+          href="/vendeur/annonces"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#1d1d1f', marginBottom: 24 }}
         >
           <ArrowLeft size={18} /> Retour à mes annonces

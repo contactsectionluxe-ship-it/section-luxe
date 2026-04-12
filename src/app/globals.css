@@ -48,18 +48,18 @@ button.proposal-description-info-btn:focus-visible {
   outline-offset: 2px;
 }
 
-/* Suivre mes offres : modifier / supprimer — même logique que l’icône « i » description */
-a.suivre-mes-offres-card-action-btn,
-a.suivre-mes-offres-card-action-btn:hover,
-a.suivre-mes-offres-card-action-btn:active,
-button.suivre-mes-offres-card-action-btn,
-button.suivre-mes-offres-card-action-btn:hover,
-button.suivre-mes-offres-card-action-btn:active {
+/* Propositions : modifier / supprimer — même logique que l’icône « i » description */
+a.propositions-card-action-btn,
+a.propositions-card-action-btn:hover,
+a.propositions-card-action-btn:active,
+button.propositions-card-action-btn,
+button.propositions-card-action-btn:hover,
+button.propositions-card-action-btn:active {
   background-color: transparent !important;
   color: #6e6e73 !important;
 }
-a.suivre-mes-offres-card-action-btn:focus-visible,
-button.suivre-mes-offres-card-action-btn:focus-visible {
+a.propositions-card-action-btn:focus-visible,
+button.propositions-card-action-btn:focus-visible {
   outline: 2px solid #86868b;
   outline-offset: 2px;
 }
@@ -116,6 +116,15 @@ img {
 input, select, textarea, button {
   font-family: inherit;
   font-size: inherit;
+}
+
+/* iOS Safari : pas de zoom automatique au focus (seuil ~16px). Les pages auth utilisent souvent 15px en inline — !important nécessaire. */
+@media (max-width: 767px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Pas de contour bleu au focus */
@@ -301,7 +310,7 @@ a:focus-visible {
   display: none;
 }
 
-/* Hero : sous-titre « Explorez… » et ligne « 1. Trouvez… » — même police (Inter) et même taille */
+/* Hero : sous-titre « Explorez… » et ligne « Trouvez, Essayez… » — même police (Inter) et même taille */
 .hero-sous-titre,
 .hero-numbered-steps {
   font-family: var(--font-inter), var(--font-sans);
@@ -372,6 +381,26 @@ a:focus-visible {
     transform: translate(50%, -50%) !important;
     width: 36px !important;
     height: 36px !important;
+  }
+  /* Mes ventes : évolution — une ligne (titre | flèches | Volume / Montant) */
+  .mes-ventes-evolution-head {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 16px !important;
+  }
+  .mes-ventes-evolution-head-title {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+  .mes-ventes-evolution-chart-arrows {
+    flex-shrink: 0 !important;
+  }
+  .mes-ventes-evolution-chart-tabs {
+    flex-shrink: 0 !important;
+    width: auto !important;
   }
 }
 
@@ -488,6 +517,42 @@ a:focus-visible {
   margin-top: var(--catalogue-results-gap, calc(-4px + 0.5mm)) !important;
 }
 
+/* Cartes annonces : dégradé entre photo et zone texte (remplace le trait #e8e6e3) */
+.listing-card-photo-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to top,
+    rgba(238, 236, 233, 0.5) 0%,
+    rgba(241, 239, 236, 0.3) 35%,
+    rgba(245, 243, 240, 0.16) 65%,
+    rgba(248, 247, 245, 0.06) 88%,
+    transparent 100%
+  );
+}
+/* Vue ligne : dégradé sur le bord droit de la vignette */
+/* Vue ligne catalogue : bande plus courte que la grille (vignette étroite) */
+.listing-card-photo-fade--line {
+  left: auto;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(22px, 28%);
+  height: auto;
+  background: linear-gradient(
+    to left,
+    rgba(238, 236, 233, 0.45) 0%,
+    rgba(241, 239, 236, 0.22) 45%,
+    rgba(245, 243, 240, 0.08) 78%,
+    transparent 100%
+  );
+}
+
 /* Catalogue vue liste (ligne) : vignette carrée (côté = ancienne hauteur 28cqw − 1cm, largeur réduite vs 28 %) */
 .catalogue-line-card {
   container-type: inline-size;
@@ -542,23 +607,23 @@ a:focus-visible {
   transform: translateY(calc(-0.038em + 0.05mm));
 }
 
-/* Suivre mes offres : liens noms vendeurs vers catalogue public */
-.suivre-mes-offres-page .suivre-mes-offres-seller-link:hover {
+/* Propositions : liens noms vendeurs vers catalogue public */
+.propositions-page .propositions-seller-link:hover {
   text-decoration: underline;
   color: #1d1d1f;
 }
-button.suivre-mes-offres-desc-toggle:focus-visible {
+button.propositions-desc-toggle:focus-visible {
   outline: 2px solid #86868b;
   outline-offset: 2px;
 }
 
-/* Suivre mes offres : cartes vue ligne plus compactes (sourcing / autres pages ligne) */
-.suivre-mes-offres-page .catalogue-line-card .catalogue-line-photo,
+/* Propositions : cartes vue ligne plus compactes (sourcing / autres pages ligne) */
+.propositions-page .catalogue-line-card .catalogue-line-photo,
 .sourcing-page .catalogue-line-card .catalogue-line-photo {
   --catalogue-line-thumb-side: max(40px, calc(22cqw - 10mm)) !important;
   min-width: 40px !important;
 }
-.suivre-mes-offres-page .catalogue-line-card .catalogue-line-title-block,
+.propositions-page .catalogue-line-card .catalogue-line-title-block,
 .sourcing-page .catalogue-line-card .catalogue-line-title-block {
   padding-top: 4px !important;
 }
@@ -841,25 +906,39 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
 
 /* Page d'accueil : sur très grands écrans, image hero plus large (éviter un rendu trop « dézoomé » / étroit) */
 @media (min-width: 1600px) {
-  .hero-section {
-    background-size: 66% auto !important;
+  .hero-bg-image-wrap {
+    width: 66% !important;
   }
 }
 @media (min-width: 2000px) {
-  .hero-section {
-    background-size: 76% auto !important;
+  .hero-bg-image-wrap {
+    width: 76% !important;
   }
+}
+
+/* CTA « vendeur professionnel » : bloc centré verticalement et horizontalement dans la bande */
+.home-section-vendeur-cta {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+.home-section-vendeur-cta .home-section-vendeur-cta-inner {
+  width: 100%;
+  max-width: 520px;
 }
 
 /* Page d'accueil mobile : pas de photo derrière le titre, titre sur toute la largeur */
 @media (max-width: 767px) {
   .hero-section {
-    background-image: none !important;
     background-color: #ffffff !important;
-    padding-top: calc(var(--header-height) + 48px) !important;
-    padding-bottom: 32px !important;
+    /* −1 cm + léger supplément au-dessus du titre ; marge h1 (1 cm) inchangée dans le JSX */
+    padding-top: calc(var(--header-height) + 48px - 1cm + 0.32cm) !important;
+    /* Espace sous les boutons : (32px + marge boutons 1 cm) − 2 cm + supplément sous « Voir le catalogue » ; marge boutons annulée plus bas */
+    padding-bottom: max(0px, calc(32px + 1cm - 2cm + 0.92cm)) !important;
   }
-  .hero-section > div:first-of-type {
+  .hero-section-backdrop {
     display: none !important;
   }
   .hero-section h1 {
@@ -876,6 +955,7 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
     justify-content: flex-start !important;
     gap: 10px !important;
     width: 100% !important;
+    margin-bottom: 0 !important;
   }
   .hero-buttons a {
     flex: 1 1 0 !important;
@@ -979,6 +1059,8 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   .home-section-featured {
     padding-top: 40px !important;
     margin-top: 0 !important;
+    /* Air sous la grille « À la une » avant le bandeau vendeur */
+    padding-bottom: 64px !important;
   }
   .home-section-featured > div > div.home-featured-section-head {
     margin-bottom: 18px !important;
@@ -1043,10 +1125,9 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
     margin-top: -6px !important;
   }
   .home-section-vendeur-cta {
-    margin-top: -44px !important;
-    padding-top: 56px !important;
-    padding-bottom: 68px !important;
-    background-position: center -12% !important;
+    margin-top: 0 !important;
+    padding-top: calc(44px + 2mm) !important;
+    padding-bottom: 44px !important;
   }
   .home-section-vendeur-cta-inner {
     max-width: none !important;
@@ -1149,6 +1230,24 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
   margin-top: -1mm;
 }
 
+/* Bloc titre Mes factures + sous-titre (hors carte), aligné sur « Mon abonnement » */
+.abonnement-mes-factures-title-block {
+  margin-top: 36px;
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+/* Deuxième carte : liste / filtres factures uniquement */
+.abonnement-mes-factures-shell {
+  background: #fff;
+  padding: 32px 28px;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  margin-top: 0;
+  box-sizing: border-box;
+  width: 100%;
+}
+
 .abonnement-shell-footnote {
   font-size: 13px;
   color: #86868b;
@@ -1214,6 +1313,103 @@ button.suivre-mes-offres-desc-toggle:focus-visible {
 .abonnement-plan-card--featured:hover {
   border-color: #1d1d1f;
   box-shadow: 0 16px 44px rgba(29, 29, 31, 0.09);
+}
+
+/** Chargement : pas de mise en avant (bordure noire / ombre) ; barres = .catalogue-skeleton. */
+.abonnement-plan-card.abonnement-plan-card--skeleton {
+  border-color: #e5e5ea;
+  background: #fff;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.abonnement-plan-card.abonnement-plan-card--skeleton:hover {
+  border-color: #e5e5ea;
+  box-shadow: none;
+}
+
+/* Squelette : mêmes marges que titre / desc / puces réels pour éviter chevauchements */
+.abonnement-plan-card--skeleton .abonnement-plan-header {
+  align-items: center;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  max-width: 140px;
+  border-radius: 6px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-badge {
+  flex-shrink: 0;
+  width: 68px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-price-main {
+  height: 30px;
+  width: 72px;
+  border-radius: 6px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-price-sub {
+  height: 15px;
+  width: 52px;
+  border-radius: 4px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-desc {
+  margin: 12px 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-desc-line {
+  display: block;
+  height: 13px;
+  border-radius: 4px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-desc-line--full {
+  width: 100%;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-desc-line--short {
+  width: 78%;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-features li {
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-features li:last-child {
+  margin-bottom: 0;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-check {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  border-radius: 999px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-feature-line {
+  flex: 0 1 auto;
+  min-width: 0;
+  height: 13px;
+  border-radius: 4px;
+}
+
+.abonnement-plan-card--skeleton .abonnement-plan-skeleton-cta {
+  height: 48px;
+  width: 100%;
+  border-radius: 12px;
 }
 
 .abonnement-plan-header {
@@ -1627,8 +1823,11 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-text-block > p {
     margin: 0 !important;
     font-size: 13px !important;
-    line-height: 1.25 !important;
+    line-height: 20px !important;
+    height: 20px !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
   .catalogue-page-main--seller .catalogue-seller-store-banner .catalogue-seller-logo-wrap {
     width: 48px !important;
@@ -1677,22 +1876,22 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   .catalogue-listing-vendeur-nom {
     display: none !important;
   }
-  /* Suivre mes offres : noms des vendeurs invités sous les cartes (même classe que le catalogue, à réafficher ici) */
-  .suivre-mes-offres-page .catalogue-listing-vendeur-nom {
+  /* Propositions : noms des vendeurs invités sous les cartes (même classe que le catalogue, à réafficher ici) */
+  .propositions-page .catalogue-listing-vendeur-nom {
     display: inline !important;
   }
   /* … et retour à la ligne (annule .listing-grid-vendeur-nom nowrap de la grille catalogue) */
-  .suivre-mes-offres-page .suivre-mes-offres-vendeurs-outer {
+  .propositions-page .propositions-vendeurs-outer {
     overflow: visible !important;
   }
-  .suivre-mes-offres-page .suivre-mes-offres-vendeurs-ligne.listing-grid-vendeur-nom {
+  .propositions-page .propositions-vendeurs-ligne.listing-grid-vendeur-nom {
     white-space: normal !important;
     overflow: visible !important;
     text-overflow: unset !important;
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
   }
-  .suivre-mes-offres-page .suivre-mes-offres-seller-link {
+  .propositions-page .propositions-seller-link {
     white-space: normal !important;
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
@@ -1790,6 +1989,8 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     width: 100% !important;
     padding-left: 24px !important;
     padding-right: 24px !important;
+    /* Un peu moins d’air sous la dernière puce qu’en plein desktop (voir padding inline À propos) */
+    padding-bottom: 40px !important;
     box-sizing: border-box !important;
   }
   .a-propos-page-inner .a-propos-section {
@@ -1819,6 +2020,14 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     min-width: 0 !important;
   }
   .abonnement-shell {
+    padding: 32px 28px !important;
+    border-radius: 18px !important;
+  }
+  .abonnement-mes-factures-title-block {
+    margin-top: 28px !important;
+    margin-bottom: 20px !important;
+  }
+  .abonnement-mes-factures-shell {
     padding: 32px 28px !important;
     border-radius: 18px !important;
   }
@@ -1941,6 +2150,45 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
   .mes-ventes-evolution-title-mobile {
     display: inline !important;
+  }
+  /* Mes ventes : ligne 1 titre + flèches (alignées au titre) ; ligne 2 Volume/Montant à droite */
+  .mes-ventes-evolution-head {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-rows: auto auto !important;
+    gap: 10px 8px !important;
+    align-items: center !important;
+    flex-wrap: unset !important;
+  }
+  .mes-ventes-evolution-head-title {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    min-width: 0 !important;
+    font-size: 15px !important;
+    line-height: 1.25 !important;
+  }
+  .mes-ventes-evolution-chart-arrows {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    justify-self: end !important;
+    flex-shrink: 0 !important;
+  }
+  .mes-ventes-evolution-chart-tabs {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+    justify-self: end !important;
+    justify-content: flex-end !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-shrink: 0 !important;
+  }
+  .mes-ventes-evolution-chart-tabs button {
+    padding: 6px 10px !important;
+    font-size: 13px !important;
+  }
+  .mes-ventes-evolution-chart-arrows button {
+    width: 34px !important;
+    height: 34px !important;
   }
   /* Page Mes annonces : pleine largeur sur mobile */
   .mes-annonces-page-inner {
@@ -2217,10 +2465,10 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 12px !important;
   }
-  /* Suivre mes offres + Sourcing : pleine largeur (via .mes-annonces-page-inner), 2 cartes par ligne */
-  .suivre-mes-offres-page .suivre-mes-offres-catalogue-grid,
-  .suivre-mes-offres-page .mes-annonces-list-grid,
-  .sourcing-page .suivre-mes-offres-catalogue-grid,
+  /* Propositions + Sourcing : pleine largeur (via .mes-annonces-page-inner), 2 cartes par ligne */
+  .propositions-page .propositions-catalogue-grid,
+  .propositions-page .mes-annonces-list-grid,
+  .sourcing-page .propositions-catalogue-grid,
   .sourcing-page .mes-annonces-list-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
@@ -2228,7 +2476,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     min-width: 0 !important;
   }
   /* Date (ex. 02/04/2026) sous la ligne « Prix souhaité » sur mobile ; un peu d’air au-dessus du prix */
-  .suivre-mes-offres-page .sale-proposal-grid-price-date,
+  .propositions-page .sale-proposal-grid-price-date,
   .sourcing-page .sale-proposal-grid-price-date {
     flex-direction: column !important;
     align-items: flex-start !important;
@@ -2236,11 +2484,11 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     gap: 4px !important;
     margin-top: 6px !important;
   }
-  .suivre-mes-offres-page .sale-proposal-grid-price-date .listing-grid-price,
+  .propositions-page .sale-proposal-grid-price-date .listing-grid-price,
   .sourcing-page .sale-proposal-grid-price-date .listing-grid-price {
     width: 100% !important;
   }
-  .suivre-mes-offres-page .sale-proposal-grid-price-date .suivre-mes-offres-grid-meta-date,
+  .propositions-page .sale-proposal-grid-price-date .propositions-grid-meta-date,
   .sourcing-page .sale-proposal-grid-price-date > span:last-child {
     justify-content: flex-start !important;
     transform: none !important;

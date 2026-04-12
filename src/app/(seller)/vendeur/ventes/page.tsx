@@ -3,9 +3,9 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag, ChevronDown, Euro } from 'lucide-react';
+import { Package, Clock, Heart, MessageCircle, Phone, CheckCircle, Plus, X, XCircle, Trash2, ShoppingBag, ChevronDown, Euro, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, type MonthEvolution, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
+import { getSellerSalesStats, type SellerSalesStats, getSellerSalesEvolution, getMonthLabel, getMonthLabelMMYY, type MonthEvolution, type SellerSalesEvolutionWindowEnd, getSellerDeletionsByReason, deleteListingDeletion, updateListingDeletionReason, type DeletionItem } from '@/lib/supabase/sales';
 import { updateListing, deleteListing } from '@/lib/supabase/listings';
 import { isSubscriptionLimitError } from '@/lib/subscription';
 import { formatEurosForPriceInput, parsePriceInputToNumber, sanitizePriceInputWhileTyping } from '@/lib/utils';
@@ -37,16 +37,32 @@ function formatAmountChart(cents: number): string {
   return `${new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(euros)} €`;
 }
 
+function calendarMonthEnd(): { year: number; month: number } {
+  const n = new Date();
+  return { year: n.getFullYear(), month: n.getMonth() };
+}
+
+function addCalendarMonths(y: number, m: number, delta: number): { year: number; month: number } {
+  const d = new Date(y, m + delta, 1);
+  return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function monthOrder(y: number, m: number): number {
+  return y * 12 + m;
+}
+
 /** Fausses données aléatoires sur 12 mois pour tester le graphique (mettre à false en prod). */
 const USE_FAKE_EVOLUTION = false;
 
-function buildFakeEvolution(): MonthEvolution[] {
+function buildFakeEvolution(endYear?: number, endMonth?: number): MonthEvolution[] {
   const now = new Date();
+  const ey = endYear ?? now.getFullYear();
+  const em = endMonth ?? now.getMonth();
   const result: MonthEvolution[] = [];
   const volumes = [120, 0, 45, 180, 220, 95, 150, 195, 110, 75, 250, 165];
   const amounts = [85000000, 0, 45000000, 280000000, 165000000, 320000000, 190000000, 95000000, 410000000, 220000000, 380000000, 270000000];
   for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const d = new Date(ey, em - 11 + i, 1);
     result.push({
       year: d.getFullYear(),
       month: d.getMonth(),
@@ -55,6 +71,98 @@ function buildFakeEvolution(): MonthEvolution[] {
     });
   }
   return result;
+}
+
+function MesVentesBodySkeleton() {
+  return (
+    <>
+      <div className="mes-ventes-filtres-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, flex: 1, minWidth: 0, alignItems: 'center' }}>
+          <div className="catalogue-skeleton" style={{ height: 44, width: 100, borderRadius: 12, flexShrink: 0 }} />
+          <div className="catalogue-skeleton" style={{ height: 44, width: 140, borderRadius: 12, flexShrink: 0 }} />
+          <div className="catalogue-skeleton" style={{ height: 44, width: 140, borderRadius: 12, flexShrink: 0 }} />
+          <div className="catalogue-skeleton" style={{ height: 44, width: 44, borderRadius: 12, flexShrink: 0 }} />
+        </div>
+        <div className="catalogue-skeleton" style={{ height: 16, width: 160, borderRadius: 4, flexShrink: 0 }} />
+      </div>
+      <div
+        className="mes-ventes-stats-grid"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}
+      >
+        {[0, 1, 2, 3].map((i) => (
+          <div
+            key={i}
+            style={{
+              padding: 16,
+              border: '1px solid #e8e6e3',
+              borderRadius: 12,
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 8, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="catalogue-skeleton" style={{ height: 12, width: '72%', maxWidth: 120, marginBottom: 10, borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 26, width: 40, borderRadius: 4 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div
+        className="mes-ventes-stats-deux-grid"
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 24 }}
+      >
+        {[0, 1].map((i) => (
+          <div
+            key={i}
+            style={{
+              padding: 20,
+              border: '1px solid #e8e6e3',
+              borderRadius: 12,
+              backgroundColor: '#fff',
+              boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div className="catalogue-skeleton" style={{ width: 44, height: 44, borderRadius: 10 }} />
+              <div className="catalogue-skeleton" style={{ width: 52, height: 36, borderRadius: 10 }} />
+            </div>
+            <div className="catalogue-skeleton" style={{ height: 12, width: '50%', marginBottom: 10, borderRadius: 4 }} />
+            <div className="catalogue-skeleton" style={{ height: 28, width: 56, borderRadius: 4 }} />
+          </div>
+        ))}
+      </div>
+      <div
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 16,
+          border: '1px solid #e8e6e3',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+          padding: 28,
+          marginBottom: 24,
+        }}
+      >
+        <div className="mes-ventes-evolution-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+          <h2 className="mes-ventes-evolution-head-title" style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 400, margin: 0, color: '#888' }}>
+            <span className="mes-ventes-evolution-title-desktop">Évolution des ventes</span>
+            <span className="mes-ventes-evolution-title-mobile">Évolution des ventes</span>
+          </h2>
+          <div className="mes-ventes-evolution-chart-arrows" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div className="catalogue-skeleton" style={{ width: 36, height: 36, borderRadius: 10 }} />
+            <div className="catalogue-skeleton" style={{ width: 36, height: 36, borderRadius: 10 }} />
+          </div>
+          <div className="mes-ventes-evolution-chart-tabs" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="catalogue-skeleton" style={{ height: 36, width: 84, borderRadius: 10 }} />
+            <div className="catalogue-skeleton" style={{ height: 36, width: 92, borderRadius: 10 }} />
+          </div>
+        </div>
+        <div className="catalogue-skeleton" style={{ height: 320, width: '100%', borderRadius: 12 }} />
+      </div>
+    </>
+  );
 }
 
 function MesVentesPageContent() {
@@ -97,6 +205,7 @@ function MesVentesPageContent() {
     setDatePresetOpen(false);
   };
   const [evolutionLoading, setEvolutionLoading] = useState(true);
+  const [evolutionWindowEnd, setEvolutionWindowEnd] = useState(() => calendarMonthEnd());
   const [chartMode, setChartMode] = useState<'volume' | 'montant'>('volume');
   const [showVenduPopup, setShowVenduPopup] = useState(false);
   const [venduList, setVenduList] = useState<DeletionItem[]>([]);
@@ -217,36 +326,45 @@ function MesVentesPageContent() {
     }
     let cancelled = false;
     setEvolutionLoading(true);
+    const evolutionOpts: SellerSalesEvolutionWindowEnd = {
+      endYear: evolutionWindowEnd.year,
+      endMonth: evolutionWindowEnd.month,
+    };
     if (USE_FAKE_EVOLUTION) {
       setTimeout(() => {
         if (!cancelled) {
-          setEvolution(buildFakeEvolution());
+          setEvolution(buildFakeEvolution(evolutionOpts.endYear, evolutionOpts.endMonth));
           setEvolutionLoading(false);
         }
       }, 400);
       return () => { cancelled = true; };
     }
-    getSellerSalesEvolution(user.uid)
+    getSellerSalesEvolution(user.uid, evolutionOpts)
       .then((data) => { if (!cancelled) setEvolution(data); })
       .catch(() => { if (!cancelled) setEvolution([]); })
       .finally(() => { if (!cancelled) setEvolutionLoading(false); });
     return () => { cancelled = true; };
-  }, [user?.uid]);
+  }, [user?.uid, evolutionWindowEnd.year, evolutionWindowEnd.month]);
 
-  if (authLoading || loading) {
-    return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
-      </div>
-    );
-  }
+  if (!authLoading && (!user || !seller)) return null;
 
-  if (!user || !seller) return null;
+  const showMainSkeleton = authLoading || loading;
+  const evolutionMaxEnd = calendarMonthEnd();
+  const canEvolutionPanForward =
+    monthOrder(evolutionWindowEnd.year, evolutionWindowEnd.month) <
+    monthOrder(evolutionMaxEnd.year, evolutionMaxEnd.month);
+  /** Mobile : 6 mois (aligné sur les 6 points du graphique) ; desktop : 12 mois. */
+  const evolutionPanStepMonths = isMobile ? 6 : 12;
+
+  const evolutionOptsForRefresh = (): SellerSalesEvolutionWindowEnd => ({
+    endYear: evolutionWindowEnd.year,
+    endMonth: evolutionWindowEnd.month,
+  });
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff' }}>
       <div className="mes-ventes-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
-        {depotInactiveLimiteBanner ? (
+        {!showMainSkeleton && depotInactiveLimiteBanner ? (
           <div
             role="status"
             style={{
@@ -294,26 +412,33 @@ function MesVentesPageContent() {
               <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px', color: '#1d1d1f' }}>
                 Mes ventes
               </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
-                {seller.status === 'approved' && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                    <CheckCircle size={12} /> Validé
-                  </span>
-                )}
-                {seller.status === 'pending' && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                    <Clock size={12} /> En attente
-                  </span>
-                )}
-                {seller.status === 'rejected' && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
-                    <XCircle size={12} /> Refusé
-                  </span>
-                )}
-              </div>
+              {showMainSkeleton ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div className="catalogue-skeleton" style={{ height: 16, width: 200, maxWidth: '100%', borderRadius: 4 }} />
+                  <div className="catalogue-skeleton" style={{ height: 24, width: 76, borderRadius: 8 }} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 14, color: '#666' }}>{seller.companyName}</span>
+                  {seller.status === 'approved' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#dcfce7', color: '#166534', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                      <CheckCircle size={12} /> Validé
+                    </span>
+                  )}
+                  {seller.status === 'pending' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fef3c7', color: '#92400e', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                      <Clock size={12} /> En attente
+                    </span>
+                  )}
+                  {seller.status === 'rejected' && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', backgroundColor: '#fee2e2', color: '#991b1b', fontSize: 12, fontWeight: 500, borderRadius: 8 }}>
+                      <XCircle size={12} /> Refusé
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            {isApprovedSeller && (
+            {!showMainSkeleton && isApprovedSeller && (
               <div className="mes-annonces-header-icons-mobile-wrap">
                 <Link
                   href="/vendeur/annonces/nouvelle?from=ventes"
@@ -340,15 +465,23 @@ function MesVentesPageContent() {
               </div>
             )}
           </div>
-          {isApprovedSeller && (
+          {showMainSkeleton ? (
+            <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
+              <div className="catalogue-skeleton" style={{ height: 46, width: 220, borderRadius: 12 }} />
+            </div>
+          ) : isApprovedSeller ? (
             <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
               <Link href="/vendeur/annonces/nouvelle?from=ventes" className="mes-ventes-deposer-link mes-annonces-deposer-link" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 20px', backgroundColor: '#000', color: '#fff', fontSize: 14, fontWeight: 500, borderRadius: 12 }}>
                 <Plus size={18} /> Déposer une annonce
               </Link>
             </div>
-          )}
+          ) : null}
         </div>
 
+        {showMainSkeleton ? (
+          <MesVentesBodySkeleton />
+        ) : (
+          <>
         {seller.status === 'pending' && (
           <div
             style={{
@@ -742,7 +875,7 @@ function MesVentesPageContent() {
                         setVenduList((prev) => prev.filter((i) => i.id !== deleteConfirmId));
                         const [newStats, newEvolution] = await Promise.all([
                           getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
-                          getSellerSalesEvolution(user.uid),
+                          getSellerSalesEvolution(user.uid, evolutionOptsForRefresh()),
                         ]);
                         setStats(newStats);
                         setEvolution(newEvolution);
@@ -966,7 +1099,7 @@ function MesVentesPageContent() {
                           const [newVenduList, newStats, newEvolution] = await Promise.all([
                             getSellerDeletionsByReason(user.uid, 'vendu', { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
                             getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
-                            getSellerSalesEvolution(user.uid),
+                            getSellerSalesEvolution(user.uid, evolutionOptsForRefresh()),
                           ]);
                           setVenduList(newVenduList);
                           setStats(newStats);
@@ -977,7 +1110,7 @@ function MesVentesPageContent() {
                           setReserveList((prev) => prev.filter((i) => i.id !== reserveAction.id));
                           const [newStats, newEvolution] = await Promise.all([
                             getSellerSalesStats(user.uid, { dateFrom: dateFrom || undefined, dateTo: dateTo || undefined }),
-                            getSellerSalesEvolution(user.uid),
+                            getSellerSalesEvolution(user.uid, evolutionOptsForRefresh()),
                           ]);
                           setStats(newStats);
                           setEvolution(newEvolution);
@@ -1005,12 +1138,71 @@ function MesVentesPageContent() {
 
         {/* Graphique évolution des ventes — 12 derniers mois */}
         <div style={{ backgroundColor: '#fff', borderRadius: 16, border: '1px solid #e8e6e3', boxShadow: '0 2px 12px rgba(0,0,0,0.04)', padding: 28, marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
-            <h2 style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 400, margin: 0, color: '#888' }}>
-              <span className="mes-ventes-evolution-title-desktop">Évolution des ventes des 12 derniers mois</span>
+          <div className="mes-ventes-evolution-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+            <h2 className="mes-ventes-evolution-head-title" style={{ fontFamily: 'var(--font-inter), var(--font-sans)', fontSize: 17, fontWeight: 400, margin: 0, color: '#888' }}>
+              <span className="mes-ventes-evolution-title-desktop">Évolution des ventes</span>
               <span className="mes-ventes-evolution-title-mobile">Évolution des ventes</span>
             </h2>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="mes-ventes-evolution-chart-arrows" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <button
+                type="button"
+                aria-label="Période précédente"
+                disabled={evolutionLoading}
+                onClick={() =>
+                  setEvolutionWindowEnd((prev) =>
+                    addCalendarMonths(prev.year, prev.month, -evolutionPanStepMonths),
+                  )
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 36,
+                  height: 36,
+                  padding: 0,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 10,
+                  background: '#fff',
+                  color: '#1d1d1f',
+                  cursor: evolutionLoading ? 'not-allowed' : 'pointer',
+                  opacity: evolutionLoading ? 0.5 : 1,
+                }}
+              >
+                <ChevronLeft size={20} strokeWidth={2} aria-hidden />
+              </button>
+              <button
+                type="button"
+                aria-label="Période suivante"
+                disabled={evolutionLoading || !canEvolutionPanForward}
+                onClick={() =>
+                  setEvolutionWindowEnd((prev) => {
+                    const max = calendarMonthEnd();
+                    const next = addCalendarMonths(prev.year, prev.month, evolutionPanStepMonths);
+                    if (monthOrder(next.year, next.month) >= monthOrder(max.year, max.month)) {
+                      return max;
+                    }
+                    return next;
+                  })
+                }
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 36,
+                  height: 36,
+                  padding: 0,
+                  border: '1px solid #d2d2d7',
+                  borderRadius: 10,
+                  background: '#fff',
+                  color: '#1d1d1f',
+                  cursor: evolutionLoading || !canEvolutionPanForward ? 'not-allowed' : 'pointer',
+                  opacity: evolutionLoading || !canEvolutionPanForward ? 0.35 : 1,
+                }}
+              >
+                <ChevronRight size={20} strokeWidth={2} aria-hidden />
+              </button>
+            </div>
+            <div className="mes-ventes-evolution-chart-tabs" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <button
               type="button"
               onClick={() => setChartMode('volume')}
@@ -1053,8 +1245,6 @@ function MesVentesPageContent() {
             const chartEvolution = isMobile ? evolution.slice(-6) : evolution;
             const values = chartEvolution.map((m) => (chartMode === 'volume' ? m.volume : m.amountCents / 100));
             const maxVal = Math.max(1, ...values);
-            const totalValues = values.reduce((a, b) => a + b, 0);
-            const isEmpty = totalValues === 0;
             const chartHeight = 320;
             const n = chartEvolution.length;
             const niceCeil = (x: number, forMontant: boolean): number => {
@@ -1110,14 +1300,6 @@ function MesVentesPageContent() {
             const gridLines = yTicks.length - 1;
             const topHeadroom = 0.02;
             const dataHeight = 200 * (1 - topHeadroom);
-
-            if (isEmpty) {
-              return (
-                <div style={{ height: chartHeight, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <p style={{ fontSize: 14, color: '#86868b', margin: 0 }}>Aucune vente sur la période</p>
-                </div>
-              );
-            }
 
             const plotHeight = chartHeight - 32;
             const valueToSvgY = (val: number) => 200 - (yMax > 0 ? (val / yMax) * dataHeight : 0);
@@ -1221,7 +1403,7 @@ function MesVentesPageContent() {
                         </div>
                       ))}
                   </div>
-                  {/* Valeurs au-dessus des points uniquement s'il y a des ventes */}
+                  {/* Valeurs au-dessus des points (0 si aucune vente) */}
                   <div style={{ position: 'absolute', left: 0, right: 0, top: 0, height: plotHeight, pointerEvents: 'none' }}>
                     {chartEvolution.map((m, i) => {
                       const p = points[i];
@@ -1268,7 +1450,7 @@ function MesVentesPageContent() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {getMonthLabel(m)}
+                      {isMobile ? getMonthLabelMMYY(m) : getMonthLabel(m)}
                     </span>
                   ))}
                 </div>
@@ -1278,6 +1460,8 @@ function MesVentesPageContent() {
         </div>
 
         </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -1286,8 +1470,26 @@ function MesVentesPageContent() {
 export default function MesVentesPage() {
   return (
     <Suspense fallback={
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: 15, color: '#6e6e73' }}>Chargement...</p>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#ffffff' }}>
+        <div className="mes-ventes-page-inner" style={{ maxWidth: 1100, margin: '0 auto', padding: '30px 24px 60px' }}>
+          <div className="mes-annonces-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+            <div className="mes-annonces-title-block" style={{ flex: '1 1 auto', minWidth: 0 }}>
+              <div className="mes-annonces-title-text-stack" style={{ flex: '1 1 auto', minWidth: 0 }}>
+                <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, margin: '0 0 8px', color: '#1d1d1f' }}>
+                  Mes ventes
+                </h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div className="catalogue-skeleton" style={{ height: 16, width: 200, maxWidth: '100%', borderRadius: 4 }} />
+                  <div className="catalogue-skeleton" style={{ height: 24, width: 76, borderRadius: 8 }} />
+                </div>
+              </div>
+            </div>
+            <div className="mes-annonces-header-actions" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10 }}>
+              <div className="catalogue-skeleton" style={{ height: 46, width: 220, borderRadius: 12 }} />
+            </div>
+          </div>
+          <MesVentesBodySkeleton />
+        </div>
       </div>
     }>
       <MesVentesPageContent />

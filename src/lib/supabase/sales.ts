@@ -247,30 +247,45 @@ export interface MonthEvolution {
 
 const MOIS_LABELS = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 
+/** Dernier mois inclus dans la fenêtre de 12 mois (`month` = 0–11, comme `Date#getMonth`). */
+export type SellerSalesEvolutionWindowEnd = {
+  endYear: number;
+  endMonth: number;
+};
+
 /**
- * Retourne l'évolution des ventes (volume + montant) pour chacun des 12 derniers mois.
+ * Retourne l'évolution des ventes (volume + montant) sur 12 mois glissants se terminant à `endMonth` inclus.
+ * Sans options : les 12 derniers mois jusqu’au mois calendaire en cours.
  * Seules les suppressions avec reason = 'vendu' sont comptées ; les articles réservés (reserve) ne sont pas inclus.
  */
-export async function getSellerSalesEvolution(sellerId: string): Promise<MonthEvolution[]> {
+export async function getSellerSalesEvolution(
+  sellerId: string,
+  options?: SellerSalesEvolutionWindowEnd,
+): Promise<MonthEvolution[]> {
   const client = checkSupabase();
   const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth() - 11, 1, 0, 0, 0, 0);
+  const endYear = options?.endYear ?? now.getFullYear();
+  const endMonth = options?.endMonth ?? now.getMonth();
+
+  const start = new Date(endYear, endMonth - 11, 1, 0, 0, 0, 0);
+  const rangeEnd = new Date(endYear, endMonth + 1, 0, 23, 59, 59, 999);
 
   const { data: deletions, error } = await client
     .from('listing_deletions')
     .select('reason, amount_cents, deleted_at')
     .eq('seller_id', sellerId)
     .eq('reason', 'vendu')
-    .gte('deleted_at', start.toISOString());
+    .gte('deleted_at', start.toISOString())
+    .lte('deleted_at', rangeEnd.toISOString());
 
   if (error) {
     console.warn('getSellerSalesEvolution:', error.message);
-    return buildEmptyEvolution();
+    return buildEmptyEvolution(endYear, endMonth);
   }
 
   const byKey: Record<string, { volume: number; amountCents: number }> = {};
   for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const d = new Date(endYear, endMonth - 11 + i, 1);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     byKey[key] = { volume: 0, amountCents: 0 };
   }
@@ -285,7 +300,7 @@ export async function getSellerSalesEvolution(sellerId: string): Promise<MonthEv
 
   const result: MonthEvolution[] = [];
   for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const d = new Date(endYear, endMonth - 11 + i, 1);
     const key = `${d.getFullYear()}-${d.getMonth()}`;
     const data = byKey[key] || { volume: 0, amountCents: 0 };
     result.push({
@@ -302,11 +317,20 @@ export function getMonthLabel(evolution: MonthEvolution): string {
   return `${MOIS_LABELS[evolution.month]} ${String(evolution.year).slice(2)}`;
 }
 
-function buildEmptyEvolution(): MonthEvolution[] {
+/** Libellé court pour mobile : mois/année sur 2 chiffres (ex. 01/26). `month` = 0–11 (comme Date#getMonth). */
+export function getMonthLabelMMYY(evolution: MonthEvolution): string {
+  const mm = String(evolution.month + 1).padStart(2, '0');
+  const yy = String(evolution.year).slice(-2);
+  return `${mm}/${yy}`;
+}
+
+function buildEmptyEvolution(endYear?: number, endMonth?: number): MonthEvolution[] {
   const now = new Date();
+  const ey = endYear ?? now.getFullYear();
+  const em = endMonth ?? now.getMonth();
   const result: MonthEvolution[] = [];
   for (let i = 0; i < 12; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const d = new Date(ey, em - 11 + i, 1);
     result.push({ year: d.getFullYear(), month: d.getMonth(), volume: 0, amountCents: 0 });
   }
   return result;

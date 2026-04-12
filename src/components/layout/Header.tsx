@@ -1,15 +1,27 @@
 'use client';
 
-import { Fragment, useState, useEffect, useCallback, useMemo, useRef, Suspense, type CSSProperties } from 'react';
+import { Fragment, useState, useEffect, useCallback, useMemo, useRef, Suspense, useSyncExternalStore, type CSSProperties, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, FileText, PlusCircle, BarChart2, Send, CreditCard, Search } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, PlusCircle, BarChart2, Send, CreditCard, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
 import { subscribeToConversations, getUserConversations } from '@/lib/supabase/messaging';
-import { Conversation } from '@/types';
+import { Conversation, type Seller } from '@/types';
+
+function subscribeMobileLayout(cb: () => void) {
+  if (typeof window === 'undefined') return () => {};
+  const mq = window.matchMedia('(max-width: 767px)');
+  mq.addEventListener('change', cb);
+  return () => mq.removeEventListener('change', cb);
+}
+
+function getMobileLayoutSnapshot() {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(max-width: 767px)').matches;
+}
 
 type HeaderNavItem = { name: string; href: string; mobileIcon: LucideIcon };
 
@@ -18,7 +30,7 @@ function getHeaderNavItems(isAuthenticated: boolean): HeaderNavItem[] {
     { name: 'Trouver une pièce', href: '/catalogue?reset=1', mobileIcon: Search },
     {
       name: 'Proposer ma pièce',
-      href: isAuthenticated ? '/proposer-vente' : '/connexion?redirect=/proposer-vente',
+      href: isAuthenticated ? '/proposer-piece' : '/connexion?redirect=/proposer-piece',
       mobileIcon: PlusCircle,
     },
   ];
@@ -35,13 +47,14 @@ function matchNavActive(
     if (q) {
       const p = new URLSearchParams(q);
       const want = p.get('redirect') || '';
-      if (want.includes('proposer-vente')) {
-        return pathname === '/connexion' && (sp.get('redirect') || '').includes('proposer-vente');
+      if (want.includes('proposer-piece') || want.includes('proposer-vente')) {
+        const rd = sp.get('redirect') || '';
+        return pathname === '/connexion' && (rd.includes('proposer-piece') || rd.includes('proposer-vente'));
       }
     }
   }
-  if (href === '/proposer-vente' || href.split('?')[0] === '/proposer-vente') {
-    return pathname === '/proposer-vente';
+  if (href === '/proposer-piece' || href.split('?')[0] === '/proposer-piece') {
+    return pathname === '/proposer-piece';
   }
   if (href === '/a-propos') return pathname === '/a-propos' || pathname.startsWith('/a-propos/');
   if (href === '/catalogue') return pathname === '/catalogue' && !sp.get('condition');
@@ -52,6 +65,15 @@ function matchNavActive(
     if (wantCondition === null) return !sp.get('condition');
     return sp.get('condition') === wantCondition;
   }
+  if (href === '/vendeur/ventes') return pathname.startsWith('/vendeur/ventes');
+  if (href === '/vendeur/demandes-mise-en-vente') return pathname.startsWith('/vendeur/demandes-mise-en-vente');
+  if (href === '/vendeur/abonnement') return pathname.startsWith('/vendeur/abonnement');
+  if (href === '/vendeur/annonces/nouvelle') return pathname.startsWith('/vendeur/annonces/nouvelle');
+  if (href === '/vendeur/annonces') {
+    if (pathname === '/vendeur/annonces') return true;
+    if (pathname.startsWith('/vendeur/annonces/') && !pathname.startsWith('/vendeur/annonces/nouvelle')) return true;
+    return false;
+  }
   return pathname === href || pathname.startsWith(href + '/');
 }
 
@@ -60,14 +82,6 @@ const HEADER_ACTION_ICON_COLOR = '#1d1d1f';
 
 /** Espacement horizontal entre les liens de la navigation centrale desktop. */
 const HEADER_CENTER_NAV_GAP_PX = 64;
-
-/** Séparateur entre entrées du menu burger (même trait que sous-menu compte : Admin / Se déconnecter). */
-const HEADER_MOBILE_NAV_DIVIDER_STYLE: CSSProperties = {
-  height: 1,
-  backgroundColor: 'rgba(0,0,0,0.06)',
-  margin: '8px 0',
-  flexShrink: 0,
-};
 
 /** Même police / cassage que `.listing-grid-vendeur` des cartes « À la une » (accueil). */
 const CENTER_NAV_LINK_STYLE: CSSProperties = {
@@ -87,6 +101,23 @@ const HEADER_MOBILE_BURGER_NAV_TEXT_STYLE: CSSProperties = {
   color: '#1d1d1f',
   textTransform: 'none',
   letterSpacing: 'normal',
+};
+
+/** Même base que les liens du sous-menu compte (Mes propositions, Mon profil…) pour un espacement identique sur mobile. */
+const headerMobileNavLinkStyleBase: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+  padding: '9px 14px',
+  margin: '2px 0',
+  fontSize: 15,
+  color: '#1d1d1f',
+  borderRadius: 10,
+  transition: 'background-color 0.15s, color 0.2s',
+  boxSizing: 'border-box',
+  textDecoration: 'none',
+  width: '100%',
+  maxWidth: '100%',
 };
 
 /** Icône User + petit marqueur à droite : croix (invité) ou coche (connecté). Toujours afficher le marqueur (y compris pendant le chargement auth si session déjà connue). */
@@ -221,39 +252,23 @@ function HeaderMobileNavLinks({
   isNavActive: (href: string) => boolean;
   onItemClick: () => void;
 }) {
+  /** Fragment : mêmes enfants flex que Mes propositions / Mon profil (pas de div intermédiaire) → espacement identique. */
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'stretch',
-        gap: 0,
-        width: '100%',
-      }}
-    >
-      {items.map((item, index) => {
+    <>
+      {items.map((item) => {
         const active = isNavActive(item.href);
         const ItemIcon = item.mobileIcon;
         return (
-          <Fragment key={item.name}>
             <Link
+            key={item.name}
               href={item.href}
               onClick={onItemClick}
               className={`header-center-nav-link-mobile${active ? ' header-center-nav-link--active' : ''}`}
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 14px',
+              ...headerMobileNavLinkStyleBase,
                 ...HEADER_MOBILE_BURGER_NAV_TEXT_STYLE,
-                borderRadius: 10,
-                transition: 'background-color 0.15s, color 0.2s',
                 backgroundColor: active ? '#e8e8ed' : 'transparent',
                 whiteSpace: 'nowrap',
-                width: '100%',
-                maxWidth: '100%',
-                boxSizing: 'border-box',
-                textDecoration: 'none',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = '#e8e8ed';
@@ -265,11 +280,9 @@ function HeaderMobileNavLinks({
               <ItemIcon size={18} color="#1d1d1f" style={{ flexShrink: 0 }} aria-hidden />
               {item.name}
             </Link>
-            {index === 0 && items.length > 1 ? <div style={HEADER_MOBILE_NAV_DIVIDER_STYLE} aria-hidden /> : null}
-          </Fragment>
         );
       })}
-    </div>
+    </>
   );
 }
 
@@ -289,6 +302,164 @@ function HeaderMobileNavWithParams({
   return <HeaderMobileNavLinks items={items} isNavActive={isNavActive} onItemClick={onItemClick} />;
 }
 
+const headerAccountLinkStyle: CSSProperties = {
+  ...headerMobileNavLinkStyleBase,
+  ...HEADER_MOBILE_BURGER_NAV_TEXT_STYLE,
+  transition: 'background-color 0.15s',
+};
+
+function HeaderAuthenticatedMenuLinks({
+  seller,
+  showAdmin,
+  onClose,
+  onSignOut,
+}: {
+  seller: Seller | null;
+  showAdmin: boolean;
+  onClose: () => void;
+  onSignOut: () => void | Promise<void>;
+}) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const linkActive = useCallback((href: string) => matchNavActive(pathname, searchParams, href), [pathname, searchParams]);
+
+  const AccountMenuLink = useCallback(
+    ({ href, children }: { href: string; children: ReactNode }) => {
+      const active = linkActive(href);
+      return (
+        <Link
+          href={href}
+          onClick={onClose}
+          className={active ? 'header-center-nav-link--active' : undefined}
+          style={{
+            ...headerAccountLinkStyle,
+            backgroundColor: active ? '#e8e8ed' : 'transparent',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = '#e8e8ed';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = active ? '#e8e8ed' : 'transparent';
+          }}
+        >
+          {children}
+        </Link>
+      );
+    },
+    [linkActive, onClose]
+  );
+
+  return (
+    <>
+      {seller ? (
+        <>
+          {seller.status === 'approved' && (
+            <AccountMenuLink href="/vendeur/annonces/nouvelle">
+              <PlusCircle size={18} /> Déposer une annonce
+            </AccountMenuLink>
+          )}
+          {(seller.status === 'approved' || seller.status === 'suspended') && (
+            <>
+              <AccountMenuLink href="/vendeur/annonces">
+                <Package size={18} /> Mes annonces
+              </AccountMenuLink>
+              <AccountMenuLink href="/vendeur/ventes">
+                <BarChart2 size={18} /> Mes ventes
+              </AccountMenuLink>
+            </>
+          )}
+          {seller.status === 'approved' && (seller.subscriptionTier === 'plus' || seller.subscriptionTier === 'pro') && (
+            <AccountMenuLink href="/vendeur/demandes-mise-en-vente">
+              <Handbag size={18} /> Sourcing
+            </AccountMenuLink>
+          )}
+          <AccountMenuLink href="/vendeur/abonnement">
+            <CreditCard size={18} /> Mon abonnement
+          </AccountMenuLink>
+          <AccountMenuLink href="/profil">
+            <User size={18} /> Mon profil
+          </AccountMenuLink>
+          <AccountMenuLink href="/contact">
+            <Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact
+          </AccountMenuLink>
+          {showAdmin && (
+            <AccountMenuLink href="/admin">
+              <Settings size={18} /> Admin
+            </AccountMenuLink>
+          )}
+          <div style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
+          <button
+            type="button"
+            onClick={() => {
+              void onSignOut();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              width: '100%',
+              padding: '9px 14px',
+              margin: '2px 0',
+              fontSize: 15,
+              color: '#1d1d1f',
+              background: 'none',
+              border: 'none',
+              textAlign: 'left',
+              borderRadius: 10,
+              cursor: 'pointer',
+              transition: 'background-color 0.15s',
+            }}
+          >
+            <LogOut size={18} /> Se déconnecter
+          </button>
+        </>
+      ) : (
+        <>
+          <AccountMenuLink href="/propositions">
+            <BarChart2 size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Mes propositions
+          </AccountMenuLink>
+          <AccountMenuLink href="/profil">
+            <User size={18} /> Mon profil
+          </AccountMenuLink>
+          <AccountMenuLink href="/contact">
+            <Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact
+          </AccountMenuLink>
+          {showAdmin && (
+            <AccountMenuLink href="/admin">
+              <Settings size={18} /> Admin
+            </AccountMenuLink>
+          )}
+          <div style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
+          <button
+            type="button"
+            onClick={() => {
+              void onSignOut();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              width: '100%',
+              padding: '9px 14px',
+              margin: '2px 0',
+              fontSize: 15,
+              color: '#1d1d1f',
+              background: 'none',
+              border: 'none',
+              textAlign: 'left',
+              borderRadius: 10,
+              cursor: 'pointer',
+              transition: 'background-color 0.15s',
+            }}
+          >
+            <LogOut size={18} /> Déconnexion
+          </button>
+        </>
+      )}
+    </>
+  );
+}
+
 function HeaderMain() {
   const { user, seller, supabaseUser, loading: authLoading, isAuthenticated, isSeller, isAdmin } = useAuth();
   /** Croix si invité ; coche si connecté ou session Supabase déjà là pendant le chargement profil (évite l’icône seule au refresh). */
@@ -306,6 +477,13 @@ function HeaderMain() {
   const [mobileMenuRight, setMobileMenuRight] = useState(12);
   const [scrolled, setScrolled] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const isMobileLayout = useSyncExternalStore(subscribeMobileLayout, getMobileLayoutSnapshot, () => false);
+  /** Burger : nav catalogue + compte ; User : sous-menu compte seul (sans Trouver / Proposer). */
+  const [mobileMenuSource, setMobileMenuSource] = useState<'burger' | 'user'>('burger');
+  const closeAccountMenus = useCallback(() => {
+    setUserMenuOpen(false);
+    setMobileMenuOpen(false);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 10);
@@ -321,11 +499,20 @@ function HeaderMain() {
   };
 
   useEffect(() => {
-    if (userMenuOpen && userMenuButtonRef.current) {
+    if (!userMenuOpen || isMobileLayout) return;
+    if (userMenuButtonRef.current) {
       const rect = userMenuButtonRef.current.getBoundingClientRect();
       setUserMenuRight(window.innerWidth - rect.right);
     }
-  }, [userMenuOpen]);
+  }, [userMenuOpen, isMobileLayout]);
+
+  useEffect(() => {
+    if (isMobileLayout) setUserMenuOpen(false);
+  }, [isMobileLayout]);
+
+  useEffect(() => {
+    if (!isMobileLayout) setMobileMenuOpen(false);
+  }, [isMobileLayout]);
 
   useEffect(() => {
     const handleClick = () => setUserMenuOpen(false);
@@ -336,11 +523,14 @@ function HeaderMain() {
   }, [userMenuOpen]);
 
   useEffect(() => {
-    if (mobileMenuOpen && mobileMenuButtonRef.current) {
-      const rect = mobileMenuButtonRef.current.getBoundingClientRect();
+    if (!mobileMenuOpen || !isMobileLayout) return;
+    const ref = mobileMenuSource === 'burger' ? mobileMenuButtonRef : userMenuButtonRef;
+    const el = ref.current;
+    if (el) {
+      const rect = el.getBoundingClientRect();
       setMobileMenuRight(window.innerWidth - rect.right);
     }
-  }, [mobileMenuOpen]);
+  }, [mobileMenuOpen, isMobileLayout, mobileMenuSource]);
 
   useEffect(() => {
     const handleClick = () => setMobileMenuOpen(false);
@@ -578,9 +768,17 @@ function HeaderMain() {
                     type="button"
                     className="header-action-item"
                     aria-label={(user?.displayName || 'Compte').trim() || 'Menu compte'}
-                    aria-expanded={userMenuOpen}
+                    aria-expanded={isMobileLayout ? mobileMenuOpen : userMenuOpen}
                     aria-haspopup="menu"
-                    onClick={(e) => { e.stopPropagation(); setUserMenuOpen(!userMenuOpen); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isMobileLayout) {
+                        setMobileMenuSource('user');
+                        setMobileMenuOpen((o) => !o);
+                      } else {
+                        setUserMenuOpen((o) => !o);
+                      }
+                    }}
                     style={{
                       ...iconOnlyActionStyleAccount,
                       background: 'none',
@@ -591,7 +789,7 @@ function HeaderMain() {
                   >
                     <HeaderAccountIcon iconSize={iconSize} headerIconCellSize={headerIconCellSize} iconWrapStyle={iconWrapStyle} state="member" />
                   </button>
-                  {userMenuOpen && (
+                  {userMenuOpen && !isMobileLayout && (
                     <div
                       className="header-user-menu-dropdown"
                       onClick={(e) => e.stopPropagation()}
@@ -617,40 +815,12 @@ function HeaderMain() {
                         <p style={{ fontSize: 13, color: '#86868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
                       </div>
                       <div style={{ padding: 8 }}>
-                        {seller ? (
-                          <>
-                            {seller.status === 'approved' && (
-                              <Link href="/vendeur/annonces/nouvelle" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><PlusCircle size={18} /> Déposer une annonce</Link>
-                            )}
-                            {(seller.status === 'approved' || seller.status === 'suspended') && (
-                              <>
-                                <Link href="/vendeur" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Package size={18} /> Mes annonces</Link>
-                                <Link href="/vendeur/ventes" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><BarChart2 size={18} /> Mes ventes</Link>
-                              </>
-                            )}
-                            {seller.status === 'approved' && (seller.subscriptionTier === 'plus' || seller.subscriptionTier === 'pro') && (
-                              <Link href="/vendeur/demandes-mise-en-vente" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Handbag size={18} /> Sourcing</Link>
-                            )}
-                            <Link href="/contact" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact</Link>
-                            <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><User size={18} /> Mon profil</Link>
-                            <Link href="/vendeur/abonnement" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><CreditCard size={18} /> Mon abonnement</Link>
-                            {(seller.status === 'approved' || seller.status === 'suspended') && (
-                              <Link href="/vendeur/factures" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><FileText size={18} /> Mes factures</Link>
-                            )}
-                            {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Settings size={18} /> Admin</Link>}
-                            <div style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
-                            <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><LogOut size={18} /> Se déconnecter</button>
-                          </>
-                        ) : (
-                          <>
-                            <Link href="/suivre-mes-offres" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><BarChart2 size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Suivre mes offres</Link>
-                            <Link href="/contact" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Send size={18} color="#1d1d1f" style={{ flexShrink: 0 }} /> Contact</Link>
-                            <Link href="/profil" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><User size={18} /> Mon profil</Link>
-                            {showAdmin && <Link href="/admin" onClick={() => setUserMenuOpen(false)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', fontSize: 15, color: '#1d1d1f', borderRadius: 10, transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><Settings size={18} /> Admin</Link>}
-                            <div style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.06)', margin: '8px 0' }} />
-                            <button onClick={handleSignOut} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 14px', fontSize: 15, color: '#1d1d1f', background: 'none', border: 'none', textAlign: 'left', borderRadius: 10, cursor: 'pointer', transition: 'background-color 0.15s' }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#e8e8ed'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}><LogOut size={18} /> Déconnexion</button>
-                          </>
-                        )}
+                        <HeaderAuthenticatedMenuLinks
+                          seller={seller}
+                          showAdmin={showAdmin}
+                          onClose={() => setUserMenuOpen(false)}
+                          onSignOut={handleSignOut}
+                        />
                       </div>
                     </div>
                   )}
@@ -664,27 +834,34 @@ function HeaderMain() {
             </div>
             <button
               ref={mobileMenuButtonRef}
+              type="button"
               className="hide-desktop"
-              onClick={(e) => { e.stopPropagation(); setMobileMenuOpen(!mobileMenuOpen); }}
+              aria-label={mobileMenuOpen && mobileMenuSource === 'burger' ? 'Fermer le menu' : 'Ouvrir le menu'}
+              aria-expanded={mobileMenuOpen && mobileMenuSource === 'burger'}
+              onClick={(e) => {
+                e.stopPropagation();
+                setMobileMenuSource('burger');
+                setMobileMenuOpen((o) => !o);
+              }}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, background: 'none', border: 'none', color: '#1d1d1f', borderRadius: 12, transform: 'translateY(0.5px)' }}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileMenuOpen && mobileMenuSource === 'burger' ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </header>
 
-      {mobileMenuOpen && (
+      {mobileMenuOpen && isMobileLayout && (
         <div
-          className="hide-desktop"
+          className="hide-desktop header-mobile-account-sheet"
           onClick={(e) => e.stopPropagation()}
           style={{
             position: 'fixed',
             top: 'calc(var(--header-height) + 1px)',
             right: mobileMenuRight,
-            width: 'max-content',
-            maxWidth: 'calc(100% - 20px)',
-            minWidth: 0,
+            width: 240,
+            minWidth: 240,
+            maxWidth: 'min(240px, calc(100vw - 20px))',
             backgroundColor: '#fbfbfb',
             borderTopLeftRadius: 0,
             borderTopRightRadius: 0,
@@ -695,26 +872,80 @@ function HeaderMain() {
             zIndex: 110,
           }}
         >
+          {isAuthenticated ? (
+            <>
+              <div style={{ padding: '16px 18px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 2, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.displayName || 'Utilisateur'}</p>
+                <p style={{ fontSize: 13, color: '#86868b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</p>
+              </div>
+              <div
+                style={{
+                  padding: 8,
+                  minHeight: 0,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  width: '100%',
+                  maxWidth: '100%',
+                  boxSizing: 'border-box',
+                }}
+              >
+                {mobileMenuSource === 'burger' ? (
+                  <Suspense
+                    fallback={
+                      <>
+                        <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={closeAccountMenus} />
+                        <HeaderAuthenticatedMenuLinks
+                          seller={seller}
+                          showAdmin={showAdmin}
+                          onClose={closeAccountMenus}
+                          onSignOut={handleSignOut}
+                        />
+                      </>
+                    }
+                  >
+                    <>
+                      <HeaderMobileNavWithParams items={headerNavItems} onItemClick={closeAccountMenus} />
+                      <HeaderAuthenticatedMenuLinks
+                        seller={seller}
+                        showAdmin={showAdmin}
+                        onClose={closeAccountMenus}
+                        onSignOut={handleSignOut}
+                      />
+                    </>
+                  </Suspense>
+                ) : (
+                  <HeaderAuthenticatedMenuLinks
+                    seller={seller}
+                    showAdmin={showAdmin}
+                    onClose={closeAccountMenus}
+                    onSignOut={handleSignOut}
+                  />
+                )}
+              </div>
+            </>
+          ) : (
           <div
             style={{
               padding: 8,
               minHeight: 0,
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'flex-start',
-              width: 'max-content',
+                alignItems: 'stretch',
+                width: '100%',
               maxWidth: '100%',
               boxSizing: 'border-box',
             }}
           >
             <Suspense
               fallback={
-                <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={() => setMobileMenuOpen(false)} />
+                  <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={closeAccountMenus} />
               }
             >
-              <HeaderMobileNavWithParams items={headerNavItems} onItemClick={() => setMobileMenuOpen(false)} />
+                <HeaderMobileNavWithParams items={headerNavItems} onItemClick={closeAccountMenus} />
             </Suspense>
           </div>
+          )}
         </div>
       )}
     </>

@@ -110,15 +110,15 @@ export default function CGVPage() {
               RCS Paris : en création<br />
               SIRET : en création<br />
               TVA intracommunautaire : en création<br />
-              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+              Email : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
             </p>
             <p style={paragraphStyle}>
               Ci-après « la Société »
               <br />
               <br />
               La Société exploite la plateforme en ligne &quot;Section Luxe&quot;, accessible à l&apos;adresse{' '}
-              <a href="https://section-luxe.vercel.app/" style={{ color: '#6e6e73', textDecoration: 'none' }}>
-                https://section-luxe.vercel.app/
+              <a href="https://www.sectionluxe.com/" style={{ color: '#6e6e73', textDecoration: 'none' }}>
+                https://www.sectionluxe.com/
               </a>
               .
             </p>

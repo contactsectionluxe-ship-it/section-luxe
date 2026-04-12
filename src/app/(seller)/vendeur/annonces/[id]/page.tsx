@@ -384,13 +384,13 @@ export default function EditListingPage() {
       try {
         const data = await getListing(listingId);
         if (!data) {
-          router.push('/vendeur');
+          router.push('/vendeur/annonces');
           return;
         }
 
         // Check ownership
         if (data.sellerId !== user?.uid) {
-          router.push('/vendeur');
+          router.push('/vendeur/annonces');
           return;
         }
 
@@ -541,7 +541,7 @@ export default function EditListingPage() {
         }
       } catch (error) {
         console.error('Error loading listing:', error);
-        router.push('/vendeur');
+        router.push('/vendeur/annonces');
       } finally {
         setLoading(false);
       }
@@ -550,7 +550,7 @@ export default function EditListingPage() {
     if (user && isApprovedSeller) {
       loadListing();
     } else if (!authLoading && !isApprovedSeller) {
-      router.push('/vendeur');
+      router.push('/vendeur/annonces');
     }
   }, [listingId, user, isApprovedSeller, authLoading, router]);
 
@@ -816,7 +816,7 @@ export default function EditListingPage() {
       } catch (e) {
         console.error('Enregistrement acceptation CGU/CGV', e);
       }
-      router.push('/vendeur');
+      router.push('/vendeur/annonces');
     } catch (err: unknown) {
       if (isSubscriptionLimitError(err)) {
         router.push('/vendeur/abonnement?limite=1');
@@ -842,7 +842,7 @@ export default function EditListingPage() {
       {/* Ligne titre : même design que Déposer une annonce (classes partagées pour le mobile) */}
       <div className="deposer-annonce-title-row" style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}>
         <Link
-          href="/vendeur"
+          href="/vendeur/annonces"
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6e6e73', textDecoration: 'none', flexShrink: 0 }}
           className="hover:opacity-80 deposer-annonce-back-link"
           aria-label="Retour à mes annonces"

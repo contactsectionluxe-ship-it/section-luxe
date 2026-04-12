@@ -2,7 +2,7 @@
 export function HeroNumberedSteps() {
   return (
     <p className="hero-numbered-steps">
-      1. Trouvez, 2. Essayez, 3. Choisissez !
+      Trouvez, Essayez, Choisissez !
     </p>
   );
 }

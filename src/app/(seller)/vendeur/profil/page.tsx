@@ -219,15 +219,59 @@ export default function ProfilVendeurPage() {
     }
   };
 
+  if (!authLoading && (!isSeller || !seller)) return null;
+
   if (authLoading || loading) {
     return (
-      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#888' }}>Chargement...</p>
+      <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+        <div className="mon-profil-page-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '30px 24px 80px' }}>
+          <div style={{ marginBottom: 32, textAlign: 'center' }}>
+            <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8 }}>
+              Mon profil
+            </h1>
+            <p style={{ fontSize: 14, color: '#888' }}>Modifier les informations du profil</p>
+          </div>
+          <div style={{ backgroundColor: '#fff', borderRadius: 18, padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 28 }}>
+              <div className="catalogue-skeleton" style={{ width: 100, height: 100, borderRadius: '50%', flexShrink: 0 }} />
+              <div className="catalogue-skeleton" style={{ height: 14, width: 160, marginTop: 14, borderRadius: 4 }} />
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+              <div style={{ flex: 1 }}>
+                <div className="catalogue-skeleton" style={{ height: 14, width: 64, marginBottom: 8, borderRadius: 4 }} />
+                <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div className="catalogue-skeleton" style={{ height: 14, width: 40, marginBottom: 8, borderRadius: 4 }} />
+                <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+              </div>
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div className="catalogue-skeleton" style={{ height: 14, width: 120, marginBottom: 8, borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div className="catalogue-skeleton" style={{ height: 14, width: 56, marginBottom: 8, borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div className="catalogue-skeleton" style={{ height: 14, width: 72, marginBottom: 8, borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+            </div>
+            <div style={{ marginBottom: 20 }}>
+              <div className="catalogue-skeleton" style={{ height: 14, width: 88, marginBottom: 8, borderRadius: 4 }} />
+              <div className="catalogue-skeleton" style={{ height: 80, width: '100%', borderRadius: 12 }} />
+            </div>
+            <div className="catalogue-skeleton" style={{ height: 120, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+            <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 980 }} />
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <div className="catalogue-skeleton" style={{ height: 48, width: '100%', borderRadius: 12 }} />
+          </div>
+        </div>
       </div>
     );
   }
-
-  if (!isSeller || !seller) return null;
 
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>

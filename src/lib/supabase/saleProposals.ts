@@ -289,7 +289,7 @@ export async function fetchVisitorSaleProposals(visitorId: string): Promise<Sale
   }));
 }
 
-/** Une proposition du visiteur (pour préremplir « Proposer une pièce » depuis Suivre mes offres). */
+/** Une proposition du visiteur (pour préremplir « Proposer une pièce » depuis Propositions). */
 export async function fetchVisitorSaleProposalById(visitorId: string, proposalId: string): Promise<SaleProposalRow | null> {
   const client = checkClient();
   const { data, error } = await client

@@ -7,7 +7,6 @@ import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { PageLoader } from '@/components/ui';
 import { uploadSaleProposalPhotos } from '@/lib/supabase/storage';
 import {
   createSaleProposalWithInvites,
@@ -66,6 +65,71 @@ const CONTENU_INCLUS_OPTIONS = [
 ];
 
 const STEP_TITLES = ['Caractéristiques', 'Photos', 'Description & détails', 'Prix & vendeurs', 'Message aux vendeurs'];
+
+/** Coquille + étapes + carte formulaire (auth ou Suspense). */
+export function ProposerVenteAuthSkeleton() {
+  return (
+    <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh' }}>
+      <div
+        className="deposer-annonce-title-row"
+        style={{ padding: '30px 24px 0', marginBottom: 28, maxWidth: 1100, marginLeft: 'auto', marginRight: 'auto' }}
+      >
+        <div className="catalogue-skeleton" style={{ width: 168, height: 22, borderRadius: 6, flexShrink: 0 }} />
+        <div className="deposer-annonce-title-center">
+          <h1
+            style={{
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              fontSize: 28,
+              fontWeight: 500,
+              margin: '0 0 8px',
+              color: '#1d1d1f',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Proposer une pièce
+          </h1>
+          <p style={{ fontSize: 15, color: '#6e6e73', margin: 0 }}>
+            <span className="deposer-annonce-subtitle-desktop">Proposer une pièce aux vendeurs</span>
+            <span className="deposer-annonce-subtitle-mobile">Proposer une pièce aux vendeurs</span>
+          </p>
+        </div>
+        <div className="deposer-annonce-title-spacer" aria-hidden />
+      </div>
+      <div className="deposer-annonce-form-inner" style={{ maxWidth: 520, margin: '0 auto', padding: '0 24px 80px' }}>
+        <div
+          className="deposer-annonce-steps-row"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 4 }}
+        >
+          {[1, 2, 3, 4, 5].map((s, i) => (
+            <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
+              <div className="catalogue-skeleton deposer-annonce-step-circle" style={{ width: 40, height: 40, borderRadius: 980, flexShrink: 0 }} />
+              {i < 4 && (
+                <div
+                  className="catalogue-skeleton deposer-annonce-steps-connector"
+                  style={{ width: 28, height: 2, margin: '0 6px', borderRadius: 1 }}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="catalogue-skeleton" style={{ height: 18, width: 220, maxWidth: '90%', margin: '0 auto 28px', borderRadius: 4 }} />
+        <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+          <div className="catalogue-skeleton" style={{ height: 14, width: 96, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+          <div className="catalogue-skeleton" style={{ height: 14, width: 120, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 20 }} />
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
+            <div className="catalogue-skeleton" style={{ height: 44, flex: 1, borderRadius: 12 }} />
+            <div className="catalogue-skeleton" style={{ height: 44, flex: 1, borderRadius: 12 }} />
+          </div>
+          <div className="catalogue-skeleton" style={{ height: 14, width: 72, marginBottom: 10, borderRadius: 4 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 12, marginBottom: 24 }} />
+          <div className="catalogue-skeleton" style={{ height: 50, width: '100%', borderRadius: 980 }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const DRAFT_KEY_NEW = 'luxe-proposition-vente-draft';
 
@@ -477,7 +541,7 @@ export function ProposerVenteFormClient() {
             .filter((u): u is string => typeof u === 'string' && u.trim().length > 0)
             .map((u) => ({ kind: 'remote' as const, url: u.trim() })),
         );
-        router.replace('/proposer-vente', { scroll: false });
+        router.replace('/proposer-piece', { scroll: false });
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Impossible de charger la proposition.');
       }
@@ -1058,13 +1122,13 @@ export function ProposerVenteFormClient() {
     };
   }, [step, selectedLocations, radiusKm, buyerLatLon, editingProposalId]);
 
-  if (authLoading) return <PageLoader />;
+  if (authLoading) return <ProposerVenteAuthSkeleton />;
   if (!user) {
-    router.replace('/connexion?redirect=/proposer-vente');
+    router.replace('/connexion?redirect=/proposer-piece');
     return null;
   }
   if (isSeller) {
-    router.replace('/vendeur');
+    router.replace('/vendeur/annonces');
     return null;
   }
 
@@ -1324,7 +1388,7 @@ export function ProposerVenteFormClient() {
 
       setEditingProposalId(null);
       inviteSellerIdsFromLoadedProposalRef.current = [];
-      router.push('/suivre-mes-offres');
+      router.push('/propositions');
     } catch (err: unknown) {
       const message =
         err instanceof Error
@@ -2925,7 +2989,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
 
             {step === 5 && (
               <motion.form
-                id="proposer-vente-final-form"
+                id="proposer-piece-final-form"
                 key="step5"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}

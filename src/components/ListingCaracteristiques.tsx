@@ -216,7 +216,7 @@ export function ListingCaracteristiques({
 
   const compact = variant === 'homeFeatured' || variant === 'lineCatalogue';
   const lineCatalogue = variant === 'lineCatalogue';
-  /** 12,5px / 1,33 : uniquement `homeFeatured` (grille « À la une », Suivre mes offres). `grid` favoris = 13px. */
+  /** 12,5px / 1,33 : uniquement `homeFeatured` (grille « À la une », Propositions). `grid` favoris = 13px. */
   const listingTextStyle: CSSProperties =
     variant === 'homeFeatured'
       ? LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE

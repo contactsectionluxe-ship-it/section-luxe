@@ -14,7 +14,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import { Listing } from '@/types';
 import { formatPrice, formatDate, parsePriceInputToNumber, sanitizePriceInputWhileTyping, formatEurosForPriceInput, CATEGORIES } from '@/lib/utils';
 import { ListingPhoto } from '@/components/ListingPhoto';
-import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
+import { sellerCatalogueShareAbsoluteUrl } from '@/lib/sellerCatalogueUrl';
 
 /** Normalise pour la recherche : minuscules, sans accents, sans tirets ni espaces (ex. "T-shirt" et "tshirt" matchent). */
 function normalizeForSearch(s: string): string {
@@ -70,13 +70,13 @@ export default function SellerDashboardPage() {
 
   const shareSellerCatalogue = useCallback(async () => {
     if (!seller || typeof window === 'undefined') return;
-    const path = sellerCataloguePath(seller);
-    const url = `${window.location.origin}${path}`;
+    const url = sellerCatalogueShareAbsoluteUrl(window.location.origin, seller);
+    const shareText = `Découvrez les annonces de ${seller.companyName} sur Section Luxe.`;
     try {
       if (typeof navigator !== 'undefined' && navigator.share) {
         await navigator.share({
           title: 'Section Luxe',
-          text: `Découvrez les annonces de ${seller.companyName} sur Section Luxe.`,
+          text: shareText,
           url,
         });
         return;
@@ -754,8 +754,11 @@ export default function SellerDashboardPage() {
             <div className="mes-annonces-list-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20 }}>
               {Array.from({ length: 8 }, (_, i) => (
                 <div key={i} className="catalogue-skeleton-card" style={{ border: '1px solid #e8e6e3', borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', ['--skeleton-index' as string]: i }}>
-                  <div className="catalogue-skeleton" style={{ width: '100%', aspectRatio: '1', borderRadius: 0 }} />
-                  <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: '88px', backgroundColor: '#fff' }}>
+                  <div style={{ position: 'relative', width: '100%', aspectRatio: '1', overflow: 'hidden' }}>
+                    <div className="catalogue-skeleton" style={{ width: '100%', height: '100%', borderRadius: 0 }} />
+                    <div className="listing-card-photo-fade" aria-hidden />
+                  </div>
+                  <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 8, minHeight: '88px', backgroundColor: '#fff' }}>
                     <div className="catalogue-skeleton" style={{ height: 20, width: '85%' }} />
                     <div className="catalogue-skeleton" style={{ height: 24, width: '45%' }} />
                     <div style={{ display: 'flex', gap: 16, marginTop: 4 }}>
@@ -827,6 +830,7 @@ export default function SellerDashboardPage() {
                   <Link href={`${listingAnnoncePath(listing)}?from=vendeur`} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
                     <div style={{ width: '100%', aspectRatio: '1', backgroundColor: '#fff', overflow: 'hidden', position: 'relative' }}>
                       <ListingPhoto src={listing.photos[0]} alt={listing.title} sizes="25vw" />
+                      <div className="listing-card-photo-fade" aria-hidden />
                       {!listing.isActive && reservedListingIds.has(listing.id) ? (
                         <button
                           type="button"
@@ -877,7 +881,7 @@ export default function SellerDashboardPage() {
                         </button>
                       )}
                     </div>
-                    <div style={{ borderTop: '1px solid #e8e6e3', padding: '16px 16px 12px', backgroundColor: '#fff' }}>
+                    <div style={{ padding: '16px 16px 12px', backgroundColor: '#fff' }}>
                       <div style={{ marginBottom: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           {(() => {

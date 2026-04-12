@@ -72,7 +72,7 @@ export default function PolitiqueConfidentialitePage() {
               Siège social : en création<br />
               RCS Paris : en création<br />
               TVA intracommunautaire : en création<br />
-              Email : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a>
+              Email : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a>
             </p>
             <p style={paragraphStyle}>
               SL INVEST agit en qualité de Responsable du traitement au sens du Règlement (UE) 2016/679 du 27 avril 2016 (RGPD).
@@ -292,7 +292,7 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>droit d&apos;introduire une réclamation auprès de la CNIL.</li>
             </ul>
             <p style={paragraphStyle}>
-              Pour exercer vos droits : <a href="mailto:contact.sectionluxe@gmail.com" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact.sectionluxe@gmail.com</a><br />
+              Pour exercer vos droits : <a href="mailto:contact@sectionluxe.fr" style={{ color: '#6e6e73', textDecoration: 'none' }}>contact@sectionluxe.fr</a><br />
               Une réponse sera apportée dans un délai maximal d&apos;un (1) mois.
             </p>
 
