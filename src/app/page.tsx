@@ -202,10 +202,9 @@ function HomePageInner() {
             className="hero-bg-image-wrap"
             style={{
               position: 'absolute',
-              right: 0,
               top: 0,
               bottom: 0,
-              width: '76%',
+              width: '100%',
               zIndex: 0,
               overflow: 'hidden',
             }}
@@ -217,12 +216,10 @@ function HomePageInner() {
                 fill
                 priority
                 quality={100}
-                sizes="(max-width: 767px) 100vw, min(124vw, 4096px)"
+                sizes="(max-width: 767px) 100vw, min(132vw, 4096px)"
                 style={{
                   objectFit: 'contain',
-                  objectPosition: 'right center',
-                  transform: 'scale(1.15)',
-                  transformOrigin: 'right center',
+                  objectPosition: 'right 25%',
                 }}
               />
             </div>

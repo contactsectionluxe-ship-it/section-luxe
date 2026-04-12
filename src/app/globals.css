@@ -922,16 +922,36 @@ button.propositions-desc-toggle:focus-visible {
   }
 }
 
-/* Page d'accueil : sur très grands écrans, image hero plus large (éviter un rendu trop « dézoomé » / étroit) */
-@media (min-width: 1600px) {
-  .hero-bg-image-wrap {
-    width: 82% !important;
-  }
+/*
+ * Colonne photo hero : pleine largeur, bord droit au bord du backdrop (object-position right + origine à droite = pas de vide à droite en contain).
+ */
+.hero-bg-image-wrap {
+  right: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
 }
-@media (min-width: 2000px) {
-  .hero-bg-image-wrap {
-    width: 88% !important;
-  }
+
+/*
+ * Bord droit photo : fondu discret (voile blanc très faible, courbe étalée).
+ * Large bande + faibles opacités = pas de halo visible, juste moins de contraste sur l’arête.
+ */
+.hero-section .hero-bg-image-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(56px, 8%);
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to left,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.06) 22%,
+    rgba(255, 255, 255, 0.035) 48%,
+    rgba(255, 255, 255, 0.015) 72%,
+    rgba(255, 255, 255, 0) 100%
+  );
 }
 
 /* Hero : rendu photo le plus net possible à l’échelle (navigateurs récents) */
@@ -945,55 +965,64 @@ button.propositions-desc-toggle:focus-visible {
   background: linear-gradient(
     to right,
     #ffffff 0%,
-    #ffffff 53%,
-    rgba(255, 255, 255, 0.9) 63%,
-    transparent 85%
+    #ffffff 47%,
+    rgba(255, 255, 255, 0.9) 57%,
+    transparent 79%
   );
 }
 
-/* Grands écrans : zoom plus marqué + dégradé étalé pour fondre proprement sur le texte */
+/*
+ * Tablette / desktop : zoom ancré vers le haut à droite (légèrement sous le coin : ~25 % depuis le haut).
+ */
+@media (min-width: 768px) {
+  .hero-bg-image-inner img {
+    transform: scale(1.27) !important;
+    transform-origin: 100% 25% !important;
+  }
+}
+
 @media (min-width: 1024px) {
   .hero-bg-image-inner img {
-    transform: scale(1.2) !important;
-    transform-origin: right center !important;
+    transform: scale(1.35) !important;
+    transform-origin: 100% 25% !important;
   }
   .hero-backdrop-gradient {
     background: linear-gradient(
       to right,
       #ffffff 0%,
-      #ffffff 42%,
-      rgba(255, 255, 255, 0.97) 52%,
-      rgba(255, 255, 255, 0.78) 62%,
-      rgba(255, 255, 255, 0.35) 76%,
-      rgba(255, 255, 255, 0.08) 88%,
-      transparent 95%
+      #ffffff 36%,
+      rgba(255, 255, 255, 0.97) 46%,
+      rgba(255, 255, 255, 0.78) 56%,
+      rgba(255, 255, 255, 0.35) 70%,
+      rgba(255, 255, 255, 0.08) 82%,
+      transparent 89%
     );
   }
 }
 
 @media (min-width: 1600px) {
   .hero-bg-image-inner img {
-    transform: scale(1.29) !important;
-    transform-origin: right center !important;
+    transform: scale(1.43) !important;
+    transform-origin: 100% 25% !important;
   }
   .hero-backdrop-gradient {
     background: linear-gradient(
       to right,
       #ffffff 0%,
-      #ffffff 38%,
-      rgba(255, 255, 255, 0.98) 48%,
-      rgba(255, 255, 255, 0.82) 58%,
-      rgba(255, 255, 255, 0.42) 74%,
-      rgba(255, 255, 255, 0.1) 87%,
-      transparent 96%
+      #ffffff 32%,
+      rgba(255, 255, 255, 0.98) 42%,
+      rgba(255, 255, 255, 0.82) 52%,
+      rgba(255, 255, 255, 0.42) 68%,
+      rgba(255, 255, 255, 0.1) 81%,
+      transparent 90%
     );
   }
 }
 
 @media (min-width: 2000px) {
   .hero-bg-image-inner img {
-    transform: scale(1.32) !important;
-    transform-origin: right center !important;
+    transform: scale(1.49) !important;
+    transform-origin: 100% 25% !important;
   }
 }
 
