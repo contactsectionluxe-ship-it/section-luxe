@@ -202,7 +202,7 @@ function HomePageInner() {
               right: 0,
               top: 0,
               bottom: 0,
-              width: '68%',
+              width: '76%',
               zIndex: 0,
             }}
           >
@@ -213,7 +213,7 @@ function HomePageInner() {
                 fill
                 priority
                 unoptimized
-                sizes="72vw"
+                sizes="78vw"
                 style={{ objectFit: 'contain', objectPosition: 'right center' }}
               />
             </div>
@@ -223,7 +223,7 @@ function HomePageInner() {
               position: 'absolute',
               inset: 0,
               zIndex: 1,
-              background: 'linear-gradient(to right, #ffffff 0%, #ffffff 48%, rgba(255,255,255,0.88) 58%, transparent 78%)',
+              background: 'linear-gradient(to right, #ffffff 0%, #ffffff 50%, rgba(255,255,255,0.9) 60%, transparent 82%)',
             }}
           />
         </div>
