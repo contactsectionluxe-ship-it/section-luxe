@@ -219,7 +219,7 @@ function HomePageInner() {
                 sizes="(max-width: 767px) 100vw, min(132vw, 4096px)"
                 style={{
                   objectFit: 'contain',
-                  objectPosition: 'right 25%',
+                  objectPosition: 'right 32%',
                 }}
               />
             </div>
