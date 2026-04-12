@@ -218,7 +218,7 @@ function HomePageInner() {
                 style={{
                   objectFit: 'contain',
                   objectPosition: 'right center',
-                  transform: 'scale(1.055)',
+                  transform: 'scale(1.095)',
                   transformOrigin: 'right center',
                 }}
               />
