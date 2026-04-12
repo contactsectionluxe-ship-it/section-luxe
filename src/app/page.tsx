@@ -204,9 +204,10 @@ function HomePageInner() {
               bottom: 0,
               width: '76%',
               zIndex: 0,
+              overflow: 'hidden',
             }}
           >
-            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
               <Image
                 src="/banniere-hero.png"
                 alt=""
@@ -214,7 +215,12 @@ function HomePageInner() {
                 priority
                 unoptimized
                 sizes="78vw"
-                style={{ objectFit: 'contain', objectPosition: 'right center' }}
+                style={{
+                  objectFit: 'contain',
+                  objectPosition: 'right center',
+                  transform: 'scale(1.055)',
+                  transformOrigin: 'right center',
+                }}
               />
             </div>
           </div>
@@ -235,7 +241,7 @@ function HomePageInner() {
               fontWeight: 500,
               lineHeight: 1.1,
               letterSpacing: '-0.02em',
-              marginTop: '1cm',
+              marginTop: '0.5cm',
               marginBottom: 24,
               maxWidth: 520,
               color: '#1d1d1f',
@@ -248,7 +254,7 @@ function HomePageInner() {
             Explorez les offres de professionnels près de chez vous.
           </p>
           <HeroNumberedSteps />
-          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: '1cm' }}>
+          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: '0.5cm' }}>
             <Link
               href="/catalogue"
               style={{
