@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -46,7 +46,7 @@ const CATEGORIES_VISIBLE = 4;
 const CATEGORY_GAP = 24;
 const CATEGORY_SCROLL_INNER_WIDTH = 'calc(150cqw + 12px)';
 
-export default function HomePage() {
+function HomePageInner() {
   const pathname = usePathname() ?? '';
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
@@ -840,5 +840,17 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense
+      fallback={
+        <div style={{ minHeight: '100vh', paddingTop: 'var(--header-height)', backgroundColor: '#fff' }} aria-hidden />
+      }
+    >
+      <HomePageInner />
+    </Suspense>
   );
 }
