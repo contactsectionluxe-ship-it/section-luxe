@@ -884,6 +884,24 @@ button.propositions-desc-toggle:focus-visible {
   width: 100%;
 }
 
+/* Catégories : bande basse uniquement, voile plus marqué au centre du bas, estompé vers les côtés et vers le haut (tons alignés sur .listing-card-photo-fade). */
+.home-section-categories .category-card-photo-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(
+    ellipse 58% 165% at 50% 100%,
+    rgba(238, 236, 233, 0.5) 0%,
+    rgba(241, 239, 236, 0.24) 44%,
+    rgba(245, 243, 240, 0.07) 68%,
+    transparent 100%
+  );
+}
+
 /* Desktop (≥768px) : éviter un 5e fragment visible au repos (4 tuiles = 100cqw avec gap 24 en TSX) */
 @media (min-width: 768px) {
   .home-section-categories .categories-scroll-container {
@@ -927,16 +945,35 @@ button.propositions-desc-toggle:focus-visible {
   background: linear-gradient(
     to right,
     #ffffff 0%,
-    #ffffff 50%,
-    rgba(255, 255, 255, 0.9) 60%,
-    transparent 82%
+    #ffffff 53%,
+    rgba(255, 255, 255, 0.9) 63%,
+    transparent 85%
   );
 }
 
 /* Grands écrans : zoom plus marqué + dégradé étalé pour fondre proprement sur le texte */
 @media (min-width: 1024px) {
   .hero-bg-image-inner img {
-    transform: scale(1.16) !important;
+    transform: scale(1.2) !important;
+    transform-origin: right center !important;
+  }
+  .hero-backdrop-gradient {
+    background: linear-gradient(
+      to right,
+      #ffffff 0%,
+      #ffffff 42%,
+      rgba(255, 255, 255, 0.97) 52%,
+      rgba(255, 255, 255, 0.78) 62%,
+      rgba(255, 255, 255, 0.35) 76%,
+      rgba(255, 255, 255, 0.08) 88%,
+      transparent 95%
+    );
+  }
+}
+
+@media (min-width: 1600px) {
+  .hero-bg-image-inner img {
+    transform: scale(1.29) !important;
     transform-origin: right center !important;
   }
   .hero-backdrop-gradient {
@@ -944,31 +981,19 @@ button.propositions-desc-toggle:focus-visible {
       to right,
       #ffffff 0%,
       #ffffff 38%,
-      rgba(255, 255, 255, 0.97) 48%,
-      rgba(255, 255, 255, 0.78) 58%,
-      rgba(255, 255, 255, 0.35) 72%,
-      rgba(255, 255, 255, 0.08) 84%,
-      transparent 92%
+      rgba(255, 255, 255, 0.98) 48%,
+      rgba(255, 255, 255, 0.82) 58%,
+      rgba(255, 255, 255, 0.42) 74%,
+      rgba(255, 255, 255, 0.1) 87%,
+      transparent 96%
     );
   }
 }
 
-@media (min-width: 1600px) {
+@media (min-width: 2000px) {
   .hero-bg-image-inner img {
-    transform: scale(1.22) !important;
+    transform: scale(1.32) !important;
     transform-origin: right center !important;
-  }
-  .hero-backdrop-gradient {
-    background: linear-gradient(
-      to right,
-      #ffffff 0%,
-      #ffffff 34%,
-      rgba(255, 255, 255, 0.98) 44%,
-      rgba(255, 255, 255, 0.82) 54%,
-      rgba(255, 255, 255, 0.42) 70%,
-      rgba(255, 255, 255, 0.1) 83%,
-      transparent 93%
-    );
   }
 }
 

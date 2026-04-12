@@ -190,7 +190,10 @@ function HomePageInner() {
           aria-hidden
           style={{
             position: 'absolute',
-            inset: 0,
+            top: 0,
+            bottom: 0,
+            left: -24,
+            right: -24,
             zIndex: 0,
             pointerEvents: 'none',
           }}
@@ -214,11 +217,11 @@ function HomePageInner() {
                 fill
                 priority
                 quality={100}
-                sizes="(max-width: 767px) 100vw, (max-width: 1599px) 85vw, (max-width: 1999px) 92vw, 96vw"
+                sizes="(max-width: 767px) 100vw, min(124vw, 4096px)"
                 style={{
                   objectFit: 'contain',
                   objectPosition: 'right center',
-                  transform: 'scale(1.12)',
+                  transform: 'scale(1.15)',
                   transformOrigin: 'right center',
                 }}
               />
@@ -432,7 +435,7 @@ function HomePageInner() {
                           position: 'relative',
                           display: 'flex',
                           flexDirection: 'column',
-                          backgroundColor: '#f6f6f8',
+                          backgroundColor: 'transparent',
                           borderRadius: CONNEXION_FORM_CARD_RADIUS,
                           overflow: 'hidden',
                           minWidth: 0,
@@ -443,7 +446,7 @@ function HomePageInner() {
                             position: 'relative',
                             width: '100%',
                             aspectRatio: '1',
-                            backgroundColor: '#f6f6f8',
+                            backgroundColor: 'transparent',
                             overflow: 'hidden',
                             display: 'flex',
                             alignItems: 'center',
@@ -463,10 +466,12 @@ function HomePageInner() {
                                 ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Chaussures' && { transform: 'scale(0.98)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
                               }}
                             />
                           ) : null}
+                          <div className="category-card-photo-fade" aria-hidden />
                         </div>
                       </article>
                     </Link>

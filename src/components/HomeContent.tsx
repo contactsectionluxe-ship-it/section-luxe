@@ -354,7 +354,7 @@ export default function HomeContent() {
                           position: 'relative',
                           display: 'flex',
                           flexDirection: 'column',
-                          backgroundColor: '#f6f6f8',
+                          backgroundColor: 'transparent',
                           borderRadius: CONNEXION_FORM_CARD_RADIUS,
                           overflow: 'hidden',
                           minWidth: 0,
@@ -365,7 +365,7 @@ export default function HomeContent() {
                             position: 'relative',
                             width: '100%',
                             aspectRatio: '1',
-                            backgroundColor: '#f6f6f8',
+                            backgroundColor: 'transparent',
                             overflow: 'hidden',
                             display: 'flex',
                             alignItems: 'center',
@@ -385,10 +385,12 @@ export default function HomeContent() {
                                 ...(cat.name === 'Montres' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Vêtements' && { transform: 'scale(0.97)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Accessoires' && { transform: 'scale(0.95)', objectPosition: 'center center' }),
+                                ...(cat.name === 'Chaussures' && { transform: 'scale(0.98)', objectPosition: 'center center' }),
                                 ...(cat.name === 'Sacs' && { transform: 'scale(1.06)', objectPosition: 'center center' }),
                               }}
                             />
                           ) : null}
+                          <div className="category-card-photo-fade" aria-hidden />
                         </div>
                       </article>
                     </Link>

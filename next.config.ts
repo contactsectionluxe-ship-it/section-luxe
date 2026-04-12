@@ -35,8 +35,10 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: '50mb',
   },
   images: {
-    /** Largeurs générées pour `/_next/image` : jusqu’à 4096 px pour bannières pleine largeur sur grands écrans Retina. */
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2560, 3840, 4096],
+    /** Largeurs générées pour `/_next/image` : pas intermédiaires + plafond 4096 px pour hero / bannières Retina. */
+    deviceSizes: [
+      640, 750, 828, 1080, 1200, 1440, 1600, 1920, 2048, 2560, 2880, 3840, 4096,
+    ],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
