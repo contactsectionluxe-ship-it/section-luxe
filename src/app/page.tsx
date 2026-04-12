@@ -207,31 +207,24 @@ function HomePageInner() {
               overflow: 'hidden',
             }}
           >
-            <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+            <div className="hero-bg-image-inner" style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
               <Image
                 src="/banniere-hero.png"
                 alt=""
                 fill
                 priority
-                unoptimized
-                sizes="78vw"
+                quality={100}
+                sizes="(max-width: 767px) 100vw, (max-width: 1599px) 85vw, (max-width: 1999px) 92vw, 96vw"
                 style={{
                   objectFit: 'contain',
                   objectPosition: 'right center',
-                  transform: 'scale(1.095)',
+                  transform: 'scale(1.12)',
                   transformOrigin: 'right center',
                 }}
               />
             </div>
           </div>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 1,
-              background: 'linear-gradient(to right, #ffffff 0%, #ffffff 50%, rgba(255,255,255,0.9) 60%, transparent 82%)',
-            }}
-          />
+          <div className="hero-backdrop-gradient" style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
         </div>
         <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto' }}>
           <h1

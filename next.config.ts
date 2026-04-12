@@ -35,11 +35,13 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: '50mb',
   },
   images: {
+    /** Largeurs générées pour `/_next/image` : jusqu’à 4096 px pour bannières pleine largeur sur grands écrans Retina. */
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2560, 3840, 4096],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],
-    /** Aligné sur `ListingPhoto` (quality 92) — Next 16 n’autorise que les qualités listées ici. */
-    qualities: [75, 92],
+    /** Qualités autorisées pour `<Image quality={…}>` (hero 100, listings 92, défaut 75). */
+    qualities: [75, 92, 100],
     /** AVIF/WebP en priorité : meilleure qualité par octet pour le même poids que du JPEG. */
     formats: ['image/avif', 'image/webp'],
     /** Cache long des variantes optimisées (répétitions / navigation : pas de re-téléchargement inutile). */

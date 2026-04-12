@@ -916,6 +916,62 @@ button.propositions-desc-toggle:focus-visible {
   }
 }
 
+/* Hero : rendu photo le plus net possible à l’échelle (navigateurs récents) */
+.hero-bg-image-inner img {
+  image-rendering: high-quality;
+}
+
+/* Hero : voile entre texte à gauche et photo (défaut = écrans < 1024 px où la photo est visible) */
+.hero-backdrop-gradient {
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    #ffffff 0%,
+    #ffffff 50%,
+    rgba(255, 255, 255, 0.9) 60%,
+    transparent 82%
+  );
+}
+
+/* Grands écrans : zoom plus marqué + dégradé étalé pour fondre proprement sur le texte */
+@media (min-width: 1024px) {
+  .hero-bg-image-inner img {
+    transform: scale(1.16) !important;
+    transform-origin: right center !important;
+  }
+  .hero-backdrop-gradient {
+    background: linear-gradient(
+      to right,
+      #ffffff 0%,
+      #ffffff 38%,
+      rgba(255, 255, 255, 0.97) 48%,
+      rgba(255, 255, 255, 0.78) 58%,
+      rgba(255, 255, 255, 0.35) 72%,
+      rgba(255, 255, 255, 0.08) 84%,
+      transparent 92%
+    );
+  }
+}
+
+@media (min-width: 1600px) {
+  .hero-bg-image-inner img {
+    transform: scale(1.22) !important;
+    transform-origin: right center !important;
+  }
+  .hero-backdrop-gradient {
+    background: linear-gradient(
+      to right,
+      #ffffff 0%,
+      #ffffff 34%,
+      rgba(255, 255, 255, 0.98) 44%,
+      rgba(255, 255, 255, 0.82) 54%,
+      rgba(255, 255, 255, 0.42) 70%,
+      rgba(255, 255, 255, 0.1) 83%,
+      transparent 93%
+    );
+  }
+}
+
 /* CTA « vendeur professionnel » : bloc centré verticalement et horizontalement dans la bande */
 .home-section-vendeur-cta {
   display: flex;
