@@ -959,18 +959,23 @@ button.propositions-desc-toggle:focus-visible {
   image-rendering: high-quality;
 }
 
-/* Hero : voile — masque le bord gauche, fondu resserré (moins étalé) */
+/* Hero : voile — fondu plus estompé (paliers serrés, transition très douce) */
 .hero-backdrop-gradient {
   pointer-events: none;
   background: linear-gradient(
     to right,
     #ffffff 0%,
-    #ffffff 56%,
-    rgba(255, 255, 255, 0.97) 59%,
-    rgba(255, 255, 255, 0.72) 64%,
-    rgba(255, 255, 255, 0.38) 69%,
-    rgba(255, 255, 255, 0.1) 73.5%,
-    transparent 78%
+    #ffffff 62%,
+    rgba(255, 255, 255, 0.99) 64%,
+    rgba(255, 255, 255, 0.94) 67%,
+    rgba(255, 255, 255, 0.82) 71%,
+    rgba(255, 255, 255, 0.65) 75%,
+    rgba(255, 255, 255, 0.46) 78.5%,
+    rgba(255, 255, 255, 0.28) 82%,
+    rgba(255, 255, 255, 0.14) 85%,
+    rgba(255, 255, 255, 0.05) 88%,
+    rgba(255, 255, 255, 0.015) 91%,
+    transparent 94%
   );
 }
 
@@ -993,13 +998,18 @@ button.propositions-desc-toggle:focus-visible {
     background: linear-gradient(
       to right,
       #ffffff 0%,
-      #ffffff 48%,
-      rgba(255, 255, 255, 1) 51%,
-      rgba(255, 255, 255, 0.9) 55%,
-      rgba(255, 255, 255, 0.55) 60%,
-      rgba(255, 255, 255, 0.22) 65%,
-      rgba(255, 255, 255, 0.06) 69%,
-      transparent 73%
+      #ffffff 54%,
+      rgba(255, 255, 255, 1) 56.5%,
+      rgba(255, 255, 255, 0.97) 59.5%,
+      rgba(255, 255, 255, 0.88) 63%,
+      rgba(255, 255, 255, 0.74) 67%,
+      rgba(255, 255, 255, 0.56) 71%,
+      rgba(255, 255, 255, 0.38) 74.5%,
+      rgba(255, 255, 255, 0.22) 78%,
+      rgba(255, 255, 255, 0.1) 81.5%,
+      rgba(255, 255, 255, 0.04) 84.5%,
+      rgba(255, 255, 255, 0.012) 87.5%,
+      transparent 91%
     );
   }
 }
@@ -1013,13 +1023,18 @@ button.propositions-desc-toggle:focus-visible {
     background: linear-gradient(
       to right,
       #ffffff 0%,
-      #ffffff 44%,
-      rgba(255, 255, 255, 1) 47%,
-      rgba(255, 255, 255, 0.88) 51%,
-      rgba(255, 255, 255, 0.52) 56%,
-      rgba(255, 255, 255, 0.22) 61%,
-      rgba(255, 255, 255, 0.06) 65%,
-      transparent 69%
+      #ffffff 50%,
+      rgba(255, 255, 255, 1) 52.5%,
+      rgba(255, 255, 255, 0.96) 55.5%,
+      rgba(255, 255, 255, 0.86) 59%,
+      rgba(255, 255, 255, 0.72) 63%,
+      rgba(255, 255, 255, 0.54) 66.5%,
+      rgba(255, 255, 255, 0.36) 70%,
+      rgba(255, 255, 255, 0.2) 73.5%,
+      rgba(255, 255, 255, 0.09) 77%,
+      rgba(255, 255, 255, 0.035) 80%,
+      rgba(255, 255, 255, 0.01) 83%,
+      transparent 87%
     );
   }
 }
