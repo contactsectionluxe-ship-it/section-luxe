@@ -1014,9 +1014,8 @@ button.propositions-desc-toggle:focus-visible {
 @media (max-width: 767px) {
   .hero-section {
     background-color: #ffffff !important;
-    /* −1 cm + léger supplément au-dessus du titre ; marge h1 (0,5 cm) dans le JSX */
+    /* Inchangé vs réf. mobile d’origine (les −0,5 cm du hero ne s’appliquent qu’au desktop). */
     padding-top: calc(var(--header-height) + 48px - 1cm + 0.32cm) !important;
-    /* Espace sous les boutons : même formule − 0,5 cm (marge boutons à 0 sur mobile) */
     padding-bottom: max(0px, calc(32px + 1cm - 2cm + 0.92cm - 0.5cm)) !important;
   }
   .hero-section-backdrop {

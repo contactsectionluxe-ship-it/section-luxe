@@ -177,8 +177,8 @@ function HomePageInner() {
         className="hero-section"
         style={{
           position: 'relative',
-          paddingTop: 'calc(var(--header-height) + 68px + 1cm)',
-          paddingBottom: 128,
+          paddingTop: 'calc(var(--header-height) + 68px)',
+          paddingBottom: 'calc(128px - 0.5cm)',
           paddingLeft: 24,
           paddingRight: 24,
           backgroundColor: '#ffffff',
@@ -250,7 +250,7 @@ function HomePageInner() {
             Explorez les offres de professionnels près de chez vous.
           </p>
           <HeroNumberedSteps />
-          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: '0.5cm' }}>
+          <div className="hero-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: 0 }}>
             <Link
               href="/catalogue"
               style={{
