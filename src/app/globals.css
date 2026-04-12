@@ -907,12 +907,12 @@ button.propositions-desc-toggle:focus-visible {
 /* Page d'accueil : sur très grands écrans, image hero plus large (éviter un rendu trop « dézoomé » / étroit) */
 @media (min-width: 1600px) {
   .hero-bg-image-wrap {
-    width: 66% !important;
+    width: 74% !important;
   }
 }
 @media (min-width: 2000px) {
   .hero-bg-image-wrap {
-    width: 76% !important;
+    width: 82% !important;
   }
 }
 
