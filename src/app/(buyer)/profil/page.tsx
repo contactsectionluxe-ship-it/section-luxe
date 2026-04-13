@@ -7,6 +7,7 @@ import { Mail, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { updateUserProfile, signOut } from '@/lib/supabase/auth';
 import { EmailChangeModal } from '@/components/profile/EmailChangeModal';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
@@ -113,7 +114,7 @@ export default function ProfilPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data as { error?: string }).error || 'Échec de la suppression');
+      if (!res.ok) throw new Error(pickApiErrorBodyMessage(data, 'Échec de la suppression'));
       await signOut();
       router.push('/');
       router.refresh();

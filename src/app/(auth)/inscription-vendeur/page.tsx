@@ -14,6 +14,7 @@ import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/file-validation';
 import { createDefaultWeeklyOpeningHours, type WeeklyOpeningHours } from '@/lib/opening-hours';
 import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHoursEditor';
 import { profilVendeurAfterFieldGap } from '@/components/profile/profilVendeurFormStyles';
+import { pickApiErrorBodyMessage, toUserFacingErrorString } from '@/lib/user-facing-error';
 
 function FileUploadField({
   label,
@@ -368,9 +369,11 @@ function SellerRegisterContent() {
         body: formUpload,
       });
       if (!resUpload.ok) {
-        const data = await resUpload.json().catch(() => ({}));
-        const detail = data?.detail ? ` — ${data.detail}` : '';
-        throw new Error((data?.error || `Upload échoué (${resUpload.status})`) + detail);
+        const data = (await resUpload.json().catch(() => ({}))) as { detail?: unknown };
+        const base = pickApiErrorBodyMessage(data, `Upload échoué (${resUpload.status})`);
+        const detailExtra = toUserFacingErrorString(data.detail, '');
+        const detail = detailExtra ? ` — ${detailExtra}` : '';
+        throw new Error(base + detail);
       }
       const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
 
@@ -440,7 +443,9 @@ function SellerRegisterContent() {
         emailSent = resEmail.ok;
         if (!resEmail.ok) {
           const data = await resEmail.json().catch(() => ({}));
-          emailErrorDetail = data?.detail || data?.error || '';
+          const d = data as { detail?: unknown; error?: unknown };
+          emailErrorDetail =
+            toUserFacingErrorString(d.detail, '') || toUserFacingErrorString(d.error, '') || pickApiErrorBodyMessage(data, '');
           console.error('Envoi email échoué:', data);
         }
       } catch (emailErr) {
@@ -457,7 +462,7 @@ function SellerRegisterContent() {
         (err && typeof err === 'object' && 'details' in err && (err as { details?: unknown }).details) ||
         (err && typeof err === 'object' && 'msg' in err && (err as { msg?: unknown }).msg) ||
         (typeof err === 'string' ? err : '');
-      const msg = typeof raw === 'string' ? raw : raw != null ? String(raw) : '';
+      const msg = toUserFacingErrorString(raw, '');
       if (msg) console.error('Registration error:', msg, err);
       else console.error('Registration error (object):', err);
       if (msg.includes('row-level security') || msg.includes('policy')) {

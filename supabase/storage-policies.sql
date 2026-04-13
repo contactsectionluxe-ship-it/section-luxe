@@ -51,3 +51,7 @@ CREATE POLICY "Lecture publique photos listings"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'listings');
+
+-- ========== Bucket "blog" (images articles Actualités) ==========
+-- Création du bucket + politique SELECT : voir migrations/storage_blog_bucket.sql
+-- Upload uniquement via API /api/admin/blog-image (service_role).

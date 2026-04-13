@@ -7,6 +7,7 @@ import { Mail, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { isAdminEmail } from '@/lib/constants';
 import { formatDate } from '@/lib/utils';
+import { pickApiErrorBodyMessage, toUserFacingErrorString } from '@/lib/user-facing-error';
 
 type Subscriber = {
   id: string;
@@ -51,7 +52,7 @@ export default function AdminNewsletterPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setError((data as { error?: string }).error || 'Erreur chargement');
+          setError(pickApiErrorBodyMessage(data, 'Erreur chargement'));
           setSubscribers([]);
         } else {
           setError(null);
@@ -108,7 +109,7 @@ export default function AdminNewsletterPage() {
 
         {error && (
           <div style={{ padding: 16, backgroundColor: '#fef2f2', borderRadius: 12, color: '#dc2626', marginBottom: 24 }}>
-            {error}
+            {toUserFacingErrorString(error)}
           </div>
         )}
 

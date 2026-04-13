@@ -23,6 +23,7 @@ import { isAdminEmail } from '@/lib/constants';
 import { getAllSellers, getSellerStats, approveSeller, rejectSeller, suspendSeller, banSeller, unbanSeller } from '@/lib/supabase/admin';
 import { Seller } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { pickApiErrorBodyMessage, toUserFacingErrorString } from '@/lib/user-facing-error';
 
 type AdminAccountStats = {
   visitorAccounts: number;
@@ -125,7 +126,7 @@ export default function AdminDashboardPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setNewsletterError((data as { error?: string }).error || 'Erreur chargement');
+          setNewsletterError(pickApiErrorBodyMessage(data, 'Erreur chargement'));
           setNewsletterSubscribers([]);
         } else {
           setNewsletterSubscribers((data as { subscribers: typeof newsletterSubscribers }).subscribers || []);
@@ -158,7 +159,7 @@ export default function AdminDashboardPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          setAccountError((data as { error?: string }).error || 'Erreur chargement');
+          setAccountError(pickApiErrorBodyMessage(data, 'Erreur chargement'));
           setAccountStats(null);
         } else {
           setAccountStats(data as AdminAccountStats);
@@ -448,6 +449,23 @@ export default function AdminDashboardPage() {
             >
               Newsletters
             </button>
+            <Link
+              href="/admin/actualites"
+              style={{
+                padding: '10px 18px',
+                fontSize: 14,
+                fontWeight: 500,
+                backgroundColor: '#fff',
+                color: '#1d1d1f',
+                border: '1px solid #d2d2d7',
+                borderRadius: 12,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+              }}
+            >
+              Actualités
+            </Link>
           </div>
         </div>
 
@@ -822,7 +840,7 @@ export default function AdminDashboardPage() {
           <>
             {accountError && (
               <div style={{ padding: 16, backgroundColor: '#fef2f2', borderRadius: 12, color: '#dc2626', marginBottom: 24 }}>
-                {accountError}
+                {toUserFacingErrorString(accountError)}
               </div>
             )}
             {accountLoading && !accountStats && <p style={{ color: '#6e6e73', marginBottom: 16 }}>Chargement des statistiques…</p>}
@@ -1150,7 +1168,7 @@ export default function AdminDashboardPage() {
           <>
             {newsletterError && (
               <div style={{ padding: 16, backgroundColor: '#fef2f2', borderRadius: 12, color: '#dc2626', marginBottom: 24 }}>
-                {newsletterError}
+                {toUserFacingErrorString(newsletterError)}
               </div>
             )}
             {/* Stats — cartes comme section Compte */}

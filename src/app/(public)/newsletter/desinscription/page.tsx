@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -43,7 +44,7 @@ function NewsletterDesinscriptionInner() {
         setEmail('');
         setMessage({ type: 'success', text: 'Vous avez bien été désinscrit de notre newsletter.' });
       } else {
-        setMessage({ type: 'error', text: (data as { error?: string }).error || 'Une erreur est survenue.' });
+        setMessage({ type: 'error', text: pickApiErrorBodyMessage(data, 'Une erreur est survenue.') });
       }
     } catch {
       setMessage({ type: 'error', text: 'Une erreur est survenue.' });

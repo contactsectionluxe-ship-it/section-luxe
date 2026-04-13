@@ -1,6 +1,7 @@
 import type { Listing } from '@/types';
 import { supabase, isSupabaseConfigured } from './client';
 import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const SALE_PROPOSALS_MIGRATION_HINT =
   'Dans Supabase : SQL → exécuter le fichier du dépôt « supabase/migrations/sale_proposals_and_conversations.sql », puis recharger la page.';
@@ -146,8 +147,8 @@ async function replaceSaleProposalInvitesViaApi(proposalId: string, sellerIds: s
     body: JSON.stringify({ proposalId, sellerIds: uniqueSellerIds }),
   });
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error || `Mise à jour des vendeurs invités impossible (${res.status})`);
+    const body = await res.json().catch(() => ({}));
+    throw new Error(pickApiErrorBodyMessage(body, `Mise à jour des vendeurs invités impossible (${res.status})`));
   }
 }
 

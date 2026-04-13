@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Mail, ChevronLeft, Check } from 'lucide-react';
 import { getSession } from '@/lib/supabase/auth';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const reportFieldLabelStyle: React.CSSProperties = {
   display: 'block',
@@ -96,7 +97,7 @@ export function EmailChangeModal({ open, onClose, currentEmail, refreshUser }: E
       body: JSON.stringify(body),
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((data as { error?: string }).error || 'Une erreur est survenue.');
+    if (!res.ok) throw new Error(pickApiErrorBodyMessage(data, 'Une erreur est survenue.'));
   };
 
   const handleSendEmailCode = async () => {

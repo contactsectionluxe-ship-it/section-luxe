@@ -15,6 +15,7 @@ import { Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
 import { getSession } from '@/lib/supabase/auth';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 import {
   StripeSubscriptionInvoicesPanel,
   StripeSubscriptionInvoicesPanelChromeSkeleton,
@@ -408,7 +409,10 @@ function AbonnementVendeurContent() {
           await refreshUser();
           router.refresh();
         } else {
-          setFlowMessage({ kind: 'error', text: j.error || 'Impossible de finaliser l’abonnement.' });
+          setFlowMessage({
+            kind: 'error',
+            text: pickApiErrorBodyMessage(j, 'Impossible de finaliser l’abonnement.'),
+          });
         }
       } catch {
         setFlowMessage({ kind: 'error', text: 'Erreur réseau lors de la synchronisation.' });
@@ -455,7 +459,7 @@ function AbonnementVendeurContent() {
         }
         setFlowMessage({
           kind: 'error',
-          text: typeof data.error === 'string' ? data.error : 'Impossible d’ouvrir le paiement.',
+          text: pickApiErrorBodyMessage(data, 'Impossible d’ouvrir le paiement.'),
         });
       } catch {
         setFlowMessage({ kind: 'error', text: 'Erreur réseau.' });
@@ -512,7 +516,7 @@ function AbonnementVendeurContent() {
       }
       setFlowMessage({
         kind: 'error',
-        text: typeof data.error === 'string' ? data.error : 'Portail de facturation indisponible.',
+        text: pickApiErrorBodyMessage(data, 'Portail de facturation indisponible.'),
       });
     } catch {
       setFlowMessage({ kind: 'error', text: 'Erreur réseau.' });
@@ -547,7 +551,7 @@ function AbonnementVendeurContent() {
       if (!r.ok) {
         setFlowMessage({
           kind: 'error',
-          text: typeof data.error === 'string' ? data.error : 'Impossible d’annuler le changement.',
+          text: pickApiErrorBodyMessage(data, 'Impossible d’annuler le changement.'),
         });
         return;
       }

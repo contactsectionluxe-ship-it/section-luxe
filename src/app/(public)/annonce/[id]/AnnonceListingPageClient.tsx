@@ -27,6 +27,7 @@ import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubs
 import { SellerVisitMapPopup } from '@/components/SellerVisitMapPopup';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 import { getListingDisplayTitle } from '@/lib/listingDisplayTitle';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 /** Affiche le téléphone au format 00 00 00 00 00 */
 function formatPhoneDisplay(phone: string): string {
@@ -418,7 +419,7 @@ export default function AnnonceListingPageClient() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data.error as string) || 'Envoi impossible');
+        throw new Error(pickApiErrorBodyMessage(data, 'Envoi impossible'));
       }
 
       setShowReportModal(false);

@@ -20,6 +20,7 @@ import {
   profilVendeurAfterFieldGap,
   profilVendeurLabelStyle,
 } from '@/components/profile/profilVendeurFormStyles';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const labelStyle = profilVendeurLabelStyle;
 
@@ -239,7 +240,7 @@ export default function ProfilVendeurPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error || res.statusText);
+        throw new Error(pickApiErrorBodyMessage(data, res.statusText || 'Erreur'));
       }
       const { url } = (await res.json()) as { url: string };
       await updateSellerProfile(user.uid, { avatarUrl: url });
@@ -336,7 +337,7 @@ export default function ProfilVendeurPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data as { error?: string }).error || 'Échec de la suppression');
+      if (!res.ok) throw new Error(pickApiErrorBodyMessage(data, 'Échec de la suppression'));
       try {
         if (typeof window !== 'undefined') sessionStorage.removeItem(PROFIL_VENDEUR_DRAFT_KEY(user.uid));
       } catch {

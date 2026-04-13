@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './client';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 function checkSupabase() {
   if (!isSupabaseConfigured || !supabase) {
@@ -110,7 +111,7 @@ export async function uploadListingPhotos(
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const msg = (body as { error?: string }).error || `Upload échoué (${res.status})`;
+        const msg = pickApiErrorBodyMessage(body, `Upload échoué (${res.status})`);
         if (res.status === 503 && msg.includes('service role')) {
           throw new Error(
             'Upload des photos impossible : la clé Supabase service role n’est pas configurée. ' +
@@ -165,7 +166,7 @@ export async function uploadSaleProposalPhotos(
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        const msg = (body as { error?: string }).error || `Upload échoué (${res.status})`;
+        const msg = pickApiErrorBodyMessage(body, `Upload échoué (${res.status})`);
         throw new Error(msg);
       }
       const data = (await res.json()) as { urls: string[] };

@@ -4,7 +4,7 @@ import { Fragment, useState, useEffect, useCallback, useMemo, useRef, Suspense, 
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, PlusCircle, BarChart2, Send, CreditCard, Search } from 'lucide-react';
+import { Menu, X, Heart, MessageCircle, User, Check, LogOut, Store, Settings, Package, Handbag, PlusCircle, BarChart2, Send, CreditCard, Search, Newspaper } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { signOut } from '@/lib/supabase/auth';
 import { isAdminEmail } from '@/lib/constants';
@@ -33,6 +33,7 @@ function getHeaderNavItems(isAuthenticated: boolean): HeaderNavItem[] {
       href: isAuthenticated ? '/proposer-piece' : '/connexion?redirect=/proposer-piece',
       mobileIcon: PlusCircle,
     },
+    { name: 'Actualités', href: '/actualites', mobileIcon: Newspaper },
   ];
 }
 
@@ -57,6 +58,7 @@ function matchNavActive(
     return pathname === '/proposer-piece';
   }
   if (href === '/a-propos') return pathname === '/a-propos' || pathname.startsWith('/a-propos/');
+  if (href === '/actualites') return pathname === '/actualites' || pathname.startsWith('/actualites/');
   if (href === '/catalogue') return pathname === '/catalogue' && !sp.get('condition');
   if (href.startsWith('/catalogue?')) {
     const params = new URLSearchParams(href.split('?')[1] || '');

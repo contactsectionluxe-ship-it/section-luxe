@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -144,7 +145,7 @@ function ContactPageInner() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError((data.error as string) || 'L\'envoi a échoué. Réessayez plus tard.');
+        setError(pickApiErrorBodyMessage(data, "L'envoi a échoué. Réessayez plus tard."));
         return;
       }
       setSuccess(true);

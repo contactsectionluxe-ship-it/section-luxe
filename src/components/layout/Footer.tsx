@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 export function Footer() {
   const { isAuthenticated } = useAuth();
@@ -99,7 +100,10 @@ export function Footer() {
         }
         clearNewsletterMessageLater();
       } else {
-        setNewsletterMessage({ type: 'error', text: data.error || 'Une erreur est survenue.' });
+        setNewsletterMessage({
+          type: 'error',
+          text: pickApiErrorBodyMessage(data, 'Une erreur est survenue.'),
+        });
         clearNewsletterMessageLater();
       }
     } catch {

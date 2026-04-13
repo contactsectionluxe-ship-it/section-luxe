@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './client';
 import { Seller, SellerStatus } from '@/types';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
+import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 function checkSupabase() {
   if (!isSupabaseConfigured || !supabase) {
@@ -159,7 +160,7 @@ export async function suspendSeller(sellerId: string, days: number): Promise<voi
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
+    throw new Error(pickApiErrorBodyMessage(data, `Erreur ${res.status}`));
   }
 }
 
@@ -179,7 +180,7 @@ export async function banSeller(sellerId: string): Promise<void> {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
+    throw new Error(pickApiErrorBodyMessage(data, `Erreur ${res.status}`));
   }
 }
 
@@ -199,7 +200,7 @@ export async function unbanSeller(sellerId: string): Promise<void> {
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error((data as { error?: string }).error || `Erreur ${res.status}`);
+    throw new Error(pickApiErrorBodyMessage(data, `Erreur ${res.status}`));
   }
 }
 
