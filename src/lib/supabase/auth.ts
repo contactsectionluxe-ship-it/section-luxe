@@ -3,7 +3,12 @@ import { supabase, isSupabaseConfigured } from './client';
 import { User, Seller } from '@/types';
 import { slugifyCompanyName } from '@/lib/sellerCatalogueUrl';
 import { normalizeSubscriptionTier } from '@/lib/subscription';
-import { parseOpeningHoursFromDb, weeklyOpeningHoursToDbJson, type WeeklyOpeningHours } from '@/lib/opening-hours';
+import {
+  createDefaultWeeklyOpeningHours,
+  parseOpeningHoursFromDb,
+  weeklyOpeningHoursToDbJson,
+  type WeeklyOpeningHours,
+} from '@/lib/opening-hours';
 
 function checkSupabase(): SupabaseClient {
   if (!isSupabaseConfigured || !supabase) {
@@ -73,6 +78,7 @@ export async function signUpSeller(
     idRectoType?: 'passeport' | 'cni_recto' | null;
     kbisUrl: string;
     displayName?: string; // Prénom + Nom pour l'affichage utilisateur
+    openingHours?: WeeklyOpeningHours;
   }
 ): Promise<Seller> {
   const client = checkSupabase();
@@ -127,6 +133,9 @@ export async function signUpSeller(
       id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
       kbis_url: sellerData.kbisUrl,
       subscription_tier: 'start',
+      opening_hours: weeklyOpeningHoursToDbJson(
+        sellerData.openingHours ?? createDefaultWeeklyOpeningHours()
+      ),
     });
 
   if (sellerError) {
@@ -169,6 +178,7 @@ export type UpgradeToSellerData = {
   idRectoType?: 'passeport' | 'cni_recto' | null;
   kbisUrl: string;
   displayName?: string;
+  openingHours?: WeeklyOpeningHours;
 };
 
 export async function upgradeToSeller(uid: string, sellerData: UpgradeToSellerData): Promise<Seller> {
@@ -213,6 +223,9 @@ export async function upgradeToSeller(uid: string, sellerData: UpgradeToSellerDa
       id_recto_type: sellerData.idRectoType === 'passeport' || sellerData.idRectoType === 'cni_recto' ? sellerData.idRectoType : null,
       kbis_url: sellerData.kbisUrl,
       subscription_tier: 'start',
+      opening_hours: weeklyOpeningHoursToDbJson(
+        sellerData.openingHours ?? createDefaultWeeklyOpeningHours()
+      ),
     });
 
   if (sellerError) {

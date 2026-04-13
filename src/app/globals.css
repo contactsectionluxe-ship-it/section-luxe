@@ -48,6 +48,83 @@ button.proposal-description-info-btn:focus-visible {
   outline-offset: 2px;
 }
 
+/*
+ * Horaires d’ouverture (profil vendeur + devenir vendeur) : mobile uniquement.
+ * Colonne jour = 88px + gap 8px comme la ligne « De » : case Fermé alignée avec « De ».
+ * Champs compacts pour une ligne ; 2ᵉ plage en dessous.
+ */
+@media (max-width: 767px) {
+  /* Même largeur + même gap que la ligne « De … » : case Fermé alignée avec « De » */
+  .seller-opening-hours-editor .seller-opening-hours-ferme-row {
+    gap: 8px !important;
+    flex-wrap: nowrap;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-day-label {
+    width: 88px !important;
+    min-width: 88px !important;
+    max-width: 88px !important;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-spacer {
+    display: block !important;
+    width: 88px !important;
+    min-width: 88px !important;
+    flex-shrink: 0;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-slots-outer {
+    gap: 8px !important;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-slots-column {
+    gap: 8px;
+    width: 100%;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-slot-row--first,
+  .seller-opening-hours-editor .seller-opening-hours-slot-row--second {
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-de {
+    width: auto !important;
+    min-width: 18px;
+    flex-shrink: 0;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-a {
+    flex-shrink: 0;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-time-input {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+    flex-shrink: 0;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+    font-size: 14px !important;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-close-plus-wrap {
+    gap: 4px !important;
+    flex-shrink: 0;
+  }
+  .seller-opening-hours-editor .seller-opening-hours-add-btn,
+  .seller-opening-hours-editor .seller-opening-hours-remove-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    flex-shrink: 0;
+  }
+  /* Même emplacement que l’ancien « + » (après l’heure de fermeture) */
+  .seller-opening-hours-editor .seller-opening-hours-amp-sep {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+  }
+}
+
 /* Propositions : modifier / supprimer — même logique que l’icône « i » description */
 a.propositions-card-action-btn,
 a.propositions-card-action-btn:hover,
@@ -919,6 +996,10 @@ button.propositions-desc-toggle:focus-visible {
   }
   .home-section-categories .category-item-label {
     cursor: grab;
+    /* Hauteur de ligne > 1 pour ne pas rogner les accents (ex. Ê) */
+    line-height: 1.35;
+    padding-top: 0.2em;
+    box-sizing: border-box;
   }
 }
 
@@ -1177,7 +1258,9 @@ button.propositions-desc-toggle:focus-visible {
     font-weight: 400 !important;
     letter-spacing: 0.5px !important;
     color: #86868b !important;
-    line-height: 1 !important;
+    line-height: 1.35 !important;
+    padding-top: 3px !important;
+    box-sizing: border-box !important;
   }
   /* Premier clic immédiat sur mobile : pas d’attente double-tap */
   .home-section-categories .category-item-card-link {

@@ -42,8 +42,8 @@ const LISTING_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
 const FAVORIS_SORT_OPTIONS = [
   { value: 'recent' as const, label: 'Plus récents' },
   { value: 'oldest' as const, label: 'Plus anciens' },
-  { value: 'price_asc' as const, label: 'Prix croissant' },
-  { value: 'price_desc' as const, label: 'Prix décroissant' },
+  { value: 'price_asc' as const, label: 'Prix croissants' },
+  { value: 'price_desc' as const, label: 'Prix décroissants' },
 ];
 
 export default function FavoritesPage() {

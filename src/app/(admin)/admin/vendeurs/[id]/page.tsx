@@ -212,7 +212,7 @@ export default function AdminSellerDetailPage() {
             {seller.companyName}
           </p>
           <p style={{ marginBottom: 10, fontSize: 14, color: '#1d1d1f' }}>
-            <span style={{ fontSize: 12, color: '#86868b', display: 'block', marginBottom: 2 }}>SIRET</span>
+            <span style={{ fontSize: 12, color: '#86868b', display: 'block', marginBottom: 2 }}>Siret *</span>
             {seller.siret || '—'}
           </p>
           <p style={{ marginBottom: 10, fontSize: 14, color: '#1d1d1f' }}>

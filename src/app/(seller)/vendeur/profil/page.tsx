@@ -10,9 +10,16 @@ import { formatDate } from '@/lib/utils';
 import { updateUserProfile, updateSellerProfile, signOut } from '@/lib/supabase/auth';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { ACCEPT_IMAGES, validateImageFile } from '@/lib/file-validation';
-import { createDefaultWeeklyOpeningHours, type WeeklyOpeningHours } from '@/lib/opening-hours';
+import {
+  createDefaultWeeklyOpeningHours,
+  parseOpeningHoursFromDb,
+  type WeeklyOpeningHours,
+} from '@/lib/opening-hours';
 import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHoursEditor';
-import { profilVendeurLabelStyle } from '@/components/profile/profilVendeurFormStyles';
+import {
+  profilVendeurAfterFieldGap,
+  profilVendeurLabelStyle,
+} from '@/components/profile/profilVendeurFormStyles';
 
 const labelStyle = profilVendeurLabelStyle;
 
@@ -25,6 +32,22 @@ const inputStyle: React.CSSProperties = {
   borderRadius: 12,
   boxSizing: 'border-box',
   outline: 'none',
+};
+
+const PROFIL_VENDEUR_DRAFT_KEY = (uid: string) => `luxe:profilVendeurDraft:${uid}`;
+
+type ProfilVendeurDraft = {
+  v: 1;
+  uid: string;
+  firstName: string;
+  lastName: string;
+  companyName: string;
+  phone: string;
+  address: string;
+  city: string;
+  postcode: string;
+  description: string;
+  openingHours: WeeklyOpeningHours;
 };
 
 export default function ProfilVendeurPage() {
@@ -55,6 +78,11 @@ export default function ProfilVendeurPage() {
   const skipNextOpeningHoursSyncRef = useRef(false);
   /** Cache buster pour forcer l’affichage de la nouvelle photo après upload (même URL Supabase). */
   const avatarDisplayKeyRef = useRef<number | null>(null);
+  /** Hydratation initiale : brouillon (changement d’onglet / fenêtre) ou serveur ; puis sync partielle seller. */
+  const profileFormHydratedRef = useRef(false);
+  const draftPayloadRef = useRef<ProfilVendeurDraft | null>(null);
+  const userUidRef = useRef<string | null>(null);
+  userUidRef.current = user?.uid ?? null;
 
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteCompanyName, setDeleteCompanyName] = useState('');
@@ -72,15 +100,58 @@ export default function ProfilVendeurPage() {
       return;
     }
     if (seller && user) {
-      const parts = (user.displayName || '').trim().split(/\s+/);
-      setFirstName(parts[0] || '');
-      setLastName(parts.slice(1).join(' ') || '');
-      setCompanyName(seller.companyName);
-      setPhone(seller.phone);
-      setAddress(seller.address);
-      setCity(seller.city ?? '');
-      setPostcode(seller.postcode ?? '');
-      setDescription(seller.description);
+      if (!profileFormHydratedRef.current) {
+        profileFormHydratedRef.current = true;
+        try {
+          const raw =
+            typeof window !== 'undefined' ? sessionStorage.getItem(PROFIL_VENDEUR_DRAFT_KEY(user.uid)) : null;
+          if (raw) {
+            const d = JSON.parse(raw) as Partial<ProfilVendeurDraft>;
+            if (d && d.v === 1 && d.uid === user.uid) {
+              setFirstName(typeof d.firstName === 'string' ? d.firstName : '');
+              setLastName(typeof d.lastName === 'string' ? d.lastName : '');
+              setCompanyName(typeof d.companyName === 'string' ? d.companyName : '');
+              setPhone(typeof d.phone === 'string' ? d.phone : '');
+              setAddress(typeof d.address === 'string' ? d.address : '');
+              setCity(typeof d.city === 'string' ? d.city : '');
+              setPostcode(typeof d.postcode === 'string' ? d.postcode : '');
+              setDescription(typeof d.description === 'string' ? d.description : '');
+              setOpeningHours(parseOpeningHoursFromDb(d.openingHours));
+              setAvatarUrl(seller.avatarUrl ?? null);
+              if (seller.avatarUrl) avatarDisplayKeyRef.current = Date.now();
+              skipNextOpeningHoursSyncRef.current = true;
+              setLoading(false);
+              return;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+
+        const parts = (user.displayName || '').trim().split(/\s+/);
+        setFirstName(parts[0] || '');
+        setLastName(parts.slice(1).join(' ') || '');
+        setCompanyName(seller.companyName);
+        setPhone(seller.phone);
+        setAddress(seller.address);
+        setCity(seller.city ?? '');
+        setPostcode(seller.postcode ?? '');
+        setDescription(seller.description);
+        if (skipNextOpeningHoursSyncRef.current) {
+          skipNextOpeningHoursSyncRef.current = false;
+        } else {
+          setOpeningHours(seller.openingHours ?? createDefaultWeeklyOpeningHours());
+        }
+        if (skipNextAvatarSyncRef.current) {
+          skipNextAvatarSyncRef.current = false;
+        } else {
+          setAvatarUrl((prev) => seller.avatarUrl ?? prev ?? null);
+          if (seller.avatarUrl) avatarDisplayKeyRef.current = Date.now();
+        }
+        setLoading(false);
+        return;
+      }
+
       if (skipNextOpeningHoursSyncRef.current) {
         skipNextOpeningHoursSyncRef.current = false;
       } else {
@@ -89,12 +160,64 @@ export default function ProfilVendeurPage() {
       if (skipNextAvatarSyncRef.current) {
         skipNextAvatarSyncRef.current = false;
       } else {
-        setAvatarUrl(prev => seller.avatarUrl ?? prev ?? null);
+        setAvatarUrl((prev) => seller.avatarUrl ?? prev ?? null);
         if (seller.avatarUrl) avatarDisplayKeyRef.current = Date.now();
       }
-      setLoading(false);
     }
   }, [authLoading, user, seller, router]);
+
+  draftPayloadRef.current =
+    user?.uid != null
+      ? {
+          v: 1,
+          uid: user.uid,
+          firstName,
+          lastName,
+          companyName,
+          phone,
+          address,
+          city,
+          postcode,
+          description,
+          openingHours,
+        }
+      : null;
+
+  useEffect(() => {
+    const persistDraft = () => {
+      try {
+        const p = draftPayloadRef.current;
+        if (typeof window !== 'undefined' && p) {
+          sessionStorage.setItem(PROFIL_VENDEUR_DRAFT_KEY(p.uid), JSON.stringify(p));
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+    const onVis = () => {
+      if (document.visibilityState === 'hidden') persistDraft();
+    };
+    const onPageHide = () => persistDraft();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('pagehide', onPageHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('pagehide', onPageHide);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      try {
+        const uid = userUidRef.current;
+        if (typeof window !== 'undefined' && uid) {
+          sessionStorage.removeItem(PROFIL_VENDEUR_DRAFT_KEY(uid));
+        }
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -146,7 +269,7 @@ export default function ProfilVendeurPage() {
       return;
     }
     if (!companyName.trim()) {
-      setError('Le nom de l\'entreprise est obligatoire.');
+      setError('Le nom commercial est obligatoire.');
       return;
     }
     if (!phone.trim()) {
@@ -173,6 +296,11 @@ export default function ProfilVendeurPage() {
       });
       skipNextOpeningHoursSyncRef.current = true;
       await refreshUser();
+      try {
+        if (typeof window !== 'undefined') sessionStorage.removeItem(PROFIL_VENDEUR_DRAFT_KEY(user.uid));
+      } catch {
+        /* ignore */
+      }
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
@@ -209,6 +337,11 @@ export default function ProfilVendeurPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Échec de la suppression');
+      try {
+        if (typeof window !== 'undefined') sessionStorage.removeItem(PROFIL_VENDEUR_DRAFT_KEY(user.uid));
+      } catch {
+        /* ignore */
+      }
       await signOut();
       router.push('/');
       router.refresh();
@@ -411,7 +544,7 @@ export default function ProfilVendeurPage() {
           )}
           <div style={{ marginBottom: 28 }}>
             <div style={{ marginBottom: 18 }}>
-              <label style={labelStyle}>Nom de l&apos;entreprise <span style={{ color: '#1d1d1f' }}>*</span></label>
+              <label style={labelStyle}>Nom commercial <span style={{ color: '#1d1d1f' }}>*</span></label>
               <input
                 type="text"
                 value={companyName}
@@ -424,12 +557,12 @@ export default function ProfilVendeurPage() {
 
             {seller.siret && (
               <div style={{ marginBottom: 18 }}>
-                <label style={labelStyle}>SIRET</label>
+                <label style={labelStyle}>Siret <span style={{ color: '#1d1d1f' }}>*</span></label>
                 <div style={{ ...inputStyle, display: 'flex', alignItems: 'center', color: '#86868b', backgroundColor: '#f5f5f7' }}>
                   {seller.siret}
                 </div>
                 <p style={{ fontSize: 11, color: '#86868b', marginTop: 4 }}>
-                  Le SIRET ne peut pas être modifié ici.{' '}
+                  Le Siret ne peut pas être modifié ici.{' '}
                   <Link
                     href={`/contact?subject=${encodeURIComponent(`Demande de modification de Siret - ${(seller.companyName || '').trim() || 'Vendeur'}`)}`}
                     style={{ color: '#1d1d1f', fontWeight: 500, textDecoration: 'underline' }}
@@ -521,6 +654,7 @@ export default function ProfilVendeurPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
                 style={{
+                  display: 'block',
                   width: '100%',
                   padding: 14,
                   fontSize: 15,
@@ -532,7 +666,9 @@ export default function ProfilVendeurPage() {
                 }}
                 placeholder="Présentez votre activité..."
               />
-              <SellerOpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
+              <div style={{ marginTop: profilVendeurAfterFieldGap }}>
+                <SellerOpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
+              </div>
             </div>
           </div>
 
@@ -604,13 +740,13 @@ export default function ProfilVendeurPage() {
 
               <div style={{ marginBottom: 14 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 6, color: '#555' }}>
-                  Recopiez le nom de votre entreprise : <strong>{seller?.companyName}</strong>
+                  Recopiez le nom commercial : <strong>{seller?.companyName}</strong>
                 </label>
                 <input
                   type="text"
                   value={deleteCompanyName}
                   onChange={(e) => setDeleteCompanyName(e.target.value)}
-                  placeholder="Nom de l'entreprise"
+                  placeholder="Nom commercial"
                   style={{ width: '100%', height: 44, padding: '0 12px', fontSize: 14, border: '1px solid #d2d2d7', borderRadius: 10, boxSizing: 'border-box', outline: 'none' }}
                   disabled={deleting}
                 />

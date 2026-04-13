@@ -72,8 +72,8 @@ const CATALOGUE_GRID_CARD_RADIUS = 18;
 const SORT_OPTIONS = [
   { value: 'date_desc', label: 'Plus récents' },
   { value: 'date_asc', label: 'Plus anciens' },
-  { value: 'price_asc', label: 'Prix croissant' },
-  { value: 'price_desc', label: 'Prix décroissant' },
+  { value: 'price_asc', label: 'Prix croissants' },
+  { value: 'price_desc', label: 'Prix décroissants' },
   { value: 'likes', label: 'Populaires' },
 ];
 

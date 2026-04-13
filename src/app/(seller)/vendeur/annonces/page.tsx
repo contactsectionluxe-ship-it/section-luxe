@@ -28,8 +28,8 @@ function normalizeForSearch(s: string): string {
 const ANNONCES_SORT_OPTIONS = [
   { value: 'recent' as const, label: 'Plus récents' },
   { value: 'oldest' as const, label: 'Plus anciens' },
-  { value: 'price_asc' as const, label: 'Prix croissant' },
-  { value: 'price_desc' as const, label: 'Prix décroissant' },
+  { value: 'price_asc' as const, label: 'Prix croissants' },
+  { value: 'price_desc' as const, label: 'Prix décroissants' },
 ];
 
 const SUPPRESSION_RAISONS = [

@@ -11,6 +11,9 @@ import { fetchSiretSuggestions, type SiretSuggestion } from '@/lib/siret';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { CguCgvCheckbox } from '@/components/ui';
 import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/file-validation';
+import { createDefaultWeeklyOpeningHours, type WeeklyOpeningHours } from '@/lib/opening-hours';
+import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHoursEditor';
+import { profilVendeurAfterFieldGap } from '@/components/profile/profilVendeurFormStyles';
 
 function FileUploadField({
   label,
@@ -239,6 +242,7 @@ function SellerRegisterContent() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [description, setDescription] = useState('');
+  const [openingHours, setOpeningHours] = useState<WeeklyOpeningHours>(() => createDefaultWeeklyOpeningHours());
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -380,6 +384,7 @@ function SellerRegisterContent() {
           postcode: postcode.trim(),
           phone,
           description,
+          openingHours,
           idCardFrontUrl,
           idCardBackUrl,
           idRectoType,
@@ -401,6 +406,7 @@ function SellerRegisterContent() {
           postcode: postcode.trim(),
           phone,
           description,
+          openingHours,
           idCardFrontUrl,
           idCardBackUrl,
           idRectoType,
@@ -827,13 +833,14 @@ function SellerRegisterContent() {
 
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-                    Description de votre activité
+                    Description de l&apos;activité
                   </label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="Décrivez votre entreprise et votre activité..."
                     style={{
+                      display: 'block',
                       width: '100%',
                       minHeight: 100,
                       padding: 14,
@@ -845,6 +852,9 @@ function SellerRegisterContent() {
                       outline: 'none',
                     }}
                   />
+                  <div style={{ marginTop: profilVendeurAfterFieldGap }}>
+                    <SellerOpeningHoursEditor value={openingHours} onChange={setOpeningHours} />
+                  </div>
                 </div>
 
                 {!isUpgrade && (

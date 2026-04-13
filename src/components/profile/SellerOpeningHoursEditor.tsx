@@ -97,7 +97,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
   };
 
   return (
-    <div style={{ marginTop: 18, fontFamily: 'inherit' }}>
+    <div className="seller-opening-hours-editor" style={{ marginTop: 0, fontFamily: 'inherit' }}>
       <button
         type="button"
         onClick={() => setHorairesOpen((o) => !o)}
@@ -109,6 +109,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
           alignItems: 'center',
           gap: 6,
           maxWidth: '100%',
+          minHeight: 0,
           padding: 0,
           marginBottom: 8,
           border: 'none',
@@ -116,6 +117,8 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
           cursor: 'pointer',
           fontFamily: 'inherit',
           textAlign: 'left',
+          WebkitAppearance: 'none',
+          appearance: 'none',
         }}
       >
         <span style={{ ...profilVendeurLabelStyle, marginBottom: 0 }}>
@@ -153,6 +156,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
               }}
             >
               <div
+                className="seller-opening-hours-ferme-row"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -161,6 +165,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                 }}
               >
                 <span
+                  className="seller-opening-hours-day-label"
                   style={{
                     ...horairesLigneLabelStyle,
                     width: 100,
@@ -172,6 +177,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                   {labelFr}
                 </span>
                 <label
+                  className="seller-opening-hours-ferme-label"
                   style={{
                     ...horairesLigneLabelStyle,
                     display: 'inline-flex',
@@ -199,6 +205,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
               </div>
               {!closed && (
                 <div
+                  className="seller-opening-hours-slots-outer"
                   style={{
                     display: 'flex',
                     gap: 12,
@@ -206,11 +213,15 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                     alignItems: 'flex-start',
                   }}
                 >
-                  <span style={{ width: 100, flexShrink: 0 }} aria-hidden />
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <span className="seller-opening-hours-spacer" style={{ width: 100, flexShrink: 0 }} aria-hidden />
+                  <div
+                    className="seller-opening-hours-slots-column"
+                    style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}
+                  >
                     {slots.map((slot, i) => (
                       <div
                         key={i}
+                        className={i === 0 ? 'seller-opening-hours-slot-row seller-opening-hours-slot-row--first' : 'seller-opening-hours-slot-row seller-opening-hours-slot-row--second'}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -218,8 +229,11 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                           flexWrap: 'wrap',
                         }}
                       >
-                        <span style={{ ...horairesLigneLabelStyle, width: 22 }}>De</span>
+                        <span className="seller-opening-hours-de" style={{ ...horairesLigneLabelStyle, width: 22 }}>
+                          De
+                        </span>
                         <input
+                          className="seller-opening-hours-time-input"
                           type="text"
                           inputMode="numeric"
                           autoComplete="off"
@@ -231,8 +245,11 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                           style={timeCompactStyle}
                           aria-label={`Ouverture ${labelFr} début`}
                         />
-                        <span style={horairesLigneLabelStyle}>à</span>
+                        <span className="seller-opening-hours-a" style={horairesLigneLabelStyle}>
+                          à
+                        </span>
                         <span
+                          className="seller-opening-hours-close-plus-wrap"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -241,6 +258,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                           }}
                         >
                           <input
+                            className="seller-opening-hours-time-input"
                             type="text"
                             inputMode="numeric"
                             autoComplete="off"
@@ -255,6 +273,7 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                           {i === row.slots.length - 1 && row.slots.length < 2 && (
                             <button
                               type="button"
+                              className="seller-opening-hours-add-btn"
                               onClick={() => addSlot(day)}
                               style={smallBtn}
                               title="Ajouter une 2ᵉ plage le même jour"
@@ -263,10 +282,31 @@ export function SellerOpeningHoursEditor({ value, onChange }: Props) {
                               <Plus size={18} strokeWidth={2} />
                             </button>
                           )}
+                          {i === 0 && row.slots.length === 2 && (
+                            <span
+                              className="seller-opening-hours-amp-sep"
+                              style={{
+                                ...horairesLigneLabelStyle,
+                                fontSize: 14,
+                                width: 40,
+                                minWidth: 40,
+                                height: 40,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                                userSelect: 'none',
+                              }}
+                              aria-hidden
+                            >
+                              &
+                            </span>
+                          )}
                         </span>
                         {i === 1 && (
                           <button
                             type="button"
+                            className="seller-opening-hours-remove-btn"
                             onClick={() => removeLastSlot(day)}
                             style={smallBtn}
                             title="Retirer la 2ᵉ plage"

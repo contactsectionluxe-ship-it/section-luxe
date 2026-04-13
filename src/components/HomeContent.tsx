@@ -401,11 +401,12 @@ export default function HomeContent() {
                         margin: 0,
                         fontSize: 12,
                         fontWeight: 400,
-                        textTransform: 'uppercase',
                         letterSpacing: 0.5,
                         color: '#86868b',
                         textAlign: 'center',
-                        lineHeight: 1,
+                        lineHeight: 1.35,
+                        paddingTop: '0.2em',
+                        boxSizing: 'border-box',
                         minWidth: 0,
                         width: '100%',
                         overflow: 'hidden',
@@ -413,7 +414,7 @@ export default function HomeContent() {
                         whiteSpace: 'nowrap',
                       }}
                     >
-                      {cat.name}
+                      {cat.name.toLocaleUpperCase('fr-FR')}
                     </p>
                   </div>
                 ))}

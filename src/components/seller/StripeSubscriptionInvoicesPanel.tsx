@@ -70,9 +70,9 @@ function sortOrderLabel(order: SortOrder): string {
     case 'oldest':
       return 'Plus anciens';
     case 'priceAsc':
-      return 'Prix croissant';
+      return 'Prix croissants';
     case 'priceDesc':
-      return 'Prix décroissant';
+      return 'Prix décroissants';
     default:
       return 'Plus récents';
   }
