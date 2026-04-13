@@ -4,7 +4,7 @@ import type { NextConfig } from "next";
 const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
-  { key: 'X-Frame-Options', value: 'DENY' },
+  /** Pas de X-Frame-Options: DENY ici : il empêche Tag Assistant / test d’installation GTM (iframe). On utilise frame-ancestors (CSP). */
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
@@ -18,9 +18,9 @@ const securityHeaders = [
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.api.gouv.fr https://geo.api.gouv.fr https://api-adresse.data.gouv.fr https://api.stripe.com https://r.stripe.com https://m.stripe.network https://merchant-ui-api.stripe.com https://errors.stripe.com https://hooks.stripe.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com",
-      "frame-src 'self' https://www.google.com https://maps.google.com https://js.stripe.com https://hooks.stripe.com",
+      "frame-src 'self' https://www.google.com https://maps.google.com https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com",
       "worker-src 'self' blob:",
-      "frame-ancestors 'none'",
+      "frame-ancestors 'self' https://tagassistant.google.com https://www.googletagmanager.com",
       "base-uri 'self'",
       "form-action 'self' https://hooks.stripe.com",
     ].join('; '),

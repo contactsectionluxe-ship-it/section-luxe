@@ -70,7 +70,7 @@ export async function getFavorite(
     .select('*')
     .eq('user_id', userId)
     .eq('listing_id', listingId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
