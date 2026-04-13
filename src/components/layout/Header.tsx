@@ -468,6 +468,12 @@ function HeaderMain() {
     () => getHeaderNavItems(!!isAuthenticated),
     [isAuthenticated]
   );
+  /** Menu burger (téléphone) : pas « Proposer ma pièce » pour un vendeur professionnel connecté (profil seller). Desktop inchangé. */
+  const headerNavItemsMobileBurger = useMemo(() => {
+    const items = getHeaderNavItems(!!isAuthenticated);
+    if (!seller) return items;
+    return items.filter((item) => !item.href.includes('/proposer-piece'));
+  }, [isAuthenticated, seller]);
   const showAdmin = isAdmin && isAdminEmail(user?.email);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -894,7 +900,7 @@ function HeaderMain() {
                   <Suspense
                     fallback={
                       <>
-                        <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={closeAccountMenus} />
+                        <HeaderMobileNavLinks items={headerNavItemsMobileBurger} isNavActive={() => false} onItemClick={closeAccountMenus} />
                         <HeaderAuthenticatedMenuLinks
                           seller={seller}
                           showAdmin={showAdmin}
@@ -905,7 +911,7 @@ function HeaderMain() {
                     }
                   >
                     <>
-                      <HeaderMobileNavWithParams items={headerNavItems} onItemClick={closeAccountMenus} />
+                      <HeaderMobileNavWithParams items={headerNavItemsMobileBurger} onItemClick={closeAccountMenus} />
                       <HeaderAuthenticatedMenuLinks
                         seller={seller}
                         showAdmin={showAdmin}
@@ -939,10 +945,10 @@ function HeaderMain() {
           >
             <Suspense
               fallback={
-                  <HeaderMobileNavLinks items={headerNavItems} isNavActive={() => false} onItemClick={closeAccountMenus} />
+                  <HeaderMobileNavLinks items={headerNavItemsMobileBurger} isNavActive={() => false} onItemClick={closeAccountMenus} />
               }
             >
-                <HeaderMobileNavWithParams items={headerNavItems} onItemClick={closeAccountMenus} />
+                <HeaderMobileNavWithParams items={headerNavItemsMobileBurger} onItemClick={closeAccountMenus} />
             </Suspense>
           </div>
           )}
