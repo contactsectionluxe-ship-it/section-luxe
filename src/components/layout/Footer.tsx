@@ -9,6 +9,8 @@ export function Footer() {
   const { isAuthenticated } = useAuth();
   const year = new Date().getFullYear();
   const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStep, setNewsletterStep] = useState<'email' | 'consent'>('email');
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   const [newsletterLoading, setNewsletterLoading] = useState(false);
   const [newsletterMessage, setNewsletterMessage] = useState<{
     type: 'success' | 'error' | 'info';
@@ -33,10 +35,42 @@ export function Footer() {
     };
   }, []);
 
-  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+  const resetNewsletterFlow = () => {
+    setNewsletterStep('email');
+    setNewsletterConsent(false);
+  };
+
+  /** Premier envoi : passage à l’étape consentement (sans appel API). */
+  const handleNewsletterEmailStep = (e: React.FormEvent) => {
     e.preventDefault();
     const email = newsletterEmail.trim().toLowerCase();
     if (!email) return;
+    if (newsletterMessageClearRef.current) {
+      clearTimeout(newsletterMessageClearRef.current);
+      newsletterMessageClearRef.current = null;
+    }
+    setNewsletterMessage(null);
+    setNewsletterConsent(false);
+    setNewsletterStep('consent');
+  };
+
+  /** Après case cochée : inscription effective. */
+  const handleNewsletterConfirm = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = newsletterEmail.trim().toLowerCase();
+    if (!email) return;
+    if (!newsletterConsent) {
+      if (newsletterMessageClearRef.current) {
+        clearTimeout(newsletterMessageClearRef.current);
+        newsletterMessageClearRef.current = null;
+      }
+      setNewsletterMessage({
+        type: 'error',
+        text: 'Veuillez cocher la case pour accepter l’utilisation de votre e-mail.',
+      });
+      clearNewsletterMessageLater();
+      return;
+    }
     if (newsletterMessageClearRef.current) {
       clearTimeout(newsletterMessageClearRef.current);
       newsletterMessageClearRef.current = null;
@@ -56,10 +90,12 @@ export function Footer() {
       };
       if (res.ok) {
         if (data.alreadySubscribed === true || data.message === 'Déjà inscrit') {
+          resetNewsletterFlow();
           setNewsletterMessage({ type: 'info', text: 'Vous êtes déjà inscrit.' });
         } else {
           setNewsletterEmail('');
-          setNewsletterMessage({ type: 'success', text: 'Merci, votre demande est enregistrée.' });
+          resetNewsletterFlow();
+          setNewsletterMessage({ type: 'success', text: 'Merci, votre inscription est enregistrée.' });
         }
         clearNewsletterMessageLater();
       } else {
@@ -140,32 +176,118 @@ export function Footer() {
             <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.5, marginBottom: 14 }}>
               Inscrivez-vous pour recevoir les actualités.
             </p>
-            <form onSubmit={handleNewsletterSubmit} className="footer-newsletter-form">
-              <div className="footer-newsletter-field">
-                <input
-                  type="email"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Votre email"
-                  required
-                  autoComplete="email"
-                  className="footer-newsletter-input"
-                  aria-label="Adresse e-mail pour la newsletter"
-                />
-                <button
-                  type="submit"
-                  disabled={newsletterLoading || !newsletterEmail.trim()}
-                  className="footer-newsletter-submit"
-                  aria-label="Envoyer l’inscription à la newsletter"
-                >
-                  {newsletterLoading ? (
-                    <Loader2 size={18} strokeWidth={2} className="footer-newsletter-submit-icon footer-newsletter-spin" aria-hidden />
-                  ) : (
+            {newsletterStep === 'email' ? (
+              <form onSubmit={handleNewsletterEmailStep} className="footer-newsletter-form">
+                <div className="footer-newsletter-field">
+                  <input
+                    type="email"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    placeholder="Votre email"
+                    required
+                    autoComplete="email"
+                    className="footer-newsletter-input"
+                    aria-label="Adresse e-mail pour la newsletter"
+                  />
+                  <button
+                    type="submit"
+                    disabled={!newsletterEmail.trim()}
+                    className="footer-newsletter-submit"
+                    aria-label="Continuer vers la confirmation d’acceptation"
+                  >
                     <Send size={18} strokeWidth={2} className="footer-newsletter-submit-icon" aria-hidden />
-                  )}
-                </button>
-              </div>
-            </form>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleNewsletterConfirm} className="footer-newsletter-form">
+                <div className="footer-newsletter-field" style={{ marginBottom: 12 }}>
+                  <input
+                    type="email"
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    placeholder="Votre email"
+                    required
+                    autoComplete="email"
+                    className="footer-newsletter-input footer-newsletter-input--full"
+                    aria-label="Adresse e-mail pour la newsletter"
+                  />
+                </div>
+                <p style={{ fontSize: 13, color: '#6e6e73', lineHeight: 1.5, marginBottom: 12 }}>
+                  Pour enregistrer votre inscription, merci d’accepter le traitement de votre adresse e-mail aux fins
+                  d’envoi de la newsletter, conformément à notre politique de confidentialité.
+                </p>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 10,
+                    fontSize: 13,
+                    color: '#424245',
+                    lineHeight: 1.45,
+                    cursor: 'pointer',
+                    marginBottom: 14,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={newsletterConsent}
+                    onChange={(e) => setNewsletterConsent(e.target.checked)}
+                    style={{ width: 18, height: 18, marginTop: 2, flexShrink: 0, accentColor: '#1d1d1f' }}
+                  />
+                  <span>
+                    J’accepte que mon adresse e-mail soit utilisée pour recevoir la newsletter et les actualités
+                    Section Luxe, et j’ai pris connaissance de la{' '}
+                    <Link href="/politique-confidentialite" style={{ color: '#424245', textDecoration: 'underline', textUnderlineOffset: 2 }}>
+                      politique de confidentialité
+                    </Link>
+                    .
+                  </span>
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={resetNewsletterFlow}
+                    disabled={newsletterLoading}
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: 14,
+                      borderRadius: 8,
+                      border: '1px solid #d2d2d7',
+                      background: '#fff',
+                      color: '#424245',
+                      cursor: newsletterLoading ? 'not-allowed' : 'pointer',
+                      opacity: newsletterLoading ? 0.6 : 1,
+                    }}
+                  >
+                    Retour
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={newsletterLoading || !newsletterEmail.trim()}
+                    style={{
+                      padding: '10px 18px',
+                      fontSize: 14,
+                      borderRadius: 8,
+                      border: 'none',
+                      background: '#1d1d1f',
+                      color: '#fff',
+                      cursor: newsletterLoading || !newsletterEmail.trim() ? 'not-allowed' : 'pointer',
+                      opacity: newsletterLoading || !newsletterEmail.trim() ? 0.6 : 1,
+                    }}
+                  >
+                    {newsletterLoading ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <Loader2 size={16} strokeWidth={2} className="footer-newsletter-spin" aria-hidden />
+                        Envoi…
+                      </span>
+                    ) : (
+                      'Valider mon inscription'
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
             {newsletterMessage && (
               <p
                 style={{
@@ -236,6 +358,9 @@ export function Footer() {
           border-radius: 0;
           background-color: transparent;
           outline: none;
+        }
+        .footer-newsletter-input.footer-newsletter-input--full {
+          padding: 12px 14px;
         }
         .footer-newsletter-submit {
           position: absolute;

@@ -13,11 +13,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.googletagmanager.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
       "img-src 'self' data: https: blob:",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.api.gouv.fr https://geo.api.gouv.fr https://api-adresse.data.gouv.fr https://api.stripe.com https://r.stripe.com https://m.stripe.network https://merchant-ui-api.stripe.com https://errors.stripe.com https://hooks.stripe.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.api.gouv.fr https://geo.api.gouv.fr https://api-adresse.data.gouv.fr https://api.stripe.com https://r.stripe.com https://m.stripe.network https://merchant-ui-api.stripe.com https://errors.stripe.com https://hooks.stripe.com https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.googletagmanager.com",
       "frame-src 'self' https://www.google.com https://maps.google.com https://js.stripe.com https://hooks.stripe.com",
       "worker-src 'self' blob:",
       "frame-ancestors 'none'",

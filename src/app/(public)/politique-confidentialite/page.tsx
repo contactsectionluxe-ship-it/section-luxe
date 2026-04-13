@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useCookieConsent } from '@/components/consent/CookieConsentProvider';
 
 const lineHeight = 1.6;
 const paragraphStyle: React.CSSProperties = {
@@ -10,10 +11,11 @@ const paragraphStyle: React.CSSProperties = {
   marginBottom: 16,
   textAlign: 'justify',
 };
+/** Titres numérotés principaux (1. … 15. …, Politique cookies) — seul gras « maison » du texte. */
 const sectionTitleStyle: React.CSSProperties = {
   fontFamily: 'var(--font-playfair), Georgia, serif',
   fontSize: 20,
-  fontWeight: 500,
+  fontWeight: 600,
   color: '#1d1d1f',
   letterSpacing: '-0.02em',
   marginTop: 32,
@@ -31,15 +33,29 @@ const listStyle: React.CSSProperties = {
 const listItemStyle: React.CSSProperties = {
   marginBottom: 6,
 };
+/** Sous-parties type 4.1, 4.2 — pas de gras (texte courant, couleur corps). */
 const subTitleStyle: React.CSSProperties = {
-  fontSize: 16,
-  fontWeight: 600,
-  color: '#1d1d1f',
+  fontSize: 15,
+  fontWeight: 400,
+  color: '#6e6e73',
   marginTop: 20,
   marginBottom: 8,
 };
 
+/** Titres numérotés de la politique cookies (1. Définition, 2. …). */
+const cookiePolicyNumberedTitleStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-playfair), Georgia, serif',
+  fontSize: 17,
+  fontWeight: 600,
+  color: '#1d1d1f',
+  letterSpacing: '-0.02em',
+  marginTop: 24,
+  marginBottom: 10,
+};
+
 export default function PolitiqueConfidentialitePage() {
+  const { openPreferences } = useCookieConsent();
+
   return (
     <div style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', backgroundColor: '#fbfbfb' }}>
       <div className="legal-simple-page" style={{ padding: '30px 24px 80px' }}>
@@ -49,7 +65,7 @@ export default function PolitiqueConfidentialitePage() {
               style={{
                 fontFamily: 'var(--font-playfair), Georgia, serif',
                 fontSize: 28,
-                fontWeight: 500,
+                fontWeight: 400,
                 marginBottom: 8,
                 color: '#1d1d1f',
                 letterSpacing: '-0.02em',
@@ -58,7 +74,7 @@ export default function PolitiqueConfidentialitePage() {
               Politique de confidentialité et cookies
             </h1>
             <p style={{ fontSize: 15, color: '#6e6e73', marginBottom: 4 }}>Section Luxe</p>
-            <p style={{ fontSize: 13, color: '#86868b' }}>Dernière mise à jour : 22/02/2026</p>
+            <p style={{ fontSize: 13, color: '#86868b' }}>Dernière mise à jour : 13/04/2026</p>
           </div>
 
           <div style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
@@ -67,7 +83,7 @@ export default function PolitiqueConfidentialitePage() {
               Le site exploité sous la marque Section Luxe est édité par :
             </p>
             <p style={paragraphStyle}>
-              <strong>SL INVEST</strong><br />
+              SL INVEST<br />
               SAS au capital de 1 000 €<br />
               Siège social : en création<br />
               RCS Paris : en création<br />
@@ -98,8 +114,8 @@ export default function PolitiqueConfidentialitePage() {
               Les données personnelles sont collectées :
             </p>
             <ul style={listStyle}>
-              <li style={listItemStyle}>directement auprès des utilisateurs lors de la création de compte, de la publication d&apos;une annonce ou d&apos;une prise de contact ;</li>
-              <li style={listItemStyle}>automatiquement lors de la navigation sur la plateforme (données techniques, cookies).</li>
+              <li style={listItemStyle}>directement auprès des utilisateurs lors de la création de compte, de la publication d&apos;une annonce, de la messagerie, d&apos;une prise de contact ou de l&apos;inscription à la newsletter ;</li>
+              <li style={listItemStyle}>automatiquement lors de la navigation sur la plateforme (données techniques, cookies et traceurs similaires).</li>
             </ul>
             <p style={paragraphStyle}>
               Aucune donnée n&apos;est achetée auprès de tiers.
@@ -117,7 +133,7 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>Numéro de téléphone (facultatif)</li>
             </ul>
             <p style={paragraphStyle}>
-              Ces informations sont nécessaires à la mise en relation.
+              Ces informations sont nécessaires à la mise en relation. Les échanges via la messagerie intégrée (contenu des messages et métadonnées associées, par exemple horodatage) sont traités pour permettre la communication entre acheteurs et vendeurs dans le cadre du service.
             </p>
             <p style={subTitleStyle}>4.2 Vendeurs professionnels</p>
             <p style={paragraphStyle}>
@@ -142,7 +158,19 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>prévenir la fraude et la contrefaçon ;</li>
               <li style={listItemStyle}>respecter les obligations légales.</li>
             </ul>
-            <p style={subTitleStyle}>4.3 Données techniques</p>
+            <p style={subTitleStyle}>4.3 Newsletter</p>
+            <p style={paragraphStyle}>
+              Lors de l&apos;inscription à la newsletter depuis le site : adresse email, date d&apos;inscription, statut (inscrit ou désinscrit) et, le cas échéant, date de désinscription. Ces données permettent l&apos;envoi ou l&apos;arrêt d&apos;envoi d&apos;informations commerciales ou d&apos;actualités, et la preuve du consentement ou de la désinscription.
+            </p>
+            <p style={subTitleStyle}>4.4 Messagerie</p>
+            <p style={paragraphStyle}>
+              Les conversations entre utilisateurs (contenu des messages, pièces jointes éventuelles selon les fonctionnalités proposées, identifiants des participants, dates) sont traitées pour assurer la mise en relation et le suivi des échanges liés aux annonces ou aux demandes.
+            </p>
+            <p style={subTitleStyle}>4.5 Contenus publiés (annonces)</p>
+            <p style={paragraphStyle}>
+              Les annonces publiées par les vendeurs (textes, photographies, caractéristiques du bien, prix, localisation affichée, etc.) constituent des données liées au compte vendeur et sont traitées pour la diffusion du service de marketplace et la mise en relation avec les acheteurs.
+            </p>
+            <p style={subTitleStyle}>4.6 Données techniques</p>
             <p style={paragraphStyle}>
               Lors de l&apos;utilisation du site :
             </p>
@@ -151,10 +179,11 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>Données de connexion</li>
               <li style={listItemStyle}>Logs techniques</li>
               <li style={listItemStyle}>Données de navigation</li>
-              <li style={listItemStyle}>Cookies</li>
+              <li style={listItemStyle}>Cookies et traceurs similaires (stockage local, identifiants techniques)</li>
+              <li style={listItemStyle}>Journal des choix de cookies : enregistrement côté serveur de la date, des catégories acceptées ou refusées, de la version de la politique applicable et de l&apos;origine du choix (sans stockage obligatoire de nom ou d&apos;email à cette fin)</li>
             </ul>
             <p style={paragraphStyle}>
-              Ces données assurent la sécurité, la stabilité et l&apos;amélioration du service.
+              Ces données assurent la sécurité, la stabilité et l&apos;amélioration du service, ainsi que la preuve du consentement aux cookies lorsque la réglementation l&apos;exige.
             </p>
 
             <h2 style={sectionTitleStyle}>5. Caractère obligatoire des données</h2>
@@ -183,7 +212,9 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>le respect des obligations légales et comptables ;</li>
               <li style={listItemStyle}>la gestion des réclamations ;</li>
               <li style={listItemStyle}>l&apos;amélioration des services ;</li>
-              <li style={listItemStyle}>la sécurité informatique.</li>
+              <li style={listItemStyle}>la sécurité informatique ;</li>
+              <li style={listItemStyle}>l&apos;envoi de la newsletter aux personnes inscrites ;</li>
+              <li style={listItemStyle}>la conservation de preuve des choix exprimés concernant les cookies et traceurs non essentiels.</li>
             </ul>
             <p style={paragraphStyle}>
               Aucune décision automatisée produisant des effets juridiques n&apos;est mise en œuvre.
@@ -197,7 +228,7 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>l&apos;exécution contractuelle ;</li>
               <li style={listItemStyle}>l&apos;intérêt légitime de SL INVEST (sécurisation, lutte contre fraude) ;</li>
               <li style={listItemStyle}>le respect d&apos;obligations légales ;</li>
-              <li style={listItemStyle}>le consentement (cookies non essentiels).</li>
+              <li style={listItemStyle}>le consentement (cookies et traceurs non essentiels, inscription à la newsletter lorsque le recueil du consentement est requis).</li>
             </ul>
 
             <h2 style={sectionTitleStyle}>8. Destinataires des données</h2>
@@ -220,12 +251,15 @@ export default function PolitiqueConfidentialitePage() {
             </p>
             <ul style={listStyle}>
               <li style={listItemStyle}>Hébergement : Vercel</li>
-              <li style={listItemStyle}>Base de données : Supabase</li>
+              <li style={listItemStyle}>Base de données et authentification : Supabase</li>
               <li style={listItemStyle}>Paiement : Stripe</li>
+              <li style={listItemStyle}>Envoi d&apos;emails (messages transactionnels, formulaires, newsletter selon les canaux activés) : prestataire(s) d&apos;envoi configuré(s) par SL INVEST (par exemple service SMTP ou fournisseur type Resend), agissant sur instruction</li>
+              <li style={listItemStyle}>Mesure d&apos;audience et gestion de balises : lorsque activés sur le site, Google Tag Manager et/ou Google Analytics (Google Ireland Limited ou société du groupe Google concernée) peuvent traiter des données de navigation conformément à vos choix de consentement</li>
             </ul>
             <p style={paragraphStyle}>
               Les données bancaires ne sont jamais stockées par SL INVEST.
-              Des contrats de sous-traitance conformes à l&apos;article 28 du RGPD encadrent ces traitements.
+              Des contrats de sous-traitance conformes à l&apos;article 28 du RGPD encadrent ces traitements lorsque la loi l&apos;exige.
+              La liste peut évoluer : toute mise à jour substantielle sera reflétée dans la présente politique.
             </p>
 
             <h2 style={sectionTitleStyle}>10. Transferts hors Union européenne</h2>
@@ -243,8 +277,8 @@ export default function PolitiqueConfidentialitePage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, color: '#6e6e73' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e5e5e7' }}>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#1d1d1f' }}>Catégorie</th>
-                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 600, color: '#1d1d1f' }}>Durée</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 400, color: '#1d1d1f' }}>Catégorie</th>
+                    <th style={{ textAlign: 'left', padding: '10px 12px', fontWeight: 400, color: '#1d1d1f' }}>Durée</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -253,7 +287,9 @@ export default function PolitiqueConfidentialitePage() {
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Prospects</td><td style={{ padding: '10px 12px' }}>3 ans après dernier contact</td></tr>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Données comptables</td><td style={{ padding: '10px 12px' }}>10 ans</td></tr>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Logs techniques</td><td style={{ padding: '10px 12px' }}>12 mois maximum</td></tr>
-                  <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Cookies</td><td style={{ padding: '10px 12px' }}>13 mois maximum</td></tr>
+                  <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Journal des consentements cookies (serveur)</td><td style={{ padding: '10px 12px' }}>12 mois maximum</td></tr>
+                  <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Inscriptions newsletter</td><td style={{ padding: '10px 12px' }}>Jusqu&apos;à désinscription, puis durée nécessaire aux obligations légales ou 3 ans à compter du dernier contact en l&apos;absence de désinscription explicite selon les usages</td></tr>
+                  <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Cookies et traceurs similaires</td><td style={{ padding: '10px 12px' }}>13 mois maximum</td></tr>
                 </tbody>
               </table>
             </div>
@@ -317,12 +353,12 @@ export default function PolitiqueConfidentialitePage() {
             </p>
 
             <h2 style={{ ...sectionTitleStyle, marginTop: 48 }}>Politique cookies</h2>
-            <h3 style={subTitleStyle}>1. Définition</h3>
+            <h3 style={{ ...cookiePolicyNumberedTitleStyle, marginTop: 14 }}>1. Définition</h3>
             <p style={paragraphStyle}>
-              Un cookie est un fichier déposé sur votre terminal lors de la navigation.
+              Au sens de cette politique, sont visés les cookies (fichiers déposés sur votre terminal) et les traceurs similaires (par exemple identifiants stockés dans le navigateur, pixels ou technologies équivalentes permettant une mesure ou une personnalisation), lorsque la réglementation les assimile aux cookies pour le consentement.
             </p>
-            <h3 style={subTitleStyle}>2. Catégories de cookies</h3>
-            <p style={{ ...paragraphStyle, fontWeight: 600, color: '#1d1d1f' }}>Cookies strictement nécessaires</p>
+            <h3 style={{ ...cookiePolicyNumberedTitleStyle, marginTop: 28 }}>2. Catégories de cookies</h3>
+            <p style={paragraphStyle}>Cookies strictement nécessaires</p>
             <p style={paragraphStyle}>Permettent :</p>
             <ul style={listStyle}>
               <li style={listItemStyle}>authentification ;</li>
@@ -331,7 +367,7 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>prévention fraude.</li>
             </ul>
             <p style={paragraphStyle}>Ils ne nécessitent pas de consentement.</p>
-            <p style={{ ...paragraphStyle, fontWeight: 600, color: '#1d1d1f' }}>Cookies analytiques</p>
+            <p style={paragraphStyle}>Cookies analytiques</p>
             <p style={paragraphStyle}>Permettent :</p>
             <ul style={listStyle}>
               <li style={listItemStyle}>mesure d&apos;audience ;</li>
@@ -339,23 +375,45 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>amélioration de l&apos;expérience utilisateur.</li>
             </ul>
             <p style={paragraphStyle}>Activés uniquement après consentement.</p>
-            <p style={{ ...paragraphStyle, fontWeight: 600, color: '#1d1d1f' }}>Cookies marketing</p>
+            <p style={paragraphStyle}>Cookies marketing</p>
             <p style={paragraphStyle}>
               Peuvent être utilisés pour : personnalisation publicitaire ; mesure de performance publicitaire.
               Activés uniquement après consentement explicite.
             </p>
-            <h3 style={subTitleStyle}>3. Gestion du consentement</h3>
+            <h3 style={cookiePolicyNumberedTitleStyle}>3. Gestion du consentement</h3>
             <p style={paragraphStyle}>
-              Lors de la première visite : un bandeau permet d&apos;accepter, refuser ou paramétrer les cookies ; le refus n&apos;empêche pas l&apos;accès aux fonctionnalités essentielles ; le consentement peut être retiré à tout moment.
+              Lors de la première visite : un bandeau permet d&apos;accepter, de refuser ou de personnaliser les cookies et traceurs concernés. Le refus n&apos;empêche pas l&apos;accès aux fonctionnalités essentielles du site. Vous pouvez modifier ou retirer votre consentement à tout moment en utilisant le bouton ci-dessous (également accessible depuis le bandeau lors d&apos;une prochaine visite si vous effacez vos choix enregistrés dans votre navigateur).
             </p>
-            <h3 style={subTitleStyle}>4. Durée de conservation</h3>
+            <p style={{ marginBottom: 20 }}>
+              <button
+                type="button"
+                onClick={openPreferences}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px 22px',
+                  fontSize: 15,
+                  fontWeight: 400,
+                  borderRadius: 10,
+                  border: '1px solid #1d1d1f',
+                  backgroundColor: '#1d1d1f',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Paramètres cookies
+              </button>
+            </p>
+            <h3 style={cookiePolicyNumberedTitleStyle}>4. Durée de conservation</h3>
             <p style={paragraphStyle}>
-              Les cookies sont conservés pour une durée maximale de 13 mois conformément aux recommandations de la CNIL.
+              Les cookies et traceurs concernés sont conservés pour une durée maximale de 13 mois conformément aux recommandations de la CNIL, sauf durée plus courte fixée par le responsable du traitement.
             </p>
           </div>
 
           <p style={{ textAlign: 'center', marginTop: 28, fontSize: 15, color: '#6e6e73' }}>
-            <Link href="/" style={{ color: '#1d1d1f', fontWeight: 500 }}>Retour à l&apos;accueil</Link>
+            <Link href="/" style={{ color: '#1d1d1f', fontWeight: 400 }}>Retour à l&apos;accueil</Link>
           </p>
         </div>
       </div>
