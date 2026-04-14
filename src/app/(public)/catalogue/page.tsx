@@ -524,7 +524,7 @@ function CatalogueContent() {
   /** Dernière position de scroll en continu : le retour « flèche » a souvent la même session que le clic sans rejouer pointerdown (Safari iOS). */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    let debounceId: ReturnType<typeof setTimeout> | undefined;
+    let debounceId: number | undefined;
     const onScroll = () => {
       if (debounceId !== undefined) window.clearTimeout(debounceId);
       debounceId = window.setTimeout(() => {
