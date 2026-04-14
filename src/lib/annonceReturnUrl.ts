@@ -58,13 +58,12 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
   const normalized = normalizeInternalPath(url);
   try {
     sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, normalized);
-    /* Mémoriser le scroll pour retour catalogue / accueil (même repère que la grille catalogue : URL complète incl. view=line si besoin). */
+    /* Mémoriser le scroll pour retour catalogue (URL complète incl. view=line si besoin). */
     const path = window.location.pathname;
     const onCatalogue = path.startsWith('/catalogue');
-    const onHome = path === '/' || path === '';
     const targetsCatalogue = normalized.startsWith('/catalogue');
-    const targetsHome = normalized === '/' || normalized.startsWith('/?');
-    if ((targetsCatalogue && onCatalogue) || (targetsHome && onHome)) {
+    /* Repère de scroll uniquement pour le catalogue : pas sur l’accueil (retour sans repositionnement). */
+    if (targetsCatalogue && onCatalogue) {
       const payload: CatalogueScrollPayload = { y: getDocumentScrollY(), href: normalized };
       sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
     }

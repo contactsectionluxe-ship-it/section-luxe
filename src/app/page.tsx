@@ -7,11 +7,7 @@ import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
-import {
-  setAnnonceReturnUrlForNextNavigation,
-  peekCatalogueScrollRestore,
-  consumeCatalogueScrollRestore,
-} from '@/lib/annonceReturnUrl';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { setDocumentScrollY } from '@/lib/documentScroll';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
@@ -57,32 +53,9 @@ function HomePageInner() {
   const [loading, setLoading] = useState(true);
   const categoriesScrollRef = useRef<HTMLDivElement>(null);
 
-  /** Retour depuis une annonce : restaurer le scroll comme sur le catalogue (même mécanisme sessionStorage). */
-  const homeRestoreScrollYRef = useRef<number | null>(null);
+  /* Rechargement pleine page : repartir du haut (pas de repère de scroll comme sur le catalogue). */
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
-    let previous: ScrollRestoration = 'auto';
-    try {
-      previous = history.scrollRestoration;
-      history.scrollRestoration = 'manual';
-    } catch {
-      /* ignore */
-    }
-    return () => {
-      try {
-        history.scrollRestoration = previous;
-      } catch {
-        /* ignore */
-      }
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    const currentHref = homeReturnHref;
-    const pending = peekCatalogueScrollRestore(currentHref);
-    homeRestoreScrollYRef.current = pending;
-    if (typeof window === 'undefined') return;
-    if (pending != null) return;
     try {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       if (nav?.type === 'reload') {
@@ -91,36 +64,8 @@ function HomePageInner() {
     } catch {
       /* ignore */
     }
-  }, [homeReturnHref]);
+  }, []);
 
-  useEffect(() => {
-    if (loading) return;
-    const currentHref = homeReturnHref;
-    if (homeRestoreScrollYRef.current == null) return;
-    homeRestoreScrollYRef.current = null;
-    const y = consumeCatalogueScrollRestore(currentHref);
-    if (y == null) return;
-
-    const applyY = (behavior: ScrollBehavior) => {
-      setDocumentScrollY(y, behavior);
-    };
-
-    let cancelled = false;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        applyY('auto');
-      });
-    });
-    const snapTimer = window.setTimeout(() => {
-      if (cancelled) return;
-      applyY('auto');
-    }, 550);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(snapTimer);
-    };
-  }, [loading, homeReturnHref]);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
