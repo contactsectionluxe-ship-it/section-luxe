@@ -297,7 +297,7 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
               boxShadow: '0 -4px 32px rgba(0,0,0,0.08)',
             }}
           >
-            <div style={{ padding: '22px 24px 20px' }}>
+            <div className="px-4 pb-5 pt-[22px] sm:px-6">
               <h2
                 id="cookie-banner-title"
                 className="font-serif text-xl sm:text-2xl font-normal tracking-tight"
@@ -313,28 +313,12 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
                 </Link>
                 .
               </p>
-              <div
-                style={{
-                  marginTop: 18,
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 10,
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                }}
-              >
+              <div className="mt-[18px] flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-2.5">
                 <button
                   type="button"
                   onClick={handleRejectAll}
-                  style={{
-                    padding: '10px 18px',
-                    fontSize: 14,
-                    borderRadius: 8,
-                    border: '1px solid #d2d2d7',
-                    background: '#fff',
-                    color: '#1d1d1f',
-                    cursor: 'pointer',
-                  }}
+                  className="min-h-[44px] min-w-0 flex-1 touch-manipulation whitespace-nowrap rounded-lg border border-[#d2d2d7] bg-white px-1.5 py-2 text-center text-[12px] leading-tight text-[#1d1d1f] sm:min-h-0 sm:flex-none sm:px-[18px] sm:py-2.5 sm:text-sm"
+                  style={{ cursor: 'pointer' }}
                 >
                   Tout refuser
                 </button>
@@ -346,30 +330,16 @@ export function CookieConsentProvider({ children }: { children: React.ReactNode 
                     setDraftMarketing(s?.marketing ?? false);
                     setPrefsOpen(true);
                   }}
-                  style={{
-                    padding: '10px 18px',
-                    fontSize: 14,
-                    borderRadius: 8,
-                    border: '1px solid #1d1d1f',
-                    background: 'transparent',
-                    color: '#1d1d1f',
-                    cursor: 'pointer',
-                  }}
+                  className="min-h-[44px] min-w-0 flex-1 touch-manipulation whitespace-nowrap rounded-lg border border-[#1d1d1f] bg-transparent px-1.5 py-2 text-center text-[12px] leading-tight text-[#1d1d1f] sm:min-h-0 sm:flex-none sm:px-[18px] sm:py-2.5 sm:text-sm"
+                  style={{ cursor: 'pointer' }}
                 >
                   Personnaliser
                 </button>
                 <button
                   type="button"
                   onClick={handleAcceptAll}
-                  style={{
-                    padding: '10px 20px',
-                    fontSize: 14,
-                    borderRadius: 8,
-                    border: 'none',
-                    background: '#1d1d1f',
-                    color: '#fff',
-                    cursor: 'pointer',
-                  }}
+                  className="min-h-[44px] min-w-0 flex-1 touch-manipulation whitespace-nowrap rounded-lg border-none bg-[#1d1d1f] px-1.5 py-2 text-center text-[12px] leading-tight text-white sm:min-h-0 sm:flex-none sm:px-5 sm:py-2.5 sm:text-sm"
+                  style={{ cursor: 'pointer' }}
                 >
                   Tout accepter
                 </button>

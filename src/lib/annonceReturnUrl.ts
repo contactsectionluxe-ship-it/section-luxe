@@ -58,11 +58,13 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
   const normalized = normalizeInternalPath(url);
   try {
     sessionStorage.setItem(ANNONCE_RETURN_URL_STORAGE_KEY, normalized);
-    /* Repère scroll : uniquement catalogue (pas l’accueil). */
+    /* Mémoriser le scroll pour retour catalogue / accueil (même repère que la grille catalogue : URL complète incl. view=line si besoin). */
     const path = window.location.pathname;
     const onCatalogue = path.startsWith('/catalogue');
+    const onHome = path === '/' || path === '';
     const targetsCatalogue = normalized.startsWith('/catalogue');
-    if (targetsCatalogue && onCatalogue) {
+    const targetsHome = normalized === '/' || normalized.startsWith('/?');
+    if ((targetsCatalogue && onCatalogue) || (targetsHome && onHome)) {
       const payload: CatalogueScrollPayload = { y: getDocumentScrollY(), href: normalized };
       sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
     }
@@ -76,20 +78,6 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
  * Sinon supprime l’entrée si elle ne correspond pas (évite une restauration plus tard par erreur).
  */
 /** Lit la position à restaurer sans retirer l’entrée (pour reporter le scroll après le chargement des annonces). */
-/** À appeler depuis le catalogue (scroll débouncé) : garde le dernier Y pour le retour navigateur même si le clic annonce ne mémorise pas (mobile). */
-export function persistCatalogueScrollFromViewport(): void {
-  if (typeof window === 'undefined') return;
-  const path = window.location.pathname;
-  if (!path.startsWith('/catalogue')) return;
-  const href = path + (window.location.search || '');
-  try {
-    const payload: CatalogueScrollPayload = { y: getDocumentScrollY(), href };
-    sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
-  } catch {
-    /* quota / mode privé */
-  }
-}
-
 export function peekCatalogueScrollRestore(currentHref: string): number | null {
   if (typeof window === 'undefined') return null;
   let raw: string | null = null;
