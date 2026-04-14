@@ -461,7 +461,11 @@ function CatalogueContent() {
   }, []);
 
   useLayoutEffect(() => {
-    const currentHref = (pathname || '') + (searchParamsString ? `?${searchParamsString}` : '');
+    /* Au retour arrière (mobile / Safari), la barre d’adresse reflète souvent l’URL avant useSearchParams. */
+    const currentHref =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search || ''}`
+        : `${pathname || ''}${searchParamsString ? `?${searchParamsString}` : ''}`;
     const pending = peekCatalogueScrollRestore(currentHref);
     catalogueRestoreScrollYRef.current = pending;
     if (typeof window === 'undefined') return;
@@ -475,6 +479,35 @@ function CatalogueContent() {
       /* ignore */
     }
   }, [pathname, searchParamsString]);
+
+  /** Retour navigateur / bfcache : réaligner le scroll si la session contient encore la position (popstate peut arriver avant que les hooks soient à jour). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const tryFromWindow = () => {
+      if (!window.location.pathname.startsWith('/catalogue')) return;
+      const href = `${window.location.pathname}${window.location.search || ''}`;
+      const y = peekCatalogueScrollRestore(href);
+      if (y == null) return;
+      catalogueRestoreScrollYRef.current = y;
+      setDocumentScrollY(y, 'auto');
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) tryFromWindow();
+    };
+    const onPopState = () => {
+      queueMicrotask(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(tryFromWindow);
+        });
+      });
+    };
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, []);
 
   const [filters, setFilters] = useState<Filters>(() => {
     const reset = searchParams.get('reset');
@@ -1064,7 +1097,10 @@ function CatalogueContent() {
   // Après chargement : replacer Y en une fois (instantané) ; recalage si la hauteur de page évolue encore (images, layout).
   useEffect(() => {
     if (loading) return;
-    const currentHref = (pathname || '') + (searchParamsString ? `?${searchParamsString}` : '');
+    const currentHref =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search || ''}`
+        : `${pathname || ''}${searchParamsString ? `?${searchParamsString}` : ''}`;
     if (catalogueRestoreScrollYRef.current == null) return;
     catalogueRestoreScrollYRef.current = null;
     const y = consumeCatalogueScrollRestore(currentHref);

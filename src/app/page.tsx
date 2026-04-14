@@ -78,7 +78,10 @@ function HomePageInner() {
   }, []);
 
   useLayoutEffect(() => {
-    const currentHref = homeReturnHref;
+    const currentHref =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search || ''}` || '/'
+        : homeReturnHref;
     const pending = peekCatalogueScrollRestore(currentHref);
     homeRestoreScrollYRef.current = pending;
     if (typeof window === 'undefined') return;
@@ -93,9 +96,43 @@ function HomePageInner() {
     }
   }, [homeReturnHref]);
 
+  /** Même logique que le catalogue : retour arrière / bfcache sur mobile. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isHomePath = (p: string) => p === '/' || p === '';
+    const tryFromWindow = () => {
+      const p = window.location.pathname;
+      if (!isHomePath(p)) return;
+      const href = `${p}${window.location.search || ''}` || '/';
+      const y = peekCatalogueScrollRestore(href);
+      if (y == null) return;
+      homeRestoreScrollYRef.current = y;
+      setDocumentScrollY(y, 'auto');
+    };
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) tryFromWindow();
+    };
+    const onPopState = () => {
+      queueMicrotask(() => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(tryFromWindow);
+        });
+      });
+    };
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('popstate', onPopState);
+    return () => {
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('popstate', onPopState);
+    };
+  }, []);
+
   useEffect(() => {
     if (loading) return;
-    const currentHref = homeReturnHref;
+    const currentHref =
+      typeof window !== 'undefined'
+        ? `${window.location.pathname}${window.location.search || ''}` || '/'
+        : homeReturnHref;
     if (homeRestoreScrollYRef.current == null) return;
     homeRestoreScrollYRef.current = null;
     const y = consumeCatalogueScrollRestore(currentHref);
@@ -112,13 +149,8 @@ function HomePageInner() {
         applyY('auto');
       });
     });
-    const snapTimer = window.setTimeout(() => {
-      if (cancelled) return;
-      applyY('auto');
-    }, 550);
     return () => {
       cancelled = true;
-      window.clearTimeout(snapTimer);
     };
   }, [loading, homeReturnHref]);
   const isDraggingRef = useRef(false);
