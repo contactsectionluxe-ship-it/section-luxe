@@ -11,6 +11,7 @@ import {
   setAnnonceReturnUrlForNextNavigation,
   consumeCatalogueScrollRestore,
   peekCatalogueScrollRestore,
+  persistCatalogueScrollFromViewport,
 } from '@/lib/annonceReturnUrl';
 import { setDocumentScrollY } from '@/lib/documentScroll';
 import { sellerCataloguePath, parseVendeurCatalogueSlug } from '@/lib/sellerCatalogueUrl';
@@ -480,7 +481,7 @@ function CatalogueContent() {
     }
   }, [pathname, searchParamsString]);
 
-  /** Retour navigateur / bfcache : réaligner le scroll si la session contient encore la position (popstate peut arriver avant que les hooks soient à jour). */
+  /** Retour navigateur / bfcache : réaligner le scroll ; plusieurs passes pour Next.js / mobile. */
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const tryFromWindow = () => {
@@ -491,22 +492,68 @@ function CatalogueContent() {
       catalogueRestoreScrollYRef.current = y;
       setDocumentScrollY(y, 'auto');
     };
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) tryFromWindow();
-    };
-    const onPopState = () => {
+    const scheduleTry = () => {
       queueMicrotask(() => {
         requestAnimationFrame(() => {
           requestAnimationFrame(tryFromWindow);
         });
       });
     };
+    let popStateDelayIds: number[] = [];
+    const clearPopDelays = () => {
+      popStateDelayIds.forEach((id) => window.clearTimeout(id));
+      popStateDelayIds = [];
+    };
+    const onPageShow = () => {
+      scheduleTry();
+    };
+    const onPopState = () => {
+      clearPopDelays();
+      scheduleTry();
+      popStateDelayIds = [80, 200, 450, 900].map((ms) => window.setTimeout(tryFromWindow, ms));
+    };
     window.addEventListener('pageshow', onPageShow);
     window.addEventListener('popstate', onPopState);
     return () => {
+      clearPopDelays();
       window.removeEventListener('pageshow', onPageShow);
       window.removeEventListener('popstate', onPopState);
     };
+  }, []);
+
+  /** Dernière position de scroll en continu : le retour « flèche » a souvent la même session que le clic sans rejouer pointerdown (Safari iOS). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let debounceId: ReturnType<typeof setTimeout> | undefined;
+    const onScroll = () => {
+      if (debounceId !== undefined) window.clearTimeout(debounceId);
+      debounceId = window.setTimeout(() => {
+        debounceId = undefined;
+        persistCatalogueScrollFromViewport();
+      }, 140);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (debounceId !== undefined) window.clearTimeout(debounceId);
+    };
+  }, []);
+
+  /** Avant navigation vers une fiche : forcer l’écriture du repère (complément au scroll débouncé). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const flush = () => persistCatalogueScrollFromViewport();
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      const a = t.closest('a[href]');
+      if (!a) return;
+      const href = a.getAttribute('href') || '';
+      if (!href.includes('/annonce/')) return;
+      flush();
+    };
+    document.addEventListener('touchstart', onTouchStart, { capture: true, passive: true });
+    return () => document.removeEventListener('touchstart', onTouchStart, { capture: true });
   }, []);
 
   const [filters, setFilters] = useState<Filters>(() => {

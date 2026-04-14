@@ -1,18 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useLayoutEffect, useState, useRef, useCallback } from 'react';
+import { Suspense, useEffect, useState, useRef, useCallback } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 import { getFeaturedListings } from '@/lib/supabase/listings';
 import { listingAnnoncePath } from '@/lib/listingPaths';
-import {
-  setAnnonceReturnUrlForNextNavigation,
-  peekCatalogueScrollRestore,
-  consumeCatalogueScrollRestore,
-} from '@/lib/annonceReturnUrl';
-import { setDocumentScrollY } from '@/lib/documentScroll';
+import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
@@ -57,102 +52,6 @@ function HomePageInner() {
   const [loading, setLoading] = useState(true);
   const categoriesScrollRef = useRef<HTMLDivElement>(null);
 
-  /** Retour depuis une annonce : restaurer le scroll comme sur le catalogue (même mécanisme sessionStorage). */
-  const homeRestoreScrollYRef = useRef<number | null>(null);
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return;
-    let previous: ScrollRestoration = 'auto';
-    try {
-      previous = history.scrollRestoration;
-      history.scrollRestoration = 'manual';
-    } catch {
-      /* ignore */
-    }
-    return () => {
-      try {
-        history.scrollRestoration = previous;
-      } catch {
-        /* ignore */
-      }
-    };
-  }, []);
-
-  useLayoutEffect(() => {
-    const currentHref =
-      typeof window !== 'undefined'
-        ? `${window.location.pathname}${window.location.search || ''}` || '/'
-        : homeReturnHref;
-    const pending = peekCatalogueScrollRestore(currentHref);
-    homeRestoreScrollYRef.current = pending;
-    if (typeof window === 'undefined') return;
-    if (pending != null) return;
-    try {
-      const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
-      if (nav?.type === 'reload') {
-        setDocumentScrollY(0, 'auto');
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [homeReturnHref]);
-
-  /** Même logique que le catalogue : retour arrière / bfcache sur mobile. */
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const isHomePath = (p: string) => p === '/' || p === '';
-    const tryFromWindow = () => {
-      const p = window.location.pathname;
-      if (!isHomePath(p)) return;
-      const href = `${p}${window.location.search || ''}` || '/';
-      const y = peekCatalogueScrollRestore(href);
-      if (y == null) return;
-      homeRestoreScrollYRef.current = y;
-      setDocumentScrollY(y, 'auto');
-    };
-    const onPageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) tryFromWindow();
-    };
-    const onPopState = () => {
-      queueMicrotask(() => {
-        requestAnimationFrame(() => {
-          requestAnimationFrame(tryFromWindow);
-        });
-      });
-    };
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('popstate', onPopState);
-    return () => {
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('popstate', onPopState);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (loading) return;
-    const currentHref =
-      typeof window !== 'undefined'
-        ? `${window.location.pathname}${window.location.search || ''}` || '/'
-        : homeReturnHref;
-    if (homeRestoreScrollYRef.current == null) return;
-    homeRestoreScrollYRef.current = null;
-    const y = consumeCatalogueScrollRestore(currentHref);
-    if (y == null) return;
-
-    const applyY = (behavior: ScrollBehavior) => {
-      setDocumentScrollY(y, behavior);
-    };
-
-    let cancelled = false;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        applyY('auto');
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, homeReturnHref]);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartX = useRef(0);
