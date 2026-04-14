@@ -12,6 +12,7 @@ import {
   consumeCatalogueScrollRestore,
   peekCatalogueScrollRestore,
 } from '@/lib/annonceReturnUrl';
+import { setDocumentScrollY } from '@/lib/documentScroll';
 import { sellerCataloguePath, parseVendeurCatalogueSlug } from '@/lib/sellerCatalogueUrl';
 import { getSellerData, getSellerIdByVendeurSlug } from '@/lib/supabase/auth';
 import { addFavorite, removeFavorite, getUserFavoriteListingIds } from '@/lib/supabase/favorites';
@@ -468,7 +469,7 @@ function CatalogueContent() {
     try {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       if (nav?.type === 'reload') {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        setDocumentScrollY(0, 'auto');
       }
     } catch {
       /* ignore */
@@ -1071,9 +1072,7 @@ function CatalogueContent() {
     prevEffectivePageRef.current = effectivePage;
 
     const applyY = (behavior: ScrollBehavior) => {
-      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      const target = Math.min(y, maxY);
-      window.scrollTo({ top: target, left: 0, behavior });
+      setDocumentScrollY(y, behavior);
     };
 
     let cancelled = false;
@@ -4442,6 +4441,10 @@ function CatalogueContent() {
                   <Link
                     key={listing.id}
                     href={listingAnnoncePath(listing)}
+                    onPointerDownCapture={(e) => {
+                      if (e.pointerType === 'mouse' && e.button !== 0) return;
+                      setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl);
+                    }}
                     onClick={() => setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl)}
                     style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                   >
@@ -4547,6 +4550,10 @@ function CatalogueContent() {
                   <Link
                     key={listing.id}
                     href={listingAnnoncePath(listing)}
+                    onPointerDownCapture={(e) => {
+                      if (e.pointerType === 'mouse' && e.button !== 0) return;
+                      setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl);
+                    }}
                     onClick={() => setAnnonceReturnUrlForNextNavigation(catalogueReturnUrl)}
                     style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                   >

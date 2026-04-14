@@ -7,7 +7,6 @@ import type { Seller } from '@/types';
 import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { SellerVisitDescriptionInfo } from '@/components/SellerVisitDescriptionInfo';
 import { SellerVisitOpeningHoursBlock } from '@/components/SellerVisitOpeningHoursBlock';
-import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 
 const CARD_SHADOW = '0 8px 32px rgba(0,0,0,0.12)';
 
@@ -159,10 +158,9 @@ export function SellerVisitMapPopup({
             <Link href={sellerCataloguePath(seller)} style={{ color: 'inherit', textDecoration: 'none' }}>
               {seller.companyName}
             </Link>
-            <SellerVerifiedSubscriptionBadge tier={seller.subscriptionTier} variant="produit" />
           </SellerVisitDescriptionInfo>
           <SellerVisitOpeningHoursBlock hours={seller.openingHours} />
-          <p style={{ fontSize: 14, color: '#666', margin: 0, marginBottom: 16 }}>{addrLine}</p>
+          <p style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', margin: 0, marginBottom: 16 }}>{addrLine}</p>
           <div
             style={{
               position: 'relative',

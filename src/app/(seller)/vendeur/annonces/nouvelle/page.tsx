@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Check, Euro, Info, Loader2, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { createListing, updateListing } from '@/lib/supabase/listings';
 import { uploadListingPhotos } from '@/lib/supabase/storage';
@@ -150,13 +150,24 @@ function NewListingContent() {
   const { user, seller, isApprovedSeller, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  /** idle → plein écran spinner pendant création / upload → logo succès puis redirection */
+  const [publishPhase, setPublishPhase] = useState<'idle' | 'saving' | 'success'>('idle');
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
   const [cancelMessage, setCancelMessage] = useState<string | null>(null);
 
   // Paiement non mené à terme : supprimer l'annonce brouillon et afficher un message (une seule fois)
   const cancelHandledRef = useRef(false);
+
+  useEffect(() => {
+    if (publishPhase === 'idle') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [publishPhase]);
+
   useEffect(() => {
     if (authLoading || !user || cancelHandledRef.current) return;
     const cancel = searchParams.get('cancel');
@@ -630,12 +641,14 @@ if (modelOptions.length > 0) {
     e.preventDefault();
     setCguCgvError('');
     if (!acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour publier l\'annonce.');
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour publier l’annonce.',
+      );
       return;
     }
     if (!validateStep4()) return;
 
-    setLoading(true);
+    setPublishPhase('saving');
     setError('');
 
     try {
@@ -650,7 +663,7 @@ if (modelOptions.length > 0) {
       const priceNum = parseListingPriceInputToNumber(price);
       if (priceNum == null) {
         setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
-        setLoading(false);
+        setPublishPhase('idle');
         return;
       }
 
@@ -711,9 +724,12 @@ if (modelOptions.length > 0) {
         body: JSON.stringify({ userId: user!.uid, context: 'publication_annonce' }),
       });
 
+      setPublishPhase('success');
+      await new Promise((r) => setTimeout(r, 1600));
       router.push(fromVentes ? '/vendeur/ventes' : '/vendeur/annonces');
     } catch (err: unknown) {
       if (isSubscriptionLimitError(err)) {
+        setPublishPhase('idle');
         router.push('/vendeur/abonnement?limite=1');
         return;
       }
@@ -731,8 +747,7 @@ if (modelOptions.length > 0) {
           ? `Erreur lors de l'upload des photos. Vérifiez que le bucket "listings" existe et que les politiques Storage sont appliquées (voir supabase/storage-policies.sql). Détail : ${message}`
           : message
       );
-    } finally {
-      setLoading(false);
+      setPublishPhase('idle');
     }
   };
 
@@ -2209,7 +2224,7 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={publishPhase !== 'idle'}
                     style={{
                       flex: 1,
                       height: 50,
@@ -2219,11 +2234,11 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
                       fontWeight: 500,
                       border: 'none',
                       borderRadius: 980,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.7 : 1,
+                      cursor: publishPhase !== 'idle' ? 'not-allowed' : 'pointer',
+                      opacity: publishPhase !== 'idle' ? 0.7 : 1,
                     }}
                   >
-                    {loading ? 'Publication...' : "Publier l'annonce"}
+                    {publishPhase === 'saving' ? 'Publication…' : "Publier l'annonce"}
                   </button>
                 </div>
               </motion.form>
@@ -2231,6 +2246,106 @@ backgroundColor: genre.includes('homme') ? '#1d1d1f' : '#fff',
           </AnimatePresence>
         </div>
       </div>
+
+      {publishPhase !== 'idle' && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy={publishPhase === 'saving'}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10050,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+            WebkitBackdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <AnimatePresence mode="wait">
+            {publishPhase === 'saving' && (
+              <motion.div
+                key="publish-saving"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 32,
+                  maxWidth: 320,
+                  textAlign: 'center',
+                }}
+              >
+                <Loader2 size={44} strokeWidth={2} className="animate-spin" style={{ color: '#1d1d1f' }} aria-hidden />
+                <p
+                  style={{
+                    fontFamily: 'var(--font-playfair), Georgia, serif',
+                    fontSize: 20,
+                    fontWeight: 500,
+                    color: '#1d1d1f',
+                    margin: 0,
+                  }}
+                >
+                  Publication en cours
+                </p>
+                <p style={{ fontSize: 14, color: '#6e6e73', margin: 0, lineHeight: 1.5 }}>
+                  Enregistrement et envoi des photos…
+                </p>
+              </motion.div>
+            )}
+            {publishPhase === 'success' && (
+              <motion.div
+                key="publish-success"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.38, ease: [0.25, 0.1, 0.25, 1] }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 32,
+                  maxWidth: 340,
+                  textAlign: 'center',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- logo statique dans /public */}
+                <img src="/logo.png" alt="" style={{ height: 42, width: 'auto', display: 'block' }} />
+                <p
+                  style={{
+                    fontFamily: 'var(--font-playfair), Georgia, serif',
+                    fontSize: 22,
+                    fontWeight: 500,
+                    color: '#1d1d1f',
+                    margin: 0,
+                  }}
+                >
+                  Annonce enregistrée
+                </p>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    backgroundColor: '#ecfdf5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={26} strokeWidth={2.5} style={{ color: '#16a34a' }} aria-hidden />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

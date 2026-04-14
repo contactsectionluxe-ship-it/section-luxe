@@ -716,7 +716,9 @@ export default function EditListingPage() {
     setError('');
     setCguCgvError('');
     if (!acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour enregistrer les modifications.');
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour enregistrer les modifications.',
+      );
       return;
     }
     if (genre.length === 0) {
@@ -2286,7 +2288,7 @@ setMaterialSearchQuery('');
                 Retour
               </button>
               <button type="submit" disabled={saving} style={{ flex: 1, height: 50, backgroundColor: '#1d1d1f', color: '#fff', fontSize: 15, fontWeight: 500, border: 'none', borderRadius: 980, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
+                {saving ? 'Enregistrement...' : 'Enregistrer'}
               </button>
             </div>
                 </motion.div>

@@ -12,6 +12,7 @@ import {
   peekCatalogueScrollRestore,
   consumeCatalogueScrollRestore,
 } from '@/lib/annonceReturnUrl';
+import { setDocumentScrollY } from '@/lib/documentScroll';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
@@ -85,7 +86,7 @@ function HomePageInner() {
     try {
       const nav = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
       if (nav?.type === 'reload') {
-        window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+        setDocumentScrollY(0, 'auto');
       }
     } catch {
       /* ignore */
@@ -101,9 +102,7 @@ function HomePageInner() {
     if (y == null) return;
 
     const applyY = (behavior: ScrollBehavior) => {
-      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      const target = Math.min(y, maxY);
-      window.scrollTo({ top: target, left: 0, behavior });
+      setDocumentScrollY(y, behavior);
     };
 
     let cancelled = false;
@@ -687,6 +686,10 @@ function HomePageInner() {
                 <Link
                   key={listing.id}
                   href={listingAnnoncePath(listing)}
+                  onPointerDownCapture={(e) => {
+                    if (e.pointerType === 'mouse' && e.button !== 0) return;
+                    setAnnonceReturnUrlForNextNavigation(homeReturnHref);
+                  }}
                   onClick={() => setAnnonceReturnUrlForNextNavigation(homeReturnHref)}
                   style={{ display: 'block', textDecoration: 'none', color: 'inherit', minWidth: 0 }}
                 >

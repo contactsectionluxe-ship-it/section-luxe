@@ -1262,7 +1262,9 @@ export function ProposerVenteFormClient() {
     e.preventDefault();
     setCguCgvError('');
     if (!acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour envoyer votre proposition.');
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour envoyer votre proposition.',
+      );
       return;
     }
     if (!validateStep4()) return;

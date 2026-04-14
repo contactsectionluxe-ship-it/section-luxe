@@ -3,6 +3,8 @@
  * Stockage session (navigateur), même origine uniquement.
  */
 
+import { getDocumentScrollY } from '@/lib/documentScroll';
+
 export const ANNONCE_RETURN_URL_STORAGE_KEY = 'luxe-annonce-return-url';
 
 /** Position de scroll à restaurer sur le catalogue (même effet que le retour navigateur). */
@@ -63,7 +65,7 @@ export function setAnnonceReturnUrlForNextNavigation(url: string): void {
     const targetsCatalogue = normalized.startsWith('/catalogue');
     const targetsHome = normalized === '/' || normalized.startsWith('/?');
     if ((targetsCatalogue && onCatalogue) || (targetsHome && onHome)) {
-      const payload: CatalogueScrollPayload = { y: window.scrollY, href: normalized };
+      const payload: CatalogueScrollPayload = { y: getDocumentScrollY(), href: normalized };
       sessionStorage.setItem(CATALOGUE_SCROLL_RESTORE_KEY, JSON.stringify(payload));
     }
   } catch {

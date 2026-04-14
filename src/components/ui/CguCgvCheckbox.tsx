@@ -2,6 +2,16 @@
 
 import Link from 'next/link';
 
+const cguCgvLinkStyle: React.CSSProperties = {
+  color: 'inherit',
+  fontWeight: 'inherit',
+  textDecoration: 'underline',
+  /* Soulignement proche du texte, légèrement adouci */
+  textDecorationColor: 'rgba(110, 110, 115, 0.78)',
+  textDecorationThickness: '1px',
+  textUnderlineOffset: 2,
+};
+
 export interface CguCgvCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -50,35 +60,19 @@ export function CguCgvCheckbox({ checked, onChange, error, id = 'cgu-cgv' }: Cgu
           }}
         />
         <span>
-          J&apos;ai pris connaissance des{' '}
-          <Link
-            href="/cgu"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#6e6e73',
-              fontWeight: 500,
-              textDecoration: 'underline',
-              textUnderlineOffset: 1,
-            }}
-          >
-            Conditions Générales d&apos;Utilisation
+          J&apos;accepte les{' '}
+          <Link href="/cgu" target="_blank" rel="noopener noreferrer" style={cguCgvLinkStyle}>
+            conditions générales d&apos;utilisation
           </Link>
-          {' '}et des{' '}
-          <Link
-            href="/cgv"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              color: '#6e6e73',
-              fontWeight: 500,
-              textDecoration: 'underline',
-              textUnderlineOffset: 1,
-            }}
-          >
-            Conditions Générales de Vente
+          {', les '}
+          <Link href="/cgv" target="_blank" rel="noopener noreferrer" style={cguCgvLinkStyle}>
+            conditions générales de vente
           </Link>
-          {' '}et les accepte.
+          {' et la '}
+          <Link href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" style={cguCgvLinkStyle}>
+            politique de confidentialité
+          </Link>
+          .
         </span>
       </label>
       {error && (

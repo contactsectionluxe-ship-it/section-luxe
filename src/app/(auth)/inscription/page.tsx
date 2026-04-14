@@ -46,7 +46,9 @@ function RegisterForm() {
     setError('');
     setCguCgvError('');
     if (!acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour créer un compte.');
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour créer un compte.',
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -76,7 +78,7 @@ function RegisterForm() {
 
   return (
     <div className="app-shell-hpad" style={{ paddingTop: 'var(--header-height)', minHeight: '100vh', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingLeft: 24, paddingRight: 24, paddingBottom: 24, backgroundColor: '#fbfbfb' }}>
-      <div className="inscription-page-inner" style={{ width: '100%', maxWidth: 420, paddingTop: 30 }}>
+      <div className="inscription-page-inner" style={{ width: '100%', maxWidth: 480, paddingTop: 30, paddingBottom: 80 }}>
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), Georgia, serif', fontSize: 28, fontWeight: 500, marginBottom: 8, color: '#1d1d1f', letterSpacing: '-0.02em' }}>
             Créer un compte
@@ -84,7 +86,7 @@ function RegisterForm() {
           <p style={{ fontSize: 15, color: '#6e6e73' }}>Rejoignez Section Luxe</p>
         </div>
 
-        <div className="inscription-form-box" style={{ backgroundColor: '#fff', padding: 36, borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
+        <div className="inscription-form-box" style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           <form onSubmit={handleSubmit}>
             {error && (
               <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 14, marginBottom: 20, borderRadius: 12 }}>

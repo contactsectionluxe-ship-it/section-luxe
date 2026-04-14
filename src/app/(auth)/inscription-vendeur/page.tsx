@@ -16,6 +16,22 @@ import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHour
 import { profilVendeurAfterFieldGap } from '@/components/profile/profilVendeurFormStyles';
 import { pickApiErrorBodyMessage, toUserFacingErrorString } from '@/lib/user-facing-error';
 
+/** Trace d’acceptation CGU/CGV/politique : enregistrement côté serveur avec une seconde tentative si échec réseau. */
+async function postCguCgvAcceptance(userId: string, context: 'inscription_vendeur'): Promise<boolean> {
+  const body = JSON.stringify({ userId, context });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch('/api/cgu-cgv-acceptance', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+    if (res.ok) return true;
+    const text = await res.text().catch(() => '');
+    console.error('[inscription-vendeur] cgu-cgv-acceptance échec', res.status, text);
+  }
+  return false;
+}
+
 function FileUploadField({
   label,
   file,
@@ -301,17 +317,29 @@ function SellerRegisterContent() {
 
   const handleNextStep = () => {
     setError('');
-    if (validateStep1()) {
-      setStep(2);
+    setCguCgvError('');
+    if (!validateStep1()) return;
+    if (!acceptCguCgv) {
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour continuer.',
+      );
+      return;
     }
+    setStep(2);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    /* Aucun envoi tant que l’étape documents n’est pas affichée */
+    if (step !== 2) {
+      return;
+    }
     setError('');
     setCguCgvError('');
-    if (step === 2 && !acceptCguCgv) {
-      setCguCgvError('Veuillez accepter les CGU et les CGV pour soumettre votre demande.');
+    if (!acceptCguCgv) {
+      setCguCgvError(
+        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour soumettre votre demande.',
+      );
       return;
     }
     if (!idRectoType) {
@@ -394,11 +422,10 @@ function SellerRegisterContent() {
           kbisUrl,
           displayName: displayNameVal,
         });
-        await fetch('/api/cgu-cgv-acceptance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.uid, context: 'inscription_vendeur' }),
-        });
+        const traced = await postCguCgvAcceptance(user.uid, 'inscription_vendeur');
+        if (!traced) {
+          console.error('[inscription-vendeur] Trace d’acceptation des conditions non enregistrée (upgrade vendeur)');
+        }
         await refreshUser();
       } else {
         const seller = await signUpSeller(email, password, {
@@ -416,11 +443,10 @@ function SellerRegisterContent() {
           kbisUrl,
           displayName: displayNameVal,
         });
-        await fetch('/api/cgu-cgv-acceptance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: seller.uid, context: 'inscription_vendeur' }),
-        });
+        const traced = await postCguCgvAcceptance(seller.uid, 'inscription_vendeur');
+        if (!traced) {
+          console.error('[inscription-vendeur] Trace d’acceptation des conditions non enregistrée (nouveau vendeur)');
+        }
       }
 
       const formDataEmail = new FormData();
@@ -949,6 +975,16 @@ function SellerRegisterContent() {
                   </>
                 )}
 
+                <CguCgvCheckbox
+                  id="inscription-vendeur-cgu-cgv-step1"
+                  checked={acceptCguCgv}
+                  onChange={(v) => {
+                    setAcceptCguCgv(v);
+                    setCguCgvError('');
+                  }}
+                  error={cguCgvError}
+                />
+
                 <button
                   type="button"
                   onClick={handleNextStep}
@@ -975,6 +1011,23 @@ function SellerRegisterContent() {
                   <br />
                   <strong>Formats acceptés : JPEG, PNG, PDF. ({MAX_FILE_SIZE_MB} Mo max)</strong>
                 </div>
+
+                {cguCgvError ? (
+                  <div
+                    role="alert"
+                    style={{
+                      padding: 12,
+                      backgroundColor: '#fef2f2',
+                      color: '#dc2626',
+                      fontSize: 12,
+                      marginBottom: 16,
+                      borderRadius: 10,
+                      border: '1px solid #fecaca',
+                    }}
+                  >
+                    {cguCgvError}
+                  </div>
+                ) : null}
 
                 <FileUploadField
                   label="Extrait KBIS de moins de 3 mois"
@@ -1030,17 +1083,13 @@ function SellerRegisterContent() {
                   />
                 )}
 
-                <CguCgvCheckbox
-                  id="inscription-vendeur-cgu-cgv"
-                  checked={acceptCguCgv}
-                  onChange={(v) => { setAcceptCguCgv(v); setCguCgvError(''); }}
-                  error={cguCgvError}
-                />
-
                 <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
+                    onClick={() => {
+                      setStep(1);
+                      setCguCgvError('');
+                    }}
                     style={{
                       flex: 1,
                       height: 50,
@@ -1057,7 +1106,7 @@ function SellerRegisterContent() {
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={loading || !acceptCguCgv}
                     style={{
                       flex: 1,
                       height: 50,
@@ -1067,8 +1116,8 @@ function SellerRegisterContent() {
                       fontWeight: 500,
                       border: 'none',
                       borderRadius: 980,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.7 : 1,
+                      cursor: loading || !acceptCguCgv ? 'not-allowed' : 'pointer',
+                      opacity: loading || !acceptCguCgv ? 0.7 : 1,
                     }}
                   >
                     {loading ? 'Envoi en cours...' : 'Soumettre ma demande'}
