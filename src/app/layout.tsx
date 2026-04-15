@@ -21,7 +21,7 @@ const playfair = Playfair_Display({
   display: 'swap',
 });
 
-const SITE_TITLE = 'Section Luxe - Trouver le meilleur du luxe - Annonces Luxe';
+const SITE_TITLE = 'Section Luxe | La vitrine des professionnels du luxe';
 const SITE_DESCRIPTION =
   'Section Luxe référence les pièces des vendeurs professionnels du luxe. Trouvez, Essayez, Choisissez la meilleure offre parmi nos annonces luxe...';
 
