@@ -15,7 +15,7 @@ import { Listing } from '@/types';
 import { CATEGORIES } from '@/lib/utils';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
-import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
+import { listingFeaturedBrandTitleParts } from '@/lib/listingDisplayTitle';
 
 function formatPrice(price: number): string {
   return new Intl.NumberFormat('fr-FR', {
@@ -435,24 +435,93 @@ export default function FavoritesPage() {
                       <div className="listing-card-photo-fade" aria-hidden />
                     </div>
                     <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
-                        <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
-                          <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {listing.sellerName}
-                          </span>
-                          <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="homeFeatured" />
+                      <p
+                        className="listing-grid-vendeur"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 400,
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.5,
+                          color: '#86868b',
+                          margin: 0,
+                          marginBottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
+                        <span
+                          className="listing-grid-vendeur-nom-badge-row"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}
+                        >
+                          {(listing.brand || '').trim() ? (
+                            <span
+                              className="listing-grid-vendeur-nom home-featured-listing-brand"
+                              title={(listing.brand || '').trim()}
+                              style={{
+                                minWidth: 0,
+                                flex: '0 1 auto',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: '#1d1d1f',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {(listing.brand || '').trim()}
+                            </span>
+                          ) : null}
                         </span>
                         {listing.sellerPostcode && (
-                          <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
+                          <span
+                            className="listing-grid-vendeur-cp"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              fontSize: 12,
+                              lineHeight: 1,
+                              fontWeight: 400,
+                              textTransform: 'uppercase',
+                              letterSpacing: 0.5,
+                              color: '#86868b',
+                              flexShrink: 0,
+                            }}
+                          >
                             <MapPin size={14} strokeWidth={2} style={{ flexShrink: 0, transform: 'translateY(-0.6px)' }} />
                             {listing.sellerPostcode}
                           </span>
                         )}
                       </p>
-                      <h3 className="listing-grid-title" title={listing.title} style={{ fontSize: 16, fontWeight: 500, color: '#1d1d1f', margin: 0, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.3 }}>
-                        {listing.title}
-                      </h3>
-                      <ListingCaracteristiques listing={listing} variant="grid" className="catalogue-listing-caracteristiques" />
+                      {(() => {
+                        const { brand, rest } = listingFeaturedBrandTitleParts(listing);
+                        const lineTitle = [brand, rest].filter(Boolean).join(' — ') || rest;
+                        return (
+                          <h3
+                            className="listing-grid-title home-featured-listing-title"
+                            title={lineTitle}
+                            style={{
+                              fontSize: 16,
+                              fontWeight: 500,
+                              color: '#1d1d1f',
+                              margin: 0,
+                              marginTop: -3,
+                              width: '100%',
+                              minWidth: 0,
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              lineHeight: 1.3,
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {rest}
+                          </h3>
+                        );
+                      })()}
+                      <ListingCaracteristiques listing={listing} variant="homeFeatured" className="catalogue-listing-caracteristiques" />
                       <div className="listing-grid-price" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: -5, minHeight: 24 }}>
                         <span style={{ fontSize: 18, fontWeight: 600, color: '#1d1d1f', lineHeight: 1.3 }}>{formatPrice(listing.price)}</span>
                       </div>

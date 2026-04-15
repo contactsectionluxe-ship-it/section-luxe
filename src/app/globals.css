@@ -1311,6 +1311,21 @@ button.propositions-desc-toggle:focus-visible {
     word-break: break-word !important;
     hyphens: auto !important;
   }
+  /* « À la une » : une seule ligne + … (le .listing-grid-title ci-dessus est 2 lignes pour le catalogue) */
+  .home-section-featured .home-featured-grid .home-featured-listing-title,
+  .catalogue-results-grid .home-featured-listing-title,
+  .favoris-list-grid .home-featured-listing-title {
+    display: block !important;
+    white-space: nowrap !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: unset !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    overflow-wrap: normal !important;
+    word-break: normal !important;
+    hyphens: none !important;
+    margin-top: -3px !important;
+  }
   .listing-grid-vendeur {
     flex-wrap: nowrap !important;
     font-size: 11px !important;
@@ -1327,6 +1342,11 @@ button.propositions-desc-toggle:focus-visible {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+  }
+  .home-section-featured .home-featured-grid .home-featured-listing-brand,
+  .catalogue-results-grid .home-featured-listing-brand,
+  .favoris-list-grid .home-featured-listing-brand {
+    font-weight: 500 !important;
   }
   .listing-grid-vendeur-cp {
     font-size: 11px !important;

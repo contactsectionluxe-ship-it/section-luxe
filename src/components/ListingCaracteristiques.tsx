@@ -43,13 +43,15 @@ export function ListingCaracteristiques({
     const arr: { key: string; node: React.ReactNode }[] = [];
     const isGrid = variant === 'grid' || variant === 'homeFeatured';
     const isLine = variant === 'line' || variant === 'lineCatalogue';
+    /** Grille « À la une » : même gris que le code postal (#86868b). */
+    const iconTint = variant === 'homeFeatured' ? '#86868b' : iconColor;
 
     if (!isGrid && !isLine && listing.category) {
       arr.push({
         key: 'category',
         node: (
           <>
-            <Tag size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Tag size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category}
           </>
         ),
@@ -64,7 +66,7 @@ export function ListingCaracteristiques({
         key: 'size',
         node: (
           <>
-            <Ruler size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Ruler size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {dimText}
           </>
         ),
@@ -74,7 +76,7 @@ export function ListingCaracteristiques({
         key: 'size',
         node: (
           <>
-            <Ruler size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Ruler size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {listing.category === 'chaussures' ? (
               <>{listing.size}&nbsp;EU</>
             ) : listing.category === 'vetements' && listing.size != null && CLOTHING_SIZES.includes(listing.size as (typeof CLOTHING_SIZES)[number]) ? (
@@ -91,7 +93,7 @@ export function ListingCaracteristiques({
         key: 'year',
         node: (
           <>
-            <Calendar size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Calendar size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {listing.year}
           </>
         ),
@@ -102,7 +104,7 @@ export function ListingCaracteristiques({
         key: 'condition',
         node: (
           <>
-            <CheckCircle size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <CheckCircle size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {CONDITIONS.find((c) => c.value === listing.condition)?.label ?? listing.condition}
           </>
         ),
@@ -113,7 +115,7 @@ export function ListingCaracteristiques({
         key: 'color',
         node: (
           <>
-            <Palette size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Palette size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {getColorLabel(listing.color)}
           </>
         ),
@@ -124,7 +126,7 @@ export function ListingCaracteristiques({
         key: 'material',
         node: (
           <>
-            <Layers size={iconSize} color={iconColor} style={{ flexShrink: 0 }} />
+            <Layers size={iconSize} color={iconTint} style={{ flexShrink: 0 }} />
             {MATERIALS.find((m) => m.value === listing.material)?.label ?? listing.material}
           </>
         ),
@@ -219,7 +221,7 @@ export function ListingCaracteristiques({
   /** 12,5px / 1,33 : uniquement `homeFeatured` (grille « À la une », Propositions). `grid` favoris = 13px. */
   const listingTextStyle: CSSProperties =
     variant === 'homeFeatured'
-      ? LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE
+      ? { ...LISTING_CARACTERISTIQUES_COMPACT_TEXT_STYLE, color: '#86868b' }
       : { fontSize: 13, color: '#6e6e73', lineHeight: 1.35 };
 
   return (

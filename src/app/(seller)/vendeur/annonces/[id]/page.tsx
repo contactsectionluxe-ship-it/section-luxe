@@ -481,7 +481,8 @@ export default function EditListingPage() {
         } else {
           setTitleSuffix(data.title || '');
         }
-        titleManuallyEditedRef.current = false;
+        /** Conserver le titre enregistré : sinon le useEffect « suggestion type/modèle » l’écrase au prochain rendu. */
+        titleManuallyEditedRef.current = true;
         setHeightCm(data.heightCm != null ? String(data.heightCm) : '');
         setWidthCm(
           data.widthCm != null ? String(data.widthCm)

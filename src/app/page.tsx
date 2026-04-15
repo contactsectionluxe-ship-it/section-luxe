@@ -12,9 +12,9 @@ import { setDocumentScrollY } from '@/lib/documentScroll';
 import { Listing } from '@/types';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
 import { ListingPhoto } from '@/components/ListingPhoto';
-import { SellerVerifiedSubscriptionBadge } from '@/components/SellerVerifiedSubscriptionBadge';
 import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
 import { HeroNumberedSteps } from '@/components/HeroNumberedSteps';
+import { listingFeaturedBrandTitleParts } from '@/lib/listingDisplayTitle';
 
 const categories = [
   { name: 'Sacs', href: '/catalogue?category=sacs', image: '/sac-categorie.png' },
@@ -612,7 +612,7 @@ function HomePageInner() {
                       <span className="catalogue-skeleton" style={{ display: 'block', height: 12, width: '50%', borderRadius: 4 }} />
                       <span className="catalogue-skeleton" style={{ display: 'block', height: 12, width: 60, flexShrink: 0, borderRadius: 4 }} />
                     </p>
-                    <div className="catalogue-skeleton" style={{ height: 16, width: '92%', borderRadius: 4 }} />
+                    <div className="catalogue-skeleton" style={{ height: 16, width: '92%', borderRadius: 4, marginTop: -3 }} />
                     <div style={{ display: 'flex', gap: '11px 15px', flexWrap: 'wrap', marginBottom: 6 }}>
                       <div className="catalogue-skeleton" style={{ height: 13, width: 60, borderRadius: 4 }} />
                       <div className="catalogue-skeleton" style={{ height: 13, width: 70, borderRadius: 4 }} />
@@ -663,10 +663,41 @@ function HomePageInner() {
                       <div className="listing-card-photo-fade" aria-hidden />
                     </div>
                     <div style={{ padding: '14px 14px 10px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, backgroundColor: '#fff' }}>
-                      <p className="listing-grid-vendeur" style={{ fontSize: 12, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', margin: 0, marginBottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, minWidth: 0 }}>
+                      <p
+                        className="listing-grid-vendeur"
+                        style={{
+                          fontSize: 12,
+                          fontWeight: 400,
+                          textTransform: 'uppercase',
+                          letterSpacing: 0.5,
+                          color: '#86868b',
+                          margin: 0,
+                          marginBottom: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
                         <span className="listing-grid-vendeur-nom-badge-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, flex: 1, gap: '0.2em' }}>
-                          <span className="listing-grid-vendeur-nom" title={listing.sellerName} style={{ minWidth: 0, flex: '0 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listing.sellerName}</span>
-                          <SellerVerifiedSubscriptionBadge tier={listing.sellerSubscriptionTier ?? 'start'} variant="homeFeatured" />
+                          {(listing.brand || '').trim() ? (
+                            <span
+                              className="listing-grid-vendeur-nom home-featured-listing-brand"
+                              title={(listing.brand || '').trim()}
+                              style={{
+                                minWidth: 0,
+                                flex: '0 1 auto',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: '#1d1d1f',
+                                fontWeight: 500,
+                              }}
+                            >
+                              {(listing.brand || '').trim()}
+                            </span>
+                          ) : null}
                         </span>
                         {listing.sellerPostcode && (
                           <span className="listing-grid-vendeur-cp" style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, lineHeight: 1, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.5, color: '#86868b', flexShrink: 0 }}>
@@ -676,25 +707,28 @@ function HomePageInner() {
                         )}
                       </p>
                       {(() => {
-                        const lineText = listing.title || '';
+                        const { brand, rest } = listingFeaturedBrandTitleParts(listing);
+                        const lineTitle = [brand, rest].filter(Boolean).join(' — ') || rest;
                         return (
                           <h3
-                            className="listing-grid-title"
-                            title={lineText}
+                            className="listing-grid-title home-featured-listing-title"
+                            title={lineTitle}
                             style={{
                               fontSize: 16,
                               fontWeight: 500,
                               color: '#1d1d1f',
                               margin: 0,
+                              marginTop: -3,
+                              width: '100%',
                               minWidth: 0,
+                              maxWidth: '100%',
                               overflow: 'hidden',
                               lineHeight: 1.3,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
+                              whiteSpace: 'nowrap',
+                              textOverflow: 'ellipsis',
                             }}
                           >
-                            {lineText}
+                            {rest}
                           </h3>
                         );
                       })()}
