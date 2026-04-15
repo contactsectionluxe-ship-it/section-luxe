@@ -19,7 +19,7 @@ import { sellerCataloguePath } from '@/lib/sellerCatalogueUrl';
 import { getSellerData } from '@/lib/supabase/auth';
 import { Listing, Seller } from '@/types';
 import { formatPrice, formatDate, CATEGORIES, getSellerAvatarUrl } from '@/lib/utils';
-import { CONDITIONS, getColorLabel, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel } from '@/lib/constants';
+import { CONDITIONS, getColorLabel, MATERIALS, CLOTHING_SIZES, getArticleTypeLabel, articleTypeBaseForCatalogueFilter } from '@/lib/constants';
 import { getDealLevel, getBarPositionFromDeal, DEAL_MARKET_BAR_SEGMENT_COLORS } from '@/lib/deal';
 import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { ListingCaracteristiques } from '@/components/ListingCaracteristiques';
@@ -494,7 +494,9 @@ export default function AnnonceListingPageClient() {
         const similar = await getListings({
           category: listingData.category,
           brand: listingData.brand ?? undefined,
-          articleTypes: listingData.articleType ? [listingData.articleType] : undefined,
+          articleTypes: listingData.articleType
+            ? [articleTypeBaseForCatalogueFilter(listingData.articleType) ?? listingData.articleType]
+            : undefined,
           condition: listingData.condition ?? undefined,
           model: listingData.model ?? undefined,
           limitCount: 150,
@@ -942,7 +944,7 @@ export default function AnnonceListingPageClient() {
                 {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
                   const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
                   return typeLabel ? (
-                    <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
+                    <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(articleTypeBaseForCatalogueFilter(listing.articleType) ?? listing.articleType)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>
                       {typeLabel}
                     </Link>
                   ) : null;
@@ -1557,7 +1559,7 @@ export default function AnnonceListingPageClient() {
                   {listing.articleType && ['vetements', 'sacs', 'bijoux', 'chaussures', 'accessoires'].includes(listing.category || '') && (() => {
                     const typeLabel = getArticleTypeLabel(listing.category!, listing.genre ?? ['femme', 'homme'], listing.articleType);
                     return typeLabel ? (
-                      <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{typeLabel}</Link>
+                      <Link href={`/catalogue?category=${encodeURIComponent(listing.category!)}&articleTypes=${encodeURIComponent(articleTypeBaseForCatalogueFilter(listing.articleType) ?? listing.articleType!)}`} style={{ display: 'inline-block', padding: '6px 12px', backgroundColor: '#f5f5f5', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none', borderRadius: 4 }}>{typeLabel}</Link>
                     ) : null;
                   })()}
                   {listing.brand && (

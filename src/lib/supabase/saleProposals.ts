@@ -1,4 +1,5 @@
 import type { Listing } from '@/types';
+import { getValidAccessTokenForFetch } from '@/lib/supabase/auth';
 import { supabase, isSupabaseConfigured } from './client';
 import type { SaleProposalLocationEntry } from '@/lib/saleProposalLocations';
 import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
@@ -126,10 +127,8 @@ async function replaceSaleProposalInvitesViaApi(proposalId: string, sellerIds: s
   if (!isSupabaseConfigured || !supabase) {
     throw new Error('Supabase non configuré');
   }
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  if (!session?.access_token) {
+  const accessToken = await getValidAccessTokenForFetch();
+  if (!accessToken) {
     throw new Error('Session expirée. Reconnectez-vous.');
   }
   const base =
@@ -142,7 +141,7 @@ async function replaceSaleProposalInvitesViaApi(proposalId: string, sellerIds: s
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ proposalId, sellerIds: uniqueSellerIds }),
   });

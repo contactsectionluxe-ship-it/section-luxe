@@ -796,7 +796,7 @@ export default function EditListingPage() {
         year: year ? parseInt(year, 10) : null,
         packaging: CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value).length ? CONTENU_INCLUS_OPTIONS.filter((o) => contenuInclus[o.value] === true).map((o) => o.value) : null,
         size: category === 'montres' ? (widthCm ? String(Math.round(parseFloat(String(widthCm).replace(',', '.')) * 10)) : null) : (category === 'chaussures' || category === 'vetements') ? (size || sizeSearchQuery.trim() || null) : null,
-        articleType: hasTypeCategory && articleType ? (articleType.includes('::') ? articleType.split('::')[0] : articleType) : null,
+        articleType: hasTypeCategory && articleType ? articleType : null,
       });
 
       setError('');
@@ -1074,7 +1074,8 @@ setMaterialSearchQuery('');
                 {(() => {
                   const articleTypeOptions = category === 'vetements' ? getArticleTypeOptionsForForm(getVetementsTypesForGenre(genre)) : category === 'sacs' ? getArticleTypeOptionsForForm(getSacsTypesForGenre(genre)) : category === 'bijoux' ? getArticleTypeOptionsForForm(getBijouxTypesForGenre(genre)) : category === 'chaussures' ? getArticleTypeOptionsForForm(getChaussuresTypesForGenre(genre)) : getArticleTypeOptionsForForm(getAccessoiresTypesForGenre(genre));
                   const articleTypeDisplayLabel = articleType
-                    ? (articleType.includes('::') ? articleType.split('::')[1] : articleTypeOptions.find((o) => o.value === articleType)?.label ?? articleType)
+                    ? (articleTypeOptions.find((o) => o.value === articleType)?.label ??
+                        (articleType.includes('::') ? articleType.split('::')[1] : articleType))
                     : '';
                   const isOptionSelected = (opt: { value: string; label: string }) => articleType === opt.value;
                   return (

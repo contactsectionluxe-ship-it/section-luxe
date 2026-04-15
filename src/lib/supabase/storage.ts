@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './client';
+import { getValidAccessTokenForFetch } from '@/lib/supabase/auth';
 import { pickApiErrorBodyMessage } from '@/lib/user-facing-error';
 
 function checkSupabase() {
@@ -88,8 +89,8 @@ export async function uploadListingPhotos(
   }
   if (files.length === 0) return [];
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
+  const accessToken = await getValidAccessTokenForFetch();
+  if (accessToken) {
     const base = typeof window !== 'undefined' ? window.location.origin : '';
     const urls: string[] = [];
     // Une requête par photo pour éviter les erreurs de parsing FormData (multipart) côté serveur
@@ -106,7 +107,7 @@ export async function uploadListingPhotos(
       formData.append('photos', new File([buffer], safeName, { type: safeType }));
       const res = await fetch(`${base}/api/upload-listing-photos`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
       if (!res.ok) {
@@ -144,8 +145,8 @@ export async function uploadSaleProposalPhotos(
   }
   if (files.length === 0) return [];
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.access_token) {
+  const accessToken = await getValidAccessTokenForFetch();
+  if (accessToken) {
     const base = typeof window !== 'undefined' ? window.location.origin : '';
     const urls: string[] = [];
     for (let i = 0; i < files.length; i++) {
@@ -161,7 +162,7 @@ export async function uploadSaleProposalPhotos(
       formData.append('photos', new File([buffer], safeName, { type: safeType }));
       const res = await fetch(`${base}/api/upload-sale-proposal-photos`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
       if (!res.ok) {

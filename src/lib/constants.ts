@@ -134,7 +134,7 @@ export function getColorLabel(value: string | null | undefined): string {
 export const VETEMENTS_TYPES_HOMME: { value: string; label: string }[] = [
   { value: 'tshirt_polo', label: 'T-shirts & Polos' },
   { value: 'chemise', label: 'Chemises' },
-  { value: 'maille_sweatshirt', label: 'Mailles & Sweatshirts' },
+  { value: 'maille_sweatshirt', label: 'Pulls & Sweats' },
   { value: 'jean', label: 'Jeans' },
   { value: 'pantalon_short', label: 'Pantalons & Shorts' },
   { value: 'veste', label: 'Vestes' },
@@ -145,7 +145,7 @@ export const VETEMENTS_TYPES_HOMME: { value: string; label: string }[] = [
 /** Types d'article vêtements Femme (catalogue = pluriel). */
 export const VETEMENTS_TYPES_FEMME: { value: string; label: string }[] = [
   { value: 'chemise_blouse', label: 'Chemises & Blouses' },
-  { value: 'maille_sweatshirt', label: 'Mailles & Sweatshirts' },
+  { value: 'maille_sweatshirt', label: 'Pulls & Sweats' },
   { value: 'top_tshirt', label: 'Tops & T-shirts' },
   { value: 'robe', label: 'Robes' },
   { value: 'pantalon_jean', label: 'Pantalons & Jeans' },
@@ -367,7 +367,7 @@ export const ARTICLE_TYPE_LABEL_SINGULAR: Record<string, string> = {
   // Vêtements
   tshirt_polo: 'T-shirt & Polo',
   chemise: 'Chemise',
-  maille_sweatshirt: 'Maille & Sweatshirt',
+  maille_sweatshirt: 'Pull & Sweat',
   jean: 'Jean',
   pantalon_short: 'Pantalon & Short',
   veste: 'Veste',
@@ -456,6 +456,8 @@ function labelHasAmpersand(label: string): boolean {
 const ARTICLE_TYPE_FORM_SPLIT_VALUE: Record<string, Record<string, string>> = {
   bottes: { 'Bottes': 'bottes', 'Bottines': 'bottines_talons' },
   derbies_richelieu: { 'Richelieus': 'derbies_richelieu::Richelieus', 'Derbies': 'derbies_richelieu::Derbies' },
+  /** Libellés affichés Pull / Sweat ; valeurs BDD inchangées (::Maille, ::Sweatshirt). */
+  maille_sweatshirt: { Pull: 'maille_sweatshirt::Maille', Sweat: 'maille_sweatshirt::Sweatshirt' },
 };
 
 export function getArticleTypeOptionsForForm(options: { value: string; label: string }[]): { value: string; label: string }[] {
@@ -656,6 +658,13 @@ export function getArticleTypeLabel(category: string, genre: ('homme' | 'femme')
     : [];
   const found = types.find((t) => t.value === articleTypeValue);
   if (found) return found.label;
+  if (articleTypeValue.includes('::')) {
+    const base = (articleTypeValue.split('::')[0] || '').trim();
+    if (base) {
+      const parent = types.find((t) => t.value === base);
+      if (parent) return parent.label;
+    }
+  }
   if (category === 'chaussures') {
     const legacy: Record<string, string> = { mules_talons: 'Mules', sandales_talons: 'Sandales', bottines_talons: 'Bottines', sandales: 'Sandales' };
     if (legacy[articleTypeValue]) return legacy[articleTypeValue];
@@ -704,11 +713,45 @@ export function expandArticleTypesForFilter(articleTypes: string[]): string[] {
   return [...out];
 }
 
+/**
+ * Valeurs possibles d'article_type en BDD pour un token de filtre (souvent la base seule, ex. maille_sweatshirt).
+ * Les annonces peuvent stocker une valeur composite (ex. maille_sweatshirt::Sweatshirt) : le filtre .in() doit les inclure.
+ */
+export function expandArticleTypeTokenForDbInFilter(t: string): string[] {
+  const trimmed = String(t).trim();
+  if (!trimmed) return [];
+  if (trimmed.includes('::')) return [trimmed];
+  const singular = (ARTICLE_TYPE_LABEL_SINGULAR as Record<string, string | undefined>)[trimmed];
+  if (!singular || !labelHasAmpersand(singular)) return [trimmed];
+  const out = new Set<string>([trimmed]);
+  for (const part of splitLabelParts(singular)) {
+    if (trimmed === 'top_tshirt' && part === 'T-shirt') continue;
+    if (trimmed === 'tailleur_costume' && part === 'Costume') continue;
+    const splitVals = ARTICLE_TYPE_FORM_SPLIT_VALUE[trimmed];
+    const formValue = splitVals?.[part] ?? `${trimmed}::${part}`;
+    out.add(formValue);
+  }
+  return [...out];
+}
+
+export function expandArticleTypesForDbInQuery(types: string[]): string[] {
+  return [...new Set(types.flatMap(expandArticleTypeTokenForDbInFilter))];
+}
+
+/** Pour liens / filtres catalogue « famille » : la base (ex. maille_sweatshirt) lorsque l’annonce stocke une valeur composite. */
+export function articleTypeBaseForCatalogueFilter(articleType: string | null | undefined): string | null {
+  if (!articleType?.trim()) return null;
+  const t = articleType.trim();
+  const i = t.indexOf('::');
+  if (i === -1) return t;
+  return t.slice(0, i).trim() || null;
+}
+
 /** Mots-clés pour filtrer les modèles vêtements selon le type de produit (dépôt annonce). Chaque type a des mots-clés exclusifs : aucun mot-clé ne doit être partagé entre deux types (évite qu’un même modèle soit lié à plusieurs types). */
 export const VETEMENTS_ARTICLE_TYPE_MODEL_KEYWORDS: Record<string, string[]> = {
   tshirt_polo: ['T-shirt', 'Polo'],
   chemise: ['Chemise'],
-  maille_sweatshirt: ['Maille', 'Sweat', 'Pull', 'Cardigan'],
+  maille_sweatshirt: ['Pull', 'Sweat', 'Cardigan'],
   jean: ['Jean'],
   pantalon_short: ['Pantalon', 'Short'],
   veste: ['Veste'],

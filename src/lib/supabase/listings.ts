@@ -7,6 +7,7 @@ import {
   SubscriptionLimitError,
   type SubscriptionTier,
 } from '@/lib/subscription';
+import { expandArticleTypeTokenForDbInFilter, expandArticleTypesForDbInQuery } from '@/lib/constants';
 
 function checkSupabase() {
   if (!isSupabaseConfigured || !supabase) {
@@ -452,18 +453,25 @@ function applyListingSearchFiltersToQuery(query: any, options?: ListingSearchFil
       const includeMontres = catsNormalized.includes('montres');
       const hasPoloOrTshirt = articleTypeList.some((t) => t === 'polo' || t === 'tshirt');
       if (includeMontres) {
-        const inPart = `article_type.in.(${articleTypeList.join(',')})`;
+        const expandedMontres = expandArticleTypesForDbInQuery(articleTypeList);
+        const inPart = `article_type.in.(${expandedMontres.join(',')})`;
         query = query.or(`${inPart},category.eq.montres`);
       } else if (hasPoloOrTshirt) {
         const orParts: string[] = [];
         const poloPattern = '%polo%';
         for (const t of articleTypeList) {
           if (t === 'polo') {
+            orParts.push(`and(article_type.eq.tshirt_polo::Polo,model.ilike.${poloPattern})`);
             orParts.push(`and(article_type.eq.tshirt_polo,model.ilike.${poloPattern})`);
           } else if (t === 'tshirt') {
+            orParts.push(
+              `and(article_type.eq.tshirt_polo::T-shirt,or(model.is.null,model.not.ilike.${poloPattern}))`,
+            );
             orParts.push(`and(article_type.eq.tshirt_polo,or(model.is.null,model.not.ilike.${poloPattern}))`);
           } else {
-            orParts.push(`article_type.eq.${t}`);
+            for (const v of expandArticleTypeTokenForDbInFilter(t)) {
+              orParts.push(`article_type.eq.${v}`);
+            }
           }
         }
         if (orParts.length > 0) query = query.or(orParts.join(','));
@@ -498,6 +506,7 @@ function applyListingSearchFiltersToQuery(query: any, options?: ListingSearchFil
         if (articleTypeList.includes('echarpe_foulard_carre_soie')) {
           articleTypeList = [...new Set([...articleTypeList.filter((t) => t !== 'echarpe_foulard_carre_soie'), 'echarpe', 'foulard_carre_soie'])];
         }
+        articleTypeList = expandArticleTypesForDbInQuery(articleTypeList);
         query = query.in('article_type', articleTypeList);
       }
     }
@@ -598,7 +607,7 @@ export async function getDistinctSizesForCategoryAndArticleTypes(
 ): Promise<string[]> {
   if (!isSupabaseConfigured || !supabase || !category || !articleTypes?.length) return [];
   const cat = (category || '').toLowerCase();
-  const types = articleTypes.map((t) => String(t).trim()).filter(Boolean);
+  const types = expandArticleTypesForDbInQuery(articleTypes.map((t) => String(t).trim()).filter(Boolean));
   if (types.length === 0) return [];
   const { data, error } = await supabase
     .from('listings')

@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useDropzone, type FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Check, Euro, Info, Trash2, Upload } from 'lucide-react';
+import { ArrowLeft, Check, Euro, Info, Loader2, Trash2, Upload } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadSaleProposalPhotos } from '@/lib/supabase/storage';
 import {
@@ -189,7 +189,7 @@ function maxSaleProposalPhotoIndexFromUrls(urls: string[]): number {
 
 /**
  * Réaligne la valeur BDD sur la valeur attendue par les listes du formulaire.
- * Quand plusieurs options partagent la même clé BDD (ex. maille_sweatshirt::Mailles vs ::Sweatshirts),
+ * Quand plusieurs options partagent la même clé BDD (ex. maille_sweatshirt::Maille vs ::Sweatshirt),
  * le texte modèle/titre aide à retrouver le bon sous-type ; sinon on enregistre désormais la valeur complète avec :: en BDD.
  */
 function articleTypeDbToFormValue(
@@ -236,7 +236,9 @@ function articleTypeDbToFormValue(
     if (hit) return hit.value;
   }
   if (mailleHint && !sweatHint) {
-    const hit = composites.find((c) => /maille/i.test(c.value) || /maille/i.test(c.label));
+    const hit = composites.find(
+      (c) => /maille|pull/i.test(c.value) || /maille|pull/i.test(c.label)
+    );
     if (hit) return hit.value;
   }
   return composites[0].value;
@@ -264,11 +266,14 @@ export function ProposerVenteFormClient() {
   const { user, isSeller, loading: authLoading } = useAuth();
   const [step, setStep] = useState(1);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  /** idle → overlay plein écran pendant envoi / upload → succès puis redirection (aligné sur Déposer une annonce). */
+  const [submitPhase, setSubmitPhase] = useState<'idle' | 'saving' | 'success'>('idle');
   const [acceptCguCgv, setAcceptCguCgv] = useState(false);
   const [cguCgvError, setCguCgvError] = useState('');
   /** Proposition existante chargée via ?modifier= (mise à jour au lieu de création). */
   const [editingProposalId, setEditingProposalId] = useState<string | null>(null);
+  /** Conservé pour le libellé de l’overlay succès après reset de `editingProposalId`. */
+  const submitSuccessWasEditingRef = useRef(false);
   const [selectedLocations, setSelectedLocations] = useState<SaleProposalLocationEntry[]>([]);
   const [radiusKm, setRadiusKm] = useState(0);
   const [buyerLatLon, setBuyerLatLon] = useState<{ lat: number; lon: number } | null>(null);
@@ -361,6 +366,15 @@ export function ProposerVenteFormClient() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [step]);
+
+  useEffect(() => {
+    if (submitPhase === 'idle') return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [submitPhase]);
 
   // Restaurer le brouillon complet au chargement (sessionStorage : survit au changement d'onglet/fenêtre)
   useEffect(() => {
@@ -1192,7 +1206,7 @@ export function ProposerVenteFormClient() {
   const validateStep4 = () => {
     const priceNum = parseListingPriceInputToNumber(price);
     if (priceNum == null) {
-      setError('Indiquez un prix souhaité en euros entiers, sans centimes (ex. 5000)');
+      setError('Indiquez un prix souhaité');
       return false;
     }
     if (radiusKm > 0) {
@@ -1270,7 +1284,7 @@ export function ProposerVenteFormClient() {
     if (!validateStep4()) return;
     if (!validateStep5()) return;
 
-    setLoading(true);
+    setSubmitPhase('saving');
     setError('');
 
     try {
@@ -1284,8 +1298,8 @@ export function ProposerVenteFormClient() {
       const finalTitle = brandToSave ? `${brandToSave} - ${(titleSuffix.trim() || suggestedSuffix).trim()}` : (titleSuffix.trim() || suggestedSuffix).trim();
       const priceNum = parseListingPriceInputToNumber(price);
       if (priceNum == null) {
-        setError('Indiquez un prix en euros entiers, sans centimes (ex. 5000)');
-        setLoading(false);
+        setError('Indiquez un prix souhaité');
+        setSubmitPhase('idle');
         return;
       }
 
@@ -1388,8 +1402,11 @@ export function ProposerVenteFormClient() {
         body: JSON.stringify({ userId: user!.uid, context: 'proposition_vente' }),
       });
 
+      submitSuccessWasEditingRef.current = !!editingProposalId;
       setEditingProposalId(null);
       inviteSellerIdsFromLoadedProposalRef.current = [];
+      setSubmitPhase('success');
+      await new Promise((r) => setTimeout(r, 1600));
       router.push('/propositions');
     } catch (err: unknown) {
       const message =
@@ -1409,8 +1426,7 @@ export function ProposerVenteFormClient() {
             ? `Erreur lors de l'upload des photos. Détail : ${message}`
             : message
       );
-    } finally {
-      setLoading(false);
+      setSubmitPhase('idle');
     }
   };
 
@@ -3140,7 +3156,7 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
                   </button>
                   <button
                     type="submit"
-                    disabled={loading}
+                    disabled={submitPhase !== 'idle'}
                     style={{
                       flex: 1,
                       height: 50,
@@ -3150,11 +3166,15 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
                       fontWeight: 500,
                       border: 'none',
                       borderRadius: 980,
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      opacity: loading ? 0.7 : 1,
+                      cursor: submitPhase !== 'idle' ? 'not-allowed' : 'pointer',
+                      opacity: submitPhase !== 'idle' ? 0.7 : 1,
                     }}
                   >
-                    {loading ? 'Envoi…' : editingProposalId ? 'Enregistrer' : 'Envoyer'}
+                    {submitPhase === 'saving'
+                      ? 'Publication…'
+                      : editingProposalId
+                        ? 'Enregistrer'
+                        : 'Envoyer'}
                   </button>
                 </div>
               </motion.form>
@@ -3162,6 +3182,106 @@ Les données que vous renseignez dans ce formulaire sont traitées par Section L
           </AnimatePresence>
         </div>
       </div>
+
+      {submitPhase !== 'idle' && (
+        <div
+          role="status"
+          aria-live="polite"
+          aria-busy={submitPhase === 'saving'}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10050,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(255, 255, 255, 0.94)',
+            WebkitBackdropFilter: 'blur(8px)',
+            backdropFilter: 'blur(8px)',
+          }}
+        >
+          <AnimatePresence mode="wait">
+            {submitPhase === 'saving' && (
+              <motion.div
+                key="submit-saving"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.22 }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 32,
+                  maxWidth: 320,
+                  textAlign: 'center',
+                }}
+              >
+                <Loader2 size={44} strokeWidth={2} className="animate-spin" style={{ color: '#1d1d1f' }} aria-hidden />
+                <p
+                  style={{
+                    fontFamily: 'var(--font-playfair), Georgia, serif',
+                    fontSize: 20,
+                    fontWeight: 500,
+                    color: '#1d1d1f',
+                    margin: 0,
+                  }}
+                >
+                  Publication en cours
+                </p>
+                <p style={{ fontSize: 14, color: '#6e6e73', margin: 0, lineHeight: 1.5 }}>
+                  Enregistrement et envoi des photos…
+                </p>
+              </motion.div>
+            )}
+            {submitPhase === 'success' && (
+              <motion.div
+                key="submit-success"
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.38, ease: [0.25, 0.1, 0.25, 1] }}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 20,
+                  padding: 32,
+                  maxWidth: 340,
+                  textAlign: 'center',
+                }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- logo statique dans /public */}
+                <img src="/logo.png" alt="" style={{ height: 42, width: 'auto', display: 'block' }} />
+                <p
+                  style={{
+                    fontFamily: 'var(--font-playfair), Georgia, serif',
+                    fontSize: 22,
+                    fontWeight: 500,
+                    color: '#1d1d1f',
+                    margin: 0,
+                  }}
+                >
+                  {submitSuccessWasEditingRef.current ? 'Proposition enregistrée' : 'Proposition envoyée'}
+                </p>
+                <div
+                  style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: '50%',
+                    backgroundColor: '#ecfdf5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={26} strokeWidth={2.5} style={{ color: '#16a34a' }} aria-hidden />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }
