@@ -23,7 +23,7 @@ const playfair = Playfair_Display({
 
 const SITE_TITLE = 'Section Luxe | La vitrine des professionnels du luxe';
 const SITE_DESCRIPTION =
-  'Section Luxe référence les pièces des vendeurs professionnels du luxe. Trouvez, Essayez, Choisissez la meilleure offre parmi nos annonces luxe...';
+  'Pièces de luxe de seconde main. Section Luxe réunit les annonces des vendeurs professionnels. Trouvez, comparez et choisissez la meilleure offre : sacs, vêtements, montres, bijoux, accessoires.';
 
 export const metadata: Metadata = {
   title: SITE_TITLE,
