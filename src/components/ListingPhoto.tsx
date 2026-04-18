@@ -60,6 +60,7 @@ export function ListingPhoto({
         sizes={sizes}
         quality={q}
         priority={priority}
+        fetchPriority={priority ? 'high' : undefined}
         className={className}
         style={{ objectFit: 'cover', ...style }}
       />
@@ -76,6 +77,7 @@ export function ListingPhoto({
         sizes={sizes}
         quality={q}
         priority={priority}
+        fetchPriority={priority ? 'high' : undefined}
         className={className}
         style={{ objectFit: 'cover', width: '100%', height: '100%', ...style }}
       />

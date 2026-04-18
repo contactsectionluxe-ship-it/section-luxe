@@ -18,6 +18,7 @@ import { getUserData, getSellerData } from '@/lib/supabase/auth';
 import { Conversation, Message, User as UserType, Seller } from '@/types';
 import { formatRelativeTime, formatDate, formatDateShort, getSellerAvatarUrl } from '@/lib/utils';
 import { SellerVisitMapPopup } from '@/components/SellerVisitMapPopup';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
 export default function ConversationPage() {
   const router = useRouter();
@@ -280,7 +281,7 @@ export default function ConversationPage() {
                   style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
                 >
                   {conversation.listingPhoto ? (
-                    <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <ListingPhoto src={conversation.listingPhoto} alt="" sizes="72px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Package size={26} color="#86868b" />
@@ -314,7 +315,7 @@ export default function ConversationPage() {
                   style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
                 >
                   {conversation.listingPhoto ? (
-                    <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <ListingPhoto src={conversation.listingPhoto} alt="" sizes="72px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <Package size={26} color="#86868b" />

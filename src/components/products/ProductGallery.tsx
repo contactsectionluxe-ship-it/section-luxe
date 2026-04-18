@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
 interface ProductGalleryProps {
   photos: string[];
@@ -38,10 +40,11 @@ export function ProductGallery({ photos, title }: ProductGalleryProps) {
           className="relative aspect-square bg-[var(--color-cream)] rounded-xl overflow-hidden cursor-zoom-in group"
           onClick={() => setShowLightbox(true)}
         >
-          <img
+          <ListingPhoto
             src={photos[selectedIndex]}
             alt={`${title} - Image ${selectedIndex + 1}`}
-            className="w-full h-full object-cover"
+            sizes="(max-width: 768px) 100vw, 560px"
+            quality={LISTING_PHOTO_QUALITY_SHARP}
           />
 
           {/* Zoom indicator */}
@@ -80,18 +83,20 @@ export function ProductGallery({ photos, title }: ProductGalleryProps) {
             {photos.map((photo, index) => (
               <button
                 key={index}
+                type="button"
                 onClick={() => setSelectedIndex(index)}
                 className={cn(
-                  'flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all',
+                  'relative flex-shrink-0 h-20 w-20 overflow-hidden rounded-lg border-2 transition-all',
                   selectedIndex === index
                     ? 'border-[var(--color-black)]'
                     : 'border-transparent hover:border-[var(--color-silver)]'
                 )}
               >
-                <img
+                <ListingPhoto
                   src={photo}
                   alt={`${title} - Miniature ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  sizes="80px"
+                  quality={LISTING_PHOTO_QUALITY_SHARP}
                 />
               </button>
             ))}
@@ -122,15 +127,34 @@ export function ProductGallery({ photos, title }: ProductGalleryProps) {
             </div>
 
             {/* Main image */}
-            <motion.img
+            <motion.div
               key={selectedIndex}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              src={photos[selectedIndex]}
-              alt={`${title} - Image ${selectedIndex + 1}`}
-              className="max-w-full max-h-full object-contain p-4"
-            />
+              className="relative flex h-[min(90vh,1200px)] w-[min(90vw,1600px)] max-h-full max-w-full items-center justify-center"
+            >
+              {photos[selectedIndex].includes('supabase.co') ? (
+                <Image
+                  src={photos[selectedIndex]}
+                  alt={`${title} - Image ${selectedIndex + 1}`}
+                  fill
+                  sizes="(max-width: 768px) 90vw, min(90vw, 1600px)"
+                  quality={100}
+                  className="object-contain p-4"
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={photos[selectedIndex]}
+                  alt={`${title} - Image ${selectedIndex + 1}`}
+                  className="max-h-full max-w-full object-contain p-4"
+                  style={{ width: 'auto', height: 'auto', maxWidth: '100%', maxHeight: '100%' }}
+                />
+              )}
+            </motion.div>
 
             {/* Navigation */}
             {photos.length > 1 && (

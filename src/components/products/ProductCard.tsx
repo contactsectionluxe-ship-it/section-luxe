@@ -7,6 +7,7 @@ import { Heart } from 'lucide-react';
 import { listingAnnoncePath } from '@/lib/listingPaths';
 import { setAnnonceReturnUrlForNextNavigation } from '@/lib/annonceReturnUrl';
 import { cn, formatPrice } from '@/lib/utils';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { Listing } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { addFavorite, removeFavorite } from '@/lib/supabase/favorites';
@@ -67,10 +68,12 @@ export function ProductCard({
         {/* Image */}
         <div className="relative aspect-[3/4] bg-[#f5f5f5] overflow-hidden">
           {listing.photos[0] ? (
-            <img
+            <ListingPhoto
               src={listing.photos[0]}
               alt={listing.title}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+              quality={LISTING_PHOTO_QUALITY_SHARP}
+              className="transition-transform duration-500 group-hover:scale-105"
             />
           ) : (
             <div className="h-full w-full flex items-center justify-center text-[#ccc]">

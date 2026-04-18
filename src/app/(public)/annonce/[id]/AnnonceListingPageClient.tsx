@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Heart, MessageCircle, Store, ArrowLeft, Share2, ChevronLeft, ChevronRight, Phone, Tag, Award, Package, Calendar, CheckCircle, Layers, Palette, Ruler, MapPin, Euro, Info, FileText, X, LineChart } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getListing, getSellerListings, getListings, incrementPhoneReveals, getVisitorId } from '@/lib/supabase/listings';
@@ -108,13 +109,17 @@ function ProduitPhotoSlideStrip({
               minHeight: 0,
             }}
           >
-            <ListingPhoto
-              src={photo}
-              alt={i === safeIndex ? title : ''}
-              sizes={sizes}
-              quality={quality}
-              priority={Boolean(priority && i === 0)}
-            />
+            {Math.abs(i - safeIndex) <= 1 ? (
+              <ListingPhoto
+                src={photo}
+                alt={i === safeIndex ? title : ''}
+                sizes={sizes}
+                quality={quality}
+                priority={Boolean(priority && i === 0)}
+              />
+            ) : (
+              <div style={{ width: '100%', height: '100%', backgroundColor: '#f5f5f7' }} aria-hidden />
+            )}
           </div>
         ))}
       </div>
@@ -2748,11 +2753,35 @@ Ces données sont utilisées pour :`}
               }
             }}
           >
-            <img
-              src={listing.photos[currentPhotoIndex]}
-              alt={getListingDisplayTitle(listing)}
-              style={{ maxWidth: '90vw', maxHeight: '90vh', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: 8 }}
-            />
+            <div
+              style={{
+                position: 'relative',
+                width: 'min(90vw, 1600px)',
+                height: 'min(90vh, 1200px)',
+                maxWidth: '100%',
+                maxHeight: '100%',
+              }}
+            >
+              {listing.photos[currentPhotoIndex].includes('supabase.co') ? (
+                <Image
+                  src={listing.photos[currentPhotoIndex]}
+                  alt={getListingDisplayTitle(listing)}
+                  fill
+                  sizes="(max-width: 768px) 90vw, min(90vw, 1600px)"
+                  quality={100}
+                  className="object-contain"
+                  style={{ objectFit: 'contain', borderRadius: 8 }}
+                  priority
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={listing.photos[currentPhotoIndex]}
+                  alt={getListingDisplayTitle(listing)}
+                  style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', borderRadius: 8 }}
+                />
+              )}
+            </div>
           </div>
         </div>
       )}

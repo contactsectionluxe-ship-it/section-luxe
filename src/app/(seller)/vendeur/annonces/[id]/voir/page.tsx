@@ -14,6 +14,7 @@ import { formatPrice, formatDate, parsePriceInputToNumber, sanitizePriceInputWhi
 import { ListingCharacteristicsProductStyle } from '@/components/listings/ListingCharacteristicsProductStyle';
 import { TruncatedInfoValue } from '@/components/TruncatedInfoValue';
 import { getListingDisplayTitle } from '@/lib/listingDisplayTitle';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
 const CONTENU_INCLUS_LABELS: Record<string, string> = { box: 'Boîte', certificat: 'Certificat', facture: 'Facture' };
 
@@ -184,10 +185,11 @@ export default function VoirAnnoncePage() {
           <div style={{ width: '100%', maxWidth: 480, margin: '0 auto' }}>
             <div style={{ position: 'relative', aspectRatio: '1', backgroundColor: '#f5f5f7', borderRadius: 16, overflow: 'hidden' }}>
               {listing.photos.length > 0 ? (
-                <img
+                <ListingPhoto
                   src={listing.photos[photoIndex]}
                   alt={listing.title}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  sizes="(max-width: 768px) 100vw, 480px"
+                  quality={LISTING_PHOTO_QUALITY_SHARP}
                 />
               ) : (
                 <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

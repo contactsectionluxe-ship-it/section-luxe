@@ -39,6 +39,8 @@ const nextConfig: NextConfig = {
     deviceSizes: [
       640, 750, 828, 1080, 1200, 1440, 1600, 1920, 2048, 2560, 2880, 3840, 4096,
     ],
+    /** Vignettes catalogue / cartes : évite de monter trop vite à 640 px quand la case affiche ~240–400 px (même qualité, moins d’octets). */
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 432, 480, 512, 576, 640, 768],
     remotePatterns: [
       { protocol: 'https', hostname: '**.supabase.co', pathname: '/storage/v1/object/public/**' },
     ],

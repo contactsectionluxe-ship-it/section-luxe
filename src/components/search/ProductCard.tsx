@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Heart, MapPin, Store } from 'lucide-react';
 import { Listing } from '@/types';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 import { useAuth } from '@/hooks/useAuth';
 import { addFavorite, removeFavorite } from '@/lib/supabase/favorites';
 
@@ -58,7 +59,7 @@ export function ProductCard({ listing, isFavorited = false, onAuthRequired }: Pr
   };
 
   return (
-    <Link href={`/p/${listing.id}`} style={{ display: 'block' }}>
+    <Link href={`/p/${listing.id}`} className="group" style={{ display: 'block' }}>
       <article style={{ position: 'relative' }}>
         {/* Image */}
         <div style={{
@@ -69,17 +70,12 @@ export function ProductCard({ listing, isFavorited = false, onAuthRequired }: Pr
           marginBottom: 12,
         }}>
           {listing.photos[0] ? (
-            <img
+            <ListingPhoto
               src={listing.photos[0]}
               alt={listing.title}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'transform 0.3s ease',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 280px"
+              quality={LISTING_PHOTO_QUALITY_SHARP}
+              className="transition-transform duration-300 ease-out group-hover:scale-[1.03]"
             />
           ) : (
             <div style={{

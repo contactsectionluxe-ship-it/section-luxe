@@ -9,6 +9,7 @@ import { subscribeToConversations, deleteConversation } from '@/lib/supabase/mes
 import { getListingsCatalogVisibility } from '@/lib/supabase/listings';
 import { Conversation } from '@/types';
 import { formatRelativeTime, formatDateShort } from '@/lib/utils';
+import { ListingPhoto, LISTING_PHOTO_QUALITY_SHARP } from '@/components/ListingPhoto';
 
 type FilterTab = 'all' | 'read' | 'unread';
 
@@ -406,7 +407,7 @@ export default function MessagesPage() {
                       <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                         <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
                           {conversation.listingPhoto ? (
-                            <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <ListingPhoto src={conversation.listingPhoto} alt="" sizes="80px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <MessageCircle size={28} color="#86868b" />
@@ -440,7 +441,7 @@ export default function MessagesPage() {
                       >
                         <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
                           {conversation.listingPhoto ? (
-                            <img src={conversation.listingPhoto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <ListingPhoto src={conversation.listingPhoto} alt="" sizes="80px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                           ) : (
                             <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               <MessageCircle size={28} color="#86868b" />
