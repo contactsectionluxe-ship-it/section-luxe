@@ -56,6 +56,12 @@ const PRODUIT_VENDEUR_CARD_SHADOW = '0 4px 24px rgba(0,0,0,0.06)';
 
 const PRODUIT_PHOTO_SLIDE_TRANSITION = 'transform 0.38s cubic-bezier(0.25, 0.1, 0.25, 1)';
 
+/** Plage « tablette » alignée sur globals.css (768–1023px) — swipe galerie / lightbox. */
+function isProduitPhotoTabletViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(min-width: 768px) and (max-width: 1023px)').matches;
+}
+
 /** Galerie page produit (hors plein écran) : glissement horizontal entre photos. */
 function ProduitPhotoSlideStrip({
   photos,
@@ -253,6 +259,9 @@ export default function AnnonceListingPageClient() {
   /** Lightbox plein écran : swipe pour changer de photo (mobile) */
   const lightboxTouchStartX = useRef(0);
   const lightboxSwipedThisGesture = useRef(false);
+  /** Tablette : souris / trackpad (pointer) en complément du tactile */
+  const mobilePhotoSwipePointerId = useRef<number | null>(null);
+  const lightboxSwipePointerId = useRef<number | null>(null);
 
   /** Afficher « Voir plus » seulement si la description a strictement plus de 5 lignes. Plusieurs vérifications (dont délais) pour que ça marche sur toutes les annonces quel que soit le chargement (polices, viewport). */
   useLayoutEffect(() => {
@@ -1510,6 +1519,7 @@ export default function AnnonceListingPageClient() {
             {/* Gallery — swipe horizontal pour faire défiler les photos (mobile uniquement) */}
             <div style={{ marginBottom: 24 }}>
               <div
+                className="produit-photo-swipe-host"
                 role="button"
                 tabIndex={0}
                 onClick={() => {
@@ -1534,6 +1544,48 @@ export default function AnnonceListingPageClient() {
                       setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
                     }
                   }
+                }}
+                onPointerDown={(e) => {
+                  if (e.pointerType === 'touch') return;
+                  if (!isProduitPhotoTabletViewport()) return;
+                  if (listing.photos.length <= 1) return;
+                  mobilePhotoSwipePointerId.current = e.pointerId;
+                  mobilePhotoTouchStartX.current = e.clientX;
+                  mobilePhotoDidSwipe.current = false;
+                  mobilePhotoSwipedThisGesture.current = false;
+                  try {
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                onPointerMove={(e) => {
+                  if (e.pointerId !== mobilePhotoSwipePointerId.current) return;
+                  if (!isProduitPhotoTabletViewport()) return;
+                  if (listing.photos.length <= 1 || mobilePhotoSwipedThisGesture.current) return;
+                  const dx = e.clientX - mobilePhotoTouchStartX.current;
+                  if (Math.abs(dx) > 50) {
+                    mobilePhotoDidSwipe.current = true;
+                    mobilePhotoSwipedThisGesture.current = true;
+                    if (dx > 0) {
+                      setCurrentPhotoIndex((i) => (i > 0 ? i - 1 : listing.photos.length - 1));
+                    } else {
+                      setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
+                    }
+                  }
+                }}
+                onPointerUp={(e) => {
+                  if (e.pointerId !== mobilePhotoSwipePointerId.current) return;
+                  mobilePhotoSwipePointerId.current = null;
+                  try {
+                    e.currentTarget.releasePointerCapture(e.pointerId);
+                  } catch {
+                    /* ignore */
+                  }
+                }}
+                onPointerCancel={(e) => {
+                  if (e.pointerId !== mobilePhotoSwipePointerId.current) return;
+                  mobilePhotoSwipePointerId.current = null;
                 }}
                 style={{ aspectRatio: '1/1', maxWidth: 400, margin: '0 auto 12px', backgroundColor: '#f5f5f7', position: 'relative', overflow: 'hidden', borderRadius: 18, cursor: listing.photos[currentPhotoIndex] ? 'zoom-in' : 'default', touchAction: 'pan-y' }}
               >
@@ -2734,6 +2786,7 @@ Ces données sont utilisées pour :`}
             </>
           )}
           <div
+            className="produit-photo-lightbox-swipe-host"
             style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'pan-y' }}
             onClick={(e) => e.stopPropagation()}
             onTouchStart={(e) => {
@@ -2751,6 +2804,46 @@ Ces données sont utilisées pour :`}
                   setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
                 }
               }
+            }}
+            onPointerDown={(e) => {
+              if (e.pointerType === 'touch') return;
+              if (!isProduitPhotoTabletViewport()) return;
+              if (listing.photos.length <= 1) return;
+              lightboxSwipePointerId.current = e.pointerId;
+              lightboxSwipedThisGesture.current = false;
+              lightboxTouchStartX.current = e.clientX;
+              try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+            }}
+            onPointerMove={(e) => {
+              if (e.pointerId !== lightboxSwipePointerId.current) return;
+              if (!isProduitPhotoTabletViewport()) return;
+              if (listing.photos.length <= 1 || lightboxSwipedThisGesture.current) return;
+              const dx = e.clientX - lightboxTouchStartX.current;
+              if (Math.abs(dx) > 50) {
+                lightboxSwipedThisGesture.current = true;
+                if (dx > 0) {
+                  setCurrentPhotoIndex((i) => (i > 0 ? i - 1 : listing.photos.length - 1));
+                } else {
+                  setCurrentPhotoIndex((i) => (i < listing.photos.length - 1 ? i + 1 : 0));
+                }
+              }
+            }}
+            onPointerUp={(e) => {
+              if (e.pointerId !== lightboxSwipePointerId.current) return;
+              lightboxSwipePointerId.current = null;
+              try {
+                e.currentTarget.releasePointerCapture(e.pointerId);
+              } catch {
+                /* ignore */
+              }
+            }}
+            onPointerCancel={(e) => {
+              if (e.pointerId !== lightboxSwipePointerId.current) return;
+              lightboxSwipePointerId.current = null;
             }}
           >
             <div

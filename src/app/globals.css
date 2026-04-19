@@ -3843,22 +3843,31 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     margin-bottom: 14px !important;
   }
 
-  /* Messagerie + conversation : largeur maîtrisée, vignettes contenues, hauteur stable (évite grands visuels / flex qui casse) */
+  /*
+   * Messagerie + conversation : même cadre d’espace que « Mes favoris » (pleine largeur,
+   * gouttières 24px, padding vertical identique au bloc favoris-page-inner).
+   */
   .messages-page-inner,
   .messages-conversation-inner {
-    max-width: min(100%, 680px) !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
+    max-width: none !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+    padding-top: 30px !important;
+    padding-bottom: 60px !important;
+    box-sizing: border-box !important;
   }
 
   .messages-list-row {
     gap: 16px !important;
-    padding: 14px 18px !important;
+    padding: 18px 24px !important;
     align-items: flex-start !important;
   }
 
   .messages-list-row-link {
-    gap: 14px !important;
+    gap: 16px !important;
   }
 
   .messages-listing-photo-wrap {
@@ -3872,25 +3881,35 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   }
 
   .messages-convo-header-shell {
-    padding: 16px 20px !important;
+    padding: 20px 24px !important;
   }
 
   .messages-convo-scroll {
-    padding: 18px 20px !important;
+    padding: 24px 24px !important;
   }
 
   .messages-convo-compose-shell {
-    padding: 16px 20px !important;
+    padding: 20px 24px !important;
   }
 
   .messages-conversation-main-card {
-    height: min(520px, calc(100dvh - var(--header-height) - 200px)) !important;
-    min-height: 320px !important;
-    max-height: calc(100dvh - var(--header-height) - 32px) !important;
+    height: min(600px, calc(100dvh - var(--header-height) - 140px)) !important;
+    min-height: 360px !important;
+    max-height: calc(100dvh - var(--header-height) - 24px) !important;
     margin-top: 0 !important;
   }
 
   .messages-bubble-column {
     max-width: min(82%, 440px) !important;
+  }
+
+  /*
+   * Page produit (layout hide-desktop) + lightbox : sur tablette, touch-action: pan-y
+   * sur la zone photo peut empêcher le swipe horizontal ; on le neutralise ici uniquement.
+   * Téléphone (≤767) et desktop (≥1024) inchangés.
+   */
+  .produit-photo-swipe-host,
+  .produit-photo-lightbox-swipe-host {
+    touch-action: none !important;
   }
 }
