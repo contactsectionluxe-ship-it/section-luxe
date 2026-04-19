@@ -425,6 +425,11 @@ export function Footer() {
           .footer-grid-newsletter {
             grid-column: 1 / -1 !important;
           }
+          /* Barre e-mail newsletter : demi-largeur (téléphone et desktop inchangés) */
+          .footer-grid-newsletter .footer-newsletter-field {
+            width: 50% !important;
+            max-width: 50% !important;
+          }
         }
       `}} />
     </footer>
