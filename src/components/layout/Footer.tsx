@@ -413,6 +413,19 @@ export function Footer() {
           .footer-bottom { flex-direction: column !important; align-items: stretch !important; }
           .footer-bottom-nav { width: 100% !important; flex-direction: row !important; flex-wrap: wrap !important; }
         }
+        @media (min-width: 768px) and (max-width: 1023px) {
+          .footer-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 28px 40px !important;
+            margin-bottom: 40px !important;
+          }
+          .footer-grid-brand {
+            grid-column: 1 / -1 !important;
+          }
+          .footer-grid-newsletter {
+            grid-column: 1 / -1 !important;
+          }
+        }
       `}} />
     </footer>
   );

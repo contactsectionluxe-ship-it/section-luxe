@@ -3756,3 +3756,114 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     width: auto !important;
   }
 }
+
+/* ========== Tablette uniquement (768px–1023px) : téléphone et desktop inchangés ========== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Accueil « À la une » + catalogue vue grille : 3 annonces par ligne */
+  .home-section-featured .home-featured-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+  .catalogue-results.catalogue-results-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  /* Panneau filtres catalogue mobile : demi-largeur écran */
+  .catalogue-mobile-filters-panel,
+  .catalogue-mobile-filters-panel-footer {
+    width: 50vw !important;
+    max-width: 50vw !important;
+  }
+
+  /* Accueil catégories : grille 3 colonnes (2 lignes pour 6 catégories), sans carrousel */
+  .home-section-categories .categories-scroll-viewport button[aria-label='Catégories précédentes'],
+  .home-section-categories .categories-scroll-viewport button[aria-label='Catégories suivantes'] {
+    display: none !important;
+  }
+  .home-section-categories .categories-scroll-container {
+    overflow-x: visible !important;
+    cursor: default !important;
+    scroll-snap-type: none !important;
+  }
+  .home-section-categories .categories-scroll-inner {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .home-section-categories .categories-scroll-item {
+    flex: unset !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    scroll-snap-align: unset !important;
+    scroll-snap-stop: unset !important;
+  }
+
+  /* CTA vendeur (accueil + catalogue) : texte plus compact */
+  .home-section-vendeur-cta-title {
+    font-size: clamp(17px, 2.6vw, 22px) !important;
+    line-height: 1.22 !important;
+    white-space: normal !important;
+    text-wrap: balance;
+  }
+  .home-section-vendeur-cta-desc {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Messagerie + conversation : largeur maîtrisée, vignettes contenues, hauteur stable (évite grands visuels / flex qui casse) */
+  .messages-page-inner,
+  .messages-conversation-inner {
+    max-width: min(100%, 680px) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .messages-list-row {
+    gap: 16px !important;
+    padding: 14px 18px !important;
+    align-items: flex-start !important;
+  }
+
+  .messages-list-row-link {
+    gap: 14px !important;
+  }
+
+  .messages-listing-photo-wrap {
+    position: relative !important;
+    flex-shrink: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .messages-convo-header-row {
+    gap: 14px !important;
+  }
+
+  .messages-convo-header-shell {
+    padding: 16px 20px !important;
+  }
+
+  .messages-convo-scroll {
+    padding: 18px 20px !important;
+  }
+
+  .messages-convo-compose-shell {
+    padding: 16px 20px !important;
+  }
+
+  .messages-conversation-main-card {
+    height: min(520px, calc(100dvh - var(--header-height) - 200px)) !important;
+    min-height: 320px !important;
+    max-height: calc(100dvh - var(--header-height) - 32px) !important;
+    margin-top: 0 !important;
+  }
+
+  .messages-bubble-column {
+    max-width: min(82%, 440px) !important;
+  }
+}

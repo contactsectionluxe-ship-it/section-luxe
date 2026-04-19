@@ -257,9 +257,13 @@ export default function ConversationPage() {
         </div>
 
         {/* Carte principale (même contour et ombre que Annonces mises en ligne / Mes ventes) */}
-        <div style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438, marginTop: '-0.5cm' }}>
+        <div
+          className="messages-conversation-main-card"
+          style={{ backgroundColor: '#fff', borderRadius: 12, border: '1px solid #e8e6e3', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: 'min(638px, calc(70vh + 1cm))', minHeight: 438, marginTop: '-0.5cm' }}
+        >
           {/* Barre supérieure : retour + annonce + interlocuteur */}
           <div
+            className="messages-convo-header-shell"
             style={{
               flexShrink: 0,
               padding: '20px 28px',
@@ -267,7 +271,7 @@ export default function ConversationPage() {
               backgroundColor: '#fff',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+            <div className="messages-convo-header-row" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
             <Link
               href="/messages"
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, color: '#1d1d1f', backgroundColor: '#f5f5f7' }}
@@ -278,7 +282,8 @@ export default function ConversationPage() {
             {conversation.saleProposalId ? (
               <div style={{ flexShrink: 0 }}>
                 <div
-                  style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                  className="messages-listing-photo-wrap"
+                  style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
                 >
                   {conversation.listingPhoto ? (
                     <ListingPhoto src={conversation.listingPhoto} alt="" sizes="72px" quality={LISTING_PHOTO_QUALITY_SHARP} />
@@ -292,7 +297,9 @@ export default function ConversationPage() {
             ) : listingOffCatalog ? (
               <div style={{ flexShrink: 0 }} aria-hidden>
                 <div
+                  className="messages-listing-photo-wrap messages-listing-photo-wrap--placeholder"
                   style={{
+                    position: 'relative',
                     width: 72,
                     height: 72,
                     borderRadius: 12,
@@ -312,7 +319,8 @@ export default function ConversationPage() {
                 style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
               >
                 <div
-                  style={{ width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                  className="messages-listing-photo-wrap"
+                  style={{ position: 'relative', width: 72, height: 72, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
                 >
                   {conversation.listingPhoto ? (
                     <ListingPhoto src={conversation.listingPhoto} alt="" sizes="72px" quality={LISTING_PHOTO_QUALITY_SHARP} />
@@ -364,6 +372,7 @@ export default function ConversationPage() {
           {/* Zone des messages */}
           <div
             ref={messagesContainerRef}
+            className="messages-convo-scroll"
             style={{
               flex: 1,
               minHeight: 0,
@@ -391,6 +400,7 @@ export default function ConversationPage() {
                     }}
                   >
                     <div
+                      className="messages-bubble-column"
                       style={{
                         display: 'flex',
                         flexDirection: 'column',
@@ -471,6 +481,7 @@ export default function ConversationPage() {
 
           {/* Champ d'envoi (style champs Devenir vendeur) */}
           <div
+            className="messages-convo-compose-shell"
             style={{
               flexShrink: 0,
               padding: '20px 28px',

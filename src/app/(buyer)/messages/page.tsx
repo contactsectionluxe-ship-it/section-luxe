@@ -394,6 +394,7 @@ export default function MessagesPage() {
                 return (
                   <div
                     key={conversation.id}
+                    className="messages-list-row"
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -405,7 +406,10 @@ export default function MessagesPage() {
                   >
                     {conversation.saleProposalId ? (
                       <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
+                        <div
+                          className="messages-listing-photo-wrap"
+                          style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                        >
                           {conversation.listingPhoto ? (
                             <ListingPhoto src={conversation.listingPhoto} alt="" sizes="80px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                           ) : (
@@ -418,7 +422,9 @@ export default function MessagesPage() {
                     ) : listingOffCatalog ? (
                       <div style={{ flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                         <div
+                          className="messages-listing-photo-wrap messages-listing-photo-wrap--placeholder"
                           style={{
+                            position: 'relative',
                             width: 80,
                             height: 80,
                             borderRadius: 12,
@@ -439,7 +445,10 @@ export default function MessagesPage() {
                         style={{ flexShrink: 0, textDecoration: 'none', color: 'inherit' }}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div style={{ width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}>
+                        <div
+                          className="messages-listing-photo-wrap"
+                          style={{ position: 'relative', width: 80, height: 80, borderRadius: 12, overflow: 'hidden', backgroundColor: '#f5f5f7', border: '1px solid #e8e6e3' }}
+                        >
                           {conversation.listingPhoto ? (
                             <ListingPhoto src={conversation.listingPhoto} alt="" sizes="80px" quality={LISTING_PHOTO_QUALITY_SHARP} />
                           ) : (
@@ -452,6 +461,7 @@ export default function MessagesPage() {
                     )}
                     <Link
                       href={`/messages/${conversation.id}`}
+                      className="messages-list-row-link"
                       style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 28, minWidth: 0, textDecoration: 'none', color: 'inherit' }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
