@@ -43,7 +43,12 @@ export const metadata: Metadata = {
     'bijoux',
     'mode',
   ],
-  icons: { icon: '/icon.png' },
+  icons: {
+    /** Favicon favoris / onglets : PNG carré à coins arrondis. */
+    icon: [{ url: '/icon.png', sizes: '1024x1024', type: 'image/png' }],
+    /** Écran d’accueil iOS, etc. : 180×180, même style. */
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
