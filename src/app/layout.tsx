@@ -55,7 +55,8 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image',
+    /** `summary` : pas de grande image à droite du titre (évite une photo imposée dans les aperçus). */
+    card: 'summary',
     title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
