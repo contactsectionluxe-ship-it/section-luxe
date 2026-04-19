@@ -44,10 +44,9 @@ export const metadata: Metadata = {
     'mode',
   ],
   icons: {
-    /** Favicon favoris / onglets : PNG carré à coins arrondis. */
-    icon: [{ url: '/icon.png', sizes: '1024x1024', type: 'image/png' }],
-    /** Écran d’accueil iOS, etc. : 180×180, même style. */
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+    /** Fichier unique depuis `public/` : carré à coins arrondis (évite les conflits avec `app/icon.png`). */
+    icon: '/icon.png',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     title: SITE_TITLE,

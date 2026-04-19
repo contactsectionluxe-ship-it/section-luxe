@@ -1,9 +1,12 @@
 /**
  * Favicon : lit `public/favicon-source.png`
- * - `public/icon.png` (+ `src/app/icon.png`) : **carré à coins arrondis** (favoris / barre de favoris, onglets).
- * - `public/apple-touch-icon.png` : **180×180**, même style (Écran d’accueil iOS, etc.).
  *
- * Décalage horizontal : ~0,5 mm à gauche sur le canevas 1024 px (voir OPTICAL_SHIFT_MM_X).
+ * - **Carré coins arrondis** (favicon site : `metadata.icons` → `public/icon.png`) + variantes 32–128 px.
+ * - **Circulaire 192×192** (Google recherche, recommandation ≥48 px) : favicon-google-192.png
+ * - **Apple Touch** 180×180 : apple-touch-icon.png
+ *
+ * Les navigateurs choisissent une taille proche de l’affichage ; Google indexe souvent le 192 px.
+ * Décalage horizontal : voir OPTICAL_SHIFT_MM_X.
  *
  *   node scripts/round-favicon.mjs
  */
@@ -16,19 +19,14 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, '..');
 
 const OUTPUT_SIZE = 1024;
+const GOOGLE_ICON_SIZE = 192;
 const APPLE_TOUCH_SIZE = 180;
-/** ~iOS : rayon de coin sur le côté (proportion du carré). */
-const APPLE_CORNER_RATIO = 0.224;
+/** Rayon des coins (proportion du côté) — un peu moins qu’avant pour des angles plus discrets. */
+const APPLE_CORNER_RATIO = 0.2;
 
 const CIRCLE_INSET = 1.06;
-/** Décalage optique vertical (px sur 1024). */
 const OPTICAL_SHIFT_Y = -5;
-/** Décalage horizontal de base (px sur 1024, négatif = gauche). */
 const OPTICAL_SHIFT_X = -5;
-/**
- * Décalage horizontal supplémentaire demandé (mm vers la gauche), converti en px sur 1024
- * (référence 96 px / inch : 0,5 mm ≈ 2 px à cette échelle).
- */
 const OPTICAL_SHIFT_MM_X = 0.5;
 
 function extraShiftLeftFromMm() {
@@ -37,7 +35,6 @@ function extraShiftLeftFromMm() {
 }
 
 /**
- * Carré blanc + logo centré (avant masque coins arrondis ou export Apple).
  * @param {string} sourcePath
  */
 async function buildCompositedSquare(sourcePath) {
@@ -88,12 +85,16 @@ async function buildCompositedSquare(sourcePath) {
     .toBuffer();
 }
 
-/** Favicon principal : carré aux coins arrondis, fond blanc aux coins (favoris / onglets). */
-async function buildMainFaviconBuffer(sourcePath) {
+/**
+ * Carré aux coins arrondis pour favicon : hors du squircle = **transparent**
+ * (sinon un calque blanc 1024×1024 masque l’arrondi : on ne voit qu’un carré blanc).
+ */
+async function buildRoundedSquarePng(sourcePath, pixelSize) {
   const onSquare = await buildCompositedSquare(sourcePath);
   const w = OUTPUT_SIZE;
   const h = OUTPUT_SIZE;
-  const rx = Math.round(w * APPLE_CORNER_RATIO);
+  const rxMax = Math.floor(Math.min(w, h) / 2);
+  const rx = Math.min(Math.round(w * APPLE_CORNER_RATIO), rxMax);
 
   const mask = Buffer.from(
     `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -107,7 +108,35 @@ async function buildMainFaviconBuffer(sourcePath) {
     .png()
     .toBuffer();
 
-  return sharp({
+  if (pixelSize === OUTPUT_SIZE) return clipped;
+  return sharp(clipped)
+    .resize(pixelSize, pixelSize, { kernel: sharp.kernel.lanczos3 })
+    .png()
+    .toBuffer();
+}
+
+/** Disque + fond blanc hors cercle (aperçu Google en pastille ronde). */
+async function buildGoogleCirclePng(sourcePath) {
+  const onSquare = await buildCompositedSquare(sourcePath);
+  const w = OUTPUT_SIZE;
+  const h = OUTPUT_SIZE;
+  const cx = w / 2;
+  const cy = h / 2;
+  const r = Math.min(w, h) / 2;
+
+  const mask = Buffer.from(
+    `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="white"/>
+    </svg>`
+  );
+
+  const clipped = await sharp(onSquare)
+    .ensureAlpha()
+    .composite([{ input: mask, blend: 'dest-in' }])
+    .png()
+    .toBuffer();
+
+  const full = await sharp({
     create: {
       width: OUTPUT_SIZE,
       height: OUTPUT_SIZE,
@@ -118,12 +147,13 @@ async function buildMainFaviconBuffer(sourcePath) {
     .composite([{ input: clipped, left: 0, top: 0 }])
     .png()
     .toBuffer();
+
+  return sharp(full)
+    .resize(GOOGLE_ICON_SIZE, GOOGLE_ICON_SIZE, { kernel: sharp.kernel.lanczos3 })
+    .png()
+    .toBuffer();
 }
 
-/**
- * Apple Touch Icon : carré 180 px, coins arrondis dans l’image (fond blanc hors forme).
- * Recommandé pour l’écran d’accueil iOS ; le masque des **onglets** Safari macOS reste imposé par le navigateur.
- */
 async function buildAppleTouchIconBuffer(sourcePath) {
   const onSquare = await buildCompositedSquare(sourcePath);
   const rx = Math.round(APPLE_TOUCH_SIZE * APPLE_CORNER_RATIO);
@@ -162,24 +192,34 @@ async function buildAppleTouchIconBuffer(sourcePath) {
 const sourcePath = join(root, 'public', 'favicon-source.png');
 const iconPath = join(root, 'public', 'icon.png');
 const appleTouchPath = join(root, 'public', 'apple-touch-icon.png');
-const appIconPath = join(root, 'src', 'app', 'icon.png');
-
+const googleCirclePath = join(root, 'public', 'favicon-google-192.png');
+const fav32 = join(root, 'public', 'favicon-32-rounded.png');
+const fav48 = join(root, 'public', 'favicon-48-rounded.png');
+const fav96 = join(root, 'public', 'favicon-96-rounded.png');
+const fav128 = join(root, 'public', 'favicon-128-rounded.png');
 if (!existsSync(sourcePath)) {
   console.error('Fichier manquant:', sourcePath);
   console.error('Place ton logo carré dans public/favicon-source.png puis relance.');
   process.exit(1);
 }
 
-const mainOut = await buildMainFaviconBuffer(sourcePath);
-writeFileSync(iconPath, mainOut);
+const main1024 = await buildRoundedSquarePng(sourcePath, OUTPUT_SIZE);
+writeFileSync(iconPath, main1024);
 console.log('Source:', sourcePath);
-console.log('Favicon (carré coins arrondis):', iconPath);
+console.log('icon.png (1024, coins arrondis):', iconPath);
+
+writeFileSync(fav32, await sharp(main1024).resize(32, 32, { kernel: sharp.kernel.lanczos3 }).png().toBuffer());
+console.log('favicon-32-rounded.png');
+writeFileSync(fav48, await sharp(main1024).resize(48, 48, { kernel: sharp.kernel.lanczos3 }).png().toBuffer());
+console.log('favicon-48-rounded.png');
+writeFileSync(fav96, await sharp(main1024).resize(96, 96, { kernel: sharp.kernel.lanczos3 }).png().toBuffer());
+console.log('favicon-96-rounded.png');
+writeFileSync(fav128, await sharp(main1024).resize(128, 128, { kernel: sharp.kernel.lanczos3 }).png().toBuffer());
+console.log('favicon-128-rounded.png');
+
+writeFileSync(googleCirclePath, await buildGoogleCirclePng(sourcePath));
+console.log('favicon-google-192.png (cercle, Google)');
 
 const appleOut = await buildAppleTouchIconBuffer(sourcePath);
 writeFileSync(appleTouchPath, appleOut);
-console.log('Apple Touch (coins arrondis):', appleTouchPath);
-
-if (existsSync(join(root, 'src', 'app'))) {
-  writeFileSync(appIconPath, mainOut);
-  console.log('Copie alignée:', appIconPath);
-}
+console.log('apple-touch-icon.png');
