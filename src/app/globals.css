@@ -3769,6 +3769,27 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     gap: 16px !important;
   }
 
+  /* Mes favoris (squelette + grille), Mes annonces, Propositions, Sourcing : 3 annonces par ligne */
+  .favoris-page-inner .catalogue-results {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+  .favoris-list-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+  .mes-annonces-list-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+  .propositions-page .propositions-catalogue-grid,
+  .propositions-page .mes-annonces-list-grid,
+  .sourcing-page .propositions-catalogue-grid,
+  .sourcing-page .mes-annonces-list-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 16px !important;
+  }
+
   /* Panneau filtres catalogue mobile : demi-largeur écran */
   .catalogue-mobile-filters-panel,
   .catalogue-mobile-filters-panel-footer {
@@ -3776,31 +3797,37 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
     max-width: 50vw !important;
   }
 
-  /* Accueil catégories : grille 3 colonnes (2 lignes pour 6 catégories), sans carrousel */
-  .home-section-categories .categories-scroll-viewport button[aria-label='Catégories précédentes'],
-  .home-section-categories .categories-scroll-viewport button[aria-label='Catégories suivantes'] {
-    display: none !important;
-  }
+  /*
+   * Accueil catégories : même défilement horizontal que le téléphone (snap + doigt),
+   * 3 tuiles visibles (téléphone = 2). Les flèches restent masquées comme en ≤1023px.
+   * Largeur ruban : 6×tuile + 5×gap — tuile = (100cqw − 2×12px) / 3 → total 200cqw + 12px.
+   */
   .home-section-categories .categories-scroll-container {
-    overflow-x: visible !important;
-    cursor: default !important;
+    overflow-x: auto !important;
+    cursor: grab !important;
+    scroll-snap-type: x mandatory !important;
+    overscroll-behavior-x: none !important;
+  }
+  .home-section-categories .categories-scroll-container[data-dragging='true'] {
     scroll-snap-type: none !important;
   }
   .home-section-categories .categories-scroll-inner {
-    display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 16px !important;
-    width: 100% !important;
-    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    grid-template-columns: unset !important;
+    gap: 12px !important;
+    width: calc(200cqw + 12px) !important;
+    max-width: none !important;
     box-sizing: border-box !important;
   }
   .home-section-categories .categories-scroll-item {
-    flex: unset !important;
+    flex: 0 0 calc((100cqw - 24px) / 3) !important;
     width: auto !important;
     min-width: 0 !important;
     max-width: none !important;
-    scroll-snap-align: unset !important;
-    scroll-snap-stop: unset !important;
+    scroll-snap-align: start !important;
+    scroll-snap-stop: always !important;
   }
 
   /* CTA vendeur (accueil + catalogue) : texte plus compact */
