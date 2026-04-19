@@ -239,7 +239,7 @@ function MesVentesPageContent() {
   }, [reserveAction]);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 767px)');
+    const mq = window.matchMedia('(max-width: 1023px)');
     const onMatch = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     setIsMobile(mq.matches);
     mq.addEventListener('change', onMatch);

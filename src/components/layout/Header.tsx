@@ -13,14 +13,14 @@ import { Conversation, type Seller } from '@/types';
 
 function subscribeMobileLayout(cb: () => void) {
   if (typeof window === 'undefined') return () => {};
-  const mq = window.matchMedia('(max-width: 767px)');
+  const mq = window.matchMedia('(max-width: 1023px)');
   mq.addEventListener('change', cb);
   return () => mq.removeEventListener('change', cb);
 }
 
 function getMobileLayoutSnapshot() {
   if (typeof window === 'undefined') return false;
-  return window.matchMedia('(max-width: 767px)').matches;
+  return window.matchMedia('(max-width: 1023px)').matches;
 }
 
 type HeaderNavItem = { name: string; href: string; mobileIcon: LucideIcon };

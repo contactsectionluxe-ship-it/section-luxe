@@ -510,7 +510,7 @@ function SuivreMesOffresProposalCard({
           </button>
         </div>
         {r.photo_urls?.length ? (
-          <CatalogueCardPhotos photos={r.photo_urls} alt={r.title || ''} sizes="(max-width: 768px) 50vw, 25vw" />
+          <CatalogueCardPhotos photos={r.photo_urls} alt={r.title || ''} sizes="(max-width: 1023px) 50vw, 25vw" />
         ) : (
           <div
             style={{

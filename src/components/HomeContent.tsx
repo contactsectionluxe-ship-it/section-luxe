@@ -57,7 +57,7 @@ export default function HomeContent() {
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const max = scrollWidth - clientWidth;
-    if (typeof window !== 'undefined' && window.innerWidth <= 767 && max > 0 && scrollLeft > max) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 1023 && max > 0 && scrollLeft > max) {
       el.scrollLeft = max;
       setScrollState('end');
       return;
@@ -66,7 +66,7 @@ export default function HomeContent() {
     else if (scrollLeft <= 2) setScrollState('start');
     else if (
       scrollLeft >= max - 2 ||
-      (typeof window !== 'undefined' && window.innerWidth <= 767 && scrollLeft >= max - Math.max(20, clientWidth * 0.15))
+      (typeof window !== 'undefined' && window.innerWidth <= 1023 && scrollLeft >= max - Math.max(20, clientWidth * 0.15))
     ) setScrollState('end');
     else setScrollState('middle');
   }, []);

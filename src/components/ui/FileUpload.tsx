@@ -106,7 +106,7 @@ export function FileUpload({
 
       {/* Files list */}
       {files.length > 0 && (
-        <div className={cn('grid gap-3', files.length < maxFiles && 'mt-4', maxFiles > 1 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1')}>
+        <div className={cn('grid gap-3', files.length < maxFiles && 'mt-4', maxFiles > 1 ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-1')}>
           {files.map((file, index) => (
             <div
               key={index}

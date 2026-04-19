@@ -63,7 +63,7 @@ import { FluidOneLineHeading } from '@/components/FluidOneLineHeading';
 
 const iconSize = 14;
 const iconColor = '#6e6e73';
-/** Annonces par page : 20 en grille sur téléphone (≤767px), 21 sinon. */
+/** Annonces par page : 20 en grille sur téléphone et tablette (≤1023px), 21 sinon. */
 const PAGE_SIZE_DEFAULT = 21;
 const PAGE_SIZE_MOBILE_GRID = 20;
 
@@ -889,7 +889,7 @@ function CatalogueContent() {
   const catalogueListViewBootstrappedRef = useRef(false);
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.innerWidth <= 767) {
+    if (window.innerWidth <= 1023) {
       setViewMode('grid');
       catalogueListViewBootstrappedRef.current = true;
       return;
@@ -925,7 +925,7 @@ function CatalogueContent() {
   const [isMobile, setIsMobile] = useState(false);
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
-    const mq = window.matchMedia('(max-width: 767px)');
+    const mq = window.matchMedia('(max-width: 1023px)');
     const sync = () => setIsMobile(mq.matches);
     sync();
     mq.addEventListener('change', sync);
@@ -1097,7 +1097,7 @@ function CatalogueContent() {
     setViewMode((prev) => {
       const next: 'horizontal' | 'grid' = prev === 'horizontal' ? 'grid' : 'horizontal';
       if (typeof window !== 'undefined') window.localStorage.setItem('catalogue-view-mode', next);
-      if (typeof window !== 'undefined' && window.innerWidth > 767) {
+      if (typeof window !== 'undefined' && window.innerWidth > 1023) {
         queueMicrotask(() => {
           const omitSellerInQuery = pathname.startsWith('/catalogue/vendeur/');
           const params = filtersToParams(filters, effectivePage, { omitSellerId: omitSellerInQuery });

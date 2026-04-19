@@ -43,7 +43,7 @@ export function ProductGallery({ photos, title }: ProductGalleryProps) {
           <ListingPhoto
             src={photos[selectedIndex]}
             alt={`${title} - Image ${selectedIndex + 1}`}
-            sizes="(max-width: 768px) 100vw, 560px"
+            sizes="(max-width: 1023px) 100vw, 560px"
             quality={LISTING_PHOTO_QUALITY_SHARP}
           />
 
@@ -139,7 +139,7 @@ export function ProductGallery({ photos, title }: ProductGalleryProps) {
                   src={photos[selectedIndex]}
                   alt={`${title} - Image ${selectedIndex + 1}`}
                   fill
-                  sizes="(max-width: 768px) 90vw, min(90vw, 1600px)"
+                  sizes="(max-width: 1023px) 90vw, min(90vw, 1600px)"
                   quality={100}
                   className="object-contain p-4"
                   style={{ objectFit: 'contain' }}

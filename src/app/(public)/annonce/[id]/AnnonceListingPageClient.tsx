@@ -913,7 +913,7 @@ export default function AnnonceListingPageClient() {
                     photos={listing.photos}
                     currentIndex={currentPhotoIndex}
                     title={getListingDisplayTitle(listing)}
-                    sizes="(max-width: 768px) min(100vw, 440px), min(640px, 90vw)"
+                    sizes="(max-width: 1023px) min(100vw, 440px), min(640px, 90vw)"
                     quality={LISTING_PHOTO_QUALITY_SHARP}
                     priority
                   />
@@ -1541,7 +1541,7 @@ export default function AnnonceListingPageClient() {
                   photos={listing.photos}
                   currentIndex={currentPhotoIndex}
                   title={getListingDisplayTitle(listing)}
-                  sizes="(max-width: 768px) min(100vw, 440px), min(640px, 90vw)"
+                  sizes="(max-width: 1023px) min(100vw, 440px), min(640px, 90vw)"
                   quality={LISTING_PHOTO_QUALITY_SHARP}
                   priority
                 />
@@ -2767,7 +2767,7 @@ Ces données sont utilisées pour :`}
                   src={listing.photos[currentPhotoIndex]}
                   alt={getListingDisplayTitle(listing)}
                   fill
-                  sizes="(max-width: 768px) 90vw, min(90vw, 1600px)"
+                  sizes="(max-width: 1023px) 90vw, min(90vw, 1600px)"
                   quality={100}
                   className="object-contain"
                   style={{ objectFit: 'contain', borderRadius: 8 }}

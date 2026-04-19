@@ -18,7 +18,7 @@ type TruncatedInfoValueProps = {
   valueTextAlign?: 'left' | 'right';
 };
 
-const MOBILE_MAX_W = 767;
+const MOBILE_MAX_W = 1023;
 
 type BubblePosition = {
   top: number;

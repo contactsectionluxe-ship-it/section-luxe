@@ -2,7 +2,7 @@
 
 import { useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 
-const MOBILE_MAX = 767;
+const MOBILE_MAX = 1023;
 const MIN_PX = 9;
 const MAX_PX = 64;
 

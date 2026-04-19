@@ -70,7 +70,7 @@ function EtatTooltipBody({ variant }: { variant: 'desktop' | 'mobile' }) {
 export function ListingCharacteristicsProductStyle({ listing }: { listing: Listing }) {
   const [etatInfoClicked, setEtatInfoClicked] = useState(false);
   const [etatInfoHover, setEtatInfoHover] = useState(false);
-  const isMobileLayout = useMatchMaxWidth(767);
+  const isMobileLayout = useMatchMaxWidth(1023);
   const etatRowRef = useRef<HTMLDivElement>(null);
 
   const categoryLabel = CATEGORIES.find((c) => c.value === listing.category)?.label ?? listing.category;

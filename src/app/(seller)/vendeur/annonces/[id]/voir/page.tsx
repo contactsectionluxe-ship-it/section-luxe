@@ -188,7 +188,7 @@ export default function VoirAnnoncePage() {
                 <ListingPhoto
                   src={listing.photos[photoIndex]}
                   alt={listing.title}
-                  sizes="(max-width: 768px) 100vw, 480px"
+                  sizes="(max-width: 1023px) 100vw, 480px"
                   quality={LISTING_PHOTO_QUALITY_SHARP}
                 />
               ) : (

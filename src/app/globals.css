@@ -9,7 +9,7 @@
   /* Catalogue : espace au-dessus du premier article (-4px + 0,5mm) */
   --catalogue-results-gap: calc(-4px + 0.5mm);
   /* Réactiver l'espace sous-header (barre Nouveautés/Femme/Homme/catégories) : réafficher <HeaderFilters /> dans Header.tsx puis ajouter :
-     @media (min-width: 768px) { :root { --header-height: 116px; } }
+     @media (min-width: 1024px) { :root { --header-height: 116px; } }
   */
   /* Apple-style radii */
   --radius-sm: 8px;
@@ -53,7 +53,7 @@ button.proposal-description-info-btn:focus-visible {
  * Colonne jour = 88px + gap 8px comme la ligne « De » : case Fermé alignée avec « De ».
  * Champs compacts pour une ligne ; 2ᵉ plage en dessous.
  */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   /* Même largeur + même gap que la ligne « De … » : case Fermé alignée avec « De » */
   .seller-opening-hours-editor .seller-opening-hours-ferme-row {
     gap: 8px !important;
@@ -196,7 +196,7 @@ input, select, textarea, button {
 }
 
 /* iOS Safari : pas de zoom automatique au focus (seuil ~16px). Les pages auth utilisent souvent 15px en inline — !important nécessaire. */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']):not([type='image']),
   textarea,
   select {
@@ -240,7 +240,7 @@ a:focus-visible {
 }
 
 /* Titres formulaires (Déposer / Proposer / Modifier) : bloc titre centré dans la page (colonnes symétriques) */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .deposer-annonce-title-row {
     display: grid !important;
     grid-template-columns: 1fr auto 1fr !important;
@@ -432,13 +432,13 @@ a:focus-visible {
 }
 
 /* Responsive breakpoints helper classes */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .hide-mobile {
     display: none !important;
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .hide-desktop {
     display: none !important;
   }
@@ -517,7 +517,7 @@ a:focus-visible {
 /* Menu burger (téléphone) : pas de soulignement animé — fond au survol / actif suffit */
 
 /* Page produit : Informations, Description, Vendeur professionnel sur 50 % à gauche sur desktop */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .produit-section-left {
     width: 50% !important;
     max-width: 50% !important;
@@ -548,7 +548,7 @@ a:focus-visible {
 }
 
 /* Page produit : les 4 titres de section (Informations, Description, Prix, Vendeur professionnel) même taille sur mobile */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   /* Téléphone : nom vendeur (carte Téléphone / Message) */
   .produit-vendeur-nom-badge-row--mobile-card {
     font-size: 21px;
@@ -576,7 +576,7 @@ a:focus-visible {
 }
 
 /* Catalogue desktop : bouton tri (Plus récents) à droite */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .catalogue-barre-tri {
     justify-content: flex-end !important;
   }
@@ -712,7 +712,7 @@ button.propositions-desc-toggle:focus-visible {
 }
 
 /* Desktop : badge encore +0,05 mm vers le haut — À la une, Mes favoris, catalogue vue ligne uniquement */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .home-section-featured .home-featured-grid .listing-grid-vendeur-nom-badge-row .seller-verified-subscription-badge {
     transform: translateY(calc(-0.038em - 0.15mm));
   }
@@ -786,7 +786,7 @@ button.propositions-desc-toggle:focus-visible {
   white-space: nowrap;
   font-size: clamp(13px, 5.2cqi, 22px);
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .produit-vendeur-section-nom h3 {
     font-size: clamp(14px, 5.6cqi, 20px);
   }
@@ -824,7 +824,7 @@ button.propositions-desc-toggle:focus-visible {
 .produit-vendeur-desc-seller-link:visited {
   color: #6e6e73;
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .produit-vendeur-desc-seller-link {
     font-size: 12px;
   }
@@ -979,8 +979,8 @@ button.propositions-desc-toggle:focus-visible {
   );
 }
 
-/* Desktop (≥768px) : éviter un 5e fragment visible au repos (4 tuiles = 100cqw avec gap 24 en TSX) */
-@media (min-width: 768px) {
+/* Desktop (≥1024px) : éviter un 5e fragment visible au repos (4 tuiles = 100cqw avec gap 24 en TSX) */
+@media (min-width: 1024px) {
   .home-section-categories .categories-scroll-container {
     scroll-snap-type: x proximity;
     scroll-padding-inline: 0;
@@ -1060,16 +1060,7 @@ button.propositions-desc-toggle:focus-visible {
   );
 }
 
-/*
- * Tablette / desktop : zoom ancré à droite, point vertical ~32 %.
- */
-@media (min-width: 768px) {
-  .hero-bg-image-inner img {
-    transform: scale(1.22) !important;
-    transform-origin: 100% 32% !important;
-  }
-}
-
+/* Desktop (≥1024px) : zoom photo hero ancré à droite, point vertical ~32 % */
 @media (min-width: 1024px) {
   .hero-bg-image-inner img {
     transform: scale(1.3) !important;
@@ -1141,7 +1132,7 @@ button.propositions-desc-toggle:focus-visible {
 }
 
 /* Page d'accueil mobile : pas de photo derrière le titre, titre sur toute la largeur */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .hero-section {
     background-color: #ffffff !important;
     /* Inchangé vs réf. mobile d’origine (les −0,5 cm du hero ne s’appliquent qu’au desktop). */
@@ -1393,7 +1384,7 @@ button.propositions-desc-toggle:focus-visible {
   }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .home-section-vendeur-cta-title {
     font-size: clamp(24px, 4vw, 32px) !important;
   }
@@ -1929,7 +1920,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
 }
 
 /* Catalogue mobile : mêmes marges latérales que la page produit (24px), liste pleine largeur */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .catalogue-page-wrap {
     padding-left: 24px !important;
     padding-right: 24px !important;
@@ -3050,7 +3041,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
 }
 
 /* Header desktop : icônes seules (Favoris, Messages, compte), alignées au centre */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .header-right .header-actions {
     align-items: center !important;
     gap: 5px !important;
@@ -3146,8 +3137,8 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   animation: catalogue-loading-bar 2s linear infinite;
 }
 
-/* ========== Mobile uniquement (≤767px) — aucun impact desktop ========== */
-@media (max-width: 767px) {
+/* ========== Mobile + tablette (≤1023px) — desktop à partir de 1024px ========== */
+@media (max-width: 1023px) {
   /* Pleine largeur propre : pas de bande qui défile ni décalage gauche/droite */
   html {
     overflow-x: clip;
@@ -3592,13 +3583,13 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   gap: 18px;
   grid-template-columns: 1fr;
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .actualites-cards-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
   }
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .actualites-card-body {
     padding: 20px 20px 22px !important;
   }
@@ -3750,7 +3741,7 @@ button.abonnement-plan-cta-btn--outline.abonnement-plan-cta-btn--primary-busy:di
   background: transparent;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .admin-filters-row.admin-account-filters-row {
     width: fit-content !important;
     max-width: 100% !important;

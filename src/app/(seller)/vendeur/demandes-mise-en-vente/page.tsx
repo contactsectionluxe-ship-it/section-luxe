@@ -583,7 +583,7 @@ function SourcingProposalCard({
           <CatalogueCardPhotos
             photos={p.photo_urls}
             alt={p.title || ''}
-            sizes="(max-width: 768px) 50vw, 25vw"
+            sizes="(max-width: 1023px) 50vw, 25vw"
           />
         ) : (
           <div

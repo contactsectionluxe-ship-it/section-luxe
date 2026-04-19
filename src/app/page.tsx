@@ -78,7 +78,7 @@ function HomePageInner() {
     if (!el) return;
     const { scrollLeft, scrollWidth, clientWidth } = el;
     const max = scrollWidth - clientWidth;
-    if (typeof window !== 'undefined' && window.innerWidth <= 767 && max > 0 && scrollLeft > max) {
+    if (typeof window !== 'undefined' && window.innerWidth <= 1023 && max > 0 && scrollLeft > max) {
       el.scrollLeft = max;
       setScrollState('end');
       return;
@@ -87,7 +87,7 @@ function HomePageInner() {
     else if (scrollLeft <= 2) setScrollState('start');
     else if (
       scrollLeft >= max - 2 ||
-      (typeof window !== 'undefined' && window.innerWidth <= 767 && scrollLeft >= max - Math.max(20, clientWidth * 0.15))
+      (typeof window !== 'undefined' && window.innerWidth <= 1023 && scrollLeft >= max - Math.max(20, clientWidth * 0.15))
     ) setScrollState('end');
     else setScrollState('middle');
   }, []);
@@ -160,7 +160,7 @@ function HomePageInner() {
                 fill
                 priority
                 quality={100}
-                sizes="(max-width: 767px) 100vw, min(132vw, 4096px)"
+                sizes="(max-width: 1023px) 100vw, min(132vw, 4096px)"
                 style={{
                   objectFit: 'contain',
                   objectPosition: 'right 32%',
