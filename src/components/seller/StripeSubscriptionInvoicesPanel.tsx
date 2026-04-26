@@ -329,7 +329,7 @@ export function StripeSubscriptionInvoicesPanel({
           padding: '8px 0 0',
         }}
       >
-        Aucune facturation Stripe n’est associée à votre compte pour l’instant. Les factures apparaîtront après souscription à Plus ou Pro.
+        Aucune facturation n’est associée à votre compte pour l’instant.
       </p>
     );
   }
