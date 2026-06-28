@@ -176,8 +176,6 @@ export default function CGVPage() {
             </p>
             <ul style={listStyle}>
               <li style={listItemStyle}>être un professionnel légalement constitué ;</li>
-              <li style={listItemStyle}>fournir un extrait Kbis de moins de 3 mois (ou équivalent) ;</li>
-              <li style={listItemStyle}>transmettre une pièce d&apos;identité ou passeport du représentant légal ;</li>
               <li style={listItemStyle}>fournir des informations exactes, complètes et à jour.</li>
             </ul>
             <p style={paragraphStyle}>

@@ -481,20 +481,7 @@ export default function CGUPage() {
 
           <h2 style={sectionTitleStyle}>III. Dispositions vendeurs professionnels</h2>
 
-          <h3 style={articleTitleStyle}>Article 1 – Vérification d&apos;identité (KYC)</h3>
-          <p style={paragraphStyle}>
-            Documents obligatoires :
-          </p>
-          <ul style={listStyle}>
-            <li style={listItemStyle}>extrait Kbis &lt; 3 mois ;</li>
-            <li style={listItemStyle}>CNI ou passeport valide ;</li>
-            <li style={listItemStyle}>justificatif de lien avec la société.</li>
-          </ul>
-          <p style={paragraphStyle}>
-            Les données sont conservées conformément à la réglementation applicable et à la <Link href="/politique-confidentialite" style={{ color: '#6e6e73', textDecoration: 'none' }}>Politique de confidentialité</Link>.
-          </p>
-
-          <h3 style={articleTitleStyle}>Article 2 – Obligations du vendeur</h3>
+          <h3 style={articleTitleStyle}>Article 1 – Obligations du vendeur</h3>
           <p style={paragraphStyle}>
             Le vendeur garantit :
           </p>
@@ -507,7 +494,7 @@ export default function CGUPage() {
             <li style={listItemStyle}>disposer de toutes autorisations nécessaires.</li>
           </ul>
 
-          <h3 style={articleTitleStyle}>Article 3 – Responsabilité exclusive</h3>
+          <h3 style={articleTitleStyle}>Article 2 – Responsabilité exclusive</h3>
           <p style={paragraphStyle}>
             Le vendeur est seul responsable :
           </p>
@@ -519,12 +506,12 @@ export default function CGUPage() {
             <li style={listItemStyle}>des réclamations clients.</li>
           </ul>
 
-          <h3 style={articleTitleStyle}>Article 4 – Indemnisation</h3>
+          <h3 style={articleTitleStyle}>Article 3 – Indemnisation</h3>
           <p style={paragraphStyle}>
             Le vendeur indemnisera intégralement la Société de toute réclamation, procédure, condamnation ou frais liés à ses produits.
           </p>
 
-          <h3 style={articleTitleStyle}>Article 5 – Suspension / Résiliation</h3>
+          <h3 style={articleTitleStyle}>Article 4 – Suspension / Résiliation</h3>
           <p style={paragraphStyle}>
             La Société peut suspendre ou supprimer sans préavis en cas :
           </p>

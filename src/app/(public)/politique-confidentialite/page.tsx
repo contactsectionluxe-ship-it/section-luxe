@@ -146,8 +146,6 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>Adresse professionnelle</li>
               <li style={listItemStyle}>Email professionnel</li>
               <li style={listItemStyle}>Numéro de téléphone</li>
-              <li style={listItemStyle}>Extrait Kbis</li>
-              <li style={listItemStyle}>Pièce d&apos;identité ou passeport officielle valide</li>
             </ul>
             <p style={paragraphStyle}>
               Ces données sont nécessaires pour :
@@ -207,7 +205,6 @@ export default function PolitiqueConfidentialitePage() {
               <li style={listItemStyle}>la création et gestion des comptes ;</li>
               <li style={listItemStyle}>la mise en relation acheteurs / vendeurs ;</li>
               <li style={listItemStyle}>la gestion des paiements vendeurs ;</li>
-              <li style={listItemStyle}>la vérification d&apos;identité ;</li>
               <li style={listItemStyle}>la prévention des fraudes et contenus illicites ;</li>
               <li style={listItemStyle}>le respect des obligations légales et comptables ;</li>
               <li style={listItemStyle}>la gestion des réclamations ;</li>
@@ -283,7 +280,6 @@ export default function PolitiqueConfidentialitePage() {
                 </thead>
                 <tbody>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Comptes actifs</td><td style={{ padding: '10px 12px' }}>Durée de la relation contractuelle</td></tr>
-                  <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Documents vendeurs</td><td style={{ padding: '10px 12px' }}>Relation contractuelle + archivage légal</td></tr>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Prospects</td><td style={{ padding: '10px 12px' }}>3 ans après dernier contact</td></tr>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Données comptables</td><td style={{ padding: '10px 12px' }}>10 ans</td></tr>
                   <tr style={{ borderBottom: '1px solid #e5e5e7' }}><td style={{ padding: '10px 12px' }}>Logs techniques</td><td style={{ padding: '10px 12px' }}>12 mois maximum</td></tr>

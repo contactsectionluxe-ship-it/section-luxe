@@ -1,16 +1,14 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CheckCircle, FileText, Upload, X } from 'lucide-react';
-import { useDropzone, type FileRejection } from 'react-dropzone';
+import { CheckCircle } from 'lucide-react';
 import { signUpSeller, upgradeToSeller } from '@/lib/supabase/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchSiretSuggestions, type SiretSuggestion } from '@/lib/siret';
 import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete';
 import { CguCgvCheckbox } from '@/components/ui';
-import { MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB } from '@/lib/file-validation';
 import { createDefaultWeeklyOpeningHours, type WeeklyOpeningHours } from '@/lib/opening-hours';
 import { SellerOpeningHoursEditor } from '@/components/profile/SellerOpeningHoursEditor';
 import { profilVendeurAfterFieldGap } from '@/components/profile/profilVendeurFormStyles';
@@ -32,176 +30,8 @@ async function postCguCgvAcceptance(userId: string, context: 'inscription_vendeu
   return false;
 }
 
-function FileUploadField({
-  label,
-  file,
-  onFileChange,
-  hint,
-  required,
-}: {
-  label: string;
-  file: File | null;
-  onFileChange: (file: File | null) => void;
-  hint: string;
-  required?: boolean;
-}) {
-  const [rejectMessage, setRejectMessage] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
-    }
-    const isImage = file.type.startsWith('image/');
-    if (isImage) {
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
-    }
-    setPreviewUrl(null);
-  }, [file]);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    setRejectMessage(null);
-    if (acceptedFiles[0]) {
-      onFileChange(acceptedFiles[0]);
-    }
-  }, [onFileChange]);
-
-  const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
-    const first = fileRejections[0];
-    if (!first) return;
-    const isTooLarge = first.errors.some((e) => e.code === 'file-too-large');
-    if (isTooLarge) {
-      setRejectMessage(`Votre fichier dépasse ${MAX_FILE_SIZE_MB} Mo. Choisissez un fichier plus léger.`);
-    } else {
-      setRejectMessage('Votre fichier : format non accepté. Utilisez JPEG, PNG ou PDF.');
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    onDropRejected,
-    accept: { 'image/jpeg': ['.jpg', '.jpeg'], 'image/png': ['.png'], 'application/pdf': ['.pdf'] },
-    maxFiles: 1,
-    maxSize: MAX_FILE_SIZE_BYTES,
-  });
-
-  const isImageFile = file?.type.startsWith('image/');
-
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
-        {label}
-        {required && <span style={{ color: '#1d1d1f' }}> *</span>}
-      </label>
-      {file ? (
-        <div
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: 200,
-            borderRadius: 12,
-            overflow: 'hidden',
-            border: '1px solid #e8e8e8',
-            backgroundColor: '#fafafa',
-          }}
-        >
-          {isImageFile && previewUrl ? (
-            <div style={{ aspectRatio: 1, position: 'relative' }}>
-              <img
-                src={previewUrl}
-                alt="Aperçu"
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-              <button
-                type="button"
-                onClick={() => onFileChange(null)}
-                aria-label="Supprimer le document"
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  border: 'none',
-                  backgroundColor: 'rgba(0,0,0,0.6)',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-          ) : (
-            <div
-              style={{
-                padding: 24,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                minHeight: 140,
-              }}
-            >
-              <FileText size={40} color="#86868b" />
-              <span style={{ fontSize: 13, color: '#1d1d1f', textAlign: 'center', wordBreak: 'break-all', paddingLeft: 8, paddingRight: 8 }}>{file.name}</span>
-              <button
-                type="button"
-                onClick={() => onFileChange(null)}
-                style={{
-                  marginTop: 4,
-                  padding: '8px 16px',
-                  fontSize: 13,
-                  border: '1px solid #d2d2d7',
-                  borderRadius: 8,
-                  backgroundColor: '#fff',
-                  cursor: 'pointer',
-                  color: '#1d1d1f',
-                }}
-              >
-                Supprimer
-              </button>
-            </div>
-          )}
-          {isImageFile && (
-            <p style={{ fontSize: 12, color: '#666', padding: '8px 10px', margin: 0, borderTop: '1px solid #e8e8e8' }}>{file.name}</p>
-          )}
-        </div>
-      ) : (
-        <div
-          {...getRootProps()}
-          style={{
-            padding: 24,
-            border: isDragActive ? '2px dashed #000' : '2px dashed #ddd',
-            backgroundColor: isDragActive ? '#fafafa' : '#fff',
-            textAlign: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <input {...getInputProps()} />
-          <Upload size={24} style={{ margin: '0 auto 8px', color: '#888' }} />
-          <p style={{ fontSize: 13, color: '#666' }}>
-            Glissez-déposez ou cliquez
-          </p>
-          <p style={{ fontSize: 11, color: '#999', marginTop: 4 }}>{MAX_FILE_SIZE_MB} Mo max. JPEG, PNG ou PDF.</p>
-        </div>
-      )}
-      {rejectMessage && (
-        <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 6, backgroundColor: '#fef2f2', padding: '8px 10px', borderRadius: 8 }}>
-          {rejectMessage}
-        </p>
-      )}
-      <p style={{ fontSize: 11, color: '#999', marginTop: 6 }}>{hint}</p>
-    </div>
-  );
-}
+/** Documents KBIS / identité désactivés temporairement à l'inscription. */
+const PENDING_DOCUMENT_URL = '';
 
 function SellerRegisterContent() {
   const router = useRouter();
@@ -210,7 +40,6 @@ function SellerRegisterContent() {
   const fromProfil = searchParams.get('from') === 'profil';
   const isUpgrade = Boolean(user && fromProfil && !isSeller);
 
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -233,11 +62,6 @@ function SellerRegisterContent() {
     setEmail(user.email ?? '');
     setPhone(user.phone ?? '');
   }, [user, fromProfil]);
-
-  // Remonter le formulaire en haut à chaque changement d'étape
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [step]);
 
   // Remonter en haut pour voir le message d'erreur
   useEffect(() => {
@@ -265,11 +89,6 @@ function SellerRegisterContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const [idCardFront, setIdCardFront] = useState<File | null>(null);
-  const [idCardBack, setIdCardBack] = useState<File | null>(null);
-  const [idRectoType, setIdRectoType] = useState<'passeport' | 'cni_recto' | null>(null);
-  const [kbis, setKbis] = useState<File | null>(null);
-
   // Suggestions sociétés pendant la saisie du SIRET (dès 9 chiffres)
   useEffect(() => {
     const digits = siret.replace(/\D/g, '');
@@ -292,7 +111,7 @@ function SellerRegisterContent() {
     return () => clearTimeout(t);
   }, [siret]);
 
-  const validateStep1 = () => {
+  const validateForm = () => {
     if (!companyName || !siret || !address || !firstName?.trim() || !lastName?.trim() || !email || !phone) {
       setError('Veuillez remplir tous les champs');
       return false;
@@ -315,55 +134,16 @@ function SellerRegisterContent() {
     return true;
   };
 
-  const handleNextStep = () => {
-    setError('');
-    setCguCgvError('');
-    if (!validateStep1()) return;
-    if (!acceptCguCgv) {
-      setCguCgvError(
-        'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour continuer.',
-      );
-      return;
-    }
-    setStep(2);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    /* Aucun envoi tant que l’étape documents n’est pas affichée */
-    if (step !== 2) {
-      return;
-    }
     setError('');
     setCguCgvError('');
+    if (!validateForm()) return;
     if (!acceptCguCgv) {
       setCguCgvError(
         'Veuillez accepter les conditions générales d’utilisation, les conditions générales de vente et la politique de confidentialité pour soumettre votre demande.',
       );
       return;
-    }
-    if (!idRectoType) {
-      setError('Veuillez indiquer le type de justificatif d\'identité (Passeport ou CNI).');
-      return;
-    }
-    if (!kbis) {
-      setError('Veuillez télécharger un document dans Extrait KBIS de moins de 3 mois.');
-      return;
-    }
-    if (idRectoType === 'passeport') {
-      if (!idCardFront) {
-        setError('Veuillez déposer un document dans Justificatif d\'identité : Passeport.');
-        return;
-      }
-    } else {
-      if (!idCardFront) {
-        setError('Veuillez déposer un document dans Justificatif d\'identité : CNI recto.');
-        return;
-      }
-      if (!idCardBack) {
-        setError('Veuillez déposer un document dans Justificatif d\'identité : CNI verso.');
-        return;
-      }
     }
 
     setLoading(true);
@@ -387,23 +167,9 @@ function SellerRegisterContent() {
         }
       }
 
-      const formUpload = new FormData();
-      formUpload.set('fileRecto', idCardFront);
-      formUpload.set('fileKbis', kbis);
-      if (idCardBack) formUpload.set('fileVerso', idCardBack);
-
-      const resUpload = await fetch('/api/upload-seller-documents', {
-        method: 'POST',
-        body: formUpload,
-      });
-      if (!resUpload.ok) {
-        const data = (await resUpload.json().catch(() => ({}))) as { detail?: unknown };
-        const base = pickApiErrorBodyMessage(data, `Upload échoué (${resUpload.status})`);
-        const detailExtra = toUserFacingErrorString(data.detail, '');
-        const detail = detailExtra ? ` — ${detailExtra}` : '';
-        throw new Error(base + detail);
-      }
-      const { idCardFrontUrl, idCardBackUrl, kbisUrl } = await resUpload.json();
+      const idCardFrontUrl = PENDING_DOCUMENT_URL;
+      const idCardBackUrl = null;
+      const kbisUrl = PENDING_DOCUMENT_URL;
 
       const displayNameVal = `${firstName.trim()} ${lastName.trim()}`.trim();
       if (isUpgrade && user?.uid) {
@@ -418,7 +184,7 @@ function SellerRegisterContent() {
           openingHours,
           idCardFrontUrl,
           idCardBackUrl,
-          idRectoType,
+          idRectoType: null,
           kbisUrl,
           displayName: displayNameVal,
         });
@@ -439,7 +205,7 @@ function SellerRegisterContent() {
           openingHours,
           idCardFrontUrl,
           idCardBackUrl,
-          idRectoType,
+          idRectoType: null,
           kbisUrl,
           displayName: displayNameVal,
         });
@@ -456,9 +222,6 @@ function SellerRegisterContent() {
       formDataEmail.set('email', email);
       formDataEmail.set('phone', phone);
       formDataEmail.set('description', description);
-      if (idCardFront) formDataEmail.set('fileRecto', idCardFront);
-      if (idCardBack) formDataEmail.set('fileVerso', idCardBack);
-      formDataEmail.set('fileKbis', kbis);
       let emailSent = false;
       let emailErrorDetail = '';
       try {
@@ -548,8 +311,8 @@ function SellerRegisterContent() {
             Demande envoyée !
           </h1>
           <p style={{ fontSize: 14, color: '#666', lineHeight: 1.6, marginBottom: 24 }}>
-            Votre demande d&apos;inscription vendeur a été soumise. Notre équipe va examiner vos
-            documents et vous recevrez une réponse dans les plus brefs délais.
+            Votre demande d&apos;inscription vendeur a été soumise. Notre équipe va examiner votre
+            dossier et vous recevrez une réponse dans les plus brefs délais.
           </p>
           <div
             style={{
@@ -603,7 +366,7 @@ function SellerRegisterContent() {
                 />
               </div>
               <p style={{ fontSize: 12, color: '#86868b', marginTop: 10 }}>
-                Notre équipe examine vos documents sous 48 à 72 h.
+                Notre équipe examine votre demande sous 48 à 72 h.
               </p>
             </div>
           </div>
@@ -667,27 +430,6 @@ function SellerRegisterContent() {
           </p>
         </div>
 
-        <div className="inscription-vendeur-steps-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div
-              className="inscription-vendeur-step-circle"
-              style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: '#1d1d1f', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, flexShrink: 0 }}
-            >
-              1
-            </div>
-            <div
-              className="inscription-vendeur-steps-connector"
-              style={{ width: 56, height: 2, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', margin: '0 10px', borderRadius: 1 }}
-            />
-            <div
-              className="inscription-vendeur-step-circle"
-              style={{ width: 40, height: 40, borderRadius: 980, backgroundColor: step >= 2 ? '#1d1d1f' : '#d2d2d7', color: step >= 2 ? '#fff' : '#86868b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 600, flexShrink: 0 }}
-            >
-              2
-            </div>
-          </div>
-        </div>
-
         <div className="inscription-vendeur-form-box" style={{ backgroundColor: '#fff', padding: '32px 28px', borderRadius: 18, boxShadow: '0 4px 24px rgba(0,0,0,0.06)' }}>
           {error && (
             <div style={{ padding: 14, backgroundColor: '#fef2f2', color: '#dc2626', fontSize: 13, marginBottom: 20 }}>
@@ -695,8 +437,7 @@ function SellerRegisterContent() {
             </div>
           )}
           <form onSubmit={handleSubmit}>
-            {step === 1 ? (
-              <>
+            <>
                 <div style={{ marginBottom: 18 }}>
                   <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 8, color: '#333' }}>
                     Nom de l&apos;entreprise <span style={{ color: '#1d1d1f' }}>*</span>
@@ -986,8 +727,8 @@ function SellerRegisterContent() {
                 />
 
                 <button
-                  type="button"
-                  onClick={handleNextStep}
+                  type="submit"
+                  disabled={loading || !acceptCguCgv}
                   style={{
                     width: '100%',
                     height: 50,
@@ -997,134 +738,13 @@ function SellerRegisterContent() {
                     fontWeight: 500,
                     border: 'none',
                     borderRadius: 980,
-                    cursor: 'pointer',
+                    cursor: loading || !acceptCguCgv ? 'not-allowed' : 'pointer',
+                    opacity: loading || !acceptCguCgv ? 0.7 : 1,
                   }}
                 >
-                  Continuer
+                  {loading ? 'Envoi en cours...' : 'Soumettre ma demande'}
                 </button>
-              </>
-            ) : (
-              <>
-                <div style={{ padding: 14, backgroundColor: '#f0f9ff', marginBottom: 24, fontSize: 13, color: '#0369a1', lineHeight: 1.5 }}>
-                  Pour valider votre compte, nous avons besoin de vérifier votre identité et
-                  l&apos;existence légale de votre entreprise.
-                  <br />
-                  <strong>Formats acceptés : JPEG, PNG, PDF. ({MAX_FILE_SIZE_MB} Mo max)</strong>
-                </div>
-
-                {cguCgvError ? (
-                  <div
-                    role="alert"
-                    style={{
-                      padding: 12,
-                      backgroundColor: '#fef2f2',
-                      color: '#dc2626',
-                      fontSize: 12,
-                      marginBottom: 16,
-                      borderRadius: 10,
-                      border: '1px solid #fecaca',
-                    }}
-                  >
-                    {cguCgvError}
-                  </div>
-                ) : null}
-
-                <FileUploadField
-                  label="Extrait KBIS de moins de 3 mois"
-                  file={kbis}
-                  onFileChange={setKbis}
-                  hint="Obligatoire. Document officiel prouvant l'existence de votre entreprise"
-                  required
-                />
-
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: '#1d1d1f', marginBottom: 10 }}>
-                    Type de justificatif d&apos;identité
-                  </p>
-                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1d1d1f' }}>
-                      <input
-                        type="radio"
-                        name="idRectoType"
-                        checked={idRectoType === 'passeport'}
-                        onChange={() => setIdRectoType('passeport')}
-                        style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
-                      />
-                      Passeport
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14, color: '#1d1d1f' }}>
-                      <input
-                        type="radio"
-                        name="idRectoType"
-                        checked={idRectoType === 'cni_recto'}
-                        onChange={() => setIdRectoType('cni_recto')}
-                        style={{ width: 18, height: 18, accentColor: '#1d1d1f' }}
-                      />
-                      CNI
-                    </label>
-                  </div>
-                </div>
-
-                <FileUploadField
-                  label={idRectoType === 'cni_recto' ? 'Justificatif d\'identité : CNI recto' : idRectoType === 'passeport' ? 'Justificatif d\'identité : Passeport' : 'Justificatif d\'identité : CNI recto'}
-                  file={idCardFront}
-                  onFileChange={setIdCardFront}
-                  hint={idRectoType === 'passeport' ? 'Obligatoire. Photo ou scan du passeport' : 'Obligatoire. Photo ou scan de la carte d\'identité (recto)'}
-                  required
-                />
-
-                {idRectoType === 'cni_recto' && (
-                  <FileUploadField
-                    label="Justificatif d'identité : CNI verso"
-                    file={idCardBack}
-                    onFileChange={setIdCardBack}
-                    hint="Obligatoire. Photo ou scan de la carte d'identité (verso)"
-                    required
-                  />
-                )}
-
-                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep(1);
-                      setCguCgvError('');
-                    }}
-                    style={{
-                      flex: 1,
-                      height: 50,
-                      backgroundColor: '#fff',
-                      color: '#1d1d1f',
-                      fontSize: 15,
-                      fontWeight: 500,
-                      border: '1.5px solid #d2d2d7',
-                      borderRadius: 980,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Retour
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || !acceptCguCgv}
-                    style={{
-                      flex: 1,
-                      height: 50,
-                      backgroundColor: '#1d1d1f',
-                      color: '#fff',
-                      fontSize: 15,
-                      fontWeight: 500,
-                      border: 'none',
-                      borderRadius: 980,
-                      cursor: loading || !acceptCguCgv ? 'not-allowed' : 'pointer',
-                      opacity: loading || !acceptCguCgv ? 0.7 : 1,
-                    }}
-                  >
-                    {loading ? 'Envoi en cours...' : 'Soumettre ma demande'}
-                  </button>
-                </div>
-              </>
-            )}
+            </>
           </form>
         </div>
 
